@@ -19,6 +19,7 @@ namespace Headers {
 
 namespace QueryPipeline {
     struct CompileResult;
+    class CompileContext;
 
     namespace PipelineConstants {
     enum class JoinAlgorithm : UnsignedTinyInt;
@@ -286,7 +287,7 @@ namespace QueryPipeline {
         bool& isEqualityJoin
       );
 
-      [[nodiscard]] static std::vector<Int> CheckPredicatesSorting(
+      [[nodiscard]] std::vector<Int> CheckPredicatesSorting(
         const Headers::TableStatistics& tableStats,
         const std::vector<JoinConditionInfo>& joinConditions
       );

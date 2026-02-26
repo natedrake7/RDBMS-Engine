@@ -108,6 +108,9 @@
 
 //use string_views on Value AsString to avoid heap allocations //or use char[size] for stack allocation
 
+//TODO next steps, need to avoid string and decimal allocations and use "views" Decimal view and string view.
+//Binary operations should allocate a new value but only then.
+
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
     // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);

@@ -278,8 +278,8 @@ namespace DatabaseEngine {
     this->masterDb->UpdateIdentityManagersIds();
  }
 
-  Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr){
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::DatabaseHeader{
@@ -291,11 +291,12 @@ namespace DatabaseEngine {
   }
 
   Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(
+    const Memory::Allocator& allocator,
     const Pages::RowReference& rowPtr,
     std::vector<Headers::TableHeader> &dbTables,
     std::vector<Headers::SchemaHeader> &schemas
   ) {
-    const auto materializedRow = rowPtr.Materialize();
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
    return  Headers::DatabaseHeader{
@@ -318,8 +319,8 @@ namespace DatabaseEngine {
     };
 }
 
-  Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr){
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::SchemaHeader{
@@ -332,8 +333,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::TableHeader SystemCatalog::ToTableHeader(const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::TableHeader SystemCatalog::ToTableHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::TableHeader{
@@ -349,8 +350,8 @@ namespace DatabaseEngine {
       };
   }
 
-  Headers::ColumnHeader SystemCatalog::ToColumnHeader(const Pages::RowReference& rowPtr) {
-      const auto materializedRow = rowPtr.Materialize();
+  Headers::ColumnHeader SystemCatalog::ToColumnHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+      const auto materializedRow = rowPtr.Materialize(&allocator);
       const auto& data = materializedRow.Data();
 
       return Headers::ColumnHeader{
@@ -381,8 +382,8 @@ namespace DatabaseEngine {
       };
   }
 
-  Headers::IndexHeader SystemCatalog::ToIndexHeader(const Pages::RowReference& rowPtr) {
-      const auto materializedRow = rowPtr.Materialize();
+  Headers::IndexHeader SystemCatalog::ToIndexHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+      const auto materializedRow = rowPtr.Materialize(&allocator);
       const auto& data = materializedRow.Data();
 
       return Headers::IndexHeader{
@@ -404,8 +405,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::IndexColumnsHeader{
@@ -423,8 +424,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::IdentityColumnsHeader{
@@ -446,11 +447,12 @@ namespace DatabaseEngine {
   }
 
   Headers::ConstraintsHeader SystemCatalog::ToConstraintsHeader(
+    const Memory::Allocator& allocator,
     const Pages::RowReference& rowPtr,
     std::vector<Headers::ConstraintsColumnsHeader> &constraintColumns,
     Headers::IndexHeader &indexHeader
   ) {
-    const auto materializedRow = rowPtr.Materialize();
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsHeader{
@@ -475,8 +477,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::ConstraintsColumnsHeader SystemCatalog::ToConstraintsColumnsHeader(const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::ConstraintsColumnsHeader SystemCatalog::ToConstraintsColumnsHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr){
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsColumnsHeader{
@@ -493,8 +495,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::DefaultValuesHeader SystemCatalog::ToDefaultValuesHeader(const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::DefaultValuesHeader SystemCatalog::ToDefaultValuesHeader(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::DefaultValuesHeader{
@@ -510,8 +512,8 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::TableStatistics SystemCatalog::ToTableStatistics(const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize();
+  Headers::TableStatistics SystemCatalog::ToTableStatistics(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+    const auto materializedRow = rowPtr.Materialize(&allocator);
     const auto& data = materializedRow.Data();
 
     return {
@@ -523,35 +525,63 @@ namespace DatabaseEngine {
     };
   }
 
-  Headers::ColumnStatistics SystemCatalog::ToColumnStatistics(const Pages::RowReference& rowPtr, const DataType columnType) {
-    const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.Data();
+    Headers::ColumnStatistics SystemCatalog::ToColumnStatistics(
+        const Memory::Allocator& allocator,
+        const Pages::RowReference& rowPtr,
+        const DataType columnType
+    ) {
+        const auto materializedRow = rowPtr.Materialize(&allocator);
+        const auto& data = materializedRow.Data();
 
-    return Headers::ColumnStatistics{
-      .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)].AsInt(),
-      .distinctCount = data[static_cast<column_index_t>(SysColumnStats::DistinctCount)].AsBigInt(),
-      .min = Value(data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Data(), data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Size(), columnType),
-      .max = Value(data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Data(), data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Size(), columnType),
-      .nullCount = data[static_cast<column_index_t>(SysColumnStats::NullCount)].AsBigInt()
-    };
-  }
+        return Headers::ColumnStatistics{
+            .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)].AsInt(),
+            .distinctCount = data[static_cast<column_index_t>(SysColumnStats::DistinctCount)].AsBigInt(),
+            .min = Value(
+                data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Data(),
+                data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Size(),
+                columnType,
+                &allocator
+            ),
+            .max = Value(
+                data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Data(),
+                data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Size(),
+                columnType,
+                &allocator
+            ),
+            .nullCount = data[static_cast<column_index_t>(SysColumnStats::NullCount)].AsBigInt()
+        };
+    }
 
-  Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(const Pages::RowReference& rowPtr, const DataType columnType) {
-    const auto materializedRow = rowPtr.Materialize();
-    const auto& data = materializedRow.Data();
+    Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(
+        const Memory::Allocator& allocator,
+        const Pages::RowReference& rowPtr,
+        const DataType columnType
+    ) {
+        const auto materializedRow = rowPtr.Materialize(&allocator);
+        const auto& data = materializedRow.Data();
 
-    return Headers::ColumnHistograms{
-      data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)].AsInt(),
-       data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)].AsInt(),
-      Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Data(), data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Size(), columnType),
-      Value(data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Data(), data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Size(), columnType),
-      data[static_cast<column_index_t>(SysColumnHistograms::RowCount)].AsInt(),
-      data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)].AsInt()
-    };
-  }
+        return Headers::ColumnHistograms{
+                data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)].AsInt(),
+                data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)].AsInt(),
+                Value(
+                    data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Data(),
+                    data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Size(),
+                    columnType,
+                    &allocator
+                ),
+                Value(
+                    data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Data(),
+                    data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Size(),
+                    columnType,
+                    &allocator
+                ),
+                data[static_cast<column_index_t>(SysColumnHistograms::RowCount)].AsInt(),
+                data[static_cast<column_index_t>(SysColumnHistograms::DistinctCount)].AsInt()
+        };
+    }
 
-  Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const Pages::RowReference& rowPtr) {
-   const auto materializedRow = rowPtr.Materialize();
+  Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const Memory::Allocator& allocator, const Pages::RowReference& rowPtr) {
+   const auto materializedRow = rowPtr.Materialize(&allocator);
    const auto& data = materializedRow.Data();
 
    return {
@@ -586,10 +616,11 @@ namespace DatabaseEngine {
  }
 
   void SystemCatalog::Shutdown(){
-   this->masterDb->UpdateMasterDatabase();
+    const Memory::Allocator allocator;
+    this->masterDb->UpdateMasterDatabase(allocator);
 
-   delete this->masterDb;
-   this->masterDb = nullptr;
+    delete this->masterDb;
+    this->masterDb = nullptr;
  }
 
  std::vector<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
@@ -729,13 +760,14 @@ namespace DatabaseEngine {
         true
       );
 
-   return new Security::User{
-      .id = result.primaryKey.AsInt(),
-      .name = admin,
-      .passwordHash =  hashedPassword,
-      .roleId = defaultRoleId,
-      .isActive = true
-   };
+   return new Security::User(
+      result.primaryKey.AsInt(),
+      admin,
+      hashedPassword,
+      defaultRoleId,
+      nullptr,
+      true
+   );
   }
 
 Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
@@ -751,15 +783,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector fields = {
-        Value(dbName, static_cast<column_index_t>(SysDatabases::Name)),
-        Value(dbPath, static_cast<column_index_t>(SysDatabases::FilePath)),
-        Value(isSystem, static_cast<column_index_t>(SysDatabases::IsSystem)),
-        Value(currentDate, static_cast<column_index_t>(SysDatabases::CreatedAt)),
-        Value(currentDate, static_cast<column_index_t>(SysDatabases::LastModifiedAt)),
-        Value(user, static_cast<column_index_t>(SysDatabases::LastModifiedBy)),
-        Value(version, static_cast<column_index_t>(SysDatabases::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysDatabases::IsDeleted)),
+      const std::vector fields = {
+        Value(dbName, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Name)),
+        Value(dbPath, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::FilePath)),
+        Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsSystem)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::CreatedAt)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::LastModifiedAt)),
+        Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::LastModifiedBy)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
     };
 
@@ -778,17 +810,17 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const Int version,
     const bool isDeleted
   ) const{
-     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
+     auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     std::vector fields = {
-        Value(databaseId, static_cast<column_index_t>(SysSchemas::DatabaseId)),
-        Value(schemaName, static_cast<column_index_t>(SysSchemas::Name)),
-        Value(currentDate, static_cast<column_index_t>(SysSchemas::CreatedAt)),
-        Value(currentDate, static_cast<column_index_t>(SysSchemas::LastModifiedAt)),
-        Value(user, static_cast<column_index_t>(SysSchemas::LastModifiedBy)),
-        Value(version, static_cast<column_index_t>(SysSchemas::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysSchemas::IsDeleted)),
+     const std::vector fields = {
+        Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::DatabaseId)),
+        Value(schemaName, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Name)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::CreatedAt)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::LastModifiedAt)),
+        Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::LastModifiedBy)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt)),
      };
 
@@ -814,17 +846,17 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector fields = {
-        Value(databaseId, static_cast<column_index_t>(SysTables::DatabaseId)),
-        Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)),
-        Value(tableName, static_cast<column_index_t>(SysTables::Name)),
-        Value(ordinalPosition, static_cast<column_index_t>(SysTables::OrdinalPosition)),
-        Value(isSystem, static_cast<column_index_t>(SysTables::IsSystemTable)),
-        Value(currentDate, static_cast<column_index_t>(SysTables::CreatedAt)),
-        Value(currentDate, static_cast<column_index_t>(SysTables::LastModifiedAt)),
-        Value(user, static_cast<column_index_t>(SysTables::LastModifiedBy)),
-        Value(version, static_cast<column_index_t>(SysTables::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysTables::IsDeleted)),
+      const std::vector fields = {
+        Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::DatabaseId)),
+        Value(schemaId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::SchemaId)),
+        Value(tableName, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Name)),
+        Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::OrdinalPosition)),
+        Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::IsSystemTable)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::CreatedAt)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::LastModifiedAt)),
+        Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::LastModifiedBy)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysTables::DeletedAt)),
       };
 
@@ -855,28 +887,28 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       const auto currentDate = DataTypes::DateTime::Now();
 
      auto precisionField = precision != INVALID_DECIMAL_PRECISION
-         ? Value(precision, static_cast<column_index_t>(SysColumns::Precision))
+         ? Value(precision, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Precision))
          : Value::Null(static_cast<column_index_t>(SysColumns::Precision));
 
      auto scaleField = scale != INVALID_DECIMAL_SCALE
-         ? Value(scale, static_cast<column_index_t>(SysColumns::Scale))
+         ? Value(scale, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Scale))
          : Value::Null(static_cast<column_index_t>(SysColumns::Scale));
 
-      std::vector fields = {
-        Value(tableId, static_cast<column_index_t>(SysColumns::TableId)),
-        Value(columnName, static_cast<column_index_t>(SysColumns::Name)),
-        Value(static_cast<TinyInt>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
-        Value(columnSize, static_cast<column_index_t>(SysColumns::RecordSize)),
+      const std::vector fields = {
+        Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::TableId)),
+        Value(columnName, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Name)),
+        Value(static_cast<TinyInt>(columnType), executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::DataType)),
+        Value(columnSize, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::RecordSize)),
         std::move(precisionField),
         std::move(scaleField),
-        Value(isNullable, static_cast<column_index_t>(SysColumns::IsNullable)),
-        Value(ordinalPosition, static_cast<column_index_t>(SysColumns::OrdinalPosition)),
-        Value(isSystem, static_cast<column_index_t>(SysColumns::IsSystemColumn)),
-        Value(currentDate, static_cast<column_index_t>(SysColumns::CreatedAt)),
-        Value(currentDate, static_cast<column_index_t>(SysColumns::LastModifiedAt)),
-        Value(user, static_cast<column_index_t>(SysColumns::LastModifiedBy)),
-        Value(version, static_cast<column_index_t>(SysColumns::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysColumns::IsDeleted)),
+        Value(isNullable, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsNullable)),
+        Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::OrdinalPosition)),
+        Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsSystemColumn)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::CreatedAt)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
+        Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::LastModifiedBy)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
       };
 
@@ -900,17 +932,17 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     std::vector fields = {
-       Value(tableId, static_cast<column_index_t>(SysIndexes::TableId)),
-       Value(indexName, static_cast<column_index_t>(SysIndexes::Name)),
-       Value(isClustered, static_cast<column_index_t>(SysIndexes::IsClustered)),
-       Value(isDisabled, static_cast<column_index_t>(SysIndexes::IsDisabled)),
-       Value(currentDate, static_cast<column_index_t>(SysIndexes::CreatedAt)),
-       Value(currentDate, static_cast<column_index_t>(SysIndexes::LastModifiedAt)),
-       Value(user, static_cast<column_index_t>(SysIndexes::LastModifiedBy)),
-       Value(version, static_cast<column_index_t>(SysIndexes::Version)),
-       Value(isDeleted, static_cast<column_index_t>(SysIndexes::IsDeleted)),
-      Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
+     const std::vector fields = {
+        Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::TableId)),
+        Value(indexName, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Name)),
+        Value(isClustered, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsClustered)),
+        Value(isDisabled, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsDisabled)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::CreatedAt)),
+        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::LastModifiedAt)),
+        Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::LastModifiedBy)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsDeleted)),
+        Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
      };
 
       auto result = table->InsertRow(executionContext, fields);
@@ -931,13 +963,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    std::vector fields = {
-      Value(indexId, static_cast<column_index_t>(SysIndexColumns::IndexId)),
-      Value(columnId, static_cast<column_index_t>(SysIndexColumns::ColumnId)),
-      Value(ordinalPosition, static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
-      Value(isIncluded, static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
-      Value(version, static_cast<column_index_t>(SysIndexColumns::Version)),
-      Value(isDeleted, static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
+    const std::vector fields = {
+      Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IndexId)),
+      Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::ColumnId)),
+      Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
+      Value(isIncluded, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
+      Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::Version)),
+      Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
       Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt)),
     };
 
@@ -965,20 +997,20 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const auto currentDate = DataTypes::DateTime::Now();
 
     auto constraintField = constraintIndexId != nullptr
-        ? Value(*constraintIndexId, static_cast<column_index_t>(SysConstraints::IndexId))
+        ? Value(*constraintIndexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IndexId))
         : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
 
-    std::vector fields = {
-      Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
-      Value(constraintName, static_cast<column_index_t>(SysConstraints::Name)),
-      Value(static_cast<TinyInt>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
-      Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
+    const std::vector fields = {
+      Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::TableId)),
+      Value(constraintName, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Name)),
+      Value(static_cast<TinyInt>(constraintType), executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Type)),
+      Value(isDisabled, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IsDisabled)),
       std::move(constraintField),
-      Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
-      Value(currentDate, static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
-      Value(user, static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
-      Value(version, static_cast<column_index_t>(SysConstraints::Version)),
-      Value(isDeleted, static_cast<column_index_t>(SysConstraints::IsDeleted)),
+      Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::CreatedAt)),
+      Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
+      Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
+      Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Version)),
+      Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IsDeleted)),
       Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
     };
 
@@ -1001,12 +1033,12 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    std::vector fields = {
-        Value(constraintId, static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
-        Value(columnId, static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
-        Value(ordinalPosition, static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
-        Value(version, static_cast<column_index_t>(SysConstraintColumns::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
+    const std::vector fields = {
+        Value(constraintId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
+        Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
+        Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt)),
     };
 
@@ -1033,16 +1065,16 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector fields = {
-        Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)),
-        Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
-        Value(seedValue, static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
-        Value(increment, static_cast<column_index_t>(SysIdentityColumns::IncrementValue)),
-        Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue)),
-        Value(isCached, static_cast<column_index_t>(SysIdentityColumns::IsCached)),
-        Value(cacheBlock, static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
-        Value(version, static_cast<column_index_t>(SysIdentityColumns::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
+      const std::vector fields = {
+        Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::TableId)),
+        Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
+        Value(seedValue, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
+        Value(increment, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IncrementValue)),
+        Value(lastValue, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::LastValue)),
+        Value(isCached, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IsCached)),
+        Value(cacheBlock, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt)),
       };
 
@@ -1063,14 +1095,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      std::vector fields = {
-        Value(columnId, static_cast<column_index_t>(SysDefaultValues::ColumnId)),
+      const std::vector fields = {
+        Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::ColumnId)),
         Value(
-      std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
-           static_cast<column_index_t>(SysDefaultValues::Value)
+            std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
+            executionContext.GetAllocator(),
+            static_cast<column_index_t>(SysDefaultValues::Value)
         ),
-        Value(version, static_cast<column_index_t>(SysDefaultValues::Version)),
-        Value(isDeleted, static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
+        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::Version)),
+        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt)),
       };
 
@@ -1091,12 +1124,12 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    std::vector fields = {
-      Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
-      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
-      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
-      Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
+    const std::vector fields = {
+      Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::TableId)),
+      Value(rowCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::RowCount)),
+      Value(rowSize, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+      Value(pageCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::PageCount)),
+      Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
     };
 
     auto result = table->InsertRow(executionContext, fields);
@@ -1115,12 +1148,12 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-    std::vector fields = {
-      Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
-      Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+    const std::vector fields = {
+      Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::ColumnId)),
+      Value(distinctCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MaximumValue)),
-      Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
+      Value(nullCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::NullCount))
     };
 
     auto result = table->InsertRow(executionContext, fields);
@@ -1131,6 +1164,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   }
 
   Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
+    const Memory::Allocator& allocator,
     const Int columnId,
     const Value &min,
     const Value &max,
@@ -1138,20 +1172,18 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const BigInt distinctCount
   ) const {
 
-    std::vector fields = {
-      Value(columnId, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
-      Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
-      Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
-      Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-      Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
+    const std::vector fields = {
+      Value(columnId, allocator, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
+      Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
+      Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
+      Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+      Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
     };
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
     auto result = table->InsertRow(this->baseExecutionContext, fields);
-
     std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
-
     return result;
   }
 
@@ -1166,13 +1198,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-   std::vector fields = {
-     Value(tableId, static_cast<column_index_t>(SysIndexStats::TableId)),
-     Value(indexId, static_cast<column_index_t>(SysIndexStats::IndexId)),
-     Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
-     Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
-     Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-     Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
+   const std::vector fields = {
+     Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::TableId)),
+     Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::IndexId)),
+     Value(leafPages, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LeafPages)),
+     Value(depth, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::Depth)),
+     Value(averageFragmentation, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+     Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
    };
 
    auto result = table->InsertRow(executionContext, fields);
@@ -1197,21 +1229,19 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const std::string lastModifiedBy = "system";
 
     const std::vector fields = {
-      Value(roleName, static_cast<column_index_t>(SysRoles::RoleName)),
-      Value(static_cast<Int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
-      Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::CreatedAt)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysRoles::LastModifiedAt)),
-      Value(lastModifiedBy, static_cast<column_index_t>(SysRoles::LastModifiedBy)),
-      Value(version, static_cast<column_index_t>(SysRoles::Version)),
-      Value(isDeleted, static_cast<column_index_t>(SysRoles::IsDeleted)),
+      Value(roleName, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::RoleName)),
+      Value(static_cast<Int>(permissions), executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Permissions)),
+      Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsSystemRole)),
+      Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::LastModifiedAt)),
+      Value(lastModifiedBy, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::LastModifiedBy)),
+      Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Version)),
+      Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsDeleted)),
       Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt)),
     };
 
     auto result = table->InsertRow(executionContext, fields);
-
     std::cout << "Inserted Role " << roleName << std::endl;
-
     return result;
   }
 
@@ -1230,16 +1260,16 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    std::vector fields = {
-      Value(username, static_cast<column_index_t>(SysUsers::UserName)),
-      Value(passwordHash, static_cast<column_index_t>(SysUsers::PasswordHash)),
-      Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
-      Value(isActive, static_cast<column_index_t>(SysUsers::IsActive)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysUsers::CreatedAt)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
-      Value(lastModifiedBy, static_cast<column_index_t>(SysUsers::LastModifiedBy)),
-      Value(version, static_cast<column_index_t>(SysUsers::Version)),
-      Value(isDeleted, static_cast<column_index_t>(SysUsers::IsDeleted)),
+    const std::vector fields = {
+      Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::UserName)),
+      Value(passwordHash, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::PasswordHash)),
+      Value(roleId, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
+      Value(isActive, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsActive)),
+      Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::CreatedAt)),
+      Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+      Value(lastModifiedBy, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy)),
+      Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::Version)),
+      Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsDeleted)),
       Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt)),
     };
 
@@ -1250,18 +1280,17 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     return result;
   }
 
-  std::vector<Security::Role> SystemCatalog::SelectRoles() const{
+  std::vector<Security::Role> SystemCatalog::SelectRoles(const Memory::Allocator& allocator) const{
    DataStructures::Array<Pages::RowReference> rows;
 
    std::vector<Security::Role> roles;
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
 
-   IndexState state;
-   table->ClusteredIndexScan(this->baseExecutionContext, &rows, state, nullptr);
+   table->SystemClusteredIndexScan(allocator, &rows, nullptr);
 
    for (const auto& row : rows) {
-     const auto materializedRow = row.Materialize();
+     const auto materializedRow = row.Materialize(&allocator);
       const auto& data = materializedRow.Data();
 
      roles.emplace_back(
@@ -1275,105 +1304,105 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
    return roles;
  }
 
-  std::vector<Security::User> SystemCatalog::SelectUsers() const{
+  std::vector<Security::User> SystemCatalog::SelectUsers(const Memory::Allocator& allocator) const{
    DataStructures::Array<Pages::RowReference> rows;
 
    std::vector<Security::User> users;
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
 
-   IndexState state;
-   table->ClusteredIndexScan(this->baseExecutionContext, &rows, state, nullptr);
+   table->SystemClusteredIndexScan(allocator, &rows, nullptr);
 
    for (const auto& row : rows) {
-      const auto materializedRow = row.Materialize();
+      const auto materializedRow = row.Materialize(&allocator);
       const auto& data = materializedRow.Data();
 
 
      users.emplace_back(
-       Security::User{
-         .id = data[0].AsInt(),
-         .name = data[1].AsString(),
-         .passwordHash = data[2].AsString(),
-         .roleId =  data[3].AsInt(),
-         .isActive = data[4].AsBool(),
-       }
+       Security::User(
+         data[0].AsInt(),
+         data[1].AsString(),
+         data[2].AsString(),
+         data[3].AsInt(),
+         nullptr,
+         data[4].AsBool()
+       )
      );
    }
 
    return users;
  }
 
- bool SystemCatalog::DatabaseExists(const std::string &dbName) const{
+ bool SystemCatalog::DatabaseExists(const Memory::Allocator& allocator, const std::string &dbName) const{
       auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
       DataStructures::Array<Pages::RowReference> selectedDatabases;
 
-      auto* columnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
-      auto* constantExpr = new Expressions::ConstantExpression(Value(dbName, static_cast<column_index_t>(SysDatabases::Name)));
+      auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+      auto constantExpr = Expressions::ConstantExpression(Value(dbName, allocator, static_cast<column_index_t>(SysDatabases::Name)));
 
-      const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::Equal);
+      const Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-      sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, &binaryExpr);
+      sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
       return !selectedDatabases.Empty();
 }
 
-Headers::DatabaseHeader SystemCatalog::SelectDatabase(const std::string &name) const{
-  auto* columnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
-  auto* constantExpr = new Expressions::ConstantExpression(Value(name, static_cast<column_index_t>(SysDatabases::Name)));
+    Headers::DatabaseHeader SystemCatalog::SelectDatabase(const Memory::Allocator& allocator, const std::string &name) const{
+        auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+        auto constantExpr = Expressions::ConstantExpression(Value(name, allocator, static_cast<column_index_t>(SysDatabases::Name)));
 
-  const Expressions::BinaryExpression binaryExpr(columnExpr, constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+        const Expressions::BinaryExpression binaryExpr(
+             &columnExpr,
+            &constantExpr,
+         Expressions::BinaryOperator::EqualIgnoreOrdinalCase
+        );
 
+        auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+        DataStructures::Array<Pages::RowReference> selectedDatabases;
+
+        sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
+
+        if (selectedDatabases.Empty()) return {};
+
+        return SystemCatalog::ToDatabaseHeader(allocator, selectedDatabases[0]);
+    }
+
+Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Memory::Allocator& allocator, const Int databaseId) const{
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
   DataStructures::Array<Pages::RowReference> selectedDatabases;
 
-  sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, &binaryExpr);
-
-  if (selectedDatabases.Empty())
-    return {};
-
-  return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
-}
-
-Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const Int databaseId) const{
-  using namespace StorageTypes;
-
-  Table* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-  DataStructures::Array<Pages::RowReference> selectedDatabases;
-
   DataTypes::Indexing::Key key;
-  key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+  key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-  sysDatabases->ClusteredIndexSeek(this->baseExecutionContext, &selectedDatabases, key, nullptr);
+  sysDatabases->SystemClusteredIndexSeek(allocator, &selectedDatabases, key, nullptr);
 
   if (selectedDatabases.Empty())
     return {};
 
-  return SystemCatalog::ToDatabaseHeader(selectedDatabases[0]);
+  return SystemCatalog::ToDatabaseHeader(allocator, selectedDatabases[0]);
 }
 
-std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databaseId) const{
+std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Memory::Allocator& allocator, const Int databaseId) const{
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
-     DataStructures::Array<Pages::RowReference> selectedSchemas;
+     DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 2);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    sysSchemas->ClusteredIndexSeek(this->baseExecutionContext, &selectedSchemas, key, nullptr);
+    sysSchemas->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
 
-    if (selectedSchemas.Empty())
-      return {};
+    if (selectedSchemas.Empty()) return {};
 
      std::vector<Headers::SchemaHeader> schemas;
 
     for (const auto& row : selectedSchemas)
-      schemas.emplace_back(SystemCatalog::ToSchemaHeader(row));
+      schemas.emplace_back(SystemCatalog::ToSchemaHeader(allocator, row));
 
      return schemas;
   }
 
-  Dictionary<std::string, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const Int databaseId) const{
-    const auto& schemas = this->SelectSchemas(databaseId);
+  Dictionary<std::string, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const Memory::Allocator& allocator, const Int databaseId) const{
+    const auto& schemas = this->SelectSchemas(allocator, databaseId);
 
     Dictionary<std::string, Headers::SchemaHeader> selectedSchemas;
 
@@ -1383,18 +1412,23 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     return selectedSchemas;
   }
 
-  bool SystemCatalog::SchemaExists(const Int databaseId, const std::string &schema, int* schemaId) const{
-    DataStructures::Array<Pages::RowReference> selectedSchemas;
+  bool SystemCatalog::SchemaExists(
+        const Memory::Allocator& allocator,
+        const Int databaseId,
+        const std::string &schema,
+        int* schemaId
+) const{
+    DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 1);
 
     auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    sysSchemas->ClusteredIndexSeek(this->baseExecutionContext, &selectedSchemas, key, nullptr);
+    sysSchemas->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
 
-    for (const auto& row : selectedSchemas) {
-      const auto materializedRow = row.Materialize();
+    for (const auto& row : selectedSchemas){
+      const auto materializedRow = row.Materialize(&allocator);
       const auto currentSchemaName = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::Name));
 
       if (Functions::String::Lower(currentSchemaName.AsString())
@@ -1410,512 +1444,551 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const Int databa
     return false;
   }
 
-   std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const std::string &dbName) const{
-    const auto databaseHeader = this->SelectDatabase(dbName);
+    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const Memory::Allocator& allocator, const std::string &dbName) const{
+        const auto databaseHeader = this->SelectDatabase(allocator, dbName);
+        return this->SelectTables(allocator, databaseHeader.id);
+    }
 
-    return this->SelectTables(databaseHeader.id);
-  }
+    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(
+        const Memory::Allocator& allocator,
+        const Int databaseId
+    ) const{
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedTables(allocator, 10);
 
-  std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const Int databaseId) const{
-    DataStructures::Array<Pages::RowReference> selectedTables;
+        auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
-    auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+        sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, nullptr);
 
-    sysTablesPtr->ClusteredIndexSeek(this->baseExecutionContext, &selectedTables, key, nullptr);
+        if (selectedTables.Empty())
+            return {};
 
-    if (selectedTables.Empty())
-      return {};
+        std::vector<Headers::TableHeader> selectedTableHeaders;
+        selectedTableHeaders.reserve(selectedTables.Size());
 
-    std::vector<Headers::TableHeader> selectedTableHeaders;
-    selectedTableHeaders.reserve(selectedTables.Size());
+        for (const auto& row : selectedTables)
+            selectedTableHeaders.emplace_back(SystemCatalog::ToTableHeader(allocator, row));
 
-    for (const auto& row : selectedTables)
-      selectedTableHeaders.emplace_back(SystemCatalog::ToTableHeader(row));
+        std::ranges::sort(selectedTableHeaders,
+            [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
+                return a.ordinalPosition < b.ordinalPosition;
+            }
+        );
 
-    std::ranges::sort(selectedTableHeaders,
-    [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
-        return a.ordinalPosition < b.ordinalPosition;
-      }
-    );
+        return selectedTableHeaders;
+    }
 
-    return selectedTableHeaders;
-  }
-
-  Headers::TableHeader SystemCatalog::SelectTable(const std::string &dbName, const std::string &tableName) const{
-    using namespace StorageTypes;
-
-    const auto databaseHeader = this->SelectDatabase(dbName);
-
-    return this->SelectTable(databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.data());
-  }
+    Headers::TableHeader SystemCatalog::SelectTable(
+        const Memory::Allocator& allocator,
+        const std::string &dbName,
+        const std::string &tableName
+    ) const{
+        const auto databaseHeader = this->SelectDatabase(allocator, dbName);
+        return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.data());
+    }
 
   Headers::TableHeader SystemCatalog::SelectTable(
+    const Memory::Allocator& allocator,
     const Int databaseId,
     const std::string &tableName,
     const std::string& schema
   ) const{
 
     Int schemaId = -1;
-    if (!this->SchemaExists(databaseId, schema, &schemaId) && !schema.empty())
+    if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.empty())
       return {};
 
     DataStructures::Array<Pages::RowReference> selectedTables;
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
-    auto* leftColumnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
-    auto* leftConstantExpr = new Expressions::ConstantExpression(Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)));
+    auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
+    auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, allocator, static_cast<column_index_t>(SysTables::SchemaId)));
 
-    auto* leftBinaryExpr = new Expressions::BinaryExpression(leftColumnExpr, leftConstantExpr, Expressions::BinaryOperator::Equal);
+    auto leftBinaryExpr = Expressions::BinaryExpression(&leftColumnExpr, &leftConstantExpr, Expressions::BinaryOperator::Equal);
 
-    auto* rightColumnExpr = new Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name));
-    auto* rightConstantExpr = new Expressions::ConstantExpression(Value(tableName, static_cast<column_index_t>(SysTables::Name)));
+    auto rightColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name));
+    auto rightConstantExpr = Expressions::ConstantExpression(Value(tableName, allocator, static_cast<column_index_t>(SysTables::Name)));
 
-    auto* rightBinaryExpr = new Expressions::BinaryExpression(rightColumnExpr, rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+    auto rightBinaryExpr = Expressions::BinaryExpression(&rightColumnExpr, &rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    const auto* logicalExpr = new Expressions::LogicalExpression(leftBinaryExpr, rightBinaryExpr, Expressions::LogicalType::And);
+    const auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    sysTablesPtr->ClusteredIndexSeek(this->baseExecutionContext, &selectedTables, key, logicalExpr);
+    sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, &logicalExpr);
 
     if (selectedTables.Empty())
       return {};
 
-    return SystemCatalog::ToTableHeader(selectedTables[0]);
+    return SystemCatalog::ToTableHeader(allocator, selectedTables[0]);
   }
 
-   std::vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(const Int tableId) const{
-    DataStructures::Array<Pages::RowReference> selectedConstraints;
-    auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
+    std::vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const{
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedConstraints(allocator);
+        auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-    constraintsTable->ClusteredIndexSeek(this->baseExecutionContext, &selectedConstraints, key, nullptr);
+        constraintsTable->ClusteredIndexSeek(this->baseExecutionContext, &selectedConstraints, key, nullptr);
 
-    if (selectedConstraints.Empty())
-      return {};
+        if (selectedConstraints.Empty()) return {};
 
-     std::vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
-    selectedConstraintsHeader.reserve(selectedConstraints.Size());
+        std::vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
+        selectedConstraintsHeader.reserve(selectedConstraints.Size());
 
-    for (const auto& row : selectedConstraints) {
-      const auto materializedRow = row.Materialize();
-      const auto& data = materializedRow.Data();
+        for (const auto& row : selectedConstraints) {
+            const auto materializedRow = row.Materialize(&allocator);
+            const auto& data = materializedRow.Data();
 
-      auto constraintColumns = this->SelectConstraintColumnsByConstraintId(data[0].AsInt());
+            auto constraintColumns = this->SelectConstraintColumnsByConstraintId(allocator, data[0].AsInt());
 
-      const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)].IsNull())
-              ? -1
-              : data[static_cast<column_index_t>(SysConstraints::IndexId)].AsInt();
+            const auto indexId =(data[static_cast<column_index_t>(SysConstraints::IndexId)].IsNull())
+                ? -1
+                : data[static_cast<column_index_t>(SysConstraints::IndexId)].AsInt();
 
-      Headers::IndexHeader index;
-      if(indexId != -1)
-        index = this->SelectIndexById(indexId);
+            Headers::IndexHeader index;
+            if(indexId != -1)
+                index = this->SelectIndexById(allocator, indexId);
 
-      selectedConstraintsHeader.emplace_back(SystemCatalog::ToConstraintsHeader(row, constraintColumns, index));
+            selectedConstraintsHeader.emplace_back(SystemCatalog::ToConstraintsHeader(allocator, row, constraintColumns, index));
+        }
+
+        return selectedConstraintsHeader;
     }
 
-    return selectedConstraintsHeader;
-  }
-
-  Headers::ColumnHeader SystemCatalog::SelectColumnById(const Int tableId, const Int columnId) const{
-    DataStructures::Array<Pages::RowReference> selectedColumns;
+  Headers::ColumnHeader SystemCatalog::SelectColumnById(
+      const Memory::Allocator& allocator,
+      const Int tableId,
+      const Int columnId
+    ) const{
+    DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 1);
     auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
     sysColumns->ClusteredIndexSeek(this->baseExecutionContext, &selectedColumns, key, nullptr);
 
     if (selectedColumns.Empty())
       return {};
 
-    return SystemCatalog::ToColumnHeader(selectedColumns.Start());
+    return SystemCatalog::ToColumnHeader(allocator, selectedColumns.Start());
   }
 
-   std::vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(const Int tableId) const{
-    DataStructures::Array<Pages::RowReference> selectedColumns;
-    auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
+    std::vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const{
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 10);
+        auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-    sysColumns->ClusteredIndexSeek(this->baseExecutionContext, &selectedColumns, key, nullptr);
+        sysColumns->SystemClusteredIndexSeek(allocator, &selectedColumns, key, nullptr);
 
-    if (selectedColumns.Empty())
-      return {};
+        if (selectedColumns.Empty()) return {};
 
-    std::vector<Headers::ColumnHeader> selectedColumnHeaders;
-    selectedColumnHeaders.reserve(selectedColumns.Size());
+        std::vector<Headers::ColumnHeader> selectedColumnHeaders;
+        selectedColumnHeaders.reserve(selectedColumns.Size());
 
-    for (const auto& row : selectedColumns)
-      selectedColumnHeaders.emplace_back(SystemCatalog::ToColumnHeader(row));
+        for (const auto& row : selectedColumns)
+            selectedColumnHeaders.emplace_back(SystemCatalog::ToColumnHeader(allocator, row));
 
-    std::ranges::sort(selectedColumnHeaders,
-                      [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-                          return a.ordinalPosition < b.ordinalPosition;
-                      }
-    );
+        std::ranges::sort(selectedColumnHeaders,
+        [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
+                return a.ordinalPosition < b.ordinalPosition;
+            }
+        );
 
-     return selectedColumnHeaders;
-  }
-
-  Dictionary<std::string, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(const Int tableId) const{
-      const auto columns = this->SelectColumns(tableId);
-
-      Dictionary<std::string, Headers::ColumnHeader> selectedColumns;
-
-      for (const auto& column : columns)
-        selectedColumns.Add(Functions::String::Lower(column.name), column);
-
-      return selectedColumns;
+        return selectedColumnHeaders;
     }
 
-   std::vector<Headers::IndexHeader> SystemCatalog::SelectIndexes(const Int tableId) const{
-      using namespace StorageTypes;
+    Dictionary<std::string, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const{
+        const auto columns = this->SelectColumns(allocator, tableId);
 
-      Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-      DataStructures::Array<Pages::RowReference> selectedIndexes;
+        Dictionary<std::string, Headers::ColumnHeader> selectedColumns;
+        for (const auto& column: columns)
+            selectedColumns.Add(Functions::String::Lower(column.name), column);
 
-      DataTypes::Indexing::Key key;
-      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+        return selectedColumns;
+    }
 
-      sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedIndexes, key, nullptr);
+   std::vector<Headers::IndexHeader> SystemCatalog::SelectIndexes(
+       const Memory::Allocator& allocator,
+       const Int tableId
+    ) const{
+        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator);
 
-       std::vector<Headers::IndexHeader> selectedIndexHeaders;
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-      for (const auto& row : selectedIndexes)
-        selectedIndexHeaders.emplace_back(SystemCatalog::ToIndexHeader(row));
+        sysIndexes->SystemClusteredIndexSeek(allocator, &selectedIndexes, key, nullptr);
+
+        std::vector<Headers::IndexHeader> selectedIndexHeaders;
+
+        for (const auto& row : selectedIndexes)
+            selectedIndexHeaders.emplace_back(SystemCatalog::ToIndexHeader(allocator, row));
 
       //get the clustered first
-      std::ranges::sort(selectedIndexHeaders,
-      [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
-        return a.isClustered > b.isClustered;
-      });
+        std::ranges::sort(selectedIndexHeaders,
+        [](const Headers::IndexHeader& a, const Headers::IndexHeader& b) {
+            return a.isClustered > b.isClustered;
+        });
+        return selectedIndexHeaders;
+    }
 
-      return selectedIndexHeaders;
-  }
+    Headers::IndexHeader SystemCatalog::SelectIndexById(const Memory::Allocator& allocator, const Int indexId) const{
+        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator, 1);
 
-  Headers::IndexHeader SystemCatalog::SelectIndexById(const Int indexId) const{
-    using namespace StorageTypes;
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
-    Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-    DataStructures::Array<Pages::RowReference> selectedIndexes;
+        sysIndexes->SystemClusteredIndexSeek(allocator, &selectedIndexes, key, nullptr);
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+        if(selectedIndexes.Empty()) return {};
 
-    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedIndexes, key, nullptr);
+        auto indexColumns = this->SelectIndexColumnsByIndexId(allocator, indexId);
 
-    if(selectedIndexes.Empty())
-      return {};
+        std::vector<Headers::IndexHeader> selectedIndexHeaders;
 
-    auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+        auto header = SystemCatalog::ToIndexHeader(allocator, selectedIndexes[0]);
+        header.columns = std::move(indexColumns);
 
-     std::vector<Headers::IndexHeader> selectedIndexHeaders;
+        return header;
+    }
 
-    auto header = SystemCatalog::ToIndexHeader(selectedIndexes[0]);
-    header.columns = std::move(indexColumns);
+    std::vector<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(
+        const Memory::Allocator& allocator,
+        const Int indexId
+    ) const{
+        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
+        DataStructures::Array<Pages::RowReference> rows;
 
-    return header;
-  }
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
-     std::vector<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(const Int indexId) const{
-    using namespace StorageTypes;
+        sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-    Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
-    DataStructures::Array<Pages::RowReference> rows;
+        if(rows.Empty()) return {};
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+        std::vector<Headers::IndexColumnsHeader> indexColumns;
 
-    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
+        for (const auto& row : rows)
+            indexColumns.emplace_back(SystemCatalog::ToIndexColumnsHeader(allocator, row));
 
-    if(rows.Empty())
-      return {};
+        //get them sorted by ordinal position
+        std::ranges::sort(indexColumns,
+        [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
+                return a.ordinalPosition < b.ordinalPosition;
+        });
 
-     std::vector<Headers::IndexColumnsHeader> indexColumns;
+        return indexColumns;
+    }
 
-    for (const auto& row : rows)
-      indexColumns.emplace_back(SystemCatalog::ToIndexColumnsHeader(row));
+    Dictionary<Int, Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(
+        const Memory::Allocator& allocator,
+        const Int indexId
+    ) const{
+        const auto indexColumns = this->SelectIndexColumnsByIndexId(allocator, indexId);
 
-    //get them sorted by ordinal position
-    std::ranges::sort(indexColumns,
-    [](const Headers::IndexColumnsHeader& a, const Headers::IndexColumnsHeader& b) {
-      return a.ordinalPosition < b.ordinalPosition;
-    });
+        Dictionary<Int, Headers::IndexColumnsHeader> indexColumnsDict;
 
-    return indexColumns;
-  }
+        for (const auto& indexColumn : indexColumns)
+            indexColumnsDict.Add(indexColumn.columnId, indexColumn);
 
-  Dictionary<Int, Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(const Int indexId) const{
-    const auto indexColumns = this->SelectIndexColumnsByIndexId(indexId);
+        return indexColumnsDict;
+    }
 
-    Dictionary<Int, Headers::IndexColumnsHeader> indexColumnsDict;
+   std::vector<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(
+       const Memory::Allocator& allocator,
+       const Int tableId
+    ) const{
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 10);
 
-    for (const auto& indexColumn : indexColumns)
-      indexColumnsDict.Add(indexColumn.columnId, indexColumn);
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-    return indexColumnsDict;
-  }
+        table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-   std::vector<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(const Int tableId) const{
-      using namespace StorageTypes;
+        if(rows.Empty()) return {};
 
-      Table* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
-      DataStructures::Array<Pages::RowReference> rows;
+        std::vector<Headers::IdentityColumnsHeader> columns;
 
-      DataTypes::Indexing::Key key;
-      key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+        for (const auto& row : rows)
+            columns.emplace_back(SystemCatalog::ToIdentityColumnsHeader(allocator, row));
 
-      table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
+        //get them sorted by ordinal position
+        std::ranges::sort(columns,
+          [](const Headers::IdentityColumnsHeader& a, const Headers::IdentityColumnsHeader& b) {
+            return a.columnId > b.columnId;
+          });
 
-      if(rows.Empty())
-        return {};
+        return columns;
+    }
 
-       std::vector<Headers::IdentityColumnsHeader> columns;
+    Dictionary<Int , Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const{
+        const auto columns = this->SelectIdentityColumnsByTableId(allocator, tableId);
 
-      for (const auto& row : rows)
-        columns.emplace_back(SystemCatalog::ToIdentityColumnsHeader(row));
+        Dictionary<Int, Headers::IdentityColumnsHeader> dict;
+        for(const auto& column : columns)
+            dict.Add(column.columnId, column);
 
-      //get them sorted by ordinal position
-      std::ranges::sort(columns,
-      [](const Headers::IdentityColumnsHeader& a, const Headers::IdentityColumnsHeader& b) {
-        return a.columnId > b.columnId;
-      });
+        return dict;
+    }
 
-      return columns;
-  }
+    std::vector<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(
+        const Memory::Allocator& allocator,
+        const Int constraintId
+    ) const{
+        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 2);
 
-  Dictionary<Int , Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(const Int tableId) const{
-    const auto columns = this->SelectIdentityColumnsByTableId(tableId);
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int, allocator));
 
-    Dictionary<Int, Headers::IdentityColumnsHeader> dict;
+        sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-    for(const auto& column : columns)
-        dict.Add(column.columnId, column);
+        if(rows.Empty()) return {};
 
-    return dict;
-  }
+        std::vector<Headers::ConstraintsColumnsHeader> constraintColumns;
 
-   std::vector<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(const Int constraintId) const{
-    using namespace StorageTypes;
+        for(const auto& row : rows)
+            constraintColumns.emplace_back(SystemCatalog::ToConstraintsColumnsHeader(allocator, row));
 
-    Table* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
-    DataStructures::Array<Pages::RowReference> rows;
+        std::ranges::sort(constraintColumns,
+        [](const Headers::ConstraintsColumnsHeader& a, const Headers::ConstraintsColumnsHeader& b) {
+                return a.ordinalPosition < b.ordinalPosition;
+            }
+        );
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int));
+        return constraintColumns;
+    }
 
-    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
+    Dictionary<Int, Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(
+        const Memory::Allocator& allocator,
+        const Int constraintId
+    ) const{
+        const auto columns = this->SelectConstraintColumnsByConstraintId(allocator, constraintId);
 
-    if(rows.Empty())
-      return {};
+        Dictionary<Int, Headers::ConstraintsColumnsHeader> constraintColumns;
+        for (const auto& constraint: columns)
+            constraintColumns.Add(constraint.columnId, constraint);
 
-    std::vector<Headers::ConstraintsColumnsHeader> constraintColumns;
+        return constraintColumns;
+    }
 
-    for(const auto& row : rows)
-      constraintColumns.emplace_back(SystemCatalog::ToConstraintsColumnsHeader(row));
+    Headers::DefaultValuesHeader SystemCatalog::SelectDefaultValueByColumnId(
+        const Memory::Allocator& allocator,
+        const Int columnId
+    ) const{
+        auto* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-    std::ranges::sort(constraintColumns,
-      [](const Headers::ConstraintsColumnsHeader& a, const Headers::ConstraintsColumnsHeader& b) {
-          return a.ordinalPosition < b.ordinalPosition;
-      }
-    );
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    return constraintColumns;
-  }
+        sysValues->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-  Dictionary<Int, Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(const Int constraintId) const{
-    const auto columns = this->SelectConstraintColumnsByConstraintId(constraintId);
+        if(rows.Empty()) return {};
 
-    Dictionary<Int, Headers::ConstraintsColumnsHeader> constraintColumns;
+        return SystemCatalog::ToDefaultValuesHeader(allocator, rows[0]);
+    }
 
-    for (const auto& constraint: columns)
-      constraintColumns.Add(constraint.columnId, constraint);
+    Headers::TableStatistics SystemCatalog::SelectTableStatisticsById(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const{
+        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-    return constraintColumns;
-  }
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-  Headers::DefaultValuesHeader SystemCatalog::SelectDefaultValueByColumnId(const Int columnId) const{
-    using namespace StorageTypes;
+        sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-    Table* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
-    DataStructures::Array<Pages::RowReference> rows;
+        if (rows.Empty()) return {};
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+        return SystemCatalog::ToTableStatistics(allocator, rows.Start());
+    }
 
-    sysValues->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
+    Headers::ColumnStatistics SystemCatalog::SelectColumnStatisticsById(
+        const Memory::Allocator& allocator,
+        const Int columnId,
+        const DataType columnType
+    ) const{
+        auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-    if(rows.Empty())
-      return {};
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    return SystemCatalog::ToDefaultValuesHeader(rows[0]);
-  }
+        sysColumnStats->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-  Headers::TableStatistics SystemCatalog::SelectTableStatisticsById(const Int tableId) const{
-    auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
-    DataStructures::Array<Pages::RowReference> selectedStats;
+        if (rows.Empty()) return {};
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+        return SystemCatalog::ToColumnStatistics(allocator, rows.Start(), columnType);
+    }
 
-    sysIndexes->ClusteredIndexSeek(this->baseExecutionContext, &selectedStats, key, nullptr);
+    std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
+        const Memory::Allocator& allocator,
+        const Int tableId,
+        const Int columnId
+    ) const {
+        auto columnHeader = this->SelectColumnById(allocator, tableId, columnId);
 
-    if (selectedStats.Empty())
-      return {};
+        std::vector<Headers::ColumnHistograms> result;
+        result.reserve(NUMBER_OF_HISTOGRAM_BUCKETS);
 
-    return SystemCatalog::ToTableStatistics(selectedStats.Start());
-  }
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-  Headers::ColumnStatistics SystemCatalog::SelectColumnStatisticsById(
-    const Int columnId,
-    const DataType columnType
-  ) const{
-    auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
-    DataStructures::Array<Pages::RowReference> selectedStats;
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
+        table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-    sysColumnStats->ClusteredIndexSeek(this->baseExecutionContext, &selectedStats, key, nullptr);
+        for (const auto& row : rows)
+            result.emplace_back(SystemCatalog::ToColumnHistograms(allocator, row, static_cast<DataType>(columnHeader.dataType)));
 
-    if (selectedStats.Empty())
-      return {};
+        return result;
+    }
 
-    return SystemCatalog::ToColumnStatistics(selectedStats.Start(), columnType);
-  }
+    std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(
+        const Memory::Allocator& allocator,
+        const Int tableId
+    ) const {
+        std::vector<Headers::IndexStatistics> result;
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-  std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
-    const Int tableId,
-    const Int columnId
-  ) const {
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-    auto columnHeader = this->SelectColumnById(tableId, columnId);
+        DataStructures::Array<Pages::RowReference> rows;
+        table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-    std::vector<Headers::ColumnHistograms> result;
-    result.reserve(NUMBER_OF_HISTOGRAM_BUCKETS);
+        for (const auto& row : rows)
+            result.emplace_back(SystemCatalog::ToIndexStatistics(allocator, row));
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+        return result;
+    }
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    void SystemCatalog::UpdateIdentityByColumnId(
+        const Memory::Allocator& allocator,
+        const Int tableId,
+        const Int columnId,
+        const BigInt lastValue
+    )const{
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
-    DataStructures::Array<Pages::RowReference> rows;
-    table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
+        const std::vector updates = {
+            Value(lastValue, allocator, static_cast<column_index_t>(SysIdentityColumns::LastValue))
+        };
 
-    for (const auto& row : rows)
-      result.emplace_back(SystemCatalog::ToColumnHistograms(row, static_cast<DataType>(columnHeader.dataType)));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    return result;
-  }
-
-  std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(const Int tableId) const {
-   std::vector<Headers::IndexStatistics> result;
-
-   auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
-
-   DataTypes::Indexing::Key key;
-   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
-
-   DataStructures::Array<Pages::RowReference> rows;
-   table->ClusteredIndexSeek(this->baseExecutionContext, &rows, key, nullptr);
-
-   for (const auto& row : rows)
-     result.emplace_back(SystemCatalog::ToIndexStatistics(row));
-
-   return result;
- }
-
-  void SystemCatalog::UpdateIdentityByColumnId(const Int tableId, const Int columnId, const int64_t& lastValue)const{
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
-
-    std::vector updates = {
-      Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
-    };
-
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
-
-    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
-  }
+        const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
+    }
 
 void SystemCatalog::UpdateTableStatisticsById(
+    const Memory::Allocator& allocator,
     const Int tableId,
-    const int64_t& rowCount,
+    const BigInt rowCount,
     const Int rowSize,
     const Int pageCount
   ) const{
 
-    std::vector updates = {
-      Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
-      Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
-      Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
+    const std::vector updates = {
+      Value(rowCount, allocator, static_cast<column_index_t>(SysTableStats::RowCount)),
+      Value(rowSize, allocator, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+      Value(pageCount, allocator, static_cast<column_index_t>(SysTableStats::PageCount)),
+      Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
     };
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
     const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
-  void SystemCatalog::UpdateColumnStatisticsById(
-    const Int columnId,
-    const int64_t& distinctCount,
-    const int64_t& nullCount,
-    const Value& min,
-    const Value& max
-  ) const{
-    std::vector updates = {
-      Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
-      Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
-      Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnStats::MinimumValue)),
-      Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), static_cast<column_index_t>(SysColumnStats::MaximumValue))
-    };
+    void SystemCatalog::UpdateColumnStatisticsById(
+        const Memory::Allocator& allocator,
+        const Int columnId,
+        const BigInt distinctCount,
+        const BigInt nullCount,
+        const Value& min,
+        const Value& max
+    ) const{
+        const std::vector updates = {
+            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+            Value(nullCount, allocator, static_cast<column_index_t>(SysColumnStats::NullCount)),
+            Value(
+            std::string(reinterpret_cast<const char*>(min.Data()), min.Size()),
+                allocator,
+                static_cast<column_index_t>(SysColumnStats::MinimumValue)
+            ),
+            Value(
+                std::string(reinterpret_cast<const char*>(max.Data()), max.Size()),
+                allocator,
+                static_cast<column_index_t>(SysColumnStats::MaximumValue)
+            )
+        };
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
-  }
+        const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
+    }
 
   void SystemCatalog::UpdateIndexStatisticsById(
-    const Int tableId,
-    const Int indexId,
-    const int64_t &leafPages,
-    const TinyInt &depth,
-    const DataTypes::Decimal &averageFragmentation
+        const Memory::Allocator& allocator,
+        const Int tableId,
+        const Int indexId,
+        const BigInt leafPages,
+        const TinyInt depth,
+        const DataTypes::Decimal &averageFragmentation
   ) const {
-   std::vector updates = {
-     Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
-     Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
-     Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-     Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
+   const std::vector updates = {
+     Value(leafPages, allocator, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+     Value(depth, allocator, static_cast<column_index_t>(SysIndexStats::Depth)),
+     Value(averageFragmentation, allocator, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+     Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysIndexStats::LastUpdated)),
    };
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
    DataTypes::Indexing::Key key;
-   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int));
-   key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int));
+   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+   key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
    const auto _ = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
  }
 
   Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
+    const Memory::Allocator& allocator,
     const Int columnId,
     const Int histogramId,
     const Value& min,
@@ -1924,17 +1997,25 @@ void SystemCatalog::UpdateTableStatisticsById(
     const BigInt& distinctCount
   ) const{
     const std::vector updates = {
-       Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
-       Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
-       Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-       Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
+       Value(
+           std::string(reinterpret_cast<const char*>(min.Data()), min.Size()),
+           allocator,
+           static_cast<column_index_t>(SysColumnHistograms::RangeStart)
+        ),
+       Value(
+           std::string(reinterpret_cast<const char*>(max.Data()), max.Size()),
+           allocator,
+           static_cast<column_index_t>(SysColumnHistograms::RangeEnd)
+        ),
+       Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+       Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
      };
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
-    key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
+    key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int, allocator));
 
     auto result = table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
 
@@ -1943,33 +2024,38 @@ void SystemCatalog::UpdateTableStatisticsById(
     return result;
   }
 
-  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(const Int columnId, const std::vector<Value> &updates) const{
+  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(
+      const Memory::Allocator& allocator,
+      const Int columnId,
+      const std::vector<Value> &updates
+    ) const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
     DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int));
+    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
     return table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
   }
 
-  Errors::RuntimeStatus SystemCatalog::UpdateUserById(
-    const std::string& username,
-    const Int userId,
-    const Int roleId
-  ) const {
-   auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
+    Errors::RuntimeStatus SystemCatalog::UpdateUserById(
+        const ExecutionContext& executionContext,
+        const std::string& username,
+        const Int userId,
+        const Int roleId
+    ) const {
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
 
-   const auto currentDate = DataTypes::DateTime::Now();
+        const auto currentDate = DataTypes::DateTime::Now();
 
-   std::vector updates = {
-     Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
-     Value(currentDate, static_cast<column_index_t>(SysUsers::LastModifiedAt)),
-     Value(username, static_cast<column_index_t>(SysUsers::LastModifiedBy))
-   };
+        const std::vector updates = {
+            Value(roleId, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
+            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+            Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy))
+        };
 
-   DataTypes::Indexing::Key key;
-   key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int, executionContext.GetAllocator()));
 
-   return table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
- }
+        return table->ClusteredIndexSeekUpdate(this->baseExecutionContext, key, updates);
+    }
 }

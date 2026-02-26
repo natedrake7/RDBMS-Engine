@@ -1,4 +1,6 @@
 #include "../../include/PhysicalPlan.h"
+
+#include <iostream>
 #include <utility>
 
 #include "ValidationMessages.h"
@@ -124,7 +126,7 @@ namespace QueryPipeline::PhysicalPlan {
     result.results.Reserve(result.rows.Size());
 
     for (const auto& row: result.rows){
-      result.results.Push(row.Materialize());
+      result.results.Push(row.Materialize(&context.GetAllocator()));
     }
 
     return result;
@@ -184,7 +186,7 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    result.status = this->server->GrantRole(this->sessionId, this->username, role);
+    result.status = this->server->GrantRole(context, this->sessionId, this->username, role);
     return result;
   }
 
@@ -243,7 +245,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult PhysicalTableScan::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -266,15 +268,18 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
     : table(table), expression(nullptr), isClustered(isClustered) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource *table, Expressions::Expression *expression, const bool isClustered)
-    : table(table), expression(expression), isClustered(isClustered) {}
+    PhysicalIndexScan::PhysicalIndexScan(
+        Statements::DataSource *table,
+        Expressions::Expression *expression,
+        const bool isClustered
+    ): table(table), expression(expression), isClustered(isClustered) {}
 
-  PhysicalIndexScan::~PhysicalIndexScan() = default;
+    PhysicalIndexScan::~PhysicalIndexScan() = default;
 
   ExecutionResult PhysicalIndexScan::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
-    const auto* db =  this->server->UseDatabase(this->table->databaseId);
+    const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -315,7 +320,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult PhysicalIndexSeek::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
-    const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -340,7 +345,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   ExecutionResult PhysicalIndexSeekRange::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
-    const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
+    const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -369,8 +374,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
       for (const auto& expression : this->resultExpressions) {
         evaluationContext.row = &row;
-        auto field = expression->Evaluate(evaluationContext);
-        resultRow.AddColumn(field);
+        resultRow.AddColumn(expression->Evaluate(evaluationContext));
       }
 
       result.results.Push(std::move(resultRow));
@@ -597,7 +601,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     PhysicalInsert::~PhysicalInsert() = default;
 
     ExecutionResult PhysicalInsert::Execute(const DatabaseEngine::ExecutionContext& context){
-        const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -614,7 +618,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalHeapDelete::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db = Network::Server::Get().UseDatabase(this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
         const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -631,7 +635,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalIndexScanDelete::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -648,7 +652,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalIndexSeekDelete::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -668,7 +672,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalHeapUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
         result.status = tablePtr->HeapUpdate(context, this->expression, this->updates);
@@ -686,7 +690,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalIndexScanUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db =  this->server->UseDatabase(this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
         result.status = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
@@ -702,7 +706,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
 
   ExecutionResult PhysicalIndexSeekUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -730,7 +734,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION);
 
-    auto* db =  this->server->UseDatabase(this->table->databaseId);
+    auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
     std::vector<DatabaseEngine::StorageTypes::Column*> columnsPtrs;
     columnsPtrs.reserve(columns.size());
@@ -744,7 +748,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         column->isNullable
       ));
 
-    const auto& tables = this->catalog->SelectTables(this->table->databaseId);
+    const auto& tables = this->catalog->SelectTables(context.GetAllocator(), this->table->databaseId);
 
     const SmallInt index = static_cast<SmallInt>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
 
@@ -830,8 +834,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     constexpr std::string_view TABLE_CREATED_MESSAGE = "Table created successfully";
     if (primaryKeyColumnIds.empty()) {
-        tablePtr->RetrieveColumnHeadersFromCatalog();
-        tablePtr->RetrieveIdentityColumnsFromCatalog();
+        tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
+        tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
         return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE);
     }
 
@@ -882,8 +886,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       indexId
     );
 
-    tablePtr->RetrieveColumnHeadersFromCatalog();
-    tablePtr->RetrieveIdentityColumnsFromCatalog();
+    tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
+    tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
 
     return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE);
   }
@@ -990,11 +994,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalIndexCreate::Execute(const DatabaseEngine::ExecutionContext& context){
         auto result = ExecutionResult();
 
-        const auto* db = this->server->UseDatabase(this->table->databaseId);
+        const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-        const auto columnsHeaders =this->catalog->SelectColumns(this->table->tableId);
+        const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->tableId);
 
         const auto indexResult =this->catalog->InsertIndexToMasterDb(
             context,

@@ -6,6 +6,8 @@
 #include <string>
 
 
+class Variable;
+
 namespace DatabaseEngine{
     class ExecutionContext;
     class ScanState;
@@ -44,11 +46,16 @@ namespace Expressions{
         const Pages::RowReference* outerRow;
         const Pages::RowReference* innerRow;
 
-        const DatabaseEngine::ExecutionContext* executionContext;
+        const Memory::Allocator* allocator;
+        const Dictionary<std::string, Variable>* variables;
 
         EvaluationContextType type;
 
         EvaluationContext();
+        EvaluationContext(
+            EvaluationContextType type,
+            const Memory::Allocator& allocator
+        );
         explicit EvaluationContext(
             EvaluationContextType type,
             const DatabaseEngine::ExecutionContext& executionContext
@@ -122,7 +129,6 @@ namespace Expressions{
 
         ColumnExpression(const std::string& name, const std::string& tableAlias);
         explicit ColumnExpression(column_index_t index);
-        ~ColumnExpression()override = default;
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
         [[nodiscard]] DataType GetReturnType() const override;
@@ -133,9 +139,9 @@ namespace Expressions{
     public:
       Value value;
 
-      explicit ConstantExpression(const Value& value);
-      explicit ConstantExpression(Value& value);
-      ~ConstantExpression()override = default;
+        explicit ConstantExpression(const Value& value);
+        explicit ConstantExpression(Value& value);
+        explicit ConstantExpression(Value&& value);
 
       [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
       [[nodiscard]] DataType GetReturnType() const override;
@@ -181,8 +187,6 @@ namespace Expressions{
         Constants::FunctionType functionType;
 
         FunctionExpression(Constants::FunctionType functionType, std::vector<Expression*>& arguments);
-        ~FunctionExpression()override;
-
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
 
         //String Function
@@ -233,7 +237,6 @@ namespace Expressions{
           LogicalType logicalType
         );
         LogicalExpression();
-        ~LogicalExpression()override;
 
         [[nodiscard]] bool IsOr()const;
         [[nodiscard]] bool IsAnd()const;
@@ -256,7 +259,6 @@ namespace Expressions{
         Expression* baseCase;
 
         explicit BranchExpression(BranchType type);
-        ~BranchExpression()override;
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
         [[nodiscard]]DataType GetReturnType() const override;
 

@@ -16,8 +16,11 @@ namespace DatabaseEngine {
 
         while (isServerRunning) {
             std::this_thread::sleep_for(20000ms);
+
+            const Memory::Allocator allocator;
+
             const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
-            lastScannedExtentId = versionDatabase.CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
+            lastScannedExtentId = versionDatabase.CleanupVersionedData(allocator, oldestTransactionId, lastScannedExtentId);
         }
     }
 }

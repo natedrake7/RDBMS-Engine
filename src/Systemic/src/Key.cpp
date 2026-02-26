@@ -24,8 +24,13 @@ namespace DataTypes::Indexing{
         this->size = 0;
     }
 
-    Key::Key(const void *keyValue, const key_size_t keySize, const DataType keyType){
-        this->value = Value(keyValue, keySize, keyType);
+    Key::Key(
+        const void *keyValue,
+        const key_size_t keySize,
+        const DataType keyType,
+        const Memory::Allocator& allocator
+    ){
+        this->value = Value(keyValue, keySize, keyType, &allocator);
         this->size = keySize;
     }
 
@@ -219,11 +224,14 @@ namespace DataTypes::Indexing{
         return ComparisonResult::Equal;
     }
 
-    void Key::InsertKey(const Key &otherKey)
-    {
+    void Key::InsertKey(const Key &otherKey){
         this->size += (otherKey.size + sizeof(key_size_t));
-
         this->subKeys.push_back(otherKey);
+    }
+
+    void Key::InsertKey(Key&& otherKey){
+        this->size += (otherKey.size + sizeof(key_size_t));
+        this->subKeys.push_back(std::move(otherKey));
     }
 
     Key::ComparisonResult Key::CompareSubKeys(const Key& firstKey, const Key& otherKey){
@@ -283,6 +291,7 @@ namespace DataTypes::Indexing{
     }
 
     Key Key::DeserializeNonComposite(
+        const Memory::Allocator& allocator,
         const object_t* buffer,
         page_offset_t& offset,
         const DataType type
@@ -295,13 +304,14 @@ namespace DataTypes::Indexing{
         memcpy(valueData, buffer + offset, valueSize);
         offset += valueSize;
 
-        Value value(valueData, valueSize, type);
+        Value value(valueData, valueSize, type, &allocator);
         std::free(valueData);
 
         return Key(value);
     }
 
     Key Key::Deserialize(
+        const Memory::Allocator& allocator,
         const object_t* buffer,
         page_offset_t& offset,
         const UnsignedTinyInt& numberOfSubKeys,
@@ -310,7 +320,7 @@ namespace DataTypes::Indexing{
         std::vector<Key> subKeys;
         subKeys.reserve(numberOfSubKeys);
         for (key_size_t i = 0; i < numberOfSubKeys; i++){
-            auto subKey = Key::DeserializeNonComposite(buffer, offset, keyTypes[i]);
+            auto subKey = Key::DeserializeNonComposite(allocator, buffer, offset, keyTypes[i]);
             subKeys.push_back(std::move(subKey));
         }
 
@@ -318,8 +328,7 @@ namespace DataTypes::Indexing{
     }
 
     std::ostream & operator<<(std::ostream &os, const Key &key){
-        if(!key.subKeys.empty())
-        {
+        if(!key.subKeys.empty()){
             os << "(";
 
             for (int i = 0; i < key.subKeys.size(); i++) {

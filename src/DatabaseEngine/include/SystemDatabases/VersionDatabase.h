@@ -58,6 +58,7 @@ namespace DatabaseEngine{
         const StorageTypes::Table* table
       );
       Pages::RowReference RetrieveRowReference(
+        const Memory::Allocator& allocator,
         const Snapshot& snapshot,
         const StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
@@ -65,6 +66,7 @@ namespace DatabaseEngine{
       [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
 
       [[nodiscard]] extent_id_t CleanupVersionedData(
+        const Memory::Allocator& allocator,
         transaction_id_t transactionId,
         extent_id_t startingExtentId = 0
       )const;

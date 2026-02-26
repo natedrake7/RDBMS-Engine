@@ -82,20 +82,20 @@ namespace Pages{
         this->row = std::move(other.row);
     }
 
-    LeafNodeTuple& LeafNodeTuple::operator=(const LeafNodeTuple& other){
-        if (this == &other)
-            return *this;
-
-        this->key = other.key;
-        this->row = other.row;
-
-        return *this;
-    }
-
-    LeafNodeTuple::LeafNodeTuple(const LeafNodeTuple& other){
-        this->key = other.key;
-        this->row = other.row;
-    }
+    // LeafNodeTuple& LeafNodeTuple::operator=(const LeafNodeTuple& other){
+    //     if (this == &other)
+    //         return *this;
+    //
+    //     this->key = other.key;
+    //     this->row = other.row;
+    //
+    //     return *this;
+    // }
+    //
+    // LeafNodeTuple::LeafNodeTuple(const LeafNodeTuple& other){
+    //     this->key = other.key;
+    //     this->row = other.row;
+    // }
 
     LeafNodeTuple::LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key){
         this->key = std::move(key);

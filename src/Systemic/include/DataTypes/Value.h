@@ -1,6 +1,9 @@
 #pragma once
 #include <cstring>
+#include <ostream>
 #include <string>
+#include <tuple>
+#include <vector>
 
 #include "DataTypes.h"
 
@@ -15,7 +18,7 @@ namespace DataTypes {
     class Guid;
 }
 
-static Dictionary<DataType, int> ColumnTypeRank{
+inline Dictionary<DataType, int> ColumnTypeRank{
   {DataType::String, 1},
   {DataType::UnicodeString, 2},
   {DataType::Bool, 3},
@@ -29,30 +32,29 @@ static Dictionary<DataType, int> ColumnTypeRank{
 
 class Value {
     object_t* data;
+    const Memory::Allocator* _allocator;
     block_size_t size;
     column_index_t columnIndex;
     DataType type;
-
-    bool usesExternalStorage;
 
     [[nodiscard]] bool TryParseAsBool()const;
     [[nodiscard]] bool TryParseAsBoolFromString()const;
     [[nodiscard]] bool TryParseAsBoolFromInt()const;
     [[nodiscard]] bool TryParseDate();
 
-    static Value PerformTinyIntAddition(TinyInt lhs, TinyInt rhs);
-    static Value PerformSmallIntAddition(SmallInt lhs, SmallInt rhs);
-    static Value PerformIntAddition(Int lhs, Int rhs);
-    static Value PerformBigIntAddition(BigInt lhs, BigInt rhs);
-    static Value PerformStringAddition(const std::string& lhs, const std::string& rhs);
-    static Value PerformDecimalAddition(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
+    // static Value PerformTinyIntAddition(TinyInt lhs, TinyInt rhs);
+    // static Value PerformSmallIntAddition(SmallInt lhs, SmallInt rhs);
+    // static Value PerformIntAddition(Int lhs, Int rhs);
+    static Value PerformBigIntAddition(const Value& lhs, const Value& rhs);
+    static Value PerformStringAddition(const Value& lhs, const Value& rhs);
+    static Value PerformDecimalAddition(const Value& lhs, const Value& rhs);
 
 
-    static Value PerformTinyIntSubtraction(TinyInt lhs, TinyInt rhs);
-    static Value PerformSmallIntSubtraction(SmallInt lhs, SmallInt rhs);
-    static Value PerformIntSubtraction(Int lhs, Int rhs);
-    static Value PerformBigIntSubtraction(BigInt lhs, BigInt rhs);
-    static Value PerformDecimalSubtraction(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
+    // static Value PerformTinyIntSubtraction(TinyInt lhs, TinyInt rhs);
+    // static Value PerformSmallIntSubtraction(SmallInt lhs, SmallInt rhs);
+    // static Value PerformIntSubtraction(Int lhs, Int rhs);
+    static Value PerformBigIntSubtraction(const Value& lhs, const Value& rhs);
+    static Value PerformDecimalSubtraction(const Value& lhs, const Value& rhs);
 
     static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
     static std::tuple<bool, Value> PerformNullGreaterComparison(const Value& lhs, const Value& rhs);
@@ -63,35 +65,30 @@ class Value {
 
     [[nodiscard]] long double InterpolateString() const;
 
-    explicit Value(
-        const object_t* data,
-        Int size,
-        DataType type,
-        const Memory::Allocator* allocator,
-        column_index_t index = 0
-    );
-
     public:
+
         Value(const Value& copyVal);
-
-        //Move Constructor
         Value(Value&& other)noexcept;
-
-        //Move Assignment Operator
         Value& operator=(Value&& other) noexcept;
-        ~Value();
 
         explicit Value(column_index_t index = 0);
-        explicit Value(const void* data, Int size, DataType type);
-        explicit Value(bool data, column_index_t index = 0);
-        explicit Value(TinyInt data, column_index_t index = 0);
-        explicit Value(SmallInt data, column_index_t index = 0);
-        explicit Value(Int data, column_index_t index = 0);
-        explicit Value(BigInt data, column_index_t index = 0);
-        explicit Value(const std::string& data, column_index_t index = 0);
-        explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
-        explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
-        explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
+        explicit Value(
+            const void* data,
+            Int size,
+            DataType type,
+            const Memory::Allocator* allocator,
+            column_index_t index = 0
+        );
+        ~Value();
+        // explicit Value(bool data, column_index_t index = 0);
+        // explicit Value(TinyInt data, column_index_t index = 0);
+        // explicit Value(SmallInt data, column_index_t index = 0);
+        // explicit Value(Int data, column_index_t index = 0);
+        // explicit Value(BigInt data, column_index_t index = 0);
+        // explicit Value(const std::string& data, column_index_t index = 0);
+        // explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
+        // explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
+        // explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
 
         Value(bool data, const Memory::Allocator& allocator, column_index_t index = 0);
         Value(TinyInt data, const Memory::Allocator& allocator, column_index_t index = 0);
@@ -134,7 +131,6 @@ class Value {
         [[nodiscard]] const object_t* Data() const;
         [[nodiscard]] object_t* DataUnsafe() const;
 
-        
         [[nodiscard]] bool AsBool()const;
         [[nodiscard]] TinyInt AsTinyInt()const;
         [[nodiscard]] SmallInt AsSmallInt()const;
@@ -169,6 +165,8 @@ class Value {
         friend Value operator>=(const Value& lhs, const Value& rhs);
         friend Value operator==(const Value& lhs, const Value& rhs);
         friend Value operator!=(const Value& lhs, const Value& rhs);
+
+        [[nodiscard]] const Memory::Allocator* GetAllocator() const;
 
         [[nodiscard]] bool ParseAsBoolFromString()const;
         [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);

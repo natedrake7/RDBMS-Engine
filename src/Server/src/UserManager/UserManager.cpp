@@ -106,14 +106,21 @@ namespace Security {
       return false;
     }
 
-    this->users.Add(name, new User{
-      .id = id,
-      .name = name,
-      .passwordHash = passwordHash,
-      .role = role
-    });
+    this->users.Add(name, new User(
+      id,
+      name,
+      passwordHash,
+      role->id,
+      role,
+      true
+    ));
 
     return true;
+  }
+
+  void UserManager::AddUser(User* user){
+      MultiThreading::WriterGuard guard(&this->mutex);
+      this->users.Add(user->name, user);
   }
 
   bool UserManager::AddSystemUser(User *user) {

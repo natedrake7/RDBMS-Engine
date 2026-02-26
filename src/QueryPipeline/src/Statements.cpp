@@ -187,17 +187,20 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus DeleteStatement::CompileDerived(CompileResult& context){
-    auto result = this->table->Validate(this->databaseId);
+    auto result = this->table->Validate(context, this->databaseId);
 
     if (!result.IsOk())
       return result;
 
     if (this->where.expression == nullptr)
-      return {};
+      return result;
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(
+        context.GetAllocator(),
+        this->table->tableId
+    );
 
-    return {};
+    return result;
     // return this->where.expression->Validate(columnsDict);
   }
 
@@ -219,13 +222,13 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus JoinStatement::Validate(const Int databaseId){
+  Errors::ValidationStatus JoinStatement::Validate(const CompileResult& context, const Int databaseId){
     this->databaseId = databaseId;
 
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "No table was specified in the join statement"};
 
-    return this->table->Validate(this->databaseId);
+    return this->table->Validate(context, this->databaseId);
   }
 
   bool JoinStatement::IsRightJoin() const {
@@ -389,10 +392,10 @@ namespace QueryPipeline::Statements {
     return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
-  Errors::ValidationStatus DataSource::Validate(const Int selectedDatabaseId) {
+  Errors::ValidationStatus DataSource::Validate(const CompileResult& context, const Int selectedDatabaseId) {
     const auto tableHeader = (!this->database.empty())
-                               ? this->catalog->SelectTable(this->database, this->name)
-                               : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
+                               ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
+                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id == INVALID_TABLE_ID){
         std::ostringstream os;
@@ -408,10 +411,10 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus DataSource::ValidateTableCreate(const Int selectedDatabaseId){
+  Errors::ValidationStatus DataSource::ValidateTableCreate(const CompileResult& context, const Int selectedDatabaseId){
     const auto tableHeader = (!this->database.empty())
-                               ? this->catalog->SelectTable(this->database, this->name)
-                               : this->catalog->SelectTable(selectedDatabaseId, this->name, this->schema);
+                               ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
+                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
 
     if (tableHeader.id != INVALID_TABLE_ID){
         std::ostringstream os;
@@ -420,7 +423,6 @@ namespace QueryPipeline::Statements {
     }
 
     this->databaseId = selectedDatabaseId;
-
     return {};
   }
 
@@ -431,8 +433,8 @@ namespace QueryPipeline::Statements {
 
   CreateTableStatement::~CreateTableStatement() = default;
 
-  Errors::ValidationStatus CreateTableStatement::CompileSchema(CompileResult& context) const{
-    const auto& schemasDict = this->catalog->SelectSchemasToDictionary(this->databaseId);
+  Errors::ValidationStatus CreateTableStatement::CompileSchema(const CompileResult& context) const{
+    const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
     Headers::SchemaHeader schemaHeader;
 
     if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
@@ -498,7 +500,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateTableStatement::CompileDerived(CompileResult& context){
-    auto result = this->table->ValidateTableCreate(this->databaseId);
+    auto result = this->table->ValidateTableCreate(context, this->databaseId);
     if (!result.IsOk())
       return result;
 
@@ -592,12 +594,12 @@ namespace QueryPipeline::Statements {
   Errors::ValidationStatus SelectStatement::Compile(CompileResult& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
+    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
 
     //Add all the join tables to the dictionaries
     for (const auto& join: this->joins) {
       tableAliasesDictionary.Add(join->table->GetAlias(), join->table->tableId);
-      this->tableColumnsDictionary.Add(join->table->tableId, this->catalog->SelectColumnsToDictionary(join->table->tableId));
+      this->tableColumnsDictionary.Add(join->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), join->table->tableId));
     }
 
     auto statementValidationScope = StatementValidationScope(
@@ -703,29 +705,32 @@ namespace QueryPipeline::Statements {
     return current;
   }
 
-  Dictionary<int32_t, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder) const{
-    Dictionary<int32_t, column_index_t> result;
-    column_index_t columnIndex = 0;
+    Dictionary<int32_t, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(
+        const CompileResult& context,
+        const std::vector<table_id_t>& joinOrder
+    ) const{
+        Dictionary<int32_t, column_index_t> result;
+        column_index_t columnIndex = 0;
 
-    for (const auto& tableId: joinOrder) {
-      //TODO cache them at the beginning
-      const auto& columns = this->catalog->SelectColumns(tableId);
+        for (const auto& tableId: joinOrder) {
+        //TODO cache them at the beginning
+            const auto& columns = this->catalog->SelectColumns(context.GetAllocator(), tableId);
 
-      for (const auto &column : columns) {
-        if (result.Contains(column.id))
-          continue;
+            for (const auto &column : columns) {
+                if (result.Contains(column.id))
+                    continue;
 
-        result.Add(column.id, columnIndex + column.ordinalPosition);
-      }
+                result.Add(column.id, columnIndex + column.ordinalPosition);
+            }
 
-      columnIndex += columns.size();
+            columnIndex += columns.size();
+        }
+
+        return result;
     }
 
-    return result;
-  }
-
-  void SelectStatement::AssignColumnsToIndices(const std::vector<table_id_t>& order)const {
-    const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(order);
+  void SelectStatement::AssignColumnsToIndices(const CompileResult& context, const std::vector<table_id_t>& order)const {
+    const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(context, order);
 
     for (const auto& resultExpr : this->results)
       AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
@@ -761,14 +766,14 @@ namespace QueryPipeline::Statements {
     if (this->table == nullptr)
       return this->CompileNoTableStatement(context);
 
-    auto tableResult = this->table->Validate(this->databaseId);
+    auto tableResult = this->table->Validate(context, this->databaseId);
     if (!tableResult.IsOk())
       return tableResult;
 
     Dictionary<std::string, table_id_t> aliasesDictionary;
 
     for (const auto& join: this->joins) {
-      auto joinResult = join->Validate(this->databaseId);
+      auto joinResult = join->Validate(context, this->databaseId);
       if (!joinResult.IsOk())
         return joinResult;
     }
@@ -793,7 +798,7 @@ namespace QueryPipeline::Statements {
       joinReorderResult.orderedJoins
     );
 
-    this->AssignColumnsToIndices(joinReorderResult.order);
+    this->AssignColumnsToIndices(context, joinReorderResult.order);
     auto* current = this->BuildJoinsPlan(context, joinReorderResult, predicatesResult);
 
     if (predicatesResult.remainingPredicate != nullptr)
@@ -815,7 +820,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateDbStatement::CompileDerived(CompileResult& context){
-    if (this->catalog->DatabaseExists(this->name)) {
+    if (this->catalog->DatabaseExists(context.GetAllocator(), this->name)) {
         std::ostringstream os;
       os << "Database " + this->name + " already exists";
 
@@ -836,7 +841,7 @@ namespace QueryPipeline::Statements {
    Errors::ValidationStatus DropDbStatement::CompileDerived(CompileResult& context){
        std::ostringstream os;
 
-     const auto database = this->catalog->SelectDatabase(this->name);
+     const auto database = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
 
      if (database.name.empty()) {
        os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
@@ -860,7 +865,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus UseDatabaseStatement::CompileDerived(CompileResult& context){
-    const auto dbHeader = this->catalog->SelectDatabase(this->name);
+    const auto dbHeader = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
 
     if (dbHeader.id == INVALID_DATABASE_ID) {
         std::ostringstream os;
@@ -1029,15 +1034,18 @@ namespace QueryPipeline::Statements {
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "No table was specified"};
 
-    auto tableStatus = this->table->Validate(this->databaseId);
+    auto tableStatus = this->table->Validate(context, this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
 
     this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
 
-    const auto identityColumns = this->catalog->SelectIdentityColumnsByTableIdToDictionary(this->table->tableId);
+    const auto identityColumns = this->catalog->SelectIdentityColumnsByTableIdToDictionary(
+        context.GetAllocator(),
+        this->table->tableId
+    );
 
     //validate insert columns existance
     HashSet<int32_t> statementColumns;
@@ -1078,7 +1086,7 @@ namespace QueryPipeline::Statements {
         continue;
       }
 
-      const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(header.id);
+      const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(context.GetAllocator(), header.id);
 
       if (defaultValue.columnId == INVALID_COLUMN_ID) {
         os << "Column " << columnName << " does not allow NULLS. Insert fails";
@@ -1105,7 +1113,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateSchemaStatement::CompileDerived(CompileResult& context){
-    if (this->catalog->SchemaExists(this->databaseId, this->name)) {
+    if (this->catalog->SchemaExists(context.GetAllocator(), this->databaseId, this->name)) {
         std::ostringstream os;
       os << "Schema " << this->name << " already exists";
 
@@ -1167,7 +1175,7 @@ namespace QueryPipeline::Statements {
     Errors::ValidationStatus UpdateStatement::ResolveAliases(CompileResult& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
         //Add Base Table to the dictionaries
         tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-        this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(this->table->tableId));
+        this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
 
         auto statementValidationScope = StatementValidationScope(
             tableAliasesDictionary,
@@ -1210,7 +1218,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   if (this->table == nullptr)
     return {Errors::ValidationError::Error, "Table was not specified"};
 
-  auto tableStatus = this->table->Validate(this->databaseId);
+  auto tableStatus = this->table->Validate(context, this->databaseId);
   if (!tableStatus.IsOk())
     return tableStatus;
 
@@ -1233,11 +1241,11 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
   }
 
   Errors::ValidationStatus CreateIndexStatement::CompileDerived(CompileResult& context){
-    auto tableStatus = this->table->Validate(this->databaseId);
+    auto tableStatus = this->table->Validate(context, this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
 
       std::ostringstream os;
     for(auto& column: this->columns) {
@@ -1252,10 +1260,10 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    const auto indexes = this->catalog->SelectIndexes(this->table->tableId);
+    const auto indexes = this->catalog->SelectIndexes(context.GetAllocator(), this->table->tableId);
 
     for (const auto& index: indexes) {
-      const auto indexedColumns = this->catalog->SelectIndexColumnsByIndexIdToDictionary(index.id);
+      const auto indexedColumns = this->catalog->SelectIndexColumnsByIndexIdToDictionary(context.GetAllocator(), index.id);
 
       if (index.name == this->name) {
         os << "Index with name: " << index.name << " already exists";
@@ -1360,7 +1368,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const CompileResult& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
       std::ostringstream os;
     Headers::ColumnHeader header;
 
@@ -1372,10 +1380,13 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     }
 
     //validate no index or constraint uses it
-    const auto constraints = this->catalog->SelectConstraints(this->table->tableId);
+    const auto constraints = this->catalog->SelectConstraints(context.GetAllocator(), this->table->tableId);
 
     for (const auto& constraint: constraints) {
-      const auto columns = this->catalog->SelectConstraintColumnsByConstraintIdToDictionary(constraint.constraintId);
+      const auto columns = this->catalog->SelectConstraintColumnsByConstraintIdToDictionary(
+          context.GetAllocator(),
+          constraint.constraintId
+        );
 
       if (columns.Contains(header.id)) {
         os << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name;
@@ -1408,11 +1419,11 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     if (this->table == nullptr)
       return {Errors::ValidationError::Error, "Table was not specified"};
 
-    auto tableStatus = this->table->Validate(this->databaseId);
+    auto tableStatus = this->table->Validate(context, this->databaseId);
     if (!tableStatus.IsOk())
       return tableStatus;
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(this->table->tableId);
+    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
 
     //validate by type
     switch (this->type) {
@@ -1421,7 +1432,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(CompileResult& context)
     case AlterTableType::AlterColumn:
       return this->CompileAlterColumn(columnsDict);
     case AlterTableType::DropColumn:
-      return this->CompileDropColumn(columnsDict);
+      return this->CompileDropColumn(context, columnsDict);
     case AlterTableType::RenameColumn:
       return this->CompileRenameColumn(columnsDict);
     default:

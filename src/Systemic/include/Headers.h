@@ -230,9 +230,9 @@ namespace Headers {
     SmallInt ordinalPosition;
     bool isSystem;
 
-    IdentityColumnsHeader identity;
-    DefaultValuesHeader defaultValue;
-    ColumnStatistics statistics;
+    // IdentityColumnsHeader identity;
+    // DefaultValuesHeader defaultValue;
+    // ColumnStatistics statistics;
     AuditInformation additionalInfo;
   };
 

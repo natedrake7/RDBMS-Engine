@@ -221,6 +221,7 @@ namespace DatabaseEngine {
     }
 
     Pages::RowReference VersionDatabase::RetrieveRowReference(
+        const Memory::Allocator& allocator,
         const Snapshot& snapshot,
         const StorageTypes::RowVersionPointer &rowPointer,
         const StorageTypes::Table *table
@@ -230,10 +231,8 @@ namespace DatabaseEngine {
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
-            return page.PeekRow(rowPointer.offset, 0);
+            return page.PeekRow(allocator, rowPointer.offset, 0);
         }
-
-        return {};
     }
 
     std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
@@ -241,7 +240,11 @@ namespace DatabaseEngine {
         return gamPage.GetAllocatedExtents(startingExtentId);
     }
 
-    extent_id_t VersionDatabase::CleanupVersionedData(const transaction_id_t transactionId, const extent_id_t startingExtentId)const {
+    extent_id_t VersionDatabase::CleanupVersionedData(
+        const Memory::Allocator& allocator,
+        const transaction_id_t transactionId,
+        const extent_id_t startingExtentId
+    )const {
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto &extentId : extents){
@@ -262,7 +265,7 @@ namespace DatabaseEngine {
                 MultiThreading::WriterGuard pageLatch(&page.Latch());
 
                 for (int i = 0; i < page.PageSize(); i++) {
-                    const auto rowPtr = page.PeekRow(i, 0);
+                    const auto rowPtr = page.PeekRow(allocator, i, 0);
                     rowPtr.lazyState->header = page.PeekRowHeader(i, 0);
 
                     if (transactionId == FIRST_TRANSACTION_ID

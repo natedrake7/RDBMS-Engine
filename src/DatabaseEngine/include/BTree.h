@@ -49,19 +49,41 @@ namespace Indexing{
             const Pages::IndexPageView& newChild
         );
 
-        static Int LeafLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
-        static Int LeafPartialLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
+        static Int LeafLowerBound(
+            const Memory::Allocator& allocator,
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key
+        );
+        static Int LeafPartialLowerBound(
+            const Memory::Allocator& allocator,
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key
+        );
 
-        static Int InternalNodeLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
-        static Int InternalNodePartialLowerBound(const Pages::IndexPageView& page, const DataTypes::Indexing::Key& key);
+        static Int InternalNodeLowerBound(
+            const Memory::Allocator& allocator,
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key
+        );
+        static Int InternalNodePartialLowerBound(
+            const Memory::Allocator& allocator,
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key
+        );
 
         static Errors::RuntimeStatus CreateDuplicateKeyError(const DataTypes::Indexing::Key& key);
 
         Pages::IndexPageView CreateRootPage(Int& indexPosition, Int pagesToAllocate);
 
-        void SplitRoot(Pages::IndexPageView& root, MultiThreading::ReaderGuard& rootLock, Int pagesToAllocate);
+        void SplitRoot(
+            const DatabaseEngine::ExecutionContext& context,
+            Pages::IndexPageView& root,
+            MultiThreading::ReaderGuard& rootLock,
+            Int pagesToAllocate
+        );
 
         void SplitChild(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentReadLock,
             Int index,
@@ -71,6 +93,7 @@ namespace Indexing{
         );
 
         void SplitLeafNoLock(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
@@ -78,6 +101,7 @@ namespace Indexing{
         )const;
 
         void SplitInternalNodeNoLock(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
@@ -85,12 +109,14 @@ namespace Indexing{
         )const;
 
         void SplitChildNoLock(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             Int index,
             const Pages::IndexPageView& child,
             Int pagesToAllocate
         );
         Errors::RuntimeStatus InsertToNonFullNode(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
@@ -98,15 +124,16 @@ namespace Indexing{
         );
 
         static Errors::RuntimeStatus InsertToNode(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         );
 
-        [[nodiscard]] Pages::IndexPageView SearchKey(const DataTypes::Indexing::Key& key) const;
+        [[nodiscard]] Pages::IndexPageView SearchKey(const Memory::Allocator& allocator, const DataTypes::Indexing::Key& key) const;
         [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::IndexPageView>& ancestors) const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode() const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(TinyInt& depth) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const Memory::Allocator& allocator) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const Memory::Allocator& allocator, TinyInt& depth) const;
 
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, TreeType treeType, Int nonClusteredId)const;
@@ -121,6 +148,7 @@ namespace Indexing{
 
         // Leaf redistribution methods for improved space utilization
         [[nodiscard]] bool TryRedistributeLeaf(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentLock,
             Pages::IndexPageView& child,
@@ -152,6 +180,7 @@ namespace Indexing{
         );
 
         void CalculateClusteredStatistics(
+            const Memory::Allocator& allocator,
             Pages::IndexPageView& currentNode,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
@@ -172,6 +201,7 @@ namespace Indexing{
         ~BTree();
 
         Errors::RuntimeStatus InsertRow(
+            const DatabaseEngine::ExecutionContext& context,
             const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition
@@ -184,14 +214,14 @@ namespace Indexing{
         )const;
 
         void IndexSeekRange(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
             DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeekRange(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
             DataStructures::Array<Pages::RowReference>* result,
@@ -199,13 +229,24 @@ namespace Indexing{
         )const;
 
         void IndexSeek(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result
         )const;
 
         void IndexSeek(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
+            const DataTypes::Indexing::Key& key,
+            DataStructures::Array<Pages::RowReference>* result,
+            const Expressions::Expression* expression
+        )const;
+        void SystemIndexSeek(
+            const Memory::Allocator& allocator,
+            const DataTypes::Indexing::Key& key,
+            DataStructures::Array<Pages::RowReference>* result
+        )const;
+        void SystemIndexSeek(
+            const Memory::Allocator& allocator,
             const DataTypes::Indexing::Key& key,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
@@ -214,29 +255,36 @@ namespace Indexing{
         void IndexScan(std::vector<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state
         )const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             DataStructures::Array<Pages::RowReference>* result,
             DatabaseEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
+            DataStructures::Array<Pages::RowReference>* result
+        )const;
+        void IndexScan(
+            const DatabaseEngine::ExecutionContext& context,
             DataStructures::Array<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
-
-        void IndexScan(
-            const DatabaseEngine::ExecutionContext& executionContext,
+        void SystemIndexScan(
+            const Memory::Allocator& allocator,
+            DataStructures::Array<Pages::RowReference>* result,
+            const Expressions::Expression* expression
+        )const;
+        void SystemIndexScan(
+            const Memory::Allocator& allocator,
             DataStructures::Array<Pages::RowReference>* result
         )const;
-
         void IndexScan(
             std::vector<DataTypes::RowIdentifier>* result,
             DatabaseEngine::IndexState& state,
@@ -246,37 +294,37 @@ namespace Indexing{
         void IndexScan(std::vector<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
             const std::vector<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
            const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const std::vector<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
             const std::vector<Value>& updates
         )const;
 
         Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const std::vector<Value>& updates
         )const;
         Errors::RuntimeStatus IndexSeekUpdate(
-            const DatabaseEngine::ExecutionContext& executionContext,
+            const DatabaseEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const std::vector<Value>& updates

@@ -5,6 +5,11 @@
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
 
+namespace DatabaseEngine
+{
+    class ExecutionContext;
+}
+
 namespace Memory
 {
     class Allocator;
@@ -27,24 +32,29 @@ namespace Pages{
     };
 
     struct RowReference{
-        PageView pageView;
+        PageView* pageView;
+        RowLazyState* lazyState;
+
         Int indexPosition;
         Int keySize;
 
-        RowLazyState* lazyState;
-
         RowReference();
-        RowReference(Frame* framePtr, Int indexPosition, Int offset);
+        RowReference(
+            Frame* framePtr,
+            const Memory::Allocator& allocator,
+            Int indexPosition,
+            Int offset
+        );
 
-        RowReference(const RowReference& other);
-        RowReference& operator=(const RowReference& other);
+        RowReference(const RowReference& other) = delete;
+        RowReference& operator=(const RowReference& other) = delete;
 
         RowReference(RowReference&& other) noexcept;
         RowReference& operator=(RowReference&& other) noexcept;
 
         ~RowReference();
 
-        [[nodiscard]] QueryResult Materialize()const;
+        [[nodiscard]] QueryResult Materialize(const Memory::Allocator* allocator)const;
         [[nodiscard]] Value PartialMaterialize(const Memory::Allocator* allocator, column_index_t columnIndex)const;
         [[nodiscard]] Int Size()const;
 

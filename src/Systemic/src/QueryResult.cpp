@@ -21,6 +21,10 @@ void QueryResult::AddColumn(Value &field){
   this->data.push_back(std::move(field));
 }
 
+void QueryResult::AddColumn(Value&& field){
+    this->data.push_back(std::move(field));
+}
+
 void QueryResult::AddColumn(const Value& field){
     this->data.push_back(field);
 }

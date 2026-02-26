@@ -545,7 +545,7 @@ namespace DatabaseEngine::StorageTypes {
             state.lastFetchedRowId.pageId = extentPageId;
 
             for (int i = state.GetNextKeyIndex(); i < page.PageSize(); i++) {
-              auto rowPtr = page.PeekRow(i, 0);
+              auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
 
               result->Push(std::move(rowPtr));
 
@@ -748,7 +748,7 @@ namespace DatabaseEngine::StorageTypes {
 
                 std::vector<extent_id_t> allocatedExtents;
                 for (int i = 0; i < page.PageSize(); i++) {
-                    auto row = page.PeekRow(i, 0);
+                    auto row = page.PeekRow(executionContext.GetAllocator(), i, 0);
 
                     evaluationContext.row = &row;
                     const auto value = expression->Evaluate(evaluationContext);
@@ -802,7 +802,7 @@ namespace DatabaseEngine::StorageTypes {
                 auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, this);
 
                 for (int i = 0;i < page.PageSize(); i++){
-                    auto rowPtr = page.PeekRow(i, 0);
+                    auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
                     evaluationContext.row = &rowPtr;
 
                     const auto value = expression->Evaluate(evaluationContext);
@@ -1020,10 +1020,10 @@ namespace DatabaseEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
 
-        auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize();
+        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
@@ -1056,7 +1056,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize();
+        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
 
         const Expressions::EvaluationContext evaluationContext(&rowPtr, executionContext);
         for (const auto* updateExpr : updates) {
@@ -1087,9 +1087,9 @@ namespace DatabaseEngine::StorageTypes {
         return insertResult;
     }
 
-    void Table::RetrieveDefaultValuesFromCatalog() const{
+    void Table::RetrieveDefaultValuesFromCatalog(const Memory::Allocator& allocator) const{
         for(const auto& column: this->columns) {
-          const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(column->GetColumnId());
+          const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(allocator, column->GetColumnId());
 
           if (systemHeader.columnId == INVALID_COLUMN_ID)
             continue;
@@ -1098,8 +1098,8 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::RetrieveColumnHeadersFromCatalog()const{
-      const auto headers = SystemCatalog::Get().SelectColumns(this->header.tableId);
+    void Table::RetrieveColumnHeadersFromCatalog(const Memory::Allocator& allocator)const{
+      const auto headers = SystemCatalog::Get().SelectColumns(allocator, this->header.tableId);
 
       assert(headers.size() == this->columns.size());
 
@@ -1113,10 +1113,10 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::UpdateCatalogIdentityColumns() const{
+    void Table::UpdateCatalogIdentityColumns(const Memory::Allocator& allocator) const{
         static auto& catalog = SystemCatalog::Get();
 
-        const auto headers = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
+        const auto headers = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
         if(headers.empty())
           return;
@@ -1132,10 +1132,10 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::RetrieveIdentityColumnsFromCatalog()const{
+    void Table::RetrieveIdentityColumnsFromCatalog(const Memory::Allocator& allocator)const{
       static auto& catalog = SystemCatalog::Get();
 
-      const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
+      const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
       if(identityHeaders.empty())
         return;
@@ -1152,10 +1152,10 @@ namespace DatabaseEngine::StorageTypes {
       }
     }
 
-    void Table::RetrieveIdentityColumnById(const int32_t &columnId)const{
+    void Table::RetrieveIdentityColumnById(const Memory::Allocator& allocator, const Int columnId)const{
         static auto& catalog = SystemCatalog::Get();
 
-        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(this->header.tableId);
+        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
         if (identityHeaders.empty())
           return;
@@ -1175,16 +1175,16 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-  void Table::RetrieveIndexesFromCatalog(){
-        Dictionary<int32_t, Column*> columnsDict;
+  void Table::RetrieveIndexesFromCatalog(const Memory::Allocator& allocator){
+        Dictionary<Int, Column*> columnsDict;
 
         for (auto& column: this->columns)
           columnsDict.Add(column->GetColumnId(), column);
 
-        const auto indexes = SystemCatalog::Get().SelectIndexes(this->header.tableId);
+        const auto indexes = SystemCatalog::Get().SelectIndexes(allocator, this->header.tableId);
 
         for (const auto& index: indexes) {
-          const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
+          const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(allocator, index.id);
 
           std::vector<column_index_t> indexColumnsIndices;
           for (const auto& indexedColumn : indexedColumns)
@@ -1202,9 +1202,9 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-  void Table::UpdateSystemCatalog() const{
-      for (const auto& column: this->columns)
-        column->UpdateMetadata();
+    void Table::UpdateSystemCatalog(const Memory::Allocator& allocator) const{
+        for (const auto& column: this->columns)
+            column->UpdateMetadata(allocator);
     }
 
   void Table::UpdateColumnName(const column_index_t index, const std::string &name)const{
@@ -1270,7 +1270,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         const column_index_t index,
         const Value &defaultValue
     ) const{
-        auto materializedRow = rowPtr.Materialize();
+        auto materializedRow = rowPtr.Materialize(&executionContext.GetAllocator());
 
         materializedRow.AddColumn(defaultValue, index);
 
@@ -1308,20 +1308,23 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         // page.UpdateBytesLeft();
   }
 
-    void Table::RemoveColumn(const column_index_t index){
+    void Table::RemoveColumn(
+        const ExecutionContext& context,
+        const column_index_t index
+    ){
         //add also last updated at deleted at etc...
         const auto* removedColumn = this->columns.at(index);
 
         const auto& server = SystemCatalog::Get();
 
         //schema adjustments in master db change this as well
-        std::vector updates = {
-            Value(true, static_cast<column_index_t>(SysColumns::IsDeleted)),
-            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
-            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::DeletedAt)),
+        std::vector<Value> updates = {
+            // Value(true, static_cast<column_index_t>(SysColumns::IsDeleted)),
+            // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
+            // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::DeletedAt)),
         };
 
-        auto result = server.UpdateColumnById(removedColumn->GetColumnId(), updates);
+        auto result = server.UpdateColumnById(context.GetAllocator(), removedColumn->GetColumnId(), updates);
 
         this->HandleRemoveColumn(removedColumn->OrdinalPosition());
         this->columns.erase(this->columns.begin() + index);
@@ -1331,12 +1334,12 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
 
             column->SetOrdinalPosition(i);
 
-            updates = {
-                Value(i, static_cast<column_index_t>(DatabaseEngine::SysColumns::OrdinalPosition))
+            std::vector<Value> update = {
+                // Value(i, static_cast<column_index_t>(DatabaseEngine::SysColumns::OrdinalPosition))
             };
 
             //adjust in master db
-            result = server.UpdateColumnById(column->GetColumnId(), updates);
+            result = server.UpdateColumnById(context.GetAllocator(), column->GetColumnId(), updates);
         }
 
         //adjust rows by heap or clustered

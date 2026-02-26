@@ -91,12 +91,12 @@ namespace DatabaseEngine::StorageTypes {
 
     void Column::SetIsOverflowed(const bool isOverflow){ this->isOverflowed = isOverflow; }
 
-    BigInt Column::GenerateIdentityValue(){
-        return this->identityManager.Generate();
+    BigInt Column::GenerateIdentityValue(const Memory::Allocator& allocator){
+        return this->identityManager.Generate(allocator);
     }
 
-    void Column::UpdateMetadata()const{
-        this->identityManager.UpdateMasterDb();
+    void Column::UpdateMetadata(const Memory::Allocator& allocator)const{
+        this->identityManager.UpdateMasterDb(allocator);
     }
 
     bool Column::HasIdentity() const{

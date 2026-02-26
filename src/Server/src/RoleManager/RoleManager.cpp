@@ -5,15 +5,17 @@
 #include "../../../Systemic/include/Security/Security.h"
 
 #include <iostream>
+#include <ranges>
+
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
   RoleManager::RoleManager() = default;
 
-  RoleManager::~RoleManager(){
-   // for (const auto &role: this->roles | std::views::values)
-   //   delete role;
-  }
+    RoleManager::~RoleManager(){
+        for (const auto &role: this->roles | std::views::values)
+            delete role;
+    }
 
   const Role* RoleManager::GetRole(const Int roleId)const{
     Role *role = nullptr;

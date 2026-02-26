@@ -14,7 +14,10 @@ namespace Pages{
 
             void InsertFirstTuple(const IndexInsertTuple& tuple) const;
 
-            DataTypes::Indexing::Key GetKey(page_offset_t& offSet) const;
+            DataTypes::Indexing::Key GetKeyByOffset(
+                const Memory::Allocator& allocator,
+                page_offset_t& offSet
+            ) const;
 
         public:
             IndexPageView();
@@ -55,18 +58,25 @@ namespace Pages{
             void InsertTuple(const IndexInsertTuple& tuple) const;
             void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
 
-            DataTypes::Indexing::Key GetKey(Int indexPosition) const;
-            LeafNodeTuple PeekLeafTuple(Int indexPosition) const;
-            InternalNodeTuple PeekInternalNodeTuple(Int indexPosition) const;
+            DataTypes::Indexing::Key GetKeyByIndex(const Memory::Allocator& allocator, Int indexPosition) const;
+            LeafNodeTuple PeekLeafTuple(const Memory::Allocator& allocator,Int indexPosition) const;
+            InternalNodeTuple PeekInternalNodeTuple(const Memory::Allocator& allocator, Int indexPosition) const;
 
-            DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(Int indexPosition, Int& outKeySize) const;
+            DatabaseEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(const Memory::Allocator& allocator, Int indexPosition, Int& outKeySize) const;
 
-            page_id_t GetChild(Int indexPosition) const;
+            page_id_t GetChild(const Memory::Allocator& allocator, Int indexPosition) const;
 
             void AppendRowToBuffer(
+                const Memory::Allocator& allocator,
                 DataStructures::Array<RowReference>* buffer,
                 const DatabaseEngine::Snapshot& snapshot,
                 Int indexPosition
             ) const;
+            void AppendRowToBuffer(
+                const Memory::Allocator& allocator,
+                DataStructures::Array<RowReference>* buffer,
+                Int indexPosition
+            ) const;
+
     };
 }

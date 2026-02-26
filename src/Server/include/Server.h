@@ -23,18 +23,17 @@ namespace DatabaseEngine {
 
 namespace Network {
   class Server {
+    Security::RoleManager roleManager;
+    Security::UserManager userManager;
+    Sessions::SessionManager sessionManager;
 
     Dictionary<Int, DatabaseEngine::Database*> databases;
+
     MultiThreading::ReadWriteMutex databasesLatch;
 
     DatabaseEngine::TemporaryDatabase* temporaryDatabase;
     DatabaseEngine::SystemCatalog* systemCatalog;
     DatabaseEngine::VersionDatabase *versionDatabase;
-
-    Sessions::SessionManager sessionManager;
-
-    Security::RoleManager roleManager;
-    Security::UserManager userManager;
 
     Server();
     ~Server();
@@ -48,7 +47,12 @@ namespace Network {
     void Shutdown();
 
     //Security Functions
-    [[nodiscard]]Errors::RuntimeStatus GrantRole(const DataTypes::Guid& currentSessionId, const std::string& username, const Security::Role* role)const;
+    [[nodiscard]]Errors::RuntimeStatus GrantRole(
+        const DatabaseEngine::ExecutionContext& context,
+        const DataTypes::Guid& currentSessionId,
+        const std::string& username,
+        const Security::Role* role
+    )const;
     bool UserExists(const std::string& userName)const;
     bool CreateUser(
         const DatabaseEngine::ExecutionContext& context,
@@ -57,9 +61,10 @@ namespace Network {
         const std::string& roleName
     );
     Errors::RuntimeStatus UpdateUserById(
-      const DataTypes::Guid& callerSessionId,
-      Int userId,
-      Int roleId
+        const DatabaseEngine::ExecutionContext& context,
+        const DataTypes::Guid& callerSessionId,
+        Int userId,
+        Int roleId
     )const;
     [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
 
@@ -85,7 +90,11 @@ namespace Network {
     // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
     // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
-    [[nodiscard]] DatabaseEngine::Database* UseDatabase(Int databaseId, bool isServerInitialization = false);
+    [[nodiscard]] DatabaseEngine::Database* UseDatabase(
+        const DatabaseEngine::ExecutionContext& context,
+        Int databaseId,
+        bool isServerInitialization = false
+    );
     const Dictionary<Int, DatabaseEngine::Database*>& GetDatabases()const;
     MultiThreading::ReadWriteMutex& GetDatabasesLatch();
     

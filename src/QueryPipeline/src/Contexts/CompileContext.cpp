@@ -12,7 +12,7 @@ namespace QueryPipeline{
     }
 
     CompileContext::~CompileContext(){
-        DatabaseEngine::GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocator.GetCapacity());
+        // DatabaseEngine::GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocator.GetCapacity());
     }
 
     CompileContext::CompileContext(CompileContext&& other) noexcept{
@@ -50,14 +50,8 @@ namespace QueryPipeline{
     }
 
     void* CompileContext::Allocate(const Int size) const{
-        if (this->allocator.WillReallocate(size)){
-            const auto prevCapacity = this->allocator.GetCapacity();
-            const auto newCapacity = this->allocator.SetNewCapacity(size);
-            this->allocator.Reallocate();
-
-            if (!DatabaseEngine::GlobalMemoryManager::Get().TryReserveForExecution(newCapacity - prevCapacity))
-                throw std::bad_alloc();
-        }
+        // if (!DatabaseEngine::GlobalMemoryManager::Get().TryReserveForExecution(newCapacity - prevCapacity))
+        //     throw std::bad_alloc();
 
         return this->allocator.Allocate(size);
     }

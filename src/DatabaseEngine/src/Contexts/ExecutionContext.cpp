@@ -10,18 +10,16 @@ namespace DatabaseEngine{
         this->snapshot = snapshot;
         this->batchSize = batchSize;
         this->variables = &variables;
-        this->allocationSize = initialAllocatorSize;
 
-        if (!GlobalMemoryManager::Get().TryReserveForExecution(this->allocationSize))
+        if (!GlobalMemoryManager::Get().TryReserveForExecution(initialAllocatorSize))
             throw std::bad_alloc();
 
-        this->allocator = Memory::Allocator(this->allocationSize);
+        this->allocator = Memory::Allocator(initialAllocatorSize);
     }
 
     ExecutionContext::ExecutionContext(){
         this->batchSize = 0;
         this->variables = nullptr;
-        this->allocationSize = 0;
     }
 
     ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept{
@@ -29,7 +27,6 @@ namespace DatabaseEngine{
         this->batchSize = other.batchSize;
         this->variables = other.variables;
         this->allocator = std::move(other.allocator);
-        this->allocationSize = other.allocationSize;
 
         other.variables = nullptr;
     }
@@ -42,7 +39,6 @@ namespace DatabaseEngine{
         this->batchSize = other.batchSize;
         this->variables = other.variables;
         this->allocator = std::move(other.allocator);
-        this->allocationSize = other.allocationSize;
 
         other.variables = nullptr;
 
@@ -50,7 +46,7 @@ namespace DatabaseEngine{
     }
 
     ExecutionContext::~ExecutionContext(){
-        GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocationSize);
+        // GlobalMemoryManager::Get().ReleaseExecutionReservation(this->allocationSize);
     }
 
     void ExecutionContext::SetBatchSize(const Int size){
@@ -78,14 +74,8 @@ namespace DatabaseEngine{
     }
 
     void* ExecutionContext::Allocate(const Int size) const{
-        if (this->allocator.WillReallocate(size)){
-            const auto prevCapacity = this->allocator.GetCapacity();
-            const auto newCapacity = this->allocator.SetNewCapacity(size);
-            this->allocator.Reallocate();
-
-            if (!GlobalMemoryManager::Get().TryReserveForExecution(newCapacity - prevCapacity))
-                throw std::bad_alloc();
-        }
+        if (!GlobalMemoryManager::Get().TryReserveForExecution(size))
+            throw std::bad_alloc();
 
         return this->allocator.Allocate(size);
     }

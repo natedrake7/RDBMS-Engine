@@ -10,14 +10,12 @@ namespace DataTypes::Indexing {
       Equal = 0,
       Greater = 1,
     };
-
-    key_size_t size;
-
     Value value;
     std::vector<Key> subKeys;
+    key_size_t size;
 
     Key();
-    Key(const void *keyValue, key_size_t keySize, DataType keyType);
+    Key(const void *keyValue, key_size_t keySize, DataType keyType, const Memory::Allocator& allocator);
     explicit Key(const Value& field);
     explicit Key(Value& field);
     explicit Key(const std::vector<Key>& subKeys);
@@ -44,6 +42,7 @@ namespace DataTypes::Indexing {
     [[nodiscard]] const Value &GetValue() const;
     [[nodiscard]] ComparisonResult CompareCompositeKeys(const Key& otherKey) const;
     void InsertKey(const Key &otherKey);
+    void InsertKey(Key&& otherKey);
 
     static ComparisonResult CompareSubKeys(const Key& firstKey, const Key& otherKey);
     [[nodiscard]] Int AsInt(Int pos = 0)const;
@@ -53,15 +52,17 @@ namespace DataTypes::Indexing {
 
     void Serialize(object_t*& buffer, page_offset_t& offset) const;
     static Key DeserializeNonComposite(
-      const object_t* buffer,
-      page_offset_t& offset,
-      DataType type
+        const Memory::Allocator& allocator,
+        const object_t* buffer,
+        page_offset_t& offset,
+        DataType type
     );
     static Key Deserialize(
-      const object_t* buffer,
-      page_offset_t& offset,
-      const UnsignedTinyInt& numberOfSubKeys,
-      const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes
+        const Memory::Allocator& allocator,
+        const object_t* buffer,
+        page_offset_t& offset,
+        const UnsignedTinyInt& numberOfSubKeys,
+        const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes
     );
 
     friend std::ostream& operator<<(std::ostream& os, const Key& key);

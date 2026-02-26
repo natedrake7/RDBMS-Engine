@@ -66,17 +66,18 @@ namespace Network {
     const auto lastCheckpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
     DatabaseEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
-    for (const auto& role : this->systemCatalog->SelectRoles())
-      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(role));
+    const Memory::Allocator allocator;
+    for (auto& role : this->systemCatalog->SelectRoles(allocator))
+      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(std::move(role)));
 
-    for (const auto& user : this->systemCatalog->SelectUsers()) {
+    for (const auto& user : this->systemCatalog->SelectUsers(allocator)) {
       const auto* role = this->roleManager.GetRole(user.roleId);
-
       const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
     }
   }
 
   Errors::RuntimeStatus Server::GrantRole(
+    const DatabaseEngine::ExecutionContext& context,
     const DataTypes::Guid& currentSessionId,
     const std::string &username,
     const Security::Role *role
@@ -89,25 +90,26 @@ namespace Network {
         "Failed to grant role: " + role->name + " to user: " + username,
       };
 
-    return this->UpdateUserById(currentSessionId, userId, role->id);
+    return this->UpdateUserById(context, currentSessionId, userId, role->id);
   }
 
-  Errors::RuntimeStatus Server::UpdateUserById(
-    const DataTypes::Guid& callerSessionId,
-    const Int userId,
-    const Int roleId
-  )const{
+    Errors::RuntimeStatus Server::UpdateUserById(
+        const DatabaseEngine::ExecutionContext& context,
+        const DataTypes::Guid& callerSessionId,
+        const Int userId,
+        const Int roleId
+    )const{
+        const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
 
-      const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
-
-      if (currentSession == nullptr || currentSession->user == nullptr)
+        if (currentSession == nullptr || currentSession->user == nullptr)
         return Errors::RuntimeStatus(Errors::RuntimeError::InvalidSession, Messages::FAILED_TO_GET_USER_SESSION);
 
-      return this->systemCatalog->UpdateUserById(
-        currentSession->user->name,
-        userId,
-        roleId
-      );
+        return this->systemCatalog->UpdateUserById(
+            context,
+            currentSession->user->name,
+            userId,
+            roleId
+        );
     }
 
   bool Server::UserExists(const std::string &userName) const{
@@ -200,9 +202,10 @@ namespace Network {
   }
 
   void Server::Shutdown(){
+    const Memory::Allocator allocator;
     for (const auto &database: this->databases | std::views::values){
-      database->UpdateMasterDatabase();
-      delete database;
+          database->UpdateMasterDatabase(allocator);
+          delete database;
     }
 
     this->temporaryDatabase->Shutdown();
@@ -210,32 +213,34 @@ namespace Network {
     // this->versionDatabase->
   }
 
-  DatabaseEngine::Database* Server::UseDatabase(const Int databaseId, const bool isServerInitialization){
-    DatabaseEngine::Database *db = nullptr;
+    DatabaseEngine::Database* Server::UseDatabase(
+        const DatabaseEngine::ExecutionContext& context,
+        const Int databaseId,
+        const bool isServerInitialization
+    ){
+        DatabaseEngine::Database *db = nullptr;
 
-    if (databaseId == CATALOG_ID)
-      return this->systemCatalog->GetDatabase();
+        if (databaseId == CATALOG_ID) return this->systemCatalog->GetDatabase();
 
-    MultiThreading::ReaderGuard lock(&this->databasesLatch);
+        MultiThreading::ReaderGuard lock(&this->databasesLatch);
 
-    if (this->databases.TryGetValue(databaseId, db))
-      return db;
+        if (this->databases.TryGetValue(databaseId, db)) return db;
 
-    const auto dbHeader = this->systemCatalog->SelectDatabaseById(databaseId);
+        const auto dbHeader = this->systemCatalog->SelectDatabaseById(context.GetAllocator(), databaseId);
 
-    MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
+        MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
 
-    if (this->databases.TryGetValue(databaseId, db))
-      return db;
+        if (this->databases.TryGetValue(databaseId, db))
+        return db;
 
-    db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
+        db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
 
-    this->databases.Add(databaseId, db);
+        this->databases.Add(databaseId, db);
 
-    return db;
-  }
+        return db;
+    }
 
-  const Dictionary<Int, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
+    const Dictionary<Int, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
 
-  MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
+    MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

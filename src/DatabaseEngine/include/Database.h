@@ -220,7 +220,7 @@ public:
 
     void GetTableHeaders()const;
 
-    void UpdateMasterDatabase()const;
+    void UpdateMasterDatabase(const Memory::Allocator& allocator)const;
 
     const std::vector<StorageTypes::Table*>& GetTables() const;
 };

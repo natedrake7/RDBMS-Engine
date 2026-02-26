@@ -4,6 +4,11 @@
 
 #include <mutex>
 
+namespace DatabaseEngine
+{
+    class ExecutionContext;
+}
+
 namespace DatabaseEngine::StorageTypes{
     class IdentityManager {
         Headers::IdentityColumnsHeader header;
@@ -11,7 +16,7 @@ namespace DatabaseEngine::StorageTypes{
 
         mutable MultiThreading::ReadWriteMutex mutex;
 
-        void UpdateMasterDb(BigInt value)const;
+        void UpdateMasterDb(const Memory::Allocator& allocator, BigInt value)const;
 
     public:
         IdentityManager();
@@ -21,9 +26,9 @@ namespace DatabaseEngine::StorageTypes{
         void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
         [[nodiscard]] const Headers::IdentityColumnsHeader& GetHeader() const;
 
-        [[nodiscard]] BigInt Generate();
-        [[nodiscard]] bool TryGenerate(BigInt& value);
-        void UpdateMasterDb()const;
+        [[nodiscard]] BigInt Generate(const Memory::Allocator& allocator);
+        [[nodiscard]] bool TryGenerate(const Memory::Allocator& allocator, BigInt& value);
+        void UpdateMasterDb(const Memory::Allocator& allocator)const;
 
         [[nodiscard]] bool IsValid()const;
     };

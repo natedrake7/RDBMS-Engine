@@ -4,6 +4,7 @@
 
 #include "DatabaseConstants.h"
 #include "Optimizer.h"
+#include "Parser.h"
 #include "../../Systemic/include/Headers.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
@@ -217,12 +218,17 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSelectivityByHistograms(
+        const CompileResult* context,
         const SeekRange& range,
         const Headers::TableStatistics& tableStats,
         const Headers::ColumnStatistics& columnStats
     ){
         static const auto& catalog = DatabaseEngine::SystemCatalog::Get();
-        const auto histograms = catalog.SelectColumnHistogramsByColumnId(tableStats.tableId, columnStats.columnId);
+        const auto histograms = catalog.SelectColumnHistogramsByColumnId(
+            context->_context.GetAllocator(),
+            tableStats.tableId,
+            columnStats.columnId
+        );
 
         if (histograms.empty())
             return CostEstimator::EstimateSelectivityForSmallTable(range, columnStats);
@@ -345,6 +351,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSelectivity(
+        const CompileResult* context,
         const SeekRange& range,
         const Headers::ColumnStatistics& columnStats,
         const Headers::TableStatistics& tableStats
@@ -354,6 +361,7 @@ namespace QueryPipeline{
 
         //todo pass column type here.
         return CostEstimator::EstimateSelectivityByHistograms(
+            context,
             range,
             tableStats,
             columnStats
@@ -361,6 +369,7 @@ namespace QueryPipeline{
     }
 
     void CostEstimator::EstimateIndexCost(
+        const CompileResult* context,
         IndexCandidate& candidate,
         const Headers::TableStatistics& tableStats
     ){
@@ -392,7 +401,7 @@ namespace QueryPipeline{
         for (const auto& info : candidate.analyzeInfo){
             const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStats.tableId, info.columnId);
 
-            const auto selectivity = CostEstimator::EstimateSelectivity(info.range, columnStats, tableStats);
+            const auto selectivity = CostEstimator::EstimateSelectivity(context, info.range, columnStats, tableStats);
 
             combinedSelectivity *= selectivity;
         }

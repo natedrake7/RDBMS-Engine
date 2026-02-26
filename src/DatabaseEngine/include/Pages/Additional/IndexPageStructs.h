@@ -59,8 +59,8 @@ namespace Pages{
 		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
 		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
 
-		LeafNodeTuple& operator=(const LeafNodeTuple& other);
-		LeafNodeTuple(const LeafNodeTuple& other);
+		LeafNodeTuple& operator=(const LeafNodeTuple& other) = delete;
+		LeafNodeTuple(const LeafNodeTuple& other) = delete;
 
 		LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key);
 	};

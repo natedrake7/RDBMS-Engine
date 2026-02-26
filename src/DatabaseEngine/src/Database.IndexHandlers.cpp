@@ -49,7 +49,7 @@ namespace DatabaseEngine {
             key.InsertKey(DataTypes::Indexing::Key(data));
         }
 
-        key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier));
+        key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier, context.GetAllocator()));
 
         return key;
     }

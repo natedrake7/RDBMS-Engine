@@ -261,15 +261,19 @@ namespace Pages{
         return rowHeader;
     }
 
-    RowReference PageView::PeekRow(const Int indexPosition, const Int offSet) const{
-        return RowReference(this->framePtr, indexPosition, offSet);
+    RowReference PageView::PeekRow(
+        const Memory::Allocator& allocator,
+        const Int indexPosition,
+        const Int offSet
+    ) const{
+        return RowReference(this->framePtr, allocator, indexPosition, offSet);
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
         SlotDirectory slot;
         std::memcpy(
             &slot,
-            this->framePtr->data + this->SlotDirectoryOffSet(indexPosition),
+            this->framePtr->data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
             SlotDirectory::Size
         );
         return slot;
@@ -406,7 +410,11 @@ namespace Pages{
         return this->framePtr->latch;
     }
 
-    QueryResult PageView::MaterializeRow(const Int indexPosition, const Int keySize) const{
+    QueryResult PageView::MaterializeRow(
+        const Memory::Allocator* allocator,
+        const Int indexPosition,
+        const Int keySize
+    ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         const auto& columns = this->framePtr->table->GetColumns();
@@ -450,7 +458,7 @@ namespace Pages{
                 continue;
             }
 
-            auto value = Value(this->framePtr->data + offSet, sizes[i], columns[i]->Type());
+            auto value = Value(this->framePtr->data + offSet, sizes[i], columns[i]->Type(), allocator);
             offSet += sizes[i];
 
             result.AddColumn(value);

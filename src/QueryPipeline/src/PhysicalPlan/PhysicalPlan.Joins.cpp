@@ -26,8 +26,8 @@ namespace QueryPipeline::PhysicalPlan {
           if (!this->expression->Evaluate(evaluationContext).AsBool())
             continue;
 
-          outerRow.Join(innerRow);
-          result.rows.Push(outerRow);
+          // outerRow.Join(innerRow);
+          // result.rows.Push(outerRow);
         }
       }
     }

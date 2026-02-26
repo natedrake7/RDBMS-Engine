@@ -60,7 +60,20 @@ namespace Expressions{
 
     EvaluationContext::EvaluationContext(){
         this->type = EvaluationContextType::Constant;
-        this->executionContext = nullptr;
+        this->allocator = nullptr;
+        this->variables = nullptr;
+        this->row = nullptr;
+        this->outerRow = nullptr;
+        this->innerRow = nullptr;
+    }
+
+    EvaluationContext::EvaluationContext(
+        const EvaluationContextType type,
+        const Memory::Allocator& allocator
+    ){
+        this->type = type;
+        this->allocator = &allocator;
+        this->variables = nullptr;
         this->row = nullptr;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
@@ -71,7 +84,8 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ){
         this->type = type;
-        this->executionContext = &executionContext;
+        this->allocator = &executionContext.GetAllocator();
+        this->variables = executionContext.GetVariables();
         this->row = nullptr;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
@@ -83,7 +97,8 @@ namespace Expressions{
     ){
         this->type = EvaluationContextType::SingleRow;
         this->row = row;
-        this->executionContext = &executionContext;
+        this->allocator = &executionContext.GetAllocator();
+        this->variables = executionContext.GetVariables();
         this->outerRow = nullptr;
         this->innerRow = nullptr;
     }
@@ -104,7 +119,8 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ) {
         this->type = EvaluationContextType::MaterializedRow;
-        this->executionContext = &executionContext;
+        this->allocator = &executionContext.GetAllocator();
+        this->variables = executionContext.GetVariables();
         this->materializedRow = row;
         this->outerRow = nullptr;
         this->innerRow = nullptr;
@@ -117,7 +133,8 @@ namespace Expressions{
         const DatabaseEngine::ExecutionContext& executionContext
     ){
         this->type = EvaluationContextType::Join;
-        this->executionContext = &executionContext;
+        this->allocator = &executionContext.GetAllocator();
+        this->variables = executionContext.GetVariables();
         this->row = nullptr;
         this->outerRow = outerRow;
         this->innerRow = innerRow;
@@ -181,16 +198,16 @@ namespace Expressions{
     Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
             case EvaluationContext::EvaluationContextType::SingleRow:
-              return context.row->PartialMaterialize(&context.executionContext->GetAllocator(), this->index);
+              return context.row->PartialMaterialize(context.allocator, this->index);
             case EvaluationContext::EvaluationContextType::MaterializedRow:
               return context.materializedRow.GetColumnAt(this->index);
             case EvaluationContext::EvaluationContextType::Join: {
-              const auto outerRow = context.outerRow->Materialize();
+              const auto outerRow = context.outerRow->Materialize(context.allocator);
               const auto outerRowSize = outerRow.Data().size();
 
               return this->index < outerRowSize
-                       ? context.outerRow->PartialMaterialize(&context.executionContext->GetAllocator(), this->index)
-                       : context.innerRow->PartialMaterialize(&context.executionContext->GetAllocator(), this->index - outerRowSize);
+                       ? context.outerRow->PartialMaterialize(context.allocator, this->index)
+                       : context.innerRow->PartialMaterialize(context.allocator, this->index - outerRowSize);
         }
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
@@ -211,6 +228,11 @@ namespace Expressions{
     }
 
     ConstantExpression::ConstantExpression(Value &value) {
+        this->value = std::move(value);
+        this->expressionType = ExpressionType::Constant;
+    }
+
+    ConstantExpression::ConstantExpression(Value&& value){
         this->value = std::move(value);
         this->expressionType = ExpressionType::Constant;
     }
@@ -325,10 +347,7 @@ namespace Expressions{
         this->expressionType = ExpressionType::Binary;
     }
 
-    BinaryExpression::~BinaryExpression(){
-        delete this->left;
-        delete this->right;
-    }
+    BinaryExpression::~BinaryExpression() = default;
 
     //TODO Implement field logical operations.
     Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
@@ -475,13 +494,8 @@ namespace Expressions{
         this->expressionType = ExpressionType::Function;
     }
 
-    FunctionExpression::~FunctionExpression() {
-        for (const auto* expression: this->arguments)
-          delete expression;
-    }
-
     Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
-        DataStructures::PolymorphicArray<Value> evaluatedArguments(context.executionContext->GetAllocator(), this->arguments.size());
+        DataStructures::PolymorphicArray<Value> evaluatedArguments(*context.allocator, this->arguments.size());
         for (const auto& arg : this->arguments)
           evaluatedArguments.Push(std::move(arg->Evaluate(context)));
 
@@ -489,42 +503,42 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        Value value(std::string(""), context.executionContext->GetAllocator(), 0);
+        Value value(std::string(""), *context.allocator, 0);
 
         for (const auto& argument : arguments)
-          value += Value(argument.AsString(), context.executionContext->GetAllocator(), 0);
+          value += Value(argument.AsString(), *context.allocator, 0);
 
         return value;
     }
 
     Value FunctionExpression::Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Length(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Length(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimLeft(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::TrimLeft(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::TrimRight(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimRight(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::TrimRight(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::Trim(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Trim(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Trim(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Ascii(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Ascii(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Char(field.AsInt()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Char(field.AsInt()), *context.allocator, 0);
     }
 
     Value FunctionExpression::CharIndex(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -536,17 +550,17 @@ namespace Expressions{
                           ? arguments[2].AsInt()
                           : 0;
 
-        return Value(Functions::String::CharIndex(subStr, str, pos), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::CharIndex(subStr, str, pos), *context.allocator, 0);
     }
 
     Value FunctionExpression::Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Lower(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Lower(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::Upper(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Upper(field.AsString()), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Upper(field.AsString()), *context.allocator, 0);
     }
 
     Value FunctionExpression::Replace(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -554,7 +568,7 @@ namespace Expressions{
         const auto& subStr = arguments[1].AsString();
         const auto& replaceStr = arguments[2].AsString();
 
-        return Value(Functions::String::Replace(str, subStr, replaceStr), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Replace(str, subStr, replaceStr), *context.allocator, 0);
     }
 
     Value FunctionExpression::Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -562,40 +576,40 @@ namespace Expressions{
         const auto& startPos = arguments[1].AsInt();
         const auto& endPos = arguments[2].AsInt();
 
-        return Value(Functions::String::SubString(field, startPos, endPos), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::SubString(field, startPos, endPos), *context.allocator, 0);
     }
 
     Value FunctionExpression::Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Left(field, startPos), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Left(field, startPos), *context.allocator, 0);
     }
 
     Value FunctionExpression::Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Right(field, startPos), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Right(field, startPos), *context.allocator, 0);
     }
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& str = arguments[0].AsString();
-        return Value(Functions::String::Reverse(str), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Reverse(str), *context.allocator, 0);
     }
 
     Value FunctionExpression::Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& size = arguments[0].AsInt();
 
-        return Value(Functions::String::Space(size), context.executionContext->GetAllocator(), 0);
+        return Value(Functions::String::Space(size), *context.allocator, 0);
     }
 
     Value FunctionExpression::GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::DateTime::Now(), context.executionContext->GetAllocator(), 0);
+        return Value(DataTypes::DateTime::Now(), *context.allocator, 0);
     }
 
     Value FunctionExpression::NewGuid(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::Guid::NewGuid(), context.executionContext->GetAllocator(), 0);
+        return Value(DataTypes::Guid::NewGuid(), *context.allocator, 0);
     }
 
     Value FunctionExpression::NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments) {
@@ -713,11 +727,6 @@ namespace Expressions{
         this->expressionType = ExpressionType::Logical;
     }
 
-    LogicalExpression::~LogicalExpression(){
-        delete this->left;
-        delete this->right;
-    }
-
     bool LogicalExpression::IsOr() const{ return this->logicalType == LogicalType::Or; }
 
     bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
@@ -731,13 +740,13 @@ namespace Expressions{
               const auto leftValue = this->left->Evaluate(context);
               const auto rightValue = this->right->Evaluate(context);
 
-              return Value(leftValue.AsBool() && rightValue.AsBool(), context.executionContext->GetAllocator(), 0);
+              return Value(leftValue.AsBool() && rightValue.AsBool(), *context.allocator, 0);
             }
             case LogicalType::Or:{
               const auto leftValue = this->left->Evaluate(context);
               const auto rightValue = this->right->Evaluate(context);
 
-              return Value(leftValue.AsBool() || rightValue.AsBool(), context.executionContext->GetAllocator(), 0);
+              return Value(leftValue.AsBool() || rightValue.AsBool(), *context.allocator, 0);
             }
             case LogicalType::Invalid:
             default:
@@ -766,16 +775,6 @@ namespace Expressions{
         this->branchType = type;
         this->baseCase = nullptr;
         this->expressionType = ExpressionType::Branch;
-    }
-
-    BranchExpression::~BranchExpression() {
-        for (const auto* branch : this->branches)
-            delete branch;
-
-        for (const auto* result : this->results)
-            delete result;
-
-        delete this->baseCase;
     }
 
     Value BranchExpression::Evaluate(const EvaluationContext &context) const {
@@ -823,7 +822,7 @@ namespace Expressions{
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
-        return context.executionContext->GetVariables()->Get(this->normalizedName).GetValue();
+        return context.variables->Get(this->normalizedName).GetValue();
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }

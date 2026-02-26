@@ -164,7 +164,8 @@ namespace DatabaseEngine
             return;
 
         //query get from masterDb
-        const auto& masterDbData = catalog.SelectTables(dbName);
+        const Memory::Allocator allocator;
+        const auto masterDbData = catalog.SelectTables(allocator, dbName);
         const auto& headerPageTables = headerPage.GetTableHeaders();
 
         if (headerPageTables.size() != masterDbData.size())
@@ -291,7 +292,8 @@ namespace DatabaseEngine
 
         auto* table = AllocateMiscEntity<StorageTypes::Table>(masterDbHeader, tableHeader, this);
 
-        const auto& masterDbColumns = catalog.SelectColumns(masterDbHeader.id);
+        const Memory::Allocator allocator;
+        const auto& masterDbColumns = catalog.SelectColumns(allocator, masterDbHeader.id);
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
                 continue;
@@ -302,10 +304,10 @@ namespace DatabaseEngine
 
         //TODO
         //maybe add in a single function
-        table->RetrieveColumnHeadersFromCatalog();
-        table->RetrieveIdentityColumnsFromCatalog();
-        table->RetrieveIndexesFromCatalog();
-        table->RetrieveDefaultValuesFromCatalog();
+        table->RetrieveColumnHeadersFromCatalog(allocator);
+        table->RetrieveIdentityColumnsFromCatalog(allocator);
+        table->RetrieveIndexesFromCatalog(allocator);
+        table->RetrieveDefaultValuesFromCatalog(allocator);
 
         this->tables.push_back(table);
     }
@@ -926,36 +928,41 @@ namespace DatabaseEngine
     std::string Database::GetFileName() const { return this->filename; }
 
     void Database::GetIdentityColumns()const{
-            for(const auto& table: this->tables)
-                table->RetrieveIdentityColumnsFromCatalog();
+        const Memory::Allocator allocator;
+        for(const auto& table: this->tables)
+            table->RetrieveIdentityColumnsFromCatalog(allocator);
     }
 
     void Database::UpdateIdentityManagersIds()const{
+        const Memory::Allocator allocator;
         for(const auto& table: this->tables)
-            table->UpdateCatalogIdentityColumns();
+            table->UpdateCatalogIdentityColumns(allocator);
     }
 
     void Database::GetColumnsHeaders() const{
-            for (const auto& table : this->tables)
-                table->RetrieveColumnHeadersFromCatalog();
+        const Memory::Allocator allocator;
+        for (const auto& table : this->tables)
+            table->RetrieveColumnHeadersFromCatalog(allocator);
     }
 
     void Database::GetDefaultValues() const{
-            for (const auto& table : this->tables)
-                table->RetrieveDefaultValuesFromCatalog();
+        const Memory::Allocator allocator;
+        for (const auto& table : this->tables)
+            table->RetrieveDefaultValuesFromCatalog(allocator);
     }
 
     void Database::GetIndexes() const{
-            for (const auto& table : this->tables)
-                table->RetrieveIndexesFromCatalog();
+        const Memory::Allocator allocator;
+        for (const auto& table : this->tables)
+            table->RetrieveIndexesFromCatalog(allocator);
     }
 
     void Database::GetTableHeaders() const{
     }
 
-    void Database::UpdateMasterDatabase()const{
+    void Database::UpdateMasterDatabase(const Memory::Allocator& allocator)const{
             for(const auto& table: this->tables)
-                table->UpdateSystemCatalog();
+                table->UpdateSystemCatalog(allocator);
     }
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }

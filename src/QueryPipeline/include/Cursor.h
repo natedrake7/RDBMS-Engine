@@ -22,6 +22,7 @@ namespace QueryPipeline {
 
     [[nodiscard]] PhysicalPlan::ExecutionResult FetchNextBatch();
     [[nodiscard]] bool CanFetch()const;
+    [[nodiscard]] const DatabaseEngine::ExecutionContext& GetExecutionContext()const;
     [[nodiscard]] const DatabaseEngine::Snapshot& GetSnapshot()const;
     [[nodiscard]] PipelineConstants::cursor_id_t GetId()const;
   };

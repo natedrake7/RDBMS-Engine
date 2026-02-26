@@ -6,7 +6,7 @@
 
 
 namespace DatabaseEngine::StorageTypes {
-  BigInt IdentityManager::Generate(){
+  BigInt IdentityManager::Generate(const Memory::Allocator& allocator){
     bool updateMasterDb = false;
 
     MultiThreading::WriterGuard guard(&this->mutex);
@@ -19,14 +19,19 @@ namespace DatabaseEngine::StorageTypes {
 
     if (updateMasterDb) {
       this->startingValue = value;
-      this->UpdateMasterDb(value);
+      this->UpdateMasterDb(allocator, value);
     }
 
     return value;
   }
 
-   void IdentityManager::UpdateMasterDb(const BigInt value) const{
-     SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, value + this->header.increment);
+   void IdentityManager::UpdateMasterDb(const Memory::Allocator& allocator, const BigInt value) const{
+        SystemCatalog::Get().UpdateIdentityByColumnId(
+            allocator,
+            this->header.tableId,
+            this->header.columnId,
+            value + this->header.increment
+        );
    }
 
   IdentityManager::IdentityManager() {
@@ -49,20 +54,24 @@ namespace DatabaseEngine::StorageTypes {
     return this->header;
   }
 
-  bool IdentityManager::TryGenerate(BigInt& value){
+  bool IdentityManager::TryGenerate(const Memory::Allocator& allocator, BigInt& value){
     if (this->header.columnId == INVALID_COLUMN_ID)
       return false;
 
-    value = this->Generate();
+    value = this->Generate(allocator);
 
     return true;
   }
 
-  void IdentityManager::UpdateMasterDb()const{
-    if (this->header.columnId == INVALID_COLUMN_ID)
-      return;
+  void IdentityManager::UpdateMasterDb(const Memory::Allocator& allocator)const{
+    if (this->header.columnId == INVALID_COLUMN_ID) return;
 
-    SystemCatalog::Get().UpdateIdentityByColumnId(this->header.tableId, this->header.columnId, this->header.lastValue);
+    SystemCatalog::Get().UpdateIdentityByColumnId(
+        allocator,
+        this->header.tableId,
+        this->header.columnId,
+        this->header.lastValue
+    );
   }
 
   bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }

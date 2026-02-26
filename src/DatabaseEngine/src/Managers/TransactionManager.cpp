@@ -57,19 +57,19 @@ namespace DatabaseEngine {
     this->activeTransactions.Remove(snapshot.transactionId);
   }
 
-  void TransactionManager::RollbackTransaction(const Snapshot& snapshot){
+  void TransactionManager::RollbackTransaction(const ExecutionContext& context){
     TransactionInfo transactionInfo;
 
     {
       std::unique_lock lock(this->dictionaryMutex);
 
-      transactionInfo = std::move(this->activeTransactions.Get(snapshot.transactionId));
+      transactionInfo = std::move(this->activeTransactions.Get(context.GetCurrentTransactionId()));
 
-      this->activeTransactions.Remove(snapshot.transactionId);
+      this->activeTransactions.Remove(context.GetCurrentTransactionId());
     }
 
     static auto& server = Network::Server::Get();
-    const auto* db = server.UseDatabase(transactionInfo.modificationInfo.databaseId);
+    const auto* db = server.UseDatabase(context, transactionInfo.modificationInfo.databaseId);
     // const auto* table = db->OpenTableById(transactionInfo.modificationInfo.tableId);
 
     //TODO track index keys along with rids to rollback index entries as well

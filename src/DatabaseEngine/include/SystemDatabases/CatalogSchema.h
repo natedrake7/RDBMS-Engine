@@ -2,7 +2,7 @@
 #include <cstdint>
 
 namespace DatabaseEngine {
-  enum CatalogTables: uint8_t {
+  enum CatalogTables: UnsignedTinyInt {
     SysDatabases = 0,
     SysSchemas = 1,
     SysTables = 2,
@@ -21,7 +21,7 @@ namespace DatabaseEngine {
     SysIndexStats = 15,
   };
 
-  enum class SysDatabases : uint8_t {
+  enum class SysDatabases : UnsignedTinyInt {
     DatabaseId = 0,
     Name = 1,
     FilePath = 2,
@@ -34,7 +34,7 @@ namespace DatabaseEngine {
     DeletedAt = 9,
   };
 
-  enum class SysSchemas : uint8_t {
+  enum class SysSchemas : UnsignedTinyInt {
     DatabaseId = 0,
     SchemaId = 1,
     Name = 2,
@@ -46,7 +46,7 @@ namespace DatabaseEngine {
     DeletedAt = 8,
   };
 
-  enum class SysTables : uint8_t {
+  enum class SysTables : UnsignedTinyInt {
     DatabaseId = 0,
     TableId = 1,
     SchemaId = 2,
@@ -61,7 +61,7 @@ namespace DatabaseEngine {
     DeletedAt = 11,
   };
 
-  enum class SysColumns : uint16_t {
+  enum class SysColumns : UnsignedTinyInt {
     TableId = 0,
     ColumnId = 1,
     Name = 2,
@@ -80,7 +80,7 @@ namespace DatabaseEngine {
     DeletedAt = 15,
   };
 
-  enum class SysIndexes : uint8_t {
+  enum class SysIndexes : UnsignedTinyInt {
     TableId = 0,
     IndexId = 1,
     Name = 2,
@@ -94,7 +94,7 @@ namespace DatabaseEngine {
     DeletedAt = 10,
   };
 
-  enum class SysIndexColumns : uint8_t {
+  enum class SysIndexColumns : UnsignedTinyInt {
     IndexId = 0,
     ColumnId = 1,
     OrdinalPosition = 2,
@@ -104,7 +104,7 @@ namespace DatabaseEngine {
     DeletedAt = 6,
   };
 
-  enum class SysConstraints : uint8_t {
+  enum class SysConstraints : UnsignedTinyInt {
     TableId = 0,
     ConstraintId = 1,
     Name = 2,
@@ -119,7 +119,7 @@ namespace DatabaseEngine {
     DeletedAt = 11,
   };
 
-  enum class SysConstraintColumns : uint8_t {
+  enum class SysConstraintColumns : UnsignedTinyInt {
     ConstraintId = 0,
     ColumnId = 1,
     OrdinalPosition = 2,
@@ -128,7 +128,7 @@ namespace DatabaseEngine {
     DeletedAt = 5,
   };
 
-  enum class SysIdentityColumns : uint8_t {
+  enum class SysIdentityColumns : UnsignedTinyInt {
     TableId = 0,
     ColumnId = 1,
     SeedValue = 2,
@@ -141,7 +141,7 @@ namespace DatabaseEngine {
     DeletedAt = 9,
   };
 
-  enum class SysDefaultValues : uint8_t {
+  enum class SysDefaultValues : UnsignedTinyInt {
     ColumnId = 0,
     Value = 1,
     Version = 2,
@@ -149,7 +149,7 @@ namespace DatabaseEngine {
     DeletedAt = 4,
   };
 
-  enum class SysTableStats : uint8_t {
+  enum class SysTableStats : UnsignedTinyInt {
     TableId = 0,
     RowCount = 1,
     AvgRowSize = 2,
@@ -157,7 +157,7 @@ namespace DatabaseEngine {
     LastUpdatedAt = 4
   };
 
-  enum class SysColumnStats : uint8_t {
+  enum class SysColumnStats : UnsignedTinyInt {
     ColumnId = 0,
     DistinctCount = 1,
     MinimumValue = 2,
@@ -165,7 +165,7 @@ namespace DatabaseEngine {
     NullCount = 4
   };
 
-  enum class SysColumnHistograms : uint8_t {
+  enum class SysColumnHistograms : UnsignedTinyInt {
     ColumnId = 0,
     HistogramId = 1,
     RangeStart = 2,
@@ -174,7 +174,7 @@ namespace DatabaseEngine {
     DistinctCount = 5,
   };
 
-  enum class SysRoles : uint8_t {
+  enum class SysRoles : UnsignedTinyInt {
     RoleId = 0,
     RoleName = 1,
     Permissions = 2,
@@ -187,7 +187,7 @@ namespace DatabaseEngine {
     DeletedAt = 9,
   };
 
-  enum class SysUsers : uint8_t {
+  enum class SysUsers : UnsignedTinyInt {
     UserId = 0,
     UserName = 1,
     PasswordHash = 2,
@@ -201,7 +201,7 @@ namespace DatabaseEngine {
     DeletedAt = 10,
   };
 
-  enum class SysIndexStats : uint8_t {
+  enum class SysIndexStats : UnsignedTinyInt {
     TableId = 0,
     IndexId = 1,
     LeafPages = 2,

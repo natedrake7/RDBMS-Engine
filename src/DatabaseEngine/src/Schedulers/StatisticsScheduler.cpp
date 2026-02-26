@@ -118,6 +118,7 @@ namespace DatabaseEngine {
         Dictionary<Int, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
         std::vector<Headers::ColumnStatistics> columnStatistics;
 
+        const Memory::Allocator allocator;
         for (const auto& column : table->GetColumns()) {
             const auto& columnId = column->GetColumnId();
 
@@ -132,7 +133,7 @@ namespace DatabaseEngine {
             );
 
             sortedValues.Add(columnId, {});
-            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(tableStatistics.tableId, columnId);
+            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(allocator, tableStatistics.tableId, columnId);
             columnHistogramsDictionary.Add(columnId, std::move(histograms));
         }
 
@@ -140,7 +141,7 @@ namespace DatabaseEngine {
 
         bool clusteredIndexUpdated = false;
         if (indexStatistics.empty()){
-            const auto indexes = SystemCatalog::Get().SelectIndexes(tableStatistics.tableId);
+            const auto indexes = SystemCatalog::Get().SelectIndexes(allocator, tableStatistics.tableId);
 
             for (const auto& index : indexes){
                 auto indexStats = Headers::IndexStatistics(tableStatistics.tableId, index.id);
@@ -198,7 +199,7 @@ namespace DatabaseEngine {
 
         //Update catalog
         this->UpdateCache(tableStatistics, columnStatistics, indexStatistics);
-        this->UpdateCatalogStatistics(tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
+        this->UpdateCatalogStatistics(allocator, tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
     }
 
     bool StatisticsScheduler::UpdateIndexStatistics(
@@ -247,55 +248,57 @@ namespace DatabaseEngine {
         int sampleRowCount = 0;
         int averageRowsPerPage = 0;
         int allocatedPagesPerExtent = 0;
+
+        const Memory::Allocator allocator;
         for (const auto& extentId : extents) {
-        const page_id_t extentFirstPageId = extentId * EXTENT_SIZE;
+            const page_id_t extentFirstPageId = extentId * EXTENT_SIZE;
 
-        const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(systemFilename, extentFirstPageId);
+            const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(systemFilename, extentFirstPageId);
 
-        const auto firstDataPageId = (iamPage.PageId() != extentFirstPageId)
-                   ? extentFirstPageId
-                   : extentFirstPageId + 1;
+            const auto firstDataPageId = (iamPage.PageId() != extentFirstPageId)
+                       ? extentFirstPageId
+                       : extentFirstPageId + 1;
 
-        bool successfulPfsLock = false;
-        auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
+            bool successfulPfsLock = false;
+            auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
 
-        for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-            if (successfulPfsLock
-                && pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA
-            ) break;
+            for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
+                if (successfulPfsLock
+                    && pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA
+                ) break;
 
-            auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
+                auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
 
-            bool successfulLock = false;
-            auto lock = MultiThreading::ReaderGuard::TryLock(&page.Latch(), successfulLock);
-            if (!successfulLock)
-                continue;
+                bool successfulLock = false;
+                auto lock = MultiThreading::ReaderGuard::TryLock(&page.Latch(), successfulLock);
+                if (!successfulLock)
+                    continue;
 
-            const auto pageSize = page.PageSize();
-            const auto fallBackPageType = page.GetPageType();
-            if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
-                continue;
+                const auto pageSize = page.PageSize();
+                const auto fallBackPageType = page.GetPageType();
+                if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
+                    continue;
 
-            averageRowsPerPage += pageSize;
-            allocatedPagesPerExtent++;
+                averageRowsPerPage += pageSize;
+                allocatedPagesPerExtent++;
 
-            for (int i = 0;i < pageSize;i++){
-                auto row = page.PeekRow(i, 0);
-                auto materializedRow = row.Materialize();
+                for (int i = 0;i < pageSize;i++){
+                    auto row = page.PeekRow(allocator, i, 0);
+                    auto materializedRow = row.Materialize(&allocator);
 
-                tableStatistics.averageRowSize += row.Size();
-                sampleRowCount++;
+                    tableStatistics.averageRowSize += row.Size();
+                    sampleRowCount++;
 
-                for (int j = 0; j < columnStatistics.size(); j++){
-                    auto& columnStats = columnStatistics[j];
-                    StatisticsScheduler::UpdateColumnStatistics(
-                        columnStats,
-                           materializedRow.GetColumnReferenceAt(j),
-                        sortedValues[columnStats.columnId]
-                    );
+                    for (int j = 0; j < columnStatistics.size(); j++){
+                        auto& columnStats = columnStatistics[j];
+                        StatisticsScheduler::UpdateColumnStatistics(
+                            columnStats,
+                               materializedRow.GetColumnReferenceAt(j),
+                            sortedValues[columnStats.columnId]
+                        );
+                    }
                 }
             }
-        }
     }
 
     averageRowsPerPage = StatisticsScheduler::EstimateRowsPerPage(averageRowsPerPage, allocatedPagesPerExtent);
@@ -315,6 +318,7 @@ namespace DatabaseEngine {
     }
 
     void StatisticsScheduler::UpdateCatalogStatistics(
+        const Memory::Allocator& allocator,
         const Headers::TableStatistics &tableStatistics,
         const std::vector<Headers::ColumnStatistics> &columnStatistics,
         const std::vector<Headers::IndexStatistics>& indexStatistics,
@@ -322,6 +326,7 @@ namespace DatabaseEngine {
     )const {
 
         this->catalog->UpdateTableStatisticsById(
+            allocator,
             tableStatistics.tableId,
             tableStatistics.rowCount,
             tableStatistics.averageRowSize,
@@ -330,6 +335,7 @@ namespace DatabaseEngine {
 
         for (const auto& colStats : columnStatistics) {
             this->catalog->UpdateColumnStatisticsById(
+                allocator,
                 colStats.columnId,
                 colStats.distinctCount,
                 colStats.nullCount,
@@ -340,6 +346,7 @@ namespace DatabaseEngine {
 
         for (const auto& indexStats : indexStatistics) {
             this->catalog->UpdateIndexStatisticsById(
+                allocator,
                 tableStatistics.tableId,
                 indexStats.indexId,
                 indexStats.leafPages,
@@ -355,6 +362,7 @@ namespace DatabaseEngine {
             for (const auto& histogram : histograms){
                 auto res = (histogram.histogramId == INVALID_HISTOGRAM_ID)
                     ? this->catalog->InsertColumnHistogramsToMasterDb(
+                        allocator,
                         columnId,
                         histogram.rangeStart,
                         histogram.rangeEnd,
@@ -362,6 +370,7 @@ namespace DatabaseEngine {
                         histogram.distinctCount
                     )
                     : this->catalog->UpdateHistogramBucket(
+                        allocator,
                         columnId, histogram.histogramId,
                         histogram.rangeStart,
                         histogram.rangeEnd,

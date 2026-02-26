@@ -424,7 +424,7 @@ namespace QueryPipeline {
 
     std::vector<Int> bestMatch;
     for (const auto& index : indexes){
-      const auto columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.indexId);
+      const auto columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.indexId);
 
       std::vector<Int> matches;
       for (const auto& column : columns){
@@ -632,7 +632,7 @@ namespace QueryPipeline {
     Optimizer::SplitConjunctions(expression, conjunctions);
 
     for (auto& index : indexes) {
-      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(index.id);
+      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.id);
 
       auto analyzeResults = Optimizer::AnalyzeTableScan(index, conjunctions);
 
@@ -642,7 +642,7 @@ namespace QueryPipeline {
       candidate.analyzeInfo = std::move(analyzeResults);
       candidate.conjunctions = &conjunctions;
       candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
-      CostEstimator::EstimateIndexCost(candidate, tableStatistics);
+      CostEstimator::EstimateIndexCost(this->context, candidate, tableStatistics);
 
       candidates.push_back(candidate);
     }

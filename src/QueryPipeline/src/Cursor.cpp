@@ -17,6 +17,8 @@ namespace QueryPipeline {
 
     bool Cursor::CanFetch() const{ return this->canFetchMore; }
 
+    const DatabaseEngine::ExecutionContext& Cursor::GetExecutionContext()const{ return this->executionContext; }
+
     const DatabaseEngine::Snapshot& Cursor::GetSnapshot() const{ return this->executionContext.GetSnapshot(); }
 
     PipelineConstants::cursor_id_t Cursor::GetId() const{ return this->id; }

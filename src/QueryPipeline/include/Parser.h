@@ -47,6 +47,7 @@ namespace QueryPipeline{
         CompileResult& operator=(CompileResult&& other) noexcept;
 
         void CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables);
+        const Memory::Allocator& GetAllocator()const;
     };
 
     class Parser{

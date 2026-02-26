@@ -164,8 +164,8 @@ std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
     //add any aggregate function execution asWell by condition
     //also store the keys of the groupBy used in order to prin them.
     //should be done in a single loop
-    for(const auto& row : rows)
-        groupedRows[SortingFunctions::CreateGroupByKey(row, sortConditions)].push_back(row);
+    // for(const auto& row : rows)
+    //     groupedRows[SortingFunctions::CreateGroupByKey(row, sortConditions)].push_back(row);
 
     for(const auto& [key , rowGroup ] : groupedRows)
     {

@@ -88,9 +88,9 @@ namespace DatabaseEngine::StorageTypes
 
         void SetIsOverflowed(bool isOverflow);
 
-        [[nodiscard]] BigInt GenerateIdentityValue();
+        [[nodiscard]] BigInt GenerateIdentityValue(const Memory::Allocator& allocator);
 
-        void UpdateMetadata()const;
+        void UpdateMetadata(const Memory::Allocator& allocator)const;
 
         [[nodiscard]] bool HasIdentity() const;
     };

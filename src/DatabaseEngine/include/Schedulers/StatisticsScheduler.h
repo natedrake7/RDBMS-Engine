@@ -73,10 +73,11 @@ namespace DatabaseEngine {
     );
 
     void UpdateCatalogStatistics(
-      const Headers::TableStatistics& tableStatistics,
-      const std::vector<Headers::ColumnStatistics>& columnStatistics,
-      const std::vector<Headers::IndexStatistics>& indexStatistics,
-      const Dictionary<Int, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
+        const Memory::Allocator& allocator,
+        const Headers::TableStatistics& tableStatistics,
+        const std::vector<Headers::ColumnStatistics>& columnStatistics,
+        const std::vector<Headers::IndexStatistics>& indexStatistics,
+        const Dictionary<Int, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
     )const;
 
     void UpdateCache(

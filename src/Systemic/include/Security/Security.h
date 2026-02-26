@@ -75,10 +75,17 @@ namespace Security {
     Role(const Int id, const std::string& name, const Permission permission, const bool isSystem)
       : id(id), name(name), permission(permission), isSystem(isSystem) {}
     Role(const Role& role) {
-      id = role.id;
-      name = role.name;
-      permission = role.permission;
-      isSystem = role.isSystem;
+      this->id = role.id;
+      this->name = role.name;
+      this->permission = role.permission;
+      this->isSystem = role.isSystem;
+    }
+
+    Role(Role&& role) noexcept{
+        this->id = std::move(role.id);
+        this->name = std::move(role.name);
+        this->permission = std::move(role.permission);
+        this->isSystem = std::move(role.isSystem);
     }
 
     [[nodiscard]] bool HasPermission(const Permission permissions) const {
@@ -97,5 +104,32 @@ namespace Security {
     const Role* role;
 
     bool isActive;
+
+    User(){
+        this->id = 0;
+        this->roleId = 0;
+        this->role = nullptr;
+        this->isActive = false;
+    }
+
+    User(
+        const Int id,
+        const std::string& name,
+        const std::string& passwordHash,
+        const Int roleId,
+        const Role* role,
+        const bool isActive
+    ): id(id), name(name), passwordHash(passwordHash), roleId(roleId), role(role), isActive(isActive) {}
+
+    User(User&& other) noexcept{
+        this->id = other.id;
+        this->name = std::move(other.name);
+        this->passwordHash = std::move(other.passwordHash);
+        this->roleId = other.roleId;
+        this->role = other.role;
+        this->isActive = other.isActive;
+
+        other.role = nullptr;
+    }
   };
 }

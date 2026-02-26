@@ -11,10 +11,7 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::NewColumn *column)
     : ExecutionNode(sessionId), table(table), column(column){}
 
-  PhysicalAddColumn::~PhysicalAddColumn(){
-    delete this->table;
-    delete this->column;
-  }
+  PhysicalAddColumn::~PhysicalAddColumn() = default;
 
   ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
@@ -58,7 +55,7 @@ namespace QueryPipeline::PhysicalPlan{
             );
      }
 
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
@@ -73,10 +70,10 @@ namespace QueryPipeline::PhysicalPlan{
     columnPtr->SetColumnId(columnId);
 
     tablePtr->AddColumn(columnPtr);
-    tablePtr->RetrieveIdentityColumnById(columnId);
+    tablePtr->RetrieveIdentityColumnById(context.GetAllocator(), columnId);
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
-    tablePtr->RetrieveDefaultValuesFromCatalog();
+    tablePtr->RetrieveDefaultValuesFromCatalog(context.GetAllocator());
 
     return ExecutionResult();
   }
@@ -84,10 +81,7 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
     : ExecutionNode(sessionId), table(table), column(column){}
 
-  PhysicalDropColumn::~PhysicalDropColumn(){
-    delete this->table;
-    delete this->column;
-  }
+  PhysicalDropColumn::~PhysicalDropColumn() = default;
 
   ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
@@ -100,11 +94,11 @@ namespace QueryPipeline::PhysicalPlan{
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->RemoveColumn(this->column->index);
+    tablePtr->RemoveColumn(context, this->column->index);
 
     return result;
   }
@@ -112,10 +106,7 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::RenameColumn *column)
   : ExecutionNode(sessionId), table(table), column(column){}
 
-  PhysicalRenameColumn::~PhysicalRenameColumn(){
-    delete this->table;
-    delete this->column;
-  }
+  PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
   ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
@@ -126,17 +117,17 @@ namespace QueryPipeline::PhysicalPlan{
         Messages::FAILED_TO_RETRIEVE_USER_SESSION
       );
 
-    const auto* db = this->server->UseDatabase(this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector updates = {
-      Value(this->column->newName.name, static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
+      Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
+      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = this->catalog->UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
@@ -146,10 +137,7 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::AlterColumn *column)
     : ExecutionNode(sessionId), table(table), column(column){}
 
-  PhysicalAlterColumn::~PhysicalAlterColumn(){
-    delete this->table;
-    delete this->column;
-  }
+  PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 
   ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionContext& context){
     auto result = ExecutionResult();
@@ -161,12 +149,12 @@ namespace QueryPipeline::PhysicalPlan{
       );
 
     const std::vector updates = {
-      Value(this->column->type.size, static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
-      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
+      Value(this->column->type.size, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
+      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
     };
 
-    const auto _ = this->catalog->UpdateColumnById(this->column->columnId, updates);
+    const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
     return result;
   }

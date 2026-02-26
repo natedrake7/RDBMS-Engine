@@ -180,8 +180,8 @@ namespace QueryPipeline::Statements {
     DataSource();
     [[nodiscard]] std::string GetAlias() const;
     [[nodiscard]] std::string GetFullName()const;
-    [[nodiscard]] Errors::ValidationStatus Validate(Int selectedDatabaseId);
-    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(Int selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus Validate(const CompileResult& context, Int selectedDatabaseId);
+    [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const CompileResult& context, Int selectedDatabaseId);
   };
 
   struct SubQuery : DataSource {
@@ -274,7 +274,7 @@ namespace QueryPipeline::Statements {
 
     JoinStatement();
     [[nodiscard]]Errors::ValidationStatus CompileDerived(CompileResult& context) override;
-    [[nodiscard]]Errors::ValidationStatus Validate(Int databaseId);
+    [[nodiscard]]Errors::ValidationStatus Validate(const CompileResult& context, Int databaseId);
 
     [[nodiscard]]bool IsRightJoin()const;
     [[nodiscard]]bool IsInnerJoin()const;
@@ -292,7 +292,7 @@ namespace QueryPipeline::Statements {
     CreateTableStatement();
     ~CreateTableStatement() override;
 
-    Errors::ValidationStatus CompileSchema(CompileResult& context) const;
+    Errors::ValidationStatus CompileSchema(const CompileResult& context) const;
     Errors::ValidationStatus CompileColumnExpression(
       NewColumn*& column,
       Dictionary<std::string, column_index_t>& columnNamesToIndexes,
@@ -334,8 +334,11 @@ namespace QueryPipeline::Statements {
         const JoinOrderAnalyzeResult& joinReorderResult,
         const PredicatePushDownResult& predicatesResult
     ) const;
-    [[nodiscard]] Dictionary<Int, column_index_t> BuildColumnsIndicesDictionary(const std::vector<table_id_t>& joinOrder)const;
-    void AssignColumnsToIndices(const std::vector<table_id_t>& order)const;
+    [[nodiscard]] Dictionary<Int, column_index_t> BuildColumnsIndicesDictionary(
+        const CompileResult& context,
+        const std::vector<table_id_t>& joinOrder
+    )const;
+    void AssignColumnsToIndices(const CompileResult& context, const std::vector<table_id_t>& order)const;
     void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary) const;
     [[nodiscard]] Errors::ValidationStatus CompileDerived(CompileResult& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -440,7 +443,7 @@ namespace QueryPipeline::Statements {
 
     [[nodiscard]] Errors::ValidationStatus CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const CompileResult& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
     Errors::ValidationStatus CompileDerived(CompileResult& context) override;
     constexpr Security::Permission RequiredPermissions()const override;

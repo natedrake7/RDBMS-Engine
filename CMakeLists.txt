@@ -85,8 +85,9 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryProtocol.cpp
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
-        src/Systemic/src/Memory/Allocator.cpp
         src/Systemic/src/Memory/Functions.cpp
+        src/Systemic/src/DataTypes/StringView.cpp
+        src/Systemic/src/Memory/Allocator.cpp
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)
@@ -175,6 +176,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Pages/OverflowPageView.cpp
         src/DatabaseEngine/src/Managers/GlobalMemoryManager.cpp
         src/DatabaseEngine/src/Contexts/ExecutionContext.cpp
+        src/DatabaseEngine/include/Memory/Allocator.h
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

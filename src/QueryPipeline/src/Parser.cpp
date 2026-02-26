@@ -104,7 +104,11 @@ namespace QueryPipeline{
             this->_scope.variables.ForceAdd(key, variable.GetType());
     }
 
-    CompileResult::CompileResult(const Errors::Error &error){
+     const Memory::Allocator& CompileResult::GetAllocator() const{
+        return this->_context.GetAllocator();
+     }
+
+     CompileResult::CompileResult(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
         this->cursors.SetAllocator(this->_context.GetAllocator());
@@ -291,7 +295,7 @@ namespace QueryPipeline{
     void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const Cursor* cursor) {
         static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
 
-        transactionManager.RollbackTransaction(cursor->GetSnapshot());
+        transactionManager.RollbackTransaction(cursor->GetExecutionContext());
 
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }

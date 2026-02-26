@@ -10,7 +10,7 @@
 #include <stdexcept>
 
 #include "DataTypes/DateTime.h"
-#include "Memory/Allocator.h"
+#include "../../include/Memory/Allocator.h"
 
 bool Value::TryParseAsBool()const{
     if (this->type == DataType::String || this->type == DataType::UnicodeString)
@@ -19,12 +19,10 @@ bool Value::TryParseAsBool()const{
     if (this->type == DataType::BigInt
         || this->type == DataType::TinyInt
         || this->type == DataType::SmallInt
-        || this->type == DataType::Int) {
-        return this->TryParseAsBoolFromInt();
-    }
+        || this->type == DataType::Int
+    ) return this->TryParseAsBoolFromInt();
 
     return false;
-
 }
 
 bool Value::TryParseAsBoolFromString()const{
@@ -65,132 +63,48 @@ bool Value::TryParseDate(){
     return true;
 }
 
-Value Value::PerformTinyIntAddition(const TinyInt lhs, const TinyInt rhs){
-    return
-        (Converter<int8_t>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                static_cast<SmallInt>(lhs +  rhs),
-                0
-            )
-            :
-            Value(
-                static_cast<int8_t>(lhs + rhs),
-                0
-            ) ;
-}
-
-Value Value::PerformSmallIntAddition(const SmallInt lhs, const SmallInt rhs){
-    return
-        (Converter<SmallInt>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                static_cast<Int>(lhs +  rhs),
-                0
-            )
-            :
-            Value(
-                static_cast<SmallInt>(lhs + rhs),
-                0
-            ) ;
-}
-
-Value Value::PerformIntAddition(const Int lhs, const Int rhs){
-    return
-        (Converter<Int>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                static_cast<int64_t>(lhs +  rhs),
-                0
-            )
-            :
-            Value(
-                static_cast<Int>(lhs + rhs),
-                0
-            ) ;
-}
-
-Value Value::PerformBigIntAddition(const BigInt lhs, const BigInt rhs){
+Value Value::PerformBigIntAddition(const Value& lhs, const Value& rhs){
     return Value(
-        lhs +  rhs,
+        lhs.AsBigInt() +  rhs.AsBigInt(),
+        *lhs.GetAllocator(),
         0
     );
 }
 
-Value Value::PerformStringAddition(const std::string &lhs, const std::string &rhs){
+Value Value::PerformStringAddition(const Value& lhs, const Value& rhs){
     return Value(
-        lhs + rhs,
+        lhs.AsString() + rhs.AsString(),
+        *lhs.GetAllocator(),
         0
     );
 
 }
 
-Value Value::PerformDecimalAddition(const DataTypes::Decimal &lhs, const DataTypes::Decimal &rhs){
-    return Value(lhs + rhs, 0);
+Value Value::PerformDecimalAddition(const Value& lhs, const Value& rhs){
+    return Value(lhs.AsDecimal() + rhs.AsDecimal(), *lhs.GetAllocator(), 0);
 }
 
-Value Value::PerformTinyIntSubtraction(const TinyInt lhs, const TinyInt rhs){
-    return
-        (Converter<TinyInt>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                static_cast<SmallInt>(lhs -  rhs),
-                0
-            )
-            :
-            Value(
-                static_cast<TinyInt>(lhs - rhs),
-                0
-            ) ;
-}
-
-Value Value::PerformSmallIntSubtraction(const SmallInt lhs, const SmallInt rhs){
-    return
-        (Converter<SmallInt>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                lhs -  rhs,
-                0
-            )
-            :
-            Value(
-                static_cast<SmallInt>(lhs - rhs),
-                0
-            ) ;
-}
-
-Value Value::PerformIntSubtraction(const Int lhs, const Int rhs){
-    return
-        (Converter<Int>::AssertOverflow(lhs, rhs))
-            ?
-            Value(
-                static_cast<BigInt>(lhs -  rhs),
-                0
-            )
-            :
-            Value(
-                lhs - rhs,
-                0
-            ) ;
-}
-
-Value Value::PerformBigIntSubtraction(const BigInt lhs, const BigInt rhs){
+Value Value::PerformBigIntSubtraction(const Value& lhs, const Value& rhs){
     return Value(
-        lhs -  rhs,
+        lhs.AsBigInt() -  rhs.AsBigInt(),
+        *lhs.GetAllocator(),
         0
     );
 }
 
-Value Value::PerformDecimalSubtraction(const DataTypes::Decimal &lhs, const DataTypes::Decimal &rhs){
-    return Value(lhs - rhs, 0);
+Value Value::PerformDecimalSubtraction(const Value& lhs, const Value& rhs){
+    return Value(lhs.AsDecimal() - rhs.AsDecimal(), *lhs.GetAllocator(), 0);
 }
 
-std::tuple<bool, Value> Value::PerformNullEqualityComparison(const Value &lhs, const Value &rhs){
+std::tuple<bool, Value> Value::PerformNullEqualityComparison(
+    const Value &lhs,
+    const Value &rhs
+){
     if (lhs.IsNull())
-        return std::make_tuple(true, Value(rhs.IsNull(), 0));
+        return std::make_tuple(true, Value(rhs.IsNull(), *lhs.GetAllocator(), 0));
 
     if (rhs.IsNull())
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
@@ -200,13 +114,13 @@ std::tuple<bool, Value> Value::PerformNullGreaterComparison(const Value& lhs, co
     const auto& isRightNull = rhs.IsNull();
 
     if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
@@ -216,13 +130,13 @@ std::tuple<bool, Value> Value::PerformNullGreaterEqualComparison(const Value& lh
     const auto& isRightNull = rhs.IsNull();
 
     if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
@@ -232,13 +146,13 @@ std::tuple<bool, Value> Value::PerformNullLessComparison(const Value& lhs, const
     const auto& isRightNull = rhs.IsNull();
 
     if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
@@ -248,23 +162,23 @@ std::tuple<bool, Value> Value::PerformNullLessEqualComparison(const Value& lhs, 
     const auto& isRightNull = rhs.IsNull();
 
     if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, 0));
+        return std::make_tuple(true, Value(false, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
 
 std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs, const Value &rhs){
     if (lhs.IsNull())
-        return std::make_tuple(true, Value(!rhs.IsNull(), 0));
+        return std::make_tuple(true, Value(!rhs.IsNull(), *lhs.GetAllocator(), 0));
 
     if (rhs.IsNull())
-        return std::make_tuple(true, Value(true, 0));
+        return std::make_tuple(true, Value(true, *lhs.GetAllocator(), 0));
 
     return std::make_tuple(false, Value::Null());
 }
@@ -291,17 +205,17 @@ Value::Value(const Value &copyVal){
     this->size = copyVal.size;
     this->type = copyVal.type;
     this->columnIndex = copyVal.columnIndex;
+    this->_allocator = copyVal._allocator;
 
     if (copyVal.data == nullptr) {
         this->data = nullptr;
         return;
     }
 
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(this->size));
     std::memcpy(this->data, copyVal.data, this->size);
-
-    this->usesExternalStorage = false;
 }
+
 Value::Value(Value &&other)noexcept {
     if (this == &other)
         return;
@@ -310,9 +224,10 @@ Value::Value(Value &&other)noexcept {
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
-    this->usesExternalStorage = other.usesExternalStorage;
+    this->_allocator = other._allocator;
 
     other.data = nullptr;
+    other._allocator = nullptr;
     other.size = 0;
     other.columnIndex = 0;
 }
@@ -320,243 +235,275 @@ Value & Value::operator=(Value &&other) noexcept{
     if (this == &other)
         return *this;
 
-    delete[] this->data;
-
     this->size = other.size;
     this->type = other.type;
     this->data = other.data;
     this->columnIndex = other.columnIndex;
-    this->usesExternalStorage = other.usesExternalStorage;
+    this->_allocator = other._allocator;
 
     other.data = nullptr;
     other.size = 0;
     other.columnIndex = 0;
+    other._allocator = nullptr;
 
     return *this;
 }
-Value::~Value(){
-    if (!this->usesExternalStorage)
-        delete this->data;
 
-    this->data = nullptr;
-}
+Value::~Value() = default;
 
 Value::Value(const column_index_t index){
     this->data = nullptr;
     this->columnIndex = index;
     this->size = 0;
     this->type = DataType::Unknown;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const void *data, const Int size, const DataType type){
-    this->data = nullptr;
-    this->size = size;
-    this->type = type;
-    this->columnIndex = 0;
-
-    this->data = new object_t[size];
-    std::memcpy(this->data, data, size);
-    this->usesExternalStorage = false;
+    this->_allocator = nullptr;
 }
 
 Value::Value(
-    const object_t* data,
+    const void *data,
     const Int size,
     const DataType type,
     const Memory::Allocator* allocator,
     const column_index_t index
 ){
-    this->data = static_cast<object_t*>(allocator->Allocate(size));
-    // this->data = new object_t[size];
-    std::memcpy(this->data, data, size);
-
+    this->data = nullptr;
     this->size = size;
     this->type = type;
     this->columnIndex = index;
-    this->usesExternalStorage = true;
+    this->_allocator = allocator;
+
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(size));
+    std::memcpy(this->data, data, size);
 }
 
-Value::Value(const bool data, const column_index_t index){
-    this->data = new object_t[sizeof(bool)];
-    std::memcpy(this->data, &data, sizeof(bool));
+// Value::Value(
+//     const object_t* data,
+//     const Int size,
+//     const DataType type,
+//     const Memory::Allocator* allocator,
+//     const column_index_t index
+// ){
+//     this->data = static_cast<object_t*>(allocator->Allocate(size));
+//     std::memcpy(this->data, data, size);
+//
+//     this->_allocator = allocator;
+//     this->size = size;
+//     this->type = type;
+//     this->columnIndex = index;
+// }
 
-    this->size = sizeof(bool);
-    this->columnIndex = index;
-    this->type = DataType::Bool;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const int8_t data, const column_index_t index){
-    this->data = new object_t[sizeof(int8_t)];
-    std::memcpy(this->data, &data, sizeof(int8_t));
-
-    this->size = sizeof(int8_t);
-    this->columnIndex = index;
-    this->type = DataType::TinyInt;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const SmallInt data, const column_index_t index){
-    this->data = new object_t[sizeof(SmallInt)];
-    std::memcpy(this->data, &data, sizeof(SmallInt));
-
-    this->size = sizeof(SmallInt);
-    this->columnIndex = index;
-    this->type = DataType::SmallInt;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const Int data, const column_index_t index){
-    this->data = new object_t[sizeof(Int)];
-    std::memcpy(this->data, &data, sizeof(Int));
-
-    this->size = sizeof(Int);
-    this->columnIndex = index;
-    this->type = DataType::Int;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const int64_t data, const column_index_t index){
-    this->data = new object_t[sizeof(int64_t)];
-    std::memcpy(this->data, &data, sizeof(int64_t));
-
-    this->size = sizeof(int64_t);
-    this->columnIndex = index;
-    this->type = DataType::BigInt;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const std::string &data, const column_index_t index){
-    this->size = data.size();
-    this->data = new object_t[this->size];
-    std::memcpy(this->data, data.data(), this->size);
-
-    this->columnIndex = index;
-    this->type = DataType::String;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const DataTypes::DateTime &data, const column_index_t index){
-    this->data = new object_t[DataTypes::DateTime::Size()];
-    const auto dt = data.GetUnixTimeStamp();
-    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
-
-    this->size = DataTypes::DateTime::Size();
-    this->columnIndex = index;
-    this->type = DataType::DateTime;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const DataTypes::Decimal &data, const column_index_t index){
-    this->size = data.GetRawDataSize();
-    this->data = new object_t[this->size];
-
-    std::memcpy(this->data, data.GetRawData(), this->size);
-    this->columnIndex = index;
-    this->type = DataType::Decimal;
-    this->usesExternalStorage = false;
-}
-
-Value::Value(const DataTypes::Guid &data, const column_index_t index){
-    this->size = data.Size();
-    this->data = new object_t[this->size];
-    std::memcpy(this->data, data.GetData().data(), this->size);
-
-    this->columnIndex = index;
-    this->type = DataType::Guid;
-    this->usesExternalStorage = false;
-}
+// Value::Value(const bool data, const column_index_t index){
+//     this->data = new object_t[sizeof(bool)];
+//     std::memcpy(this->data, &data, sizeof(bool));
+//
+//     this->size = sizeof(bool);
+//     this->columnIndex = index;
+//     this->type = DataType::Bool;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const TinyInt data, const column_index_t index){
+//     this->data = new object_t[sizeof(TinyInt)];
+//     std::memcpy(this->data, &data, sizeof(TinyInt));
+//
+//     this->size = sizeof(int8_t);
+//     this->columnIndex = index;
+//     this->type = DataType::TinyInt;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const SmallInt data, const column_index_t index){
+//     this->data = new object_t[sizeof(SmallInt)];
+//     std::memcpy(this->data, &data, sizeof(SmallInt));
+//
+//     this->size = sizeof(SmallInt);
+//     this->columnIndex = index;
+//     this->type = DataType::SmallInt;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const Int data, const column_index_t index){
+//     this->data = new object_t[sizeof(Int)];
+//     std::memcpy(this->data, &data, sizeof(Int));
+//
+//     this->size = sizeof(Int);
+//     this->columnIndex = index;
+//     this->type = DataType::Int;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const int64_t data, const column_index_t index){
+//     this->data = new object_t[sizeof(int64_t)];
+//     std::memcpy(this->data, &data, sizeof(int64_t));
+//
+//     this->size = sizeof(int64_t);
+//     this->columnIndex = index;
+//     this->type = DataType::BigInt;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const std::string &data, const column_index_t index){
+//     this->size = data.size();
+//     this->data = new object_t[this->size];
+//     std::memcpy(this->data, data.data(), this->size);
+//
+//     this->columnIndex = index;
+//     this->type = DataType::String;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const DataTypes::DateTime &data, const column_index_t index){
+//     this->data = new object_t[DataTypes::DateTime::Size()];
+//     const auto dt = data.GetUnixTimeStamp();
+//     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
+//
+//     this->size = DataTypes::DateTime::Size();
+//     this->columnIndex = index;
+//     this->type = DataType::DateTime;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const DataTypes::Decimal &data, const column_index_t index){
+//     this->size = data.GetRawDataSize();
+//     this->data = new object_t[this->size];
+//
+//     std::memcpy(this->data, data.GetRawData(), this->size);
+//     this->columnIndex = index;
+//     this->type = DataType::Decimal;
+//     this->usesExternalStorage = false;
+// }
+//
+// Value::Value(const DataTypes::Guid &data, const column_index_t index){
+//     this->size = data.Size();
+//     this->data = new object_t[this->size];
+//     std::memcpy(this->data, data.GetData().data(), this->size);
+//
+//     this->columnIndex = index;
+//     this->type = DataType::Guid;
+//     this->usesExternalStorage = false;
+// }
 
 Value::Value(const bool data, const Memory::Allocator& allocator, const column_index_t index){
     this->data = static_cast<object_t*>(allocator.Allocate(sizeof(bool)));
     std::memcpy(this->data, &data, sizeof(bool));
 
+    this->_allocator = &allocator;
     this->size = sizeof(bool);
     this->columnIndex = index;
     this->type = DataType::Bool;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const TinyInt data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const TinyInt data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(sizeof(TinyInt)));
     std::memcpy(this->data, &data, sizeof(TinyInt));
 
+    this->_allocator = &allocator;
     this->size = sizeof(TinyInt);
     this->columnIndex = index;
     this->type = DataType::TinyInt;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const SmallInt data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const SmallInt data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(sizeof(SmallInt)));
     std::memcpy(this->data, &data, sizeof(SmallInt));
 
+    this->_allocator = &allocator;
     this->size = sizeof(SmallInt);
     this->columnIndex = index;
     this->type = DataType::SmallInt;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const Int data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const Int data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(sizeof(Int)));
     std::memcpy(this->data, &data, sizeof(Int));
 
+    this->_allocator = &allocator;
     this->size = sizeof(Int);
     this->columnIndex = index;
     this->type = DataType::Int;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const BigInt data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const BigInt data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(sizeof(BigInt)));
     std::memcpy(this->data, &data, sizeof(BigInt));
 
+    this->_allocator = &allocator;
     this->size = sizeof(BigInt);
     this->columnIndex = index;
     this->type = DataType::BigInt;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const std::string& data, const Memory::Allocator& allocator, column_index_t index){
+Value::Value(
+    const std::string& data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(data.size()));
     std::memcpy(this->data, data.data(), data.size());
     this->size = data.size();
 
+    this->_allocator = &allocator;
     this->columnIndex = index;
     this->type = DataType::String;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const DataTypes::DateTime& data, const Memory::Allocator& allocator, column_index_t index){
+Value::Value(
+    const DataTypes::DateTime& data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(DataTypes::DateTime::Size()));
     const auto dt = data.GetUnixTimeStamp();
     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
+    this->_allocator = &allocator;
     this->size = DataTypes::DateTime::Size();
     this->columnIndex = index;
     this->type = DataType::DateTime;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const DataTypes::Decimal& data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const DataTypes::Decimal& data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(data.GetRawDataSize()));
     std::memcpy(this->data, data.GetRawData(), data.GetRawDataSize());
 
+    this->_allocator = &allocator;
     this->size = data.GetRawDataSize();
     this->columnIndex = index;
     this->type = DataType::Decimal;
-    this->usesExternalStorage = true;
 }
 
-Value::Value(const DataTypes::Guid& data, const Memory::Allocator& allocator, const column_index_t index){
+Value::Value(
+    const DataTypes::Guid& data,
+    const Memory::Allocator& allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator.Allocate(data.Size()));
     std::memcpy(this->data, data.GetData().data(), data.Size());
 
+    this->_allocator = &allocator;
     this->size = data.Size();
     this->columnIndex = index;
     this->type = DataType::Guid;
-    this->usesExternalStorage = true;
 }
 
 Value Value::FromExternalStorage(
@@ -583,9 +530,7 @@ void Value::SetNull(){
 }
 
 void Value::SetData(const bool otherData){
-    delete this->data;
-
-    this->data = new object_t[sizeof(bool)];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(bool)));
     std::memcpy(this->data, &otherData, sizeof(bool));
 
     this->size = sizeof(bool);
@@ -593,9 +538,7 @@ void Value::SetData(const bool otherData){
 }
 
 void Value::SetData(const TinyInt otherData) {
-    delete this->data;
-
-    this->data = new object_t[sizeof(TinyInt)];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(TinyInt)));
     std::memcpy(this->data, &otherData, sizeof(TinyInt));
 
     this->size = sizeof(TinyInt);
@@ -603,9 +546,7 @@ void Value::SetData(const TinyInt otherData) {
 }
 
 void Value::SetData(const SmallInt otherData) {
-    delete this->data;
-
-    this->data = new object_t[sizeof(SmallInt)];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(SmallInt)));
     std::memcpy(this->data, &otherData, sizeof(SmallInt));
 
     this->size = sizeof(SmallInt);
@@ -613,9 +554,7 @@ void Value::SetData(const SmallInt otherData) {
 }
 
 void Value::SetData(const Int otherData) {
-    delete this->data;
-
-    this->data = new object_t[sizeof(Int)];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(Int)));
     std::memcpy(this->data, &otherData, sizeof(Int));
 
     this->size = sizeof(Int);
@@ -623,9 +562,7 @@ void Value::SetData(const Int otherData) {
 }
 
 void Value::SetData(const BigInt otherData) {
-    delete this->data;
-
-    this->data = new object_t[sizeof(BigInt)];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(BigInt)));
     std::memcpy(this->data, &otherData, sizeof(BigInt));
     this->size = sizeof(BigInt);
 
@@ -633,29 +570,23 @@ void Value::SetData(const BigInt otherData) {
 }
 
 void Value::SetData(const std::string &otherData) {
-    delete this->data;
-
-    this->size = otherData.size();
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(otherData.size()));
     std::memcpy(this->data, otherData.data(), this->size);
 
+    this->size = otherData.size();
     this->type = DataType::String;
 }
 
 void Value::SetData(const DataTypes::Decimal &otherData) {
-    delete this->data;
-
-    this->size = otherData.GetRawDataSize();
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(otherData.GetRawDataSize()));
     std::memcpy(this->data, otherData.GetRawData(), this->size);
 
+    this->size = otherData.GetRawDataSize();
     this->type = DataType::Decimal;
 }
 
 void Value::SetData(const DataTypes::DateTime &otherData) {
-    delete this->data;
-
-    this->data = new object_t[DataTypes::DateTime::Size()];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(DataTypes::DateTime::Size()));
     const auto dt = otherData.GetUnixTimeStamp();
     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
@@ -664,22 +595,18 @@ void Value::SetData(const DataTypes::DateTime &otherData) {
 }
 
 void Value::SetData(const DataTypes::Guid &otherData){
-    delete this->data;
-
-    this->size = otherData.Size();
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(DataTypes::Guid::Size()));
     std::memcpy(this->data, otherData.GetData().data(), this->size);
 
+    this->size = DataTypes::Guid::Size();
     this->type = DataType::Guid;
 }
 
 void Value::SetData(const page_id_t pageId){
-    delete this->data;
-
-    this->size = sizeof(page_id_t);
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(sizeof(page_id_t)));
     std::memcpy(this->data, &pageId, this->size);
 
+    this->size = sizeof(page_id_t);
     this->type = DataType::Int;
 }
 
@@ -805,13 +732,15 @@ Value& Value::operator=(const Value &rhs){
 
     this->size = rhs.size;
     this->type = rhs.type;
+    this->columnIndex = rhs.columnIndex;
+    this->_allocator = rhs.GetAllocator();
 
     if (rhs.data == nullptr) {
         this->data = nullptr;
         return *this;
     }
 
-    this->data = new object_t[this->size];
+    this->data = static_cast<object_t*>(this->_allocator->Allocate(this->size));
     std::memcpy(this->data, rhs.data, this->size);
 
     return *this;
@@ -824,17 +753,17 @@ Value operator+(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt: {
-        auto value = Value::PerformBigIntAddition(lhs.AsBigInt(), rhs.AsBigInt());
+        auto value = Value::PerformBigIntAddition(lhs, rhs);
         DataTypes::Coercions::DeduceIntegerType(value);
         return value;
     }
     case DataType::Decimal:
-        return Value::PerformDecimalAddition(lhs.AsDecimal(), rhs.AsDecimal());
+        return Value::PerformDecimalAddition(lhs, rhs);
     case DataType::String:
     case DataType::UnicodeString:
-        return Value::PerformStringAddition(lhs.AsString(), rhs.AsString());
+        return Value::PerformStringAddition(lhs, rhs);
     case DataType::Bool:
-        return Value(lhs.AsBool() + rhs.AsBool(), 0);
+        return Value(lhs.AsBool() + rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
@@ -854,28 +783,28 @@ Value& Value::operator+=(const Value &rhs){
 
 Value operator-(const Value &lhs, const Value &rhs){
     switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt: {
-        auto value = Value::PerformBigIntSubtraction(lhs.AsBigInt(), rhs.AsBigInt());
-        DataTypes::Coercions::DeduceIntegerType(value);
-        return value;
-    }
-    case DataType::Decimal:
-        return Value::PerformDecimalSubtraction(lhs.AsDecimal(), rhs.AsDecimal());
-    case DataType::String:
-    case DataType::UnicodeString:
-    case DataType::Bool:
-    case DataType::DateTime:
-    case DataType::Guid:
-    case DataType::RowIdentifier:
-    case DataType::Unknown:
-    default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type));
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt: {
+            auto value = Value::PerformBigIntSubtraction(lhs, rhs);
+            DataTypes::Coercions::DeduceIntegerType(value);
+            return value;
+        }
+        case DataType::Decimal:
+            return Value::PerformDecimalSubtraction(lhs, rhs);
+        case DataType::String:
+        case DataType::UnicodeString:
+        case DataType::Bool:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            throw std::invalid_argument("Left Operand has type: "
+                + ColumnTypesToStringDictionary.Get(lhs.type)
+                + " and right operand has type: "
+                + ColumnTypesToStringDictionary.Get(rhs.type));
     }
 }
 
@@ -889,14 +818,14 @@ Value operator%(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() % rhs.AsBigInt(), 0);
+        auto value = Value(lhs.AsBigInt() % rhs.AsBigInt(), *lhs.GetAllocator(), 0);
         DataTypes::Coercions::DeduceIntegerType(value);
         return value;
     }
     case DataType::Bool:
-        return Value(lhs.AsBool() % rhs.AsBool(), 0);
+        return Value(lhs.AsBool() % rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::Decimal:
-    // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);
+    // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);WWW
     case DataType::String:
     case DataType::UnicodeString:
     case DataType::DateTime:
@@ -918,14 +847,14 @@ Value operator*(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() * rhs.AsBigInt(), 0);
+        auto value = Value(lhs.AsBigInt() * rhs.AsBigInt(), *lhs.GetAllocator(), 0);
         DataTypes::Coercions::DeduceIntegerType(value);
         return value;
     }
     case DataType::Bool:
-        return Value(lhs.AsBool() * rhs.AsBool(), 0);
+        return Value(lhs.AsBool() * rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() * rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() * rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
     case DataType::UnicodeString:
     case DataType::DateTime:
@@ -951,19 +880,19 @@ Value operator<(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt:
-        return Value(lhs.AsBigInt() < rhs.AsBigInt(), 0);
+        return Value(lhs.AsBigInt() < rhs.AsBigInt(), *lhs.GetAllocator(), 0);
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() < rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() < rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() < rhs.AsString(), 0);
+        return Value(lhs.AsString() < rhs.AsString(), *lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() < rhs.AsUnicodeString(), 0);
+        return Value(lhs.AsUnicodeString() < rhs.AsUnicodeString(), *lhs.GetAllocator(), 0);
     case DataType::Bool:
-        return Value(lhs.AsBool() < rhs.AsBool(), 0);
+        return Value(lhs.AsBool() < rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
-        return Value(lhs.AsDateTime() < rhs.AsDateTime(), 0);
+        return Value(lhs.AsDateTime() < rhs.AsDateTime(), *lhs.GetAllocator(), 0);
     case DataType::Guid:
-        return Value(lhs.AsGuid() < rhs.AsGuid(), 0);
+        return Value(lhs.AsGuid() < rhs.AsGuid(), *lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
@@ -989,19 +918,19 @@ Value operator<=(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt:
-        return Value(lhs.AsBigInt() <= rhs.AsBigInt(), 0);
+        return Value(lhs.AsBigInt() <= rhs.AsBigInt(), *lhs.GetAllocator(), 0);
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() <= rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() <= rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() <= rhs.AsString(), 0);
+        return Value(lhs.AsString() <= rhs.AsString(), *lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() <= rhs.AsUnicodeString(), 0);
+        return Value(lhs.AsUnicodeString() <= rhs.AsUnicodeString(), *lhs.GetAllocator(), 0);
     case DataType::Bool:
-        return Value(lhs.AsBool() <= rhs.AsBool(), 0);
+        return Value(lhs.AsBool() <= rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
-        return Value(lhs.AsDateTime() <= rhs.AsDateTime(), 0);
+        return Value(lhs.AsDateTime() <= rhs.AsDateTime(), *lhs.GetAllocator(), 0);
     case DataType::Guid:
-        return Value(lhs.AsGuid() <= rhs.AsGuid(), 0);
+        return Value(lhs.AsGuid() <= rhs.AsGuid(), *lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
@@ -1027,20 +956,20 @@ Value operator>=(const Value &lhs, const Value &rhs){
         const auto left = lhs.AsBigInt();
         const auto right = rhs.AsBigInt();
 
-        return Value(left >= right, 0);
+        return Value(left >= right, *lhs.GetAllocator(), 0);
     }
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() >= rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() >= rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() >= rhs.AsString(), 0);
+        return Value(lhs.AsString() >= rhs.AsString(), *lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() >= rhs.AsUnicodeString(), 0);
+        return Value(lhs.AsUnicodeString() >= rhs.AsUnicodeString(), *lhs.GetAllocator(), 0);
     case DataType::Bool:
-        return Value(lhs.AsBool() >= rhs.AsBool(), 0);
+        return Value(lhs.AsBool() >= rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
-        return Value(lhs.AsDateTime() >= rhs.AsDateTime(), 0);
+        return Value(lhs.AsDateTime() >= rhs.AsDateTime(), *lhs.GetAllocator(), 0);
     case DataType::Guid:
-        return Value(lhs.AsGuid() >= rhs.AsGuid(), 0);
+        return Value(lhs.AsGuid() >= rhs.AsGuid(), *lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
@@ -1062,22 +991,22 @@ Value operator==(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() == rhs.AsBigInt(), 0);
+        auto value = Value(lhs.AsBigInt() == rhs.AsBigInt(), *lhs.GetAllocator(), 0);
         DataTypes::Coercions::DeduceIntegerType(value);
         return value;
     }
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() == rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() == rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() == rhs.AsString(), 0);
+        return Value(lhs.AsString() == rhs.AsString(), *lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() == rhs.AsUnicodeString(), 0);
+        return Value(lhs.AsUnicodeString() == rhs.AsUnicodeString(), *lhs.GetAllocator(), 0);
     case DataType::Bool:
-        return Value(lhs.AsBool() == rhs.AsBool(), 0);
+        return Value(lhs.AsBool() == rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
-        return Value(lhs.AsDateTime() == rhs.AsDateTime(), 0);
+        return Value(lhs.AsDateTime() == rhs.AsDateTime(), *lhs.GetAllocator(), 0);
     case DataType::Guid:
-        return Value(lhs.AsGuid() == rhs.AsGuid(), 0);
+        return Value(lhs.AsGuid() == rhs.AsGuid(), *lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
@@ -1099,22 +1028,22 @@ Value operator!=(const Value &lhs, const Value &rhs){
     case DataType::SmallInt:
     case DataType::Int:
     case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() != rhs.AsBigInt(), 0);
+        auto value = Value(lhs.AsBigInt() != rhs.AsBigInt(), *lhs.GetAllocator(), 0);
         DataTypes::Coercions::DeduceIntegerType(value);
         return value;
     }
     case DataType::Decimal:
-        return Value(lhs.AsDecimal() != rhs.AsDecimal(), 0);
+        return Value(lhs.AsDecimal() != rhs.AsDecimal(), *lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() != rhs.AsString(), 0);
+        return Value(lhs.AsString() != rhs.AsString(), *lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() != rhs.AsUnicodeString(), 0);
+        return Value(lhs.AsUnicodeString() != rhs.AsUnicodeString(), *lhs.GetAllocator(), 0);
     case DataType::Bool:
-        return Value(lhs.AsBool() != rhs.AsBool(), 0);
+        return Value(lhs.AsBool() != rhs.AsBool(), *lhs.GetAllocator(), 0);
     case DataType::DateTime:
-        return Value(lhs.AsDateTime() != rhs.AsDateTime(), 0);
+        return Value(lhs.AsDateTime() != rhs.AsDateTime(), *lhs.GetAllocator(), 0);
     case DataType::Guid:
-        return Value(lhs.AsGuid() != rhs.AsGuid(), 0);
+        return Value(lhs.AsGuid() != rhs.AsGuid(), *lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
@@ -1125,6 +1054,8 @@ Value operator!=(const Value &lhs, const Value &rhs){
         );
     }
 }
+
+const Memory::Allocator* Value::GetAllocator() const{ return this->_allocator;}
 
 bool Value::ParseAsBoolFromString() const{
     const auto strData = Functions::String::Lower(this->AsString());
@@ -1141,6 +1072,7 @@ bool Value::ParseAsBoolFromString() const{
 Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
     return Value(
         Functions::String::EqualsIgnoreCase(lhs.AsString(), rhs.AsString()),
+        *lhs.GetAllocator(),
         0
     );
 }

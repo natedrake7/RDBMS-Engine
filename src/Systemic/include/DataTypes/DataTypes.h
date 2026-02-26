@@ -80,7 +80,7 @@ enum class DataType : uint8_t{
 
 constexpr Int DATETIME_SIZE = sizeof(BigInt);
 
-static Dictionary<std::string, block_size_t> ColumnTypeSizes = {
+inline Dictionary<std::string, block_size_t> ColumnTypeSizes = {
   {"tinyint", sizeof(int8_t)},
   {"smallint", sizeof(int16_t)},
   {"int", sizeof(int32_t)},
@@ -94,7 +94,7 @@ static Dictionary<std::string, block_size_t> ColumnTypeSizes = {
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-static Dictionary<std::string, DataType> ColumnTypesDictionary = {
+inline Dictionary<std::string, DataType> ColumnTypesDictionary = {
   {"tinyint", DataType::TinyInt},
   {"smallint", DataType::SmallInt},
   {"int", DataType::Int},
@@ -108,7 +108,7 @@ static Dictionary<std::string, DataType> ColumnTypesDictionary = {
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-static Dictionary<DataType, std::string> ColumnTypesToStringDictionary = {
+inline Dictionary<DataType, std::string> ColumnTypesToStringDictionary = {
   {DataType::TinyInt, "TinyInt"},
   {DataType::SmallInt, "SmallInt"},
   {DataType::Int, "Int"},

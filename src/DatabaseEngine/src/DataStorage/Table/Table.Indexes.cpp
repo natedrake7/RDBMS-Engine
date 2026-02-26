@@ -35,12 +35,20 @@ namespace DatabaseEngine::StorageTypes {
         auto* tree = this->GetClusteredIndexedTree();
         // auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
-        auto key = this->CreateKey(executionContext, this->GetClusteredIndex(), payload);
+        auto key = this->CreateKey(
+            executionContext,
+            this->GetClusteredIndex(),
+            payload
+        );
 
-        int indexPosition = 0;
-
+        Int indexPosition = 0;
         auto tuple = Pages::IndexInsertTuple(key, &payload);
-        auto status = tree->InsertRow(tuple, pagesToAllocate, indexPosition);
+        auto status = tree->InsertRow(
+            executionContext,
+            tuple,
+            pagesToAllocate,
+            indexPosition
+        );
 
         if (status.code != Errors::RuntimeError::Ok)
             return status;
@@ -138,6 +146,22 @@ namespace DatabaseEngine::StorageTypes {
         tree->IndexSeek(executionContext, key, selectedRows);
     }
 
+    void Table::SystemClusteredIndexSeek(
+        const Memory::Allocator& allocator,
+        DataStructures::Array<Pages::RowReference>* selectedRows,
+        const DataTypes::Indexing::Key& key,
+        const Expressions::Expression* expression
+    ){
+        const auto* tree = this->GetClusteredIndexedTree();
+
+        if (expression != nullptr){
+            tree->SystemIndexSeek(allocator, key, selectedRows, expression);
+            return;
+        }
+
+        tree->SystemIndexSeek(allocator, key, selectedRows);
+    }
+
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
         DataStructures::Array<Pages::RowReference> *selectedRows,
@@ -173,6 +197,24 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         tree->IndexScan(executionContext, selectedRows);
+    }
+
+    void Table::SystemClusteredIndexScan(
+        const Memory::Allocator& allocator,
+        DataStructures::Array<Pages::RowReference>* selectedRows,
+        const Expressions::Expression* expression
+    ){
+        if (this->header.allocationPageId == INVALID_PAGE_ID)
+            return;
+
+        const auto* tree = this->GetClusteredIndexedTree();
+
+        if(expression != nullptr){
+            tree->SystemIndexScan(allocator, selectedRows, expression);
+            return;
+        }
+
+        tree->SystemIndexScan(allocator, selectedRows);
     }
 
     void Table::NonClusteredIndexScan(

@@ -5,7 +5,6 @@
 #include "SystemDatabases/SystemCatalog.h"
 
 namespace DatabaseEngine {
-
   StatisticsManager & StatisticsManager::Get() {
     static StatisticsManager instance;
     return instance;
@@ -18,7 +17,8 @@ namespace DatabaseEngine {
     if (this->tableStatisticsCache.TryGetValue(tableId, stats))
       return stats;
 
-    auto catalogStats = SystemCatalog::Get().SelectTableStatisticsById(tableId);
+    const Memory::Allocator allocator;
+    auto catalogStats = SystemCatalog::Get().SelectTableStatisticsById(allocator, tableId);
 
     if (catalogStats.tableId == INVALID_TABLE_ID)
       return stats;
@@ -40,9 +40,10 @@ namespace DatabaseEngine {
     if (this->columnStatisticsCache.TryGetValue(columnId, stats))
       return stats;
 
-    auto columnHeader = SystemCatalog::Get().SelectColumnById(tableId, columnId);
+    const Memory::Allocator allocator;
+    auto columnHeader = SystemCatalog::Get().SelectColumnById(allocator, tableId, columnId);
 
-    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(columnId, static_cast<DataType>(columnHeader.dataType));
+    auto catalogStats = SystemCatalog::Get().SelectColumnStatisticsById(allocator, columnId, static_cast<DataType>(columnHeader.dataType));
 
     if (catalogStats.columnId == INVALID_TABLE_ID)
       return stats;
@@ -61,7 +62,8 @@ namespace DatabaseEngine {
     if (this->indexStatisticsCache.TryGetValue(tableId, stats))
       return stats;
 
-    auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(tableId);
+    const Memory::Allocator allocator;
+    auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(allocator, tableId);
 
     if (catalogStats.empty())
       return stats;

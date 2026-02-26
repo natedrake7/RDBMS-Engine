@@ -2,7 +2,7 @@
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/Memory/Allocator.h"
+#include "../../../Systemic/include/Memory/Allocator.h"
 #include "../Managers/GlobalMemoryManager.h"
 
 class Variable;
@@ -31,8 +31,6 @@ namespace DatabaseEngine {
         Memory::Allocator allocator;
         const Dictionary<std::string, Variable>* variables;
         Int batchSize;
-
-        Int allocationSize;
 
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 

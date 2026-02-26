@@ -57,7 +57,7 @@ namespace DatabaseEngine::StorageTypes{
             //ignore auto-computed columns even if specified
             if (column->HasIdentity()){
                 const auto columnSize = column->Size();
-                auto identityValue = column->GenerateIdentityValue();
+                auto identityValue = column->GenerateIdentityValue(allocator);
                 payload.SetData(&identityValue, columnSize);
 
                 payload.SetData(&columnSize, sizeof(block_size_t), dataSizesOffset);

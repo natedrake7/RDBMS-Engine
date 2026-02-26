@@ -13,6 +13,7 @@ public:
     QueryResult(QueryResult&& other) noexcept;
 
     void AddColumn(Value& field);
+    void AddColumn(Value&& field);
     void AddColumn(const Value& field);
     void AddColumn(const Value& field, column_index_t columnIndex);
     void Print()const;

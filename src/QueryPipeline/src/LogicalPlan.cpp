@@ -86,7 +86,7 @@ namespace QueryPipeline {
     : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode* LogicalTableScan::ToPhysical(CompileResult& context){
-    auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
+    auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     // If no indexes are available, use heap scan
     if (indexes.empty())
@@ -319,7 +319,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(CompileResult& context){
-    const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
+    const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     //if no indexes are available heap scan
     if (indexes.empty())
@@ -334,7 +334,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     //   expression->GetColumns(expressionColumns);
 
     for (const auto& index: indexes) {
-      const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
+      const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
 
       if (canIndexSeek) {
         for (const auto& column: index.columns) {
@@ -360,7 +360,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(CompileResult& context){
-        const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(this->table->tableId);
+        const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
         //if no indexes are available heap scan
         if (indexes.empty())
@@ -375,7 +375,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         //   expression->GetColumns(expressionColumns);
 
         for (const auto& index: indexes) {
-            const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(index.id);
+            const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
 
             if (canIndexSeek) {
                 for (const auto& column: indexHeader.columns) {

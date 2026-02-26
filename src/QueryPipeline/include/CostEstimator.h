@@ -19,6 +19,7 @@ namespace Headers {
 }
 
 namespace QueryPipeline{
+    struct CompileResult;
     struct IndexCandidate;
     struct SeekRange;
     struct IndexSeekColumnAnalysisResults;
@@ -93,6 +94,7 @@ namespace QueryPipeline{
         );
 
         [[nodiscard]] static double EstimateSelectivityByHistograms(
+            const CompileResult* context,
             const SeekRange& range,
             const Headers::TableStatistics& tableStats,
             const Headers::ColumnStatistics& columnStats
@@ -104,6 +106,7 @@ namespace QueryPipeline{
         );
 
         [[nodiscard]] static double EstimateSelectivity(
+            const CompileResult* context,
             const SeekRange& range,
             const Headers::ColumnStatistics& columnStats,
             const Headers::TableStatistics& tableStats
@@ -111,6 +114,7 @@ namespace QueryPipeline{
 
     public:
         static void EstimateIndexCost(
+            const CompileResult* context,
             IndexCandidate& candidate,
             const Headers::TableStatistics& tableStats
         );

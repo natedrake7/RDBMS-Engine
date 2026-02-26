@@ -69,7 +69,11 @@ namespace Pages{
         [[nodiscard]] PageHeader* GetHeader()const;
 
         [[nodiscard]] DatabaseEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
-        [[nodiscard]] RowReference PeekRow(Int indexPosition, Int offSet) const;
+        [[nodiscard]] RowReference PeekRow(
+            const Memory::Allocator& allocator,
+            Int indexPosition,
+            Int offSet
+        ) const;
 
         [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
@@ -108,7 +112,11 @@ namespace Pages{
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 
         void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
-        [[nodiscard]] QueryResult MaterializeRow(Int indexPosition, Int keySize) const;
+        [[nodiscard]] QueryResult MaterializeRow(
+            const Memory::Allocator* allocator,
+            Int indexPosition,
+            Int keySize
+        ) const;
         Value PartialMaterializeRow(const Memory::Allocator* allocator, const RowReference* rowPtr, column_index_t columnIndex) const;
 
         [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
