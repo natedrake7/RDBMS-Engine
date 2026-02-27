@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "DataTypes.h"
-#include "String.h"
+#include "StringView.h"
 
 namespace Memory{
     class IAllocator;
@@ -137,6 +137,7 @@ class Value {
         [[nodiscard]] Int AsInt()const;
         [[nodiscard]] BigInt AsBigInt()const;
         [[nodiscard]] DataTypes::String AsString()const;
+        [[nodiscard]] DataTypes::StringView AsStringView()const;
         [[nodiscard]] std::u16string AsUnicodeString()const;
         [[nodiscard]] DataTypes::Decimal AsDecimal()const;
         [[nodiscard]] DataTypes::DateTime AsDateTime()const;

@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdint>
-#include <string>
-#include "../DataStructures/Dictionary.h"
+#include "StringView.h"
+#include "../DataStructures/ConstexprDictionary.h"
 
 typedef uint8_t UnsignedTinyInt;
 typedef uint16_t UnsignedSmallInt;
@@ -78,47 +78,58 @@ enum class DataType : uint8_t{
   Unknown = 11
 };
 
+enum class StringComparisonType: UnsignedTinyInt{
+    Equals = 0,
+    EqualsIgnoreOrdinalCase = 1,
+    StartsWith = 2,
+    StartsWithIgnoreOrdinalCase = 3,
+    EndsWith = 4,
+    EndsWithIgnoreOrdinalCase = 5,
+    Contains = 6,
+    ContainsIgnoreCase = 7
+};
+
 constexpr Int DATETIME_SIZE = sizeof(BigInt);
 
-inline Dictionary<std::string, block_size_t> ColumnTypeSizes = {
-  {"tinyint", sizeof(int8_t)},
-  {"smallint", sizeof(int16_t)},
-  {"int", sizeof(int32_t)},
-  {"bigint", sizeof(int64_t)},
-  {"datetime", DATETIME_SIZE},
-  {"bool", sizeof(bool)},
-  {"string", 0},
-  {"decimal", 0},
-  {"unicodestring", 0},
-  {"guid", 16}
+static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10> ColumnTypeSizes{
+  Pair(DataTypes::StringView("tinyint"), sizeof(TinyInt)),
+  Pair(DataTypes::StringView("smallint"), sizeof(SmallInt)),
+  Pair(DataTypes::StringView("int"), sizeof(Int)),
+  Pair(DataTypes::StringView("bigint"), sizeof(BigInt)),
+  Pair(DataTypes::StringView("datetime"), DATETIME_SIZE),
+  Pair(DataTypes::StringView("bool"), sizeof(bool)),
+  Pair(DataTypes::StringView("string"), 0),
+  Pair(DataTypes::StringView("decimal"), 0),
+  Pair(DataTypes::StringView("unicodestring"), 0),
+  Pair(DataTypes::StringView("guid"), 16)
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-inline Dictionary<std::string, DataType> ColumnTypesDictionary = {
-  {"tinyint", DataType::TinyInt},
-  {"smallint", DataType::SmallInt},
-  {"int", DataType::Int},
-  {"bigint", DataType::BigInt},
-  {"datetime", DataType::DateTime},
-  {"bool", DataType::Bool},
-  {"string", DataType::String},
-  {"decimal", DataType::Decimal},
-  {"unicodestring", DataType::UnicodeString},
-  {"guid", DataType::Guid}
+static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 11> ColumnTypesDictionary = {
+  Pair(DataTypes::StringView("tinyint"), DataType::TinyInt),
+  Pair(DataTypes::StringView("smallint"), DataType::SmallInt),
+  Pair(DataTypes::StringView("int"), DataType::Int),
+  Pair(DataTypes::StringView("bigint"), DataType::BigInt),
+  Pair(DataTypes::StringView("datetime"), DataType::DateTime),
+  Pair(DataTypes::StringView("bool"), DataType::Bool),
+  Pair(DataTypes::StringView("string"), DataType::String),
+  Pair(DataTypes::StringView("decimal"), DataType::Decimal),
+  Pair(DataTypes::StringView("unicodestring"), DataType::UnicodeString),
+  Pair(DataTypes::StringView("guid"), DataType::Guid)
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };
 
-inline Dictionary<DataType, std::string> ColumnTypesToStringDictionary = {
-  {DataType::TinyInt, "TinyInt"},
-  {DataType::SmallInt, "SmallInt"},
-  {DataType::Int, "Int"},
-  {DataType::BigInt, "BigInt"},
-  {DataType::DateTime, "DateTime"},
-  {DataType::Bool, "Bool"},
-  {DataType::String, "String"},
-  {DataType::Decimal, "Decimal"},
-  {DataType::UnicodeString, "Unicodestring"},
-  {DataType::Guid, "Guid"},
-  {DataType::Unknown, "Invalid"}
+static constexpr ConstexprDictionary<DataType, DataTypes::StringView, 11> ColumnTypesToStringDictionary = {
+  Pair(DataType::TinyInt, DataTypes::StringView("TinyInt")),
+  Pair(DataType::SmallInt, DataTypes::StringView("SmallInt")),
+  Pair(DataType::Int, DataTypes::StringView("Int")),
+  Pair(DataType::BigInt, DataTypes::StringView("BigInt")),
+  Pair(DataType::DateTime, DataTypes::StringView("DateTime")),
+  Pair(DataType::Bool, DataTypes::StringView("Bool")),
+  Pair(DataType::String, DataTypes::StringView("String")),
+  Pair(DataType::Decimal, DataTypes::StringView("Decimal")),
+  Pair(DataType::UnicodeString, DataTypes::StringView("Unicodestring")),
+  Pair(DataType::Guid, DataTypes::StringView("Guid")),
+  Pair(DataType::Unknown, DataTypes::StringView("Invalid"))
   //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };

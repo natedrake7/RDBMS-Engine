@@ -3,42 +3,59 @@
 #include <cstdint>
 #include <string>
 #include "DataTypes.h"
+#include "String.h"
+#include "StringView.h"
 
 namespace DataTypes {
-    class String;
     constexpr Int GUID_SIZE = 16;
+    constexpr static Int GUID_STRING_SIZE = 36;
+    constexpr static Int GUID_STRING_NO_HYPHEN_SIZE = 32;
+    constexpr static Int GUID_HEX_SIZE = 2;
+    constexpr static StringView GUID_STRING_FORMAT = "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x";
+    constexpr static StringView GUID_VALIDATION_FORMAT = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$";
 
-  class Guid {
-    std::array<UnsignedTinyInt, GUID_SIZE> data;
+    class Guid {
+        std::array<UnsignedTinyInt, GUID_SIZE> _data;
+
+        static bool Validate(const char* str, Int size);
+        static Guid Parse(const char* str, Int size);
 
     public:
-      Guid();
-      Guid(const unsigned char* data, Int size);
-      explicit Guid(const std::array<UnsignedTinyInt, GUID_SIZE>& data);
-      ~Guid();
-      [[nodiscard]] std::array<UnsignedTinyInt, GUID_SIZE>& GetDataUnsafe();
-      [[nodiscard]] const std::array<UnsignedTinyInt, GUID_SIZE>& GetData() const;
+        Guid();
+        Guid(const unsigned char* data, Int size);
+        explicit Guid(const std::array<UnsignedTinyInt, GUID_SIZE>& data);
+        ~Guid();
+        [[nodiscard]] std::array<UnsignedTinyInt, GUID_SIZE>& GetDataUnsafe();
+        [[nodiscard]] const std::array<UnsignedTinyInt, GUID_SIZE>& GetData() const;
 
-      [[nodiscard]] std::string ToString() const;
-      static Guid Parse(const std::string& str);
-      static bool Validate(const String& str);
+        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
+        static Guid Parse(const String& str);
+        static Guid Parse(const StringView& str);
+        static Guid Parse(const std::string& str);
+        static Guid Parse(const std::string_view& str);
+        static Guid Parse(const char* str);
 
-      friend std::ostream& operator<<(std::ostream& os, const Guid& guid);
-      static Guid NewGuid();
-      static Guid Empty();
-      static Guid FromString(const std::string& str);
+        static bool Validate(const String& str);
+        static bool Validate(const StringView& str);
+        static bool Validate(const std::string& str);
+        static bool Validate(const std::string_view& str);
+        static bool Validate(const char* str);
 
-      long double Interpolate() const;
+        friend std::ostream& operator<<(std::ostream& os, const Guid& guid);
+        static Guid NewGuid();
+        static Guid Empty();
 
-      constexpr static Int Size() { return GUID_SIZE; };
-  };
+        [[nodiscard]] long double Interpolate() const;
 
-  bool operator==(const Guid& guid1, const Guid& guid2);
-  bool operator!=(const Guid& guid1, const Guid& guid2);
-  bool operator<(const Guid& guid1, const Guid& guid2);
-  bool operator>(const Guid& guid1, const Guid& guid2);
-  bool operator<=(const Guid& guid1, const Guid& guid2);
-  bool operator>=(const Guid& guid1, const Guid& guid2);
+        constexpr static Int Size() { return GUID_SIZE; };
+    };
+
+    bool operator==(const Guid& guid1, const Guid& guid2);
+    bool operator!=(const Guid& guid1, const Guid& guid2);
+    bool operator<(const Guid& guid1, const Guid& guid2);
+    bool operator>(const Guid& guid1, const Guid& guid2);
+    bool operator<=(const Guid& guid1, const Guid& guid2);
+    bool operator>=(const Guid& guid1, const Guid& guid2);
 }
 
 template<>

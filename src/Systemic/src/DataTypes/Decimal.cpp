@@ -2,313 +2,107 @@
 #include <algorithm>
 #include <iostream>
 
+#include "DataTypes/StringView.h"
+
 namespace DataTypes {
-    Decimal::Decimal() = default;
+    template <typename T>
+    void Decimal::InitializeFromInteger(const T value){
+        static_assert(std::is_integral_v<T>, "Decimal::InitializeFromInteger: T must be an integer");
 
-    Decimal::Decimal(const std::string& value){
-        if (value.empty())
-            return;
+        const auto isPositive = value >= 0;
+        auto absValue = std::abs(static_cast<BigInt>(value));
 
-        std::string copiedValue(value);
+        std::array<byte_t, 2 * DECIMAL_ARRAY_SIZE> digits{};
 
-        //remove sign
-        const bool isPositive = copiedValue.front() != '-';
-
-        if (!isPositive || copiedValue.front() == '+')
-            copiedValue.erase(0, 1);
-
-        for (const auto& ch : copiedValue) {
-            if (ch != '0')
-                break;
-
-            copiedValue.erase(0, 1);
+        Int counter = 0;
+        if (absValue == 0){
+            digits[0] = 0;
         }
 
-        auto fractionIndex = Decimal::GetFractionIndex(copiedValue);
+        while (absValue > 0) {
+            digits[counter++]  = absValue % 10;
+            absValue /= 10;
+        }
 
-        //invalid string
-        if (fractionIndex != 0) {
-            copiedValue.erase(fractionIndex , 1);
-            const auto fractionalDigits = copiedValue.size() - fractionIndex;
+        std::ranges::reverse(digits);
 
-            const auto integerDigits = copiedValue.size() - fractionalDigits;
+        digits[counter++] = 0x00;
+        digits[counter++] = 0x00;
 
-            if (fractionalDigits % 2 != 0)
-                copiedValue.push_back('0');
+        fraction_index_t fractionIndex = digits.size() - 2;
 
-            if (integerDigits % 2 != 0) {
-                copiedValue.insert(copiedValue.begin(), '0');
-                fractionIndex++;
+
+        if (fractionIndex % 2 != 0) {
+
+            digits.insert(digits.begin(), 0);
+            fractionIndex++;
+        }
+
+        this->bytes = Decimal::Pack(digits, isPositive, fractionIndex);
+    }
+
+    std::vector<Int> Decimal::Unpack(const std::vector<byte_t> &bytes){
+        std::vector<Int> digits;
+
+        for (int i = 1; i < bytes.size(); i++) {
+            digits.push_back((bytes[i] >> 4) & 0x0F);
+            digits.push_back(bytes[i] & 0x0F);
+        }
+
+        return digits;
+    }
+
+
+
+    std::vector<Int> Decimal::MultiplyDigits(const std::vector<Int> &leftDigits, const std::vector<Int> &rightDigits){
+        std::vector<Int> result(leftDigits.size() + rightDigits.size(), 0);
+
+        for (int i = leftDigits.size() - 1; i >= 0; --i) {
+            for (int j = rightDigits.size() - 1; j >= 0; --j) {
+                const int pos = i + j + 1;
+                result[pos] += leftDigits[i] * rightDigits[j];
             }
         }
 
-        const byte_t signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
-
-        this->bytes.push_back(signAndFractionPoint);
-
-
-        for (int i = 0; i < copiedValue.size(); i+= 2){
-            byte_t val = 0;
-
-            val |= (copiedValue[i] - '0') << 4;
-
-            if (i + 1 < copiedValue.size()) 
-                val |= (copiedValue[i + 1] - '0');
-
-            this->bytes.push_back(val);
+        // Step 3: fix carries
+        for (int k = result.size() - 1; k > 0; k--) {
+            result[k-1] += result[k] / 10;
+            result[k] %= 10;
         }
-    }
-
-    Decimal::Decimal(const bool value){
-        //boolean is always positive
-        constexpr auto isPositive = true;
-
-        //fraction index is always at a fixed position
-        constexpr fraction_index_t fractionIndex = 2;
-
-        constexpr byte_t signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
-
-        this->bytes.push_back(signAndFractionPoint);
-
-        byte_t val = 0;
-
-        val |= (value ? 1 : 0);
-
-        this->bytes.push_back(val);
-
-        //add alignment byte
-        this->bytes.push_back(0x00);
-    }
-
-    Decimal::Decimal(const TinyInt value){
-        this->InitializeFromInteger<TinyInt>(value);
-    }
-
-    Decimal::Decimal(const SmallInt value){
-        this->InitializeFromInteger<int16_t>(value);
-    }
-
-    Decimal::Decimal(const Int value){
-        this->InitializeFromInteger<Int>(value);
-    }
-
-    Decimal::Decimal(const BigInt value){
-        this->InitializeFromInteger<BigInt>(value);
-    }
-
-    Decimal::Decimal(const byte_t* data, const Int dataSize){
-        this->bytes = std::vector(data, data + dataSize);
-    }
-
-    Decimal::Decimal(const std::vector<byte_t> &value){
-        this->bytes = value;
-    }
-
-    Decimal::~Decimal() = default;
-
-    bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
-
-    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->bytes.at(0) & 0x7F); }
-
-    std::string Decimal::ToString() const{
-        const auto isPositive = this->IsPositive();
-        
-        std::string result = ( isPositive ? "" : "-" );
-
-        for (int i = 1; i < this->bytes.size(); i++)
-        {
-            const auto& byte = this->bytes.at(i);
-
-            result += std::to_string((byte >> 4) & 0x0F);
-            result += std::to_string(byte & 0x0F);
-        }
-
-        // if (result.back() == '0')
-        //     result.pop_back();
-
-        const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + ( isPositive ? 0 : 1);
-
-        result.insert(fractionIndex,  ".");
 
         return result;
     }
 
-    const byte_t* Decimal::GetRawData() const { return this->bytes.data(); }
-
-    Int Decimal::GetRawDataSize() const { return this->bytes.size(); }
-
-    const std::vector<byte_t>& Decimal::GetData() const { return this->bytes; }
-
-    byte_t Decimal::CreateSignAndFractionByte(
+    std::array<byte_t, DECIMAL_ARRAY_SIZE> Decimal::Pack(
+        const std::array<byte_t, 2 * DECIMAL_ARRAY_SIZE> &digits,
         const bool isPositive,
-        const fraction_index_t fractionIndex) {
-        return (isPositive << 7) | (fractionIndex & 0x7F);
+        const fraction_index_t fractionIndex
+    ){
+        std::array<byte_t, DECIMAL_ARRAY_SIZE> out{};
+        Int counter = 0;
+        out[counter++] = Decimal::CreateSignAndFractionByte(isPositive, fractionIndex);
+
+        for (int i = 0; i < digits.size(); i += 2) {
+            const int high = digits[i];
+            const int low  = (i+1 < digits.size()) ? digits[i+1] : 0;\
+            out[counter++] = (high << 4) | low;
+        }
+
+        return out;
     }
 
-    Decimal operator+(const Decimal &left, const Decimal &right){
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
+    fraction_index_t Decimal::GetFractionIndex(const std::string& value){
+        const int decimalPos = static_cast<int>(value.find('.'));
 
-        const auto leftSign = left.IsPositive();
-        const auto rightSign = right.IsPositive();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-
-        const auto fractionIndex = leftFractionIndex > rightFractionIndex
-                            ? leftFractionIndex
-                            : rightFractionIndex;
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        //both same sign, add them and use sign afterwards
-        if (leftSign == rightSign)
-            return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
-
-        //else they have different signs
-        //so subtract them
-        return (Decimal::IsGreaterMagnitude(leftCopy, rightCopy))
-            ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
-            : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, rightSign);
+        return (decimalPos != std::string::npos)
+                   ? decimalPos
+                   : 0;
     }
 
-    Decimal operator-(const Decimal &left, const Decimal &right){
-        const bool leftSign = left.IsPositive();
-        const bool rightSign = right.IsPositive();
-
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-        const auto fractionIndex = leftFractionIndex > rightFractionIndex
-                        ? leftFractionIndex
-                        : rightFractionIndex;
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        if (leftSign == rightSign)
-            return (Decimal::IsGreaterMagnitude(leftCopy, rightCopy))
-                ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
-                : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, !leftSign);
-
-        return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
-    }
-
-    Decimal operator*(const Decimal &left, const Decimal &right){
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        fraction_index_t fractionIndex = leftFractionIndex + rightFractionIndex;
-
-        return Decimal::Multiply(
-            leftCopy,
-            rightCopy,
-            fractionIndex,
-            left.IsPositive() == right.IsPositive()
-        );
-    }
-
-    bool operator==(const Decimal& left, const Decimal& right)
-    {
-        const bool leftSign = left.IsPositive();
-        const bool rightSign = right.IsPositive();
-
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        if (leftSign != rightSign)
-            return false;
-
-        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) == 0;
-    }
-
-    bool operator>=(const Decimal& left, const Decimal& right)
-    {
-        const bool leftSign = left.IsPositive();
-        const bool rightSign = right.IsPositive();
-
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        if (leftSign > rightSign)
-            return true;
-
-        if (leftSign < rightSign)
-            return false;
-
-        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) >= 0;
-    }
-
-    bool operator>(const Decimal& left, const Decimal& right)
-    {
-        const bool leftSign = left.IsPositive();
-        const bool rightSign = right.IsPositive();
-
-        const auto& leftData = left.GetData();
-        const auto& rightData = right.GetData();
-
-        auto leftFractionIndex = left.GetFractionIndex();
-        auto rightFractionIndex = right.GetFractionIndex();
-
-        auto leftCopy = leftData;
-        auto rightCopy = rightData;
-
-        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-        if (leftSign > rightSign)
-            return true;
-
-        if (leftSign < rightSign)
-            return false;
-
-        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) > 0;
-    }
-
-    bool operator<(const Decimal& left, const Decimal& right)
-    {
-        return !(left >= right);
-    }
-
-    bool operator<=(const Decimal& left, const Decimal& right)
-    {
-        return !(left > right);
+    fraction_index_t Decimal::DetermineResultFractionIndex(
+        const fraction_index_t leftFractionIndex,
+        const fraction_index_t rightFractionIndex){
+        return std::max(leftFractionIndex, rightFractionIndex);
     }
 
     int Decimal::CompareDecimalsWithoutSign(const std::vector<byte_t>& leftData, const std::vector<byte_t>& rightData)
@@ -338,66 +132,6 @@ namespace DataTypes {
         }
 
         return 0;
-    }
-
-    std::vector<Int> Decimal::Unpack(const std::vector<byte_t> &bytes){
-        std::vector<Int> digits;
-
-        for (int i = 1; i < bytes.size(); i++) {
-            digits.push_back((bytes[i] >> 4) & 0x0F);
-            digits.push_back(bytes[i] & 0x0F);
-        }
-
-        return digits;
-    }
-
-    std::vector<Int> Decimal::MultiplyDigits(const std::vector<Int> &leftDigits, const std::vector<Int> &rightDigits){
-        std::vector<Int> result(leftDigits.size() + rightDigits.size(), 0);
-
-        for (int i = leftDigits.size() - 1; i >= 0; --i) {
-            for (int j = rightDigits.size() - 1; j >= 0; --j) {
-                const int pos = i + j + 1;
-                result[pos] += leftDigits[i] * rightDigits[j];
-            }
-        }
-
-        // Step 3: fix carries
-        for (int k = result.size() - 1; k > 0; k--) {
-            result[k-1] += result[k] / 10;
-            result[k] %= 10;
-        }
-
-        return result;
-    }
-
-    std::vector<byte_t> Decimal::Pack(
-        const std::vector<Int> &digits,
-        const bool isPositive,
-        const fraction_index_t fractionIndex
-    ){
-        std::vector<byte_t> out;
-        out.push_back(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
-
-        for (int i = 0; i < digits.size(); i += 2) {
-            const int high = digits[i];
-            const int low  = (i+1 < digits.size()) ? digits[i+1] : 0;
-            out.push_back((high << 4) | low);
-        }
-        return out;
-    }
-
-    fraction_index_t Decimal::GetFractionIndex(const std::string& value){
-        const int decimalPos = static_cast<int>(value.find('.'));
-
-        return (decimalPos != std::string::npos)
-                            ? decimalPos 
-                            : 0;
-    }
-
-    fraction_index_t Decimal::DetermineResultFractionIndex(
-        const fraction_index_t leftFractionIndex,
-        const fraction_index_t rightFractionIndex){
-        return std::max(leftFractionIndex, rightFractionIndex);
     }
 
     Decimal Decimal::Add(
@@ -601,6 +335,12 @@ namespace DataTypes {
             digits.push_back(0);
     }
 
+    byte_t Decimal::CreateSignAndFractionByte(
+        const bool isPositive,
+        const fraction_index_t fractionIndex) {
+        return (isPositive << 7) | (fractionIndex & 0x7F);
+    }
+
     bool Decimal::IsGreaterMagnitude(const std::vector<byte_t> &left, const std::vector<byte_t> &right){
         for (size_t i = 1; i < left.size(); i++) {
             if (left[i] == right[i])
@@ -613,43 +353,141 @@ namespace DataTypes {
         return false;
     }
 
-    std::ostream & operator<<(std::ostream &os, const Decimal &decimal){
-        os << decimal.ToString();
-        return os;
-    }
+    Decimal::Decimal()
+        : _data{}, _size(0) {}
 
-    template <typename T>
-    void Decimal::InitializeFromInteger(const T value){
-        static_assert(std::is_integral_v<T>, "Decimal::InitializeFromInteger: T must be an integer");
+    Decimal::Decimal(const StringView& value) : _data{}, _size(0) {
+        if (value.Empty())
+            return;
 
-        const auto isPositive = value >= 0;
+        Int start = 0;
 
-        auto absValue = std::abs(static_cast<BigInt>(value));
+        const bool isPositive = value[0] != '-';
+        if (value[0] == '-' || value[0] == '+')
+            start++;
 
-        std::vector<Int> digits;
+        while (start < value.Size() - 1 && value[start] == '0' && value[start + 1] != '.')
+            start++;
 
-        if (absValue == 0)
-            digits.push_back(0);
-
-        while (absValue > 0) {
-            digits.push_back(absValue % 10);
-            absValue /= 10;
+        Int dotPos = -1;
+        for (Int i = start; i < value.Size(); i++) {
+            if (value[i] == '.'){
+                dotPos = i;
+                break;
+            }
         }
 
-        std::ranges::reverse(digits);
+        // Stack buffer — no heap
+        std::array<char, DECIMAL_ARRAY_SIZE * 2> digits{};
+        Int digitCount = 0;
 
-        digits.push_back(0x00);
-        digits.push_back(0x00);
+        for (Int i = start; i < value.Size(); i++) {
+            if (i == dotPos) continue;
+            digits[digitCount++] = value[i];
+        }
 
-        fraction_index_t fractionIndex = digits.size() - 2;
+        Int fractionIndex = (dotPos == -1) ? 0 : dotPos - start;
+
+        if ((digitCount - fractionIndex) % 2 != 0)
+            digits[digitCount++] = '0';
 
         if (fractionIndex % 2 != 0) {
-            digits.insert(digits.begin(), 0);
+            // shift right by 1
+            for (Int i = digitCount; i > 0; i--)
+                digits[i] = digits[i - 1];
+            digits[0] = '0';
+            digitCount++;
             fractionIndex++;
         }
 
-        this->bytes = Decimal::Pack(digits, isPositive, fractionIndex);
+        this->_data[this->_size++] = (static_cast<byte_t>(isPositive) << 7) | (fractionIndex & 0x7F);
+
+        for (Int i = 0; i < digitCount; i += 2) {
+            auto val = static_cast<byte_t>((digits[i] - '0') << 4);
+            if (i + 1 < digitCount)
+                val |= static_cast<byte_t>(digits[i + 1] - '0');
+            this->_data[this->_size++] = val;
+        }
     }
+
+    Decimal::Decimal(const byte_t* data, const Int dataSize){
+        this->bytes = std::vector(data, data + dataSize);
+    }
+
+    Decimal::Decimal(const std::vector<byte_t> &value){
+        this->bytes = value;
+    }
+
+    Decimal::Decimal(const bool value){
+        //boolean is always positive
+        constexpr auto isPositive = true;
+
+        //fraction index is always at a fixed position
+        constexpr fraction_index_t fractionIndex = 2;
+
+        constexpr byte_t signAndFractionPoint = (isPositive << 7) | (fractionIndex & 0x7F);
+
+        this->_data[0] = signAndFractionPoint;
+        byte_t val = 0;
+        val |= (value ? 1 : 0);
+
+        this->_data[1] = val;
+        this->_data[2] = 0x00;
+        this->_size = 2;
+    }
+
+    Decimal::Decimal(const TinyInt value){
+        this->InitializeFromInteger<TinyInt>(value);
+    }
+
+    Decimal::Decimal(const SmallInt value){
+        this->InitializeFromInteger<int16_t>(value);
+    }
+
+    Decimal::Decimal(const Int value){
+        this->InitializeFromInteger<Int>(value);
+    }
+
+    Decimal::Decimal(const BigInt value){
+        this->InitializeFromInteger<BigInt>(value);
+    }
+
+    Decimal::~Decimal() = default;
+
+    bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
+
+    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->bytes.at(0) & 0x7F); }
+
+    String Decimal::ToString(const ::Memory::IAllocator* allocator) const{
+        const auto isPositive = this->IsPositive();
+
+        String str(allocator, static_cast<Int>(this->_data.size()));
+
+        Int counter = 0;
+        if (!isPositive)
+            str[counter++] = '-';
+
+        for (int i = counter; i < this->_data.size(); i++){
+            const auto& byte = this->_data[i];
+
+            str[i] = static_cast<char>((byte >> 4) & 0x0F);
+        }
+
+        // if (result.back() == '0')
+        //     result.pop_back();
+
+        const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + ( isPositive ? 0 : 1);
+
+        result.insert(fractionIndex,  ".");
+
+        return result;
+    }
+
+    const byte_t* Decimal::GetRawData() const { return this->bytes.data(); }
+
+    Int Decimal::GetRawDataSize() const { return this->bytes.size(); }
+
+    const std::vector<byte_t>& Decimal::GetData() const { return this->bytes; }
 
     Int Decimal::Size(const Int precision){
         return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
@@ -657,6 +495,177 @@ namespace DataTypes {
 
     double Decimal::ToDouble() const{
         return std::stod(this->ToString());
+    }
+
+    std::ostream & operator<<(std::ostream &os, const Decimal &decimal){
+        os << decimal.ToString();
+        return os;
+    }
+
+    Decimal operator+(const Decimal &left, const Decimal &right){
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        const auto leftSign = left.IsPositive();
+        const auto rightSign = right.IsPositive();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+
+        const auto fractionIndex = leftFractionIndex > rightFractionIndex
+                                       ? leftFractionIndex
+                                       : rightFractionIndex;
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        //both same sign, add them and use sign afterwards
+        if (leftSign == rightSign)
+            return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
+
+        //else they have different signs
+        //so subtract them
+        return (Decimal::IsGreaterMagnitude(leftCopy, rightCopy))
+                   ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
+                   : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, rightSign);
+    }
+
+    Decimal operator-(const Decimal &left, const Decimal &right){
+        const bool leftSign = left.IsPositive();
+        const bool rightSign = right.IsPositive();
+
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+        const auto fractionIndex = leftFractionIndex > rightFractionIndex
+                                       ? leftFractionIndex
+                                       : rightFractionIndex;
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        if (leftSign == rightSign)
+            return (Decimal::IsGreaterMagnitude(leftCopy, rightCopy))
+                       ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
+                       : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, !leftSign);
+
+        return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
+    }
+
+    Decimal operator*(const Decimal &left, const Decimal &right){
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        fraction_index_t fractionIndex = leftFractionIndex + rightFractionIndex;
+
+        return Decimal::Multiply(
+            leftCopy,
+            rightCopy,
+            fractionIndex,
+            left.IsPositive() == right.IsPositive()
+        );
+    }
+
+    bool operator==(const Decimal& left, const Decimal& right)
+    {
+        const bool leftSign = left.IsPositive();
+        const bool rightSign = right.IsPositive();
+
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        if (leftSign != rightSign)
+            return false;
+
+        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) == 0;
+    }
+
+    bool operator>=(const Decimal& left, const Decimal& right)
+    {
+        const bool leftSign = left.IsPositive();
+        const bool rightSign = right.IsPositive();
+
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        if (leftSign > rightSign)
+            return true;
+
+        if (leftSign < rightSign)
+            return false;
+
+        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) >= 0;
+    }
+
+    bool operator>(const Decimal& left, const Decimal& right)
+    {
+        const bool leftSign = left.IsPositive();
+        const bool rightSign = right.IsPositive();
+
+        const auto& leftData = left.GetData();
+        const auto& rightData = right.GetData();
+
+        auto leftFractionIndex = left.GetFractionIndex();
+        auto rightFractionIndex = right.GetFractionIndex();
+
+        auto leftCopy = leftData;
+        auto rightCopy = rightData;
+
+        Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+        Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+        if (leftSign > rightSign)
+            return true;
+
+        if (leftSign < rightSign)
+            return false;
+
+        return Decimal::CompareDecimalsWithoutSign(leftCopy, rightCopy) > 0;
+    }
+
+    bool operator<(const Decimal& left, const Decimal& right)
+    {
+        return !(left >= right);
+    }
+
+    bool operator<=(const Decimal& left, const Decimal& right)
+    {
+        return !(left > right);
     }
 
     Decimal & Decimal::operator=(const TinyInt right){

@@ -2,6 +2,11 @@
 #include "DataTypes/DataTypes.h"
 #include <limits>
 
+
+constexpr Int ITOS_BUFFER_SIZE = 32;
+constexpr Int DATETIME_TO_STRING_BUFFER_SIZE = 32;
+constexpr Int DATETIME_TO_STRING_MS_BUFFER_SIZE = 8;
+
 constexpr Int NUMBER_OF_HISTOGRAM_BUCKETS = 100;
 
 constexpr Int INVALID_DATABASE_ID = -1;

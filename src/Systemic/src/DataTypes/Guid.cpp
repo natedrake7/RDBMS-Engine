@@ -6,147 +6,130 @@
 #include <iostream>
 #include <random>
 #include <regex>
-#include <sstream>
 
-#include "DataTypes/String.h"
+#include "DataTypes/StringView.h"
 
 namespace DataTypes {
-  Guid::Guid() {
-    this->data = std::array<uint8_t, GUID_SIZE>{0};
-  }
+    bool Guid::Validate(const char* str, const Int size){
+        static std::regex pattern(GUID_VALIDATION_FORMAT.Data());
 
-  Guid::Guid(const unsigned char *data, const Int size){
-    std::memcpy(this->data.data(), data, size);
-  }
-
-  Guid::Guid(const std::array<uint8_t, 16> &data) : data(data){}
-
-  Guid::~Guid() = default;
-
-  std::array<uint8_t, GUID_SIZE>& Guid::GetDataUnsafe(){ return this->data; }
-
-  const std::array<uint8_t, GUID_SIZE> & Guid::GetData() const{ return this->data; }
-
-  std::string Guid::ToString() const{
-    std::ostringstream oss;
-
-    for (int i = 0; i < GUID_SIZE; i++) {
-      // Insert dashes at GUID positions (after bytes 4, 6, 8, 10)
-      if (i == 4 || i == 6 || i == 8 || i == 10)
-        oss << '-';
-
-      oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(this->data[i]);
-    }
-
-    return oss.str();
-  }
-
-    Guid Guid::Parse(const std::string &str){
-        if (!Guid::Validate(str)) return Guid();
-
-        std::string hex;
-        hex.reserve(32);
-
-        for (const auto& c : str) {
-            if (c == '-') continue;
-            hex += c;
+        if (size == 0) {
+            std::cerr << "Expected Guid but got empty string instead" << std::endl;
+            return false;
         }
 
-        std::array <UnsignedTinyInt, GUID_SIZE> data{};
-        for (size_t i = 0; i < GUID_SIZE; i++) {
-            std::string byteStr = hex.substr(i * 2, 2);
-            data[i] = static_cast<UnsignedTinyInt>(
-                std::stoul(byteStr, nullptr, 16)
-            );
+        if(!regex_match(str, pattern)) {
+            std::cerr << "Invalid Guid specified" << std::endl;
+            return false;
+        }
+
+        return true;
+    }
+
+    Guid Guid::Parse(const char* str, const Int size){
+        if (!Guid::Validate(str, size)) return Guid();
+
+        char buffer[GUID_STRING_NO_HYPHEN_SIZE];
+        Int bufferPos = 0;
+        for (int i = 0; i < size; i++){
+            if (str[i] == '-') continue;
+            buffer[bufferPos++] = str[i];
+        }
+
+        std::array<UnsignedTinyInt, GUID_SIZE> data{};
+        for (auto i = 0; i < GUID_SIZE; i++) {
+            const char byteStr[3] = { buffer[i * 2], buffer[i * 2 + 1], '\0' };
+            data[i] = static_cast<UnsignedTinyInt>(std::strtoul(byteStr, nullptr, 16));
         }
 
         return Guid(data);
     }
 
-  bool Guid::Validate(const String& str){
-    static std::regex pattern("^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$");
-
-    if (str.Empty()) {
-      std::cerr << "Expected Guid but got empty string instead" << std::endl;
-      return false;
+    Guid::Guid() {
+        this->_data = {};
     }
 
-    if(!regex_match(str.GetDataAsChar(), pattern)) {
-      std::cerr << "Invalid Guid specified" << std::endl;
-      return false;
+    Guid::Guid(const unsigned char *data, const Int size){
+        std::memcpy(this->_data.data(), data, size);
     }
 
-    return true;
-  }
+    Guid::Guid(const std::array<UnsignedTinyInt, 16> &data) : _data(data){}
 
-  bool operator==(const Guid &guid1, const Guid &guid2) { return memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) == 0; }
+    Guid::~Guid() = default;
 
-  bool operator!=(const Guid &guid1, const Guid &guid2){ return !(guid1 == guid2); }
+    std::array<UnsignedTinyInt, GUID_SIZE>& Guid::GetDataUnsafe(){ return this->_data; }
 
-  bool operator<(const Guid &guid1, const Guid &guid2) { return memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) < 0; }
+    const std::array<UnsignedTinyInt, GUID_SIZE> & Guid::GetData() const{ return this->_data; }
 
-  bool operator>(const Guid &guid1, const Guid &guid2){ return guid2 < guid1; }
+    String Guid::ToString(const ::Memory::IAllocator* allocator) const {
+        char buffer[GUID_STRING_SIZE] = {};
+        std::snprintf(buffer, sizeof(buffer) + 1,
+            GUID_STRING_FORMAT.Data(),
+                this->_data[0],  this->_data[1],  this->_data[2],  this->_data[3],
+                this->_data[4],  this->_data[5],
+                this->_data[6],  this->_data[7],
+                this->_data[8],  this->_data[9],
+                this->_data[10], this->_data[11], this->_data[12],
+                this->_data[13], this->_data[14], this->_data[15]
+        );
 
-  bool operator<=(const Guid &guid1, const Guid &guid2){ return guid2 >= guid1; }
-
-  bool operator>=(const Guid &guid1, const Guid &guid2){ return !(guid1 < guid2); }
-
-  std::ostream & operator<<(std::ostream &os, const Guid &guid){
-    os << guid.ToString();
-    return os;
-  }
-
-  Guid Guid::NewGuid(){
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<int> dist(0, 255);
-
-    std::array<UnsignedTinyInt, GUID_SIZE> data{};
-
-    for (auto& byte : data)
-      byte = static_cast<UnsignedTinyInt>(dist(gen));
-
-    // Set UUID version to 4 (random)
-    data[6] = (data[6] & 0x0F) | 0x40;
-
-    // Set the variant to 10xxxxxx (RFC 4122)
-    data[8] = (data[8] & 0x3F) | 0x80;
-
-    return Guid(data);
-  }
-
-  Guid Guid::Empty() {
-    static Guid Empty;
-
-    return Empty;
-  }
-
-
-  Guid Guid::FromString(const std::string &str){
-    std::string hex_str;
-    hex_str.reserve(32);
-    for (const char& c : str) {
-        if (!std::isxdigit(c))
-          continue;
-
-        hex_str += c;
+        return String(buffer, GUID_STRING_SIZE, allocator);
     }
 
-    std::array<uint8_t, GUID_SIZE> data{};
-    for (size_t i = 0; i < GUID_SIZE; ++i) {
-      std::string byte_str = hex_str.substr(i * 2, 2);
-      data[i] = static_cast<uint8_t>(std::stoul(byte_str, nullptr, 16));
+    Guid Guid::Parse(const String& str){ return Guid::Parse(str.Data(), str.Size());}
+    Guid Guid::Parse(const StringView& str){ return Guid::Parse(str.Data(), str.Size());}
+    Guid Guid::Parse(const std::string& str){ return Guid::Parse(str.c_str(), static_cast<Int>(str.size()));}
+    Guid Guid::Parse(const std::string_view& str) { return Guid::Parse(str.data(), static_cast<Int>(str.size())); }
+    Guid Guid::Parse(const char* str) { return Guid::Parse(str, static_cast<Int>(std::strlen(str)));}
+
+    bool Guid::Validate(const String& str){ return Guid::Validate(str.Data(), str.Size()); }
+    bool Guid::Validate(const StringView& str){ return Guid::Validate(str.Data(), str.Size()); }
+    bool Guid::Validate(const std::string& str){ return Guid::Validate(str.c_str(), static_cast<Int>(str.size()));}
+    bool Guid::Validate(const std::string_view& str) { return Guid::Validate(str.data(), static_cast<Int>(str.size())); }
+    bool Guid::Validate(const char* str) { return Guid::Validate(str, static_cast<Int>(std::strlen(str)));}
+
+    bool operator==(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) == 0; }
+
+    bool operator!=(const Guid &guid1, const Guid &guid2){ return !(guid1 == guid2); }
+
+    bool operator<(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) < 0; }
+
+    bool operator>(const Guid &guid1, const Guid &guid2){ return guid2 < guid1; }
+
+    bool operator<=(const Guid &guid1, const Guid &guid2){ return guid2 >= guid1; }
+
+    bool operator>=(const Guid &guid1, const Guid &guid2){ return !(guid1 < guid2); }
+
+    std::ostream & operator<<(std::ostream &os, const Guid &guid){
+        // os << guid.ToString();
+        return os;
     }
 
-    return Guid(data);
-  }
+    Guid Guid::NewGuid(){
+        std::random_device rd;
+        std::mt19937 gen(rd());
+        std::uniform_int_distribution<int> dist(0, 255);
 
-  long double Guid::Interpolate() const{
-    uint64_t result = 0;
+        std::array<UnsignedTinyInt, GUID_SIZE> data{};
 
-    for (int i = 0; i < 8; i++)
-      result = (result << 8) | static_cast<uint64_t>(this->data[i]);
+        for (auto& byte : data)
+        byte = static_cast<UnsignedTinyInt>(dist(gen));
 
-    return static_cast<long double>(result);
-  }
+        // Set UUID version to 4 (random)
+        data[6] = (data[6] & 0x0F) | 0x40;
+
+        // Set the variant to 10xxxxxx (RFC 4122)
+        data[8] = (data[8] & 0x3F) | 0x80;
+
+        return Guid(data);
+    }
+
+    Guid Guid::Empty() { return Guid(); }
+
+    long double Guid::Interpolate() const{
+        uint64_t result = 0;
+        for (int i = 0; i < 8; i++)
+            result = (result << 8) | static_cast<uint64_t>(this->_data[i]);
+        return static_cast<long double>(result);
+    }
 }

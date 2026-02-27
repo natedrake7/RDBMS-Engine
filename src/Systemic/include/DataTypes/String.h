@@ -1,80 +1,104 @@
 ﻿#pragma once
 #include <span>
-
+#include "StringView.h"
 #include "DataTypes.h"
-#include "../../../DatabaseEngine/include/Managers/GlobalMemoryManager.h"
 
-namespace Memory
-{
+namespace Memory{
     class IAllocator;
 }
 
 namespace DataTypes{
-    enum class StringComparisonType: UnsignedTinyInt{
-        Equals = 0,
-        EqualsIgnoreOrdinalCase = 1,
-        StartsWith = 2,
-        StartsWithIgnoreOrdinalCase = 3,
-        EndsWith = 4,
-        EndsWithIgnoreOrdinalCase = 5,
-        Contains = 6,
-        ContainsIgnoreCase = 7
-    };
-
     class String{
-        const object_t* _data;
-        Int size;
+        const ::Memory::IAllocator* _allocator;
+        char* _data;
+        Int _size;
+        Int _capacity;
 
-        [[nodiscard]] inline bool EqualsIgnoreCase(const String& other) const;
-        [[nodiscard]] inline bool StartsWith(const String& other) const;
-        [[nodiscard]] inline bool StartsWithIgnoreCase(const String& other) const;
-        [[nodiscard]] inline bool EndsWith(const String& other) const;
-        [[nodiscard]] inline bool EndsWithIgnoreCase(const String& other) const;
-        [[nodiscard]] inline bool Contains(const String& other) const;
-        [[nodiscard]] inline bool ContainsIgnoreCase(const String& other) const;
+        void CalculateCapacity(Int size);
+        [[nodiscard]] bool CanFit(Int size) const;
+
+        [[nodiscard]] inline bool Equals(const char* other, Int size) const;
+        [[nodiscard]] inline bool EqualsIgnoreCase(const char* other, Int size) const;
+        [[nodiscard]] inline bool StartsWith(const char* other, Int size) const;
+        [[nodiscard]] inline bool StartsWithIgnoreCase(const char* other, Int size) const;
+        [[nodiscard]] inline bool EndsWith(const char* other, Int size) const;
+        [[nodiscard]] inline bool EndsWithIgnoreCase(const char* other, Int size) const;
+        [[nodiscard]] inline bool Contains(const char* other, Int size) const;
+        [[nodiscard]] inline bool ContainsIgnoreCase(const char* other, Int size) const;
+
         public:
-        /**
-             *
-             * @param data Non-owning pointer of the actual data
-             * @param size The size of the string view in bytes (not including null terminator, if any).
-             * The string view can contain null characters within it and is not required to be null-terminated.
-        */
-        String(const object_t* data, Int size);
-        String(const String& other);
-        String(String&& other) noexcept;
+            String(const ::Memory::IAllocator* allocator);
+            String(const ::Memory::IAllocator* allocator, Int size);
+            String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
+            String(const char* str, const ::Memory::IAllocator* allocator);
+            String(char* str, Int size, const ::Memory::IAllocator* allocator);
+            String(const String& other);
+            String& operator=(const String& other);
+            String(String&& other) noexcept;
+            String& operator=(String&& other) noexcept;
 
-        String(const char* other);
-        String& operator=(const char* other);
+            ~String();
 
-        String& operator=(String&& other) noexcept;
-        String& operator=(const String& other);
-        ~String();
+            friend std::ostream& operator<<(std::ostream& os, const String& sv);
+            [[nodiscard]] char operator[](Int index) const;
+            [[nodiscard]] char& operator[](Int index);
+            bool operator==(const String& other) const;
+            bool operator!=(const String& other) const;
 
-        [[nodiscard]] const object_t* Data() const;
-        [[nodiscard]] const char* GetDataAsChar() const;
+            operator std::string_view() const;
+            operator std::span<const char>() const;
 
-        //operators
-        friend std::ostream& operator<<(std::ostream& os, const String& sv);
-        [[nodiscard]] char operator[](Int index) const;
-        bool operator==(const String& other) const;
-        bool operator!=(const String& other) const;
+            friend String operator+(const String& lhs, const String& rhs);
+            friend String operator+(const String& lhs, const char* other);
+            friend String operator+(const char* lhs, const String& rhs);
+            friend String operator+(const String& lhs, const StringView& rhs);
+            friend String operator+(const StringView& lhs, const String& rhs);
+            friend String operator+(const String& lhs, std::string_view rhs);
+            friend String operator+(std::string_view lhs, const String& rhs);
+            friend String operator+(const String& lhs, const std::string& rhs);
+            friend String operator+(const std::string& lhs, const String& rhs);
 
-        operator std::string_view() const;
-        operator std::span<const char>() const;
+            String& operator+=(const String& other);
+            String& operator+=(const char* other);
+            String& operator+=(const StringView& other);
+            String& operator+=(std::string_view other);
+            String& operator+=(const std::string& other);
 
-        //functions
-        [[nodiscard]] String Concat(const String& other, const ::Memory::IAllocator* allocator) const;
-        [[nodiscard]] String Substring(Int startIndex, Int length) const;
+            [[nodiscard]] const char* Data()const;
 
-        [[nodiscard]] Int Size()const;
-        [[nodiscard]] Int IndexOf(char c) const;
-        [[nodiscard]] bool Contains(const String& other, StringComparisonType type) const;
-        [[nodiscard]] bool Empty() const;
+            //functions
+            [[nodiscard]] String Concat(const String& other) const;
+            [[nodiscard]] String Concat(const char* other) const;
+            [[nodiscard]] String Concat(const StringView& other) const;
+            [[nodiscard]] String Concat(std::string_view other) const;
+            [[nodiscard]] String Concat(const std::string& other) const;
 
-        // STL compatibility
-        using const_iterator = const object_t*;
 
-        const_iterator begin() const;
-        const_iterator end() const;
+            [[nodiscard]] String& Append(const String& other);
+            [[nodiscard]] String& Append(const StringView& other);
+            [[nodiscard]] String& Append(const char* other);
+            [[nodiscard]] String& Append(std::string_view other);
+            [[nodiscard]] String& Append(const std::string& other);
+
+            void Insert(Int pos, const char* data, Int size);
+
+            [[nodiscard]] String Substring(Int startIndex, Int length) const;
+            [[nodiscard]] StringView SubstringView(Int startIndex, Int length) const;
+
+            [[nodiscard]] Int Size()const;
+            [[nodiscard]] Int IndexOf(char c) const;
+            [[nodiscard]] bool Contains(const String& other, StringComparisonType type) const;
+            [[nodiscard]] bool Contains(const char* other, StringComparisonType type) const;
+            [[nodiscard]] bool Contains(const StringView& other, StringComparisonType type) const;
+            [[nodiscard]] bool Contains(std::string_view other, StringComparisonType type) const;
+            [[nodiscard]] bool Contains(const std::string& other, StringComparisonType type) const;
+            [[nodiscard]] bool Empty() const;
+
+            // STL compatibility
+            using const_iterator = const char*;
+
+            [[nodiscard]] const_iterator begin() const;
+            [[nodiscard]] const_iterator end() const;
     };
+
 }

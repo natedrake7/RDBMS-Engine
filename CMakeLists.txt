@@ -86,6 +86,8 @@ add_library(Systemic SHARED
         src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/src/Memory/Functions.cpp
+        src/Systemic/src/DataTypes/StringView.cpp
+        src/Systemic/include/DataTypes/String.h
         src/Systemic/src/DataTypes/String.cpp
 )
 

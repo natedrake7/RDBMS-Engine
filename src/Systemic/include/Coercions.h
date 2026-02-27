@@ -1,7 +1,6 @@
 #pragma once
-#include <cstdint>
+#include "DataStructures/ConstexprHashSet.h"
 #include "DataTypes/Value.h"
-#include "DataStructures/HashSet.h"
 #include "DataTypes/Guid.h"
 
 namespace DataTypes{
@@ -76,14 +75,25 @@ namespace DataTypes{
                 CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
                 CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
             }
-    };
+        };
 
-        static inline const HashSet<std::string> TrueStrings = {
-            "true", "1", "yes", "y", "on"
+        static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
+            StringView("true"),
+            StringView("1"),
+            StringView("yes"),
+            StringView("y"),
+            StringView("on")
         };
-        static inline const HashSet<std::string> FalseStrings = {
-            "false", "0", "no", "n", "off"
+
+        static constexpr ConstexprHashSet<StringView, 5> FalseStrings = {
+            StringView("false"),
+            StringView("0"),
+            StringView("no"),
+            StringView("n"),
+            StringView("off")
         };
+
+        static void ThrowException(DataType type);
 
     [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
@@ -112,6 +122,7 @@ namespace DataTypes{
         [[nodiscard]] static Int ToInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static String ToString(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static StringView ToStringView(const Value& value, bool explicitCast = false);
         [[nodiscard]] static std::u16string ToUnicodeString(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
         [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);

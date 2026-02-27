@@ -1,14 +1,23 @@
 ﻿#pragma once
+#include <array>
+
 #include "../../../DatabaseEngine/include/DatabaseConstants.h"
 #include <string>
 #include <vector>
 #include <limits>
 
+#include "String.h"
+
 using namespace Constants;
 
+static constexpr Int DECIMAL_ARRAY_SIZE = 20;
+
 namespace DataTypes {
+    class StringView;
+
     class Decimal final {
-        std::vector<byte_t> bytes;
+        std::array<byte_t, DECIMAL_ARRAY_SIZE> _data;
+        Int _size;
 
     protected:
         template <typename T>
@@ -16,8 +25,8 @@ namespace DataTypes {
 
         static std::vector<Int> Unpack(const std::vector<byte_t>& bytes);
         static std::vector<Int> MultiplyDigits(const std::vector<Int>& leftDigits, const std::vector<Int>& rightDigits);
-        static std::vector<byte_t> Pack(
-            const std::vector<Int>& digits,
+        static std::array<byte_t, DECIMAL_ARRAY_SIZE> Pack(
+            const std::array<byte_t, 2 * DECIMAL_ARRAY_SIZE> &digits,
             bool isPositive,
             fraction_index_t fractionIndex
         );
@@ -96,7 +105,7 @@ namespace DataTypes {
 
     public:
         Decimal();
-        explicit Decimal(const std::string& value);
+        explicit Decimal(const StringView& value);
         explicit Decimal(const byte_t* data, Int dataSize);
         explicit Decimal(const std::vector<byte_t>& value);
         explicit Decimal(bool value);
@@ -109,7 +118,7 @@ namespace DataTypes {
 
         [[nodiscard]] bool IsPositive() const;
         [[nodiscard]] fraction_index_t GetFractionIndex() const;
-        [[nodiscard]] std::string ToString() const;
+        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
 
         [[nodiscard]] const byte_t* GetRawData() const;
 

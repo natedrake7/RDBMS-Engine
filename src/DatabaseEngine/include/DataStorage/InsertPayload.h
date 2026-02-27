@@ -107,7 +107,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::DateTime &src){
-        const auto dt = src.GetUnixTimeStamp();
+        const auto dt = src.UnixTimeStamp();
         this->SetData(&dt, DataTypes::DateTime::Size());
     }
 }

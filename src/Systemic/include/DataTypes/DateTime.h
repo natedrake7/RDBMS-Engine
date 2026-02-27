@@ -3,7 +3,7 @@
 #include <chrono>
 #include <string>
 
-#include "String.h"
+#include "StringView.h"
 #include "../DataTypes/DataTypes.h"
 
 namespace DataTypes {
@@ -16,31 +16,31 @@ namespace DataTypes {
 	class DateTime {
 		BigInt timeStamp;
 
-		static inline const std::array<String, 15> DateTimeFormats = {
+		static inline const std::array<StringView, 15> DateTimeFormats = {
 			// ISO 8601 with fractional seconds and timezone
-			String("%Y-%m-%dT%H:%M:%S.%OS%z"),   // e.g., 2025-08-26T19:30:20.123+0200
-			String("%Y-%m-%dT%H:%M:%S.%OSZ"),    // e.g., 2025-08-26T19:30:20.123Z
-			String("%Y-%m-%dT%H:%M:%S.%OS"),     // e.g., 2025-08-26T19:30:20.123
-			String("%Y-%m-%dT%H:%M:%SZ"),        // e.g., 2025-08-26T19:30:20Z
-			String("%Y-%m-%dT%H:%M:%S"),         // e.g., 2025-08-26T19:30:20
+			StringView("%Y-%m-%dT%H:%M:%S.%OS%z"),   // e.g., 2025-08-26T19:30:20.123+0200
+			StringView("%Y-%m-%dT%H:%M:%S.%OSZ"),    // e.g., 2025-08-26T19:30:20.123Z
+			StringView("%Y-%m-%dT%H:%M:%S.%OS"),     // e.g., 2025-08-26T19:30:20.123
+			StringView("%Y-%m-%dT%H:%M:%SZ"),        // e.g., 2025-08-26T19:30:20Z
+			StringView("%Y-%m-%dT%H:%M:%S"),         // e.g., 2025-08-26T19:30:20
 
 			// Full date + time with fractional seconds
-			String("%Y-%m-%d %H:%M:%S.%OS"),     // e.g., 2025-08-26 19:30:20.123
+			StringView("%Y-%m-%d %H:%M:%S.%OS"),     // e.g., 2025-08-26 19:30:20.123
 
 			// Full date + time (seconds precision)
-			String("%Y-%m-%d %H:%M:%S"),         // e.g., 2025-08-26 19:30:20
-			String("%d/%m/%Y %H:%M:%S"),         // e.g., 26/08/2025 19:30:20
-			String("%m/%d/%Y %H:%M:%S"),         // e.g., 08/26/2025 19:30:20
+			StringView("%Y-%m-%d %H:%M:%S"),         // e.g., 2025-08-26 19:30:20
+			StringView("%d/%m/%Y %H:%M:%S"),         // e.g., 26/08/2025 19:30:20
+			StringView("%m/%d/%Y %H:%M:%S"),         // e.g., 08/26/2025 19:30:20
 
 			// Date only
-			String("%Y-%m-%d"),                   // e.g., 2025-08-26
-			String("%d/%m/%Y"),                   // e.g., 26/08/2025
-			String("%m/%d/%Y"),                   // e.g., 08/26/2025
-			String("%Y%m%d"),                     // e.g., 20250826
+			StringView("%Y-%m-%d"),                   // e.g., 2025-08-26
+			StringView("%d/%m/%Y"),                   // e.g., 26/08/2025
+			StringView("%m/%d/%Y"),                   // e.g., 08/26/2025
+			StringView("%Y%m%d"),                     // e.g., 20250826
 
 			// Time only
-			String("%H:%M:%S"),                   // e.g., 19:30:20
-			String("%H:%M")                       // e.g., 19:30
+			StringView("%H:%M:%S"),                   // e.g., 19:30:20
+			StringView("%H:%M")                       // e.g., 19:30
 		};
 
 	protected:
@@ -74,16 +74,17 @@ namespace DataTypes {
 		void AddYears(Int years);
 
 		static DateTime Now();
-		static bool FromString(DateTime& outVal, const std::string& date, const std::string& format = "");
-		static bool FromString(const String& str);
-		inline static constexpr Int Size(){ return DATETIME_SIZE; }
+		static bool FromString(DateTime& outVal, const StringView& date, const StringView& format = "");
+		static bool FromString(const StringView& str);
+		static constexpr Int Size(){ return DATETIME_SIZE; }
 
-		[[nodiscard]] String ToString(const String& format = "%Y-%m-%d %H:%M:%S%OS") const;
-		[[nodiscard]] BigInt GetUnixTimeStamp()const;
+		[[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, const StringView& format = "%Y-%m-%d %H:%M:%S%OS") const;
+		[[nodiscard]] BigInt UnixTimeStamp()const;
 
 		static bool ValidateDate(const DateTime& datetime);
 
-		friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
+		// friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
+	    void Print(std::ostream& os, const ::Memory::IAllocator* allocator, const StringView& format = "%Y-%m-%d %H:%M:%S%OS") const;
 	};
 }
 

@@ -70,7 +70,7 @@ void QueryResult::Print() const{
       std::cout << (column.AsBool() ? "TRUE" : "FALSE");
       break;
     case DataType::DateTime:
-      std::cout << column.AsDateTime();
+      column.AsDateTime().Print(std::cout, column.GetAllocator());
       break;
     case DataType::Guid:
       std::cout << column.AsGuid();

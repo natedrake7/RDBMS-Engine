@@ -3,27 +3,28 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
+
+#include "Constants.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/String.h"
+#include "DataTypes/StringView.h"
 
 template<typename T>
 class Converter {
-public:
-    static T Stoi(const std::string& input)
-    {
+    static T Stoi(const char* input){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        if (sizeof(T) > sizeof(int))
-        {
-            auto value = stoll(input);
+        static_assert(std::is_integral_v<T>, "T must be integral type");
 
-            if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
-                throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
+        const auto* str = input;
+        char* endptr = nullptr;
+        errno = 0;  // Reset errno before the conversion
 
-            return static_cast<T>(value);
-        }
+        auto value = strtoll(str, &endptr, 10);
 
-        int value = stoi(input);
+        // Check for conversion errors
+        if (endptr == str || *endptr != '\0' || errno == ERANGE)
+            return false;
 
         if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
             throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
@@ -31,14 +32,21 @@ public:
         return static_cast<T>(value);
     }
 
+public:
+    static T Stoi(const std::string& input){ return Stoi(input.c_str());}
+
+    static T Stoi(const DataTypes::StringView& input){ return Stoi(input.Data());}
+
+    static T Stoi(const DataTypes::String& input) { return Stoi(input.Data()); }
+
     static DataTypes::Decimal Stod(const std::string& input) {
         return DataTypes::Decimal(input);
     }
 
-    static bool TryStoi(const DataTypes::String& input) {
+    static bool TryStoi(const DataTypes::StringView& input) {
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        const auto* str = input.GetDataAsChar();
+        const auto* str = input.Data();
         char* endptr = nullptr;
         errno = 0;  // Reset errno before the conversion
 
@@ -141,4 +149,15 @@ public:
         return ((rightValue > 0 && leftValue > std::numeric_limits<T>::max() - rightValue) ||
             (rightValue < 0 && leftValue < std::numeric_limits<T>::min() - rightValue));
     }
+
+
+    static DataTypes::String Itos(const T input, const ::Memory::IAllocator* allocator){
+        static_assert(std::is_integral_v<T>, "T must be integral type");
+
+        char buffer[ITOS_BUFFER_SIZE] = {};
+        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<long long>(input));
+
+        return DataTypes::String(buffer, len, allocator);
+    }
+
 };

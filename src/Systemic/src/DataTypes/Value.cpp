@@ -28,6 +28,7 @@ bool Value::TryParseAsBool()const{
 bool Value::TryParseAsBoolFromString()const{
     const auto strData = Functions::String::Lower(this->AsString());
 
+    const auto stringView = this->AsStringView();
     if (strData == "true" || strData == "1")
         return true;
 
@@ -469,7 +470,7 @@ Value::Value(
     const column_index_t index
 ){
     this->data = static_cast<object_t*>(allocator->AllocateRaw(DataTypes::DateTime::Size()));
-    const auto dt = data.GetUnixTimeStamp();
+    const auto dt = data.UnixTimeStamp();
     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
     this->_allocator = allocator;
@@ -587,7 +588,7 @@ void Value::SetData(const DataTypes::Decimal &otherData) {
 
 void Value::SetData(const DataTypes::DateTime &otherData) {
     this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(DataTypes::DateTime::Size()));
-    const auto dt = otherData.GetUnixTimeStamp();
+    const auto dt = otherData.UnixTimeStamp();
     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
 
     this->size = DataTypes::DateTime::Size();
@@ -638,7 +639,11 @@ int64_t Value::AsBigInt() const {
     return DataTypes::Coercions::ToBigInt(*this);
 }
 
-std::string Value::AsString() const {
+DataTypes::String Value::AsString() const {
+    return DataTypes::Coercions::ToString(*this);
+}
+
+DataTypes::StringView Value::AsStringView() const{
     return DataTypes::Coercions::ToString(*this);
 }
 
@@ -1099,7 +1104,7 @@ long double Value::Interpolate() const{
     case DataType::Bool:
         return this->AsBool();
     case DataType::DateTime:
-        return this->AsDateTime().GetUnixTimeStamp();
+        return this->AsDateTime().UnixTimeStamp();
     case DataType::Guid:
         return this->AsGuid().Interpolate();
     case DataType::RowIdentifier:

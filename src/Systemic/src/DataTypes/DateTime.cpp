@@ -4,6 +4,9 @@
 #include <cmath>
 #include <spanstream>
 
+#include "Constants.h"
+#include "DataTypes/String.h"
+
 namespace DataTypes{
 	DateTime::DateTime(){
 		const auto timePoint = std::chrono::system_clock::now();
@@ -172,14 +175,13 @@ namespace DataTypes{
 
 	DateTime DateTime::Now() { return DateTime(); }
 
-	bool DateTime::FromString(DateTime& outVal, const std::string &date, const std::string &format)
+	bool DateTime::FromString(DateTime& outVal, const StringView& date, const StringView& format)
 	{
 		std::chrono::system_clock::time_point tp;
 
-		if (!format.empty()) {
-			std::istringstream ss(date);
-
-			ss >> std::chrono::parse(format, tp);
+		if (!format.Empty()) {
+			std::ispanstream ss(date);
+			ss >> std::chrono::parse(format.Data(), tp);
 
 			if (ss.fail())
 				return false;
@@ -187,9 +189,8 @@ namespace DataTypes{
 		else {
 			bool parsedDate = false;
 			for (const auto& validFormat: DateTimeFormats) {
-				std::istringstream ss(date);
-
-				ss >> std::chrono::parse(validFormat, tp);
+				std::ispanstream ss(date);
+				ss >> std::chrono::parse(validFormat.Data(), tp);
 
 				if (!ss.fail()) {
 					parsedDate = true;
@@ -208,15 +209,14 @@ namespace DataTypes{
 		return true;
 	}
 
-	bool DateTime::FromString(const String& str)
+	bool DateTime::FromString(const StringView& str)
 	{
-		std::chrono::system_clock::time_point tp;
-
-		bool parsedDate = false;
+        bool parsedDate = false;
 		for (const auto& validFormat: DateTimeFormats) {
-			std::ispanstream ss(str);
+            std::chrono::system_clock::time_point tp;
+            std::ispanstream ss(str);
 
-			ss >> std::chrono::parse(validFormat, tp);
+			ss >> std::chrono::parse(validFormat.Data(), tp);
 
 			if (!ss.fail()) {
 				parsedDate = true;
@@ -227,33 +227,36 @@ namespace DataTypes{
 	    return parsedDate;
 	}
 
-	std::string DateTime::ToString(const std::string &format) const
+    String DateTime::ToString(const ::Memory::IAllocator* allocator, const StringView& format) const
 	{
-		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
+	    const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
+	    const std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+	    const auto* localTime = std::localtime(&t);
 
-#ifdef _WIN32
-		return std::format("{:%Y-%m-%d %H:%M:%S%OS}", timePoint);
-#else
-		const std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+	    // Format date/time using strftime into a char buffer
+	    char buffer[DATETIME_TO_STRING_BUFFER_SIZE] = {};
+	    const auto bufferBytes = std::strftime(buffer, sizeof(buffer), format.Data(), localTime);
 
-		// Convert to std::tm (local time)
-		const auto* localTime = std::localtime(&t);
+	    // Append milliseconds manually
+	    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            timePoint.time_since_epoch()) % 1000;
 
-		std::ostringstream oss;
-		oss << std::put_time(localTime, format.c_str());
+	    char msBuffer[DATETIME_TO_STRING_MS_BUFFER_SIZE] = {};
+	    const auto msBytes = std::snprintf(msBuffer, sizeof(msBuffer), ".%03lld", static_cast<long long>(ms.count()));
 
-		// Append milliseconds
-		const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(timePoint.time_since_epoch()) % 1000;
-		oss << '.' << std::setw(3) << std::setfill('0') << ms.count();
+	    String result(allocator, static_cast<Int>(bufferBytes + msBytes));
 
-		return oss.str();
-#endif
+	    result.Insert(0, buffer, static_cast<Int>(bufferBytes));
+        result.Insert(static_cast<Int>(bufferBytes), msBuffer, msBytes);
+
+	    return result;
 	}
 
-	BigInt DateTime::GetUnixTimeStamp() const { return this->timeStamp; }
+
+	BigInt DateTime::UnixTimeStamp() const { return this->timeStamp; }
 
 	bool DateTime::ValidateDate(const DateTime &datetime){
-		const auto& timestamp = datetime.GetUnixTimeStamp();
+		const auto& timestamp = datetime.UnixTimeStamp();
 
 		return localtime(&timestamp) != nullptr;
 	}
@@ -264,10 +267,10 @@ namespace DataTypes{
 			throw std::invalid_argument("Invalid date/time components.");
 	}
 
-	std::ostream & operator<<(std::ostream &os, const DateTime &datetime){
-		os << datetime.ToString();
-		return os;
-	}
+	// std::ostream & operator<<(std::ostream &os, const DateTime &datetime){
+	// 	os << datetime.ToString();
+	// 	return os;
+	// }
 
 }
 
@@ -275,8 +278,16 @@ bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime&
 	return !(firstDate == secondDate);
 }
 
+void DataTypes::DateTime::Print(
+    std::ostream& os,
+    const Memory::IAllocator* allocator,
+    const StringView& format
+) const{
+    os << this->ToString(allocator, format);
+}
+
 bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.GetUnixTimeStamp() == secondDate.GetUnixTimeStamp();
+	return firstDate.UnixTimeStamp() == secondDate.UnixTimeStamp();
 }
 
 bool operator>=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
@@ -286,8 +297,8 @@ bool operator<=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime&
 	return !(firstDate > secondDate);
 }
 bool operator>(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.GetUnixTimeStamp() > secondDate.GetUnixTimeStamp();
+	return firstDate.UnixTimeStamp() > secondDate.UnixTimeStamp();
 }
 bool operator<(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.GetUnixTimeStamp() < secondDate.GetUnixTimeStamp();
+	return firstDate.UnixTimeStamp() < secondDate.UnixTimeStamp();
 }

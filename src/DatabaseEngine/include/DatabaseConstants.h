@@ -6,21 +6,20 @@
 #include "../../Systemic/include/Security/Security.h"
 
 namespace Constants{
-    constexpr std::string_view WRITE_AHEAD_LOG_FILE = "wal.log";
-    constexpr std::string_view UNDO_LOG_FILE = "undo.log";
+    static constexpr auto WRITE_AHEAD_LOG_FILE = DataTypes::StringView("wal.log");
+    static constexpr auto UNDO_LOG_FILE = DataTypes::StringView("undo.log");
+    static constexpr auto DATA_FILE_EXTENSION = DataTypes::StringView(".data");
 
-    constexpr std::string_view DATA_FILE_EXTENSION = ".data";
-
-    constexpr size_t PAGE_SIZE = 8 * 1024;
-    constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
-    constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
-    constexpr size_t EXTENT_SIZE = 8;
-    constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
-    constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
-    constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
-    constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = 1024;
-    constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
-    constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
+    static constexpr size_t PAGE_SIZE = 8 * 1024;
+    static constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
+    static constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
+    static constexpr size_t EXTENT_SIZE = 8;
+    static constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
+    static constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
+    static constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
+    static constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = 1024;
+    static constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
+    static constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
     enum class AlterTableType: UnsignedTinyInt {
         AddColumn = 0,
@@ -72,34 +71,34 @@ namespace Constants{
         NonClustered = 1
     };
 
-    constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
-    constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
-    constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + sizeof(page_id_t);
-    constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
+    static constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
+    static constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
+    static constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + sizeof(page_id_t);
+    static constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
 
-    constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
-    constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
-    constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
-    constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
-    constexpr UnsignedSmallInt LARGE_OBJECT_PAGE_SIZE = PAGE_SIZE_WITHOUT_HEADER - 2 * sizeof(page_id_t);
+    static constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - 7;
+    static constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
+    static constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
+    static constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
+    static constexpr UnsignedSmallInt LARGE_OBJECT_PAGE_SIZE = PAGE_SIZE_WITHOUT_HEADER - 2 * sizeof(page_id_t);
 	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
 
-    constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
-    constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
+    static constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
+    static constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
 
-    constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;
-    constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;
-    constexpr page_id_t HEADER_PAGE_ID = 0;
+    static constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;
+    static constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;
+    static constexpr page_id_t HEADER_PAGE_ID = 0;
 
-    constexpr Int CATALOG_ID = 1;
+    static constexpr Int CATALOG_ID = 1;
 
-    constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
+    static constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 
-    constexpr Int ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
+    static constexpr Int ROW_VERSION_HEADER_SIZE = 2 * sizeof(transaction_id_t) + sizeof(page_id_t) + sizeof(page_offset_t);
 
-    constexpr Int LARGE_OBJECT_POINTER_SIZE = sizeof(page_id_t);
-    constexpr Int LARGE_OBJECT_METADATA_SIZE = PAGE_HEADER_SIZE + sizeof(page_size_t) + sizeof(page_id_t);
-    constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
+    static constexpr Int LARGE_OBJECT_POINTER_SIZE = sizeof(page_id_t);
+    static constexpr Int LARGE_OBJECT_METADATA_SIZE = PAGE_HEADER_SIZE + sizeof(page_size_t) + sizeof(page_id_t);
+    static constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
 
     enum class FunctionType : UnsignedTinyInt {
         // -----------------------
@@ -177,17 +176,17 @@ namespace Constants{
         NullIf = 121
     };
 
-    static constexpr std::string_view DEFAULT_SCHEMA_NAME = "dbo";
-    static constexpr std::string_view ADMIN_NAME = "admin";
-    static constexpr std::string_view DB_OWNER_NAME = "db_owner";
-    static constexpr std::string_view DB_WRITER_NAME = "db_writer";
-    static constexpr std::string_view DB_READER_NAME = "db_reader";
-    static constexpr std::string_view GUEST_NAME = "guest";
+    static constexpr auto DEFAULT_SCHEMA_NAME = DataTypes::StringView("dbo");
+    static constexpr auto ADMIN_NAME = DataTypes::StringView("admin");
+    static constexpr auto DB_OWNER_NAME = DataTypes::StringView("db_owner");
+    static constexpr auto DB_WRITER_NAME = DataTypes::StringView("db_writer");
+    static constexpr auto DB_READER_NAME = DataTypes::StringView("db_reader");
+    static constexpr auto GUEST_NAME = DataTypes::StringView("guest");
 
     static constexpr auto  ADMIN_PERMISSIONS = Security::Permission::ALL;
 
     static constexpr auto  GUEST_PERMISSIONS =
-      Security::Permission::NONE;
+        Security::Permission::NONE;
 
     static constexpr Security::Permission DB_READER_PERMISSIONS =
         Security::Permission::SELECT
