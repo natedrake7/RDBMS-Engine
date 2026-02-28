@@ -4,7 +4,6 @@
 #include <ostream>
 
 #include "DataTypes/String.h"
-#include "Memory/IAllocator.h"
 
 namespace DataTypes{
     bool StringView::EqualsIgnoreCase(const char* other, const Int size) const{
@@ -261,12 +260,4 @@ namespace DataTypes{
     }
 
     bool StringView::Empty() const{ return this->_size == 0; }
-
-    StringView::const_iterator StringView::begin() const{
-        return this->_data;
-    }
-
-    StringView::const_iterator StringView::end() const{
-        return this->_data + this->_size;
-    }
 }

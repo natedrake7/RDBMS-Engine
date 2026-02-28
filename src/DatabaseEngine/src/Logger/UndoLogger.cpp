@@ -24,7 +24,7 @@ namespace DatabaseEngine::Logging{
   }
 
   UndoLogger & UndoLogger::Get() {
-    const auto& logFilePath = Constants::UNDO_LOG_FILE.data();
+    const auto& logFilePath = Constants::UNDO_LOG_FILE.Data();
 
     static UndoLogger instance(logFilePath);
     return instance;

@@ -1,7 +1,5 @@
 #pragma once
 #include <cstdint>
-#include "StringView.h"
-#include "../DataStructures/ConstexprDictionary.h"
 
 typedef uint8_t UnsignedTinyInt;
 typedef uint16_t UnsignedSmallInt;
@@ -90,46 +88,3 @@ enum class StringComparisonType: UnsignedTinyInt{
 };
 
 constexpr Int DATETIME_SIZE = sizeof(BigInt);
-
-static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10> ColumnTypeSizes{
-  Pair(DataTypes::StringView("tinyint"), sizeof(TinyInt)),
-  Pair(DataTypes::StringView("smallint"), sizeof(SmallInt)),
-  Pair(DataTypes::StringView("int"), sizeof(Int)),
-  Pair(DataTypes::StringView("bigint"), sizeof(BigInt)),
-  Pair(DataTypes::StringView("datetime"), DATETIME_SIZE),
-  Pair(DataTypes::StringView("bool"), sizeof(bool)),
-  Pair(DataTypes::StringView("string"), 0),
-  Pair(DataTypes::StringView("decimal"), 0),
-  Pair(DataTypes::StringView("unicodestring"), 0),
-  Pair(DataTypes::StringView("guid"), 16)
-  //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-};
-
-static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 11> ColumnTypesDictionary = {
-  Pair(DataTypes::StringView("tinyint"), DataType::TinyInt),
-  Pair(DataTypes::StringView("smallint"), DataType::SmallInt),
-  Pair(DataTypes::StringView("int"), DataType::Int),
-  Pair(DataTypes::StringView("bigint"), DataType::BigInt),
-  Pair(DataTypes::StringView("datetime"), DataType::DateTime),
-  Pair(DataTypes::StringView("bool"), DataType::Bool),
-  Pair(DataTypes::StringView("string"), DataType::String),
-  Pair(DataTypes::StringView("decimal"), DataType::Decimal),
-  Pair(DataTypes::StringView("unicodestring"), DataType::UnicodeString),
-  Pair(DataTypes::StringView("guid"), DataType::Guid)
-  //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-};
-
-static constexpr ConstexprDictionary<DataType, DataTypes::StringView, 11> ColumnTypesToStringDictionary = {
-  Pair(DataType::TinyInt, DataTypes::StringView("TinyInt")),
-  Pair(DataType::SmallInt, DataTypes::StringView("SmallInt")),
-  Pair(DataType::Int, DataTypes::StringView("Int")),
-  Pair(DataType::BigInt, DataTypes::StringView("BigInt")),
-  Pair(DataType::DateTime, DataTypes::StringView("DateTime")),
-  Pair(DataType::Bool, DataTypes::StringView("Bool")),
-  Pair(DataType::String, DataTypes::StringView("String")),
-  Pair(DataType::Decimal, DataTypes::StringView("Decimal")),
-  Pair(DataType::UnicodeString, DataTypes::StringView("Unicodestring")),
-  Pair(DataType::Guid, DataTypes::StringView("Guid")),
-  Pair(DataType::Unknown, DataTypes::StringView("Invalid"))
-  //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
-};

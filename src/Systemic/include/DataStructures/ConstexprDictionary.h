@@ -1,6 +1,6 @@
 ﻿#pragma once
+#include <array>
 #include "Hashers.h"
-#include "Hashers/IntegerHashers.h"
 
 template<typename Key, typename Value>
 struct Pair{
@@ -47,7 +47,7 @@ class ConstexprDictionary{
             return false;
         }
 
-        [[nodiscard]] constexpr Value& operator[](const Key& key){
+        [[nodiscard]] constexpr const Value& operator[](const Key key) const noexcept {
             const size_t idx = Hasher::Hash(key) % Capacity;
             for (size_t i = 0; i < Capacity; ++i) {
                 const size_t slot = (idx + i) % Capacity;
@@ -63,7 +63,11 @@ class ConstexprDictionary{
             return this->buckets[idx].value;
         }
 
-        [[nodiscard]] constexpr  Value& Get(const Key& key) noexcept {
+        // [[nodiscard]] constexpr  Value& Get(const Key& key) const noexcept {
+        //     return this->operator[](key);
+        // }
+
+        [[nodiscard]] constexpr const Value& Get(const Key key) const noexcept {
             return this->operator[](key);
         }
 

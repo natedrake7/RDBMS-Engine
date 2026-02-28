@@ -1,5 +1,4 @@
 #pragma once
-#include <cstring>
 #include <ostream>
 #include <string>
 #include <tuple>
@@ -7,6 +6,7 @@
 
 #include "DataTypes.h"
 #include "StringView.h"
+#include "DataStructures/ConstexprDictionary.h"
 
 namespace Memory{
     class IAllocator;
@@ -18,16 +18,26 @@ namespace DataTypes {
     class Guid;
 }
 
-inline Dictionary<DataType, int> ColumnTypeRank{
-  {DataType::String, 1},
-  {DataType::UnicodeString, 2},
-  {DataType::Bool, 3},
-  {DataType::TinyInt, 4},
-  {DataType::SmallInt, 5},
-  {DataType::Int, 6},
-  {DataType::BigInt, 7},
-  {DataType::Decimal, 8},
-  {DataType::DateTime, 9},
+static constexpr ConstexprDictionary<DataType, Int, 9> ColumnTypeRank{
+    Pair(DataType::String, 1),
+    Pair(DataType::UnicodeString, 2),
+    Pair(DataType::Bool, 3),
+    Pair(DataType::TinyInt, 4),
+    Pair(DataType::SmallInt, 5),
+    Pair(DataType::Int, 6),
+    Pair(DataType::BigInt, 7),
+    Pair(DataType::Decimal, 8),
+    Pair(DataType::DateTime, 9),
+};
+
+static constexpr DataTypes::StringView TrueStrings[] = {
+    DataTypes::StringView("true"),
+    DataTypes::StringView("1")
+};
+
+static constexpr DataTypes::StringView FalseStrings[] = {
+    DataTypes::StringView("false"),
+    DataTypes::StringView("0")
 };
 
 class Value {
@@ -65,6 +75,8 @@ class Value {
 
     [[nodiscard]] long double InterpolateString() const;
 
+    static void BinaryOperationException(DataType lhs, DataType rhs);
+
     public:
 
         Value(const Value& copyVal);
@@ -96,6 +108,7 @@ class Value {
         Value(Int data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(BigInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::String& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);

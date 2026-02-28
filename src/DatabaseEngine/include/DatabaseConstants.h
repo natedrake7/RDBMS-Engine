@@ -1,9 +1,8 @@
 ﻿#pragma once
-
-#include <cstddef>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/PackedByte.h"
 #include "../../Systemic/include/Security/Security.h"
+#include "../../Systemic/include/DataTypes/StringView.h"
 
 namespace Constants{
     static constexpr auto WRITE_AHEAD_LOG_FILE = DataTypes::StringView("wal.log");

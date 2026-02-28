@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../DataTypes/DataTypes.h"
+#include <ostream>
 
 namespace Memory{
     enum class MemoryLogLevel : UnsignedTinyInt {

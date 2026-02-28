@@ -1,8 +1,6 @@
-﻿// ConstexprHashSet.h
-#pragma once
+﻿#pragma once
 #include <array>
-#include <string_view>
-#include "Hashers/BaseHasher.h"
+#include "Hashers.h"
 
 
 template<typename T, size_t N, typename Hasher = ConstexprHash<T>>

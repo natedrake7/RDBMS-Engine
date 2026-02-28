@@ -130,12 +130,12 @@ void QueryResult::SetColumnIndex(const Int columnPos, const column_index_t colum
 int64_t QueryResult::ComputeHash() const{
   std::hash<std::string> strHash;
   size_t seed = 0;
-
-  for (const auto& value : this->data) {
-    auto str = value.AsString(); // or serialize to bytes
-
-    seed ^= strHash(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-  }
+  //
+  // for (const auto& value : this->data) {
+  //   auto str = value.AsString(); // or serialize to bytes
+  //
+  //   seed ^= strHash(str) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+  // }
 
   return static_cast<int64_t>(seed);
 }
@@ -239,18 +239,15 @@ ostream& operator<<(std::ostream& os, const QueryResult& result){
       os << column.AsDecimal();
       break;
     case DataType::String:
-      os << column.AsString();
-      break;
     case DataType::UnicodeString:
-      //TODO
-      os << column.AsString();
+      os << column.AsStringView();
       break;
     case DataType::Bool:
       os << (column.AsBool() ? "TRUE" : "FALSE");
       break;
     case DataType::DateTime:
-      os << column.AsDateTime();
-      break;
+        column.AsDateTime().Print(os, column.GetAllocator());
+        break;
     case DataType::Guid:
       os << column.AsGuid();
       break;

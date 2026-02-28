@@ -3,36 +3,40 @@
 #include "../DataStorage/Row.h"
 #include "Logger.Structures.h"
 #include "../../../Systemic/include/DataStructures/HashSet.h"
+#include "DataStructures/ConstexprDictionary.h"
+
 #include <cstdint>
 #include <mutex>
 
+#include "DataStructures/Dictionary.h"
+
 namespace DatabaseEngine::Logging {
-  enum OperationType : uint8_t{
-    InvalidOperation = 0,
-    InsertRow = 1,
-    UpdateRow = 2,
-    DeleteRow = 3,
-    CreateTable = 4,
-    AlterTable = 5,
-    DropTable = 6,
-    BatchInsertRow = 7,
-    //etc...
-  };
+    enum OperationType : UnsignedTinyInt{
+        InvalidOperation = 0,
+        InsertRow = 1,
+        UpdateRow = 2,
+        DeleteRow = 3,
+        CreateTable = 4,
+        AlterTable = 5,
+        DropTable = 6,
+        BatchInsertRow = 7,
+        //etc...
+    };
 
-  static const Dictionary<OperationType, std::string> OperationTypeToString = {
-    { OperationType::InvalidOperation, "Invalid Operation"},
-    { OperationType::InsertRow, "Insert Row"},
-    { OperationType::UpdateRow, "Update Row"},
-    { OperationType::DeleteRow, "Delete Row"},
-    { OperationType::CreateTable, "Create Table"},
-    { OperationType::BatchInsertRow, "Batch Insert Row"}
-  };
+    static const Dictionary<OperationType, DataTypes::StringView> OperationTypeToString = {
+        { OperationType::InvalidOperation, DataTypes::StringView("Invalid Operation")},
+        { OperationType::InsertRow, DataTypes::StringView("Insert Row")},
+        { OperationType::UpdateRow, DataTypes::StringView("Update Row")},
+        { OperationType::DeleteRow, DataTypes::StringView("Delete Row")},
+        { OperationType::CreateTable, DataTypes::StringView("Create Table")},
+        { OperationType::BatchInsertRow, DataTypes::StringView("Batch Insert Row")}
+    };
 
-  static const HashSet<OperationType> RowAffectedOperationTypes = {
-    OperationType::InsertRow,
-    OperationType::UpdateRow,
-    OperationType::DeleteRow
-  };
+    static const HashSet RowAffectedOperationTypes = {
+        OperationType::InsertRow,
+        OperationType::UpdateRow,
+        OperationType::DeleteRow
+    };
 
   struct CheckPoint {
     transaction_id_t transactionId;

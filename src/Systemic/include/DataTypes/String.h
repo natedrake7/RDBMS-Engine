@@ -2,6 +2,7 @@
 #include <span>
 #include "StringView.h"
 #include "DataTypes.h"
+#include <ostream>
 
 namespace Memory{
     class IAllocator;
@@ -72,6 +73,9 @@ namespace DataTypes{
             [[nodiscard]] String Concat(const StringView& other) const;
             [[nodiscard]] String Concat(std::string_view other) const;
             [[nodiscard]] String Concat(const std::string& other) const;
+            [[nodiscard]] static String Concat(const StringView& lhs, const StringView& rhs, const ::Memory::IAllocator* allocator);
+            [[nodiscard]] static String Concat(const String& lhs, const String& rhs, const ::Memory::IAllocator* allocator);
+            [[nodiscard]] static String Concat(const char* lhs, const char* rhs, const ::Memory::IAllocator* allocator);
 
 
             [[nodiscard]] String& Append(const String& other);

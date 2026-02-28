@@ -11,6 +11,7 @@
 
 #include "DataTypes/DateTime.h"
 #include "../../include/Memory/IAllocator.h"
+#include "DataTypes/DataTypes.StaticData.h"
 
 bool Value::TryParseAsBool()const{
     if (this->type == DataType::String || this->type == DataType::UnicodeString)
@@ -26,13 +27,11 @@ bool Value::TryParseAsBool()const{
 }
 
 bool Value::TryParseAsBoolFromString()const{
-    const auto strData = Functions::String::Lower(this->AsString());
-
     const auto stringView = this->AsStringView();
-    if (strData == "true" || strData == "1")
+    if (stringView == "true" || stringView == "1")
         return true;
 
-    if (strData == "false" || strData == "0")
+    if (stringView == "false" || stringView == "0")
         return true;
 
     return false;
@@ -51,11 +50,9 @@ bool Value::TryParseAsBoolFromInt()const{
 }
 
 bool Value::TryParseDate(){
-    const auto strData = Functions::String::Lower(this->AsString());
-
     DataTypes::DateTime parsedDate;
 
-    const auto result = DataTypes::DateTime::FromString(parsedDate, strData);
+    const auto result = DataTypes::DateTime::FromString(parsedDate, this->AsStringView());
 
     if (!result)
         return false;
@@ -74,7 +71,7 @@ Value Value::PerformBigIntAddition(const Value& lhs, const Value& rhs){
 
 Value Value::PerformStringAddition(const Value& lhs, const Value& rhs){
     return Value(
-        lhs.AsString() + rhs.AsString(),
+        DataTypes::String::Concat(lhs.AsStringView(), lhs.AsStringView(), lhs.GetAllocator()),
         lhs.GetAllocator(),
         0
     );
@@ -187,10 +184,10 @@ std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs,
 long double Value::InterpolateString() const{
     const auto str = this->AsString();
 
-    constexpr auto MAX_PREFIX_LEN = 8;  // Use first 8 characters
+    constexpr Int MAX_PREFIX_LEN = 8;  // Use first 8 characters
     constexpr double BASE = 256.0;        // ASCII character set
 
-    const auto length = std::min(str.length(), static_cast<size_t>(MAX_PREFIX_LEN));
+    const auto length = std::min(str.Size(), MAX_PREFIX_LEN);
 
     long double result = 0.0;
     for (int i = 0;i < length; i++){
@@ -200,6 +197,17 @@ long double Value::InterpolateString() const{
     }
 
     return result;
+}
+
+void Value::BinaryOperationException(const DataType lhs, const DataType rhs) {
+    const auto& leftStr = DataTypeToStringDictionary.Get(lhs);
+    const auto& rightStr = DataTypeToStringDictionary.Get(rhs);
+
+    throw std::invalid_argument("Left Operand has type: "
+        + std::string(leftStr.Data(), leftStr.Size())
+        + " and right operand has type: "
+        + std::string(rightStr.Data(), rightStr.Size())
+    );
 }
 
 Value::Value(const Value &copyVal){
@@ -464,6 +472,16 @@ Value::Value(
     this->type = DataType::String;
 }
 
+Value::Value(const DataTypes::String &data, const Memory::IAllocator *allocator, column_index_t index){
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
+    std::memcpy(this->data, data.Data(), data.Size());
+    this->size = data.Size();
+
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataType::String;
+}
+
 Value::Value(
     const DataTypes::DateTime& data,
     const Memory::IAllocator* allocator,
@@ -644,7 +662,7 @@ DataTypes::String Value::AsString() const {
 }
 
 DataTypes::StringView Value::AsStringView() const{
-    return DataTypes::Coercions::ToString(*this);
+    return DataTypes::Coercions::ToStringView(*this);
 }
 
 std::u16string Value::AsUnicodeString() const {
@@ -719,7 +737,7 @@ std::ostream & operator<<(std::ostream& os, const Value &field){
         os << field.AsBool();
         break;
     case DataType::DateTime:
-        os << field.AsDateTime();
+        field.AsDateTime().Print(os, field.GetAllocator());
         break;
     case DataType::Guid:
         os << field.AsGuid();
@@ -774,11 +792,10 @@ Value operator+(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type));
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value& Value::operator+=(const Value &rhs){
@@ -806,11 +823,10 @@ Value operator-(const Value &lhs, const Value &rhs){
         case DataType::RowIdentifier:
         case DataType::Unknown:
         default:
-            throw std::invalid_argument("Left Operand has type: "
-                + ColumnTypesToStringDictionary.Get(lhs.type)
-                + " and right operand has type: "
-                + ColumnTypesToStringDictionary.Get(rhs.type));
+            Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator/(const Value &lhs, const Value &rhs){
@@ -838,12 +854,10 @@ Value operator%(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator*(const Value &lhs, const Value &rhs){
@@ -867,12 +881,10 @@ Value operator*(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
@@ -889,7 +901,7 @@ Value operator<(const Value &lhs, const Value &rhs){
     case DataType::Decimal:
         return Value(lhs.AsDecimal() < rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() < rhs.AsString(), lhs.GetAllocator(), 0);
+        return Value(lhs.AsStringView() < rhs.AsStringView(), lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
         return Value(lhs.AsUnicodeString() < rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
@@ -901,12 +913,10 @@ Value operator<(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator>(const Value &lhs, const Value &rhs){
@@ -927,7 +937,7 @@ Value operator<=(const Value &lhs, const Value &rhs){
     case DataType::Decimal:
         return Value(lhs.AsDecimal() <= rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() <= rhs.AsString(), lhs.GetAllocator(), 0);
+        return Value(lhs.AsStringView() <= rhs.AsStringView(), lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
         return Value(lhs.AsUnicodeString() <= rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
@@ -939,12 +949,10 @@ Value operator<=(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 
@@ -960,13 +968,12 @@ Value operator>=(const Value &lhs, const Value &rhs){
     case DataType::BigInt: {
         const auto left = lhs.AsBigInt();
         const auto right = rhs.AsBigInt();
-
         return Value(left >= right, lhs.GetAllocator(), 0);
     }
     case DataType::Decimal:
         return Value(lhs.AsDecimal() >= rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
-        return Value(lhs.AsString() >= rhs.AsString(), lhs.GetAllocator(), 0);
+        return Value(lhs.AsStringView() >= rhs.AsStringView(), lhs.GetAllocator(), 0);
     case DataType::UnicodeString:
         return Value(lhs.AsUnicodeString() >= rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
@@ -978,12 +985,10 @@ Value operator>=(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator==(const Value &lhs, const Value &rhs){
@@ -1015,12 +1020,10 @@ Value operator==(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    return Value::Null();
 }
 
 Value operator!=(const Value &lhs, const Value &rhs){
@@ -1052,31 +1055,31 @@ Value operator!=(const Value &lhs, const Value &rhs){
     case DataType::RowIdentifier:
     case DataType::Unknown:
     default:
-        throw std::invalid_argument("Left Operand has type: "
-            + ColumnTypesToStringDictionary.Get(lhs.type)
-            + " and right operand has type: "
-            + ColumnTypesToStringDictionary.Get(rhs.type)
-        );
+        Value::BinaryOperationException(lhs.type, rhs.type);
     }
+
+    Value::Null();
 }
 
 const Memory::IAllocator* Value::GetAllocator() const{ return this->_allocator;}
 
 bool Value::ParseAsBoolFromString() const{
-    const auto strData = Functions::String::Lower(this->AsString());
+    const auto strView = this->AsStringView();
 
-    if (strData == "true" || strData == "1")
-        return true;
+    for (const auto& str: TrueStrings)
+        if (str.Contains(strView, StringComparisonType::EqualsIgnoreOrdinalCase))
+            return true;
 
-    if (strData == "false" || strData == "0")
-        return false;
+    for (const auto& str: FalseStrings)
+        if (str.Contains(strView, StringComparisonType::EqualsIgnoreOrdinalCase))
+            return false;
 
     return false;
 }
 
 Value Value::EqualsIgnoreOrdinalCase(const Value &lhs, const Value &rhs){
     return Value(
-        Functions::String::EqualsIgnoreCase(lhs.AsString(), rhs.AsString()),
+        lhs.AsStringView().Contains(rhs.AsStringView(), StringComparisonType::EqualsIgnoreOrdinalCase),
         lhs.GetAllocator(),
         0
     );

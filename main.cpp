@@ -18,13 +18,6 @@
 #include "src/DatabaseEngine/include/Managers/GlobalMemoryManager.h"
 #include "src/Systemic/include/Memory/Functions.h"
 
-// #include <memory_resource>
-//
-// #include "UnitTests/include/UnitTests.h"
-//
-// struct QueryContext {
-//     std::pmr::monotonic_buffer_resource arena;
-// };
 //TODO
 //Add Decimal (division remains)
 //Add Alter table (test alter drop and rename)
@@ -115,7 +108,6 @@
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
-    // memoryInfo.Log(std::cout, Memory::MemoryLogLevel::GigaBytes);
 
     static auto& globalMemoryManager = DatabaseEngine::GlobalMemoryManager::Get();
     globalMemoryManager.Initialize(memoryInfo);

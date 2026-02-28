@@ -2,6 +2,7 @@
 
 #include "../include/Converter.h"
 #include "../include/Functions/StringFunctions.h"
+#include "DataTypes/DataTypes.StaticData.h"
 #include "DataTypes/DateTime.h"
 
 namespace DataTypes{
@@ -15,7 +16,9 @@ namespace DataTypes{
     void Coercions::ThrowException(const DataType type){
         if (type == DataType::Unknown)
             throw std::invalid_argument("Invalid Field Type");
-        throw std::invalid_argument("Field type " +  ColumnTypesToStringDictionary.Get(type) + " cannot be coerced to Bool");
+
+        const auto& typeName = DataTypeToStringDictionary.Get(type);
+        throw std::invalid_argument("Field type " +  std::string(typeName.Data(), typeName.Size()) + " cannot be coerced to Bool");
     }
 
     bool Coercions::ParseAsBoolFromString(const Value &value){

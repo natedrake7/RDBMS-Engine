@@ -332,6 +332,48 @@ namespace DataTypes{
         return String(newString, newSize, this->_allocator);
     }
 
+    String String::Concat(
+        const StringView &lhs,
+        const StringView &rhs,
+        const Memory::IAllocator *allocator
+    ){
+        const auto size = lhs.Size() + rhs.Size();
+        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
+        std::memcpy(newString, lhs.Data(), lhs.Size());
+        std::memcpy(newString + lhs.Size(), rhs.Data(), rhs.Size());
+
+        return String(newString, size, allocator);
+    }
+
+    String String::Concat(
+        const String &lhs,
+        const String &rhs,
+        const Memory::IAllocator *allocator
+    ){
+        const auto size = lhs._size + rhs._size;
+        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
+        std::memcpy(newString, lhs._data, lhs._size);
+        std::memcpy(newString + lhs._size, rhs._data, rhs._size);
+
+        return String(newString, size, allocator);
+    }
+
+    String String::Concat(
+        const char *lhs,
+        const char *rhs,
+        const Memory::IAllocator *allocator
+    ) {
+        const auto lhsSize = static_cast<Int>(std::strlen(lhs));
+        const auto rhsSize = static_cast<Int>(std::strlen(rhs));
+        const auto size = lhsSize + rhsSize;
+
+        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
+        std::memcpy(newString, lhs, lhsSize);
+        std::memcpy(newString + lhsSize, rhs, rhsSize);
+
+        return String(newString, size, allocator);
+    }
+
     String& String::Append(const String& other){
         const Int newSize = this->_size + other._size;
         if (!this->CanFit(newSize))

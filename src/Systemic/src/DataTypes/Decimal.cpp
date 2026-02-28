@@ -34,11 +34,11 @@ namespace DataTypes {
 
         if (fractionIndex % 2 != 0) {
 
-            digits.insert(digits.begin(), 0);
+            // digits.insert(digits.begin(), 0);
             fractionIndex++;
         }
 
-        this->bytes = Decimal::Pack(digits, isPositive, fractionIndex);
+        this->_data = Decimal::Pack(digits, isPositive, fractionIndex);
     }
 
     std::vector<Int> Decimal::Unpack(const std::vector<byte_t> &bytes){
@@ -270,18 +270,19 @@ namespace DataTypes {
         fraction_index_t &fractionIndex,
         const bool isPositive
     ){
-        const auto leftDigits  = Decimal::Unpack(left);
-        const auto rightDigits = Decimal::Unpack(right);
-
-        auto productDigits = Decimal::MultiplyDigits(leftDigits, rightDigits);
-
-        Decimal::TrimLeadingZeros(productDigits, fractionIndex);
-        Decimal::TrimTrailingZeros(productDigits, fractionIndex);
-        Decimal::PadDecimalParts(productDigits, fractionIndex);
-
-        const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
-
-        return Decimal(packed);
+        // const auto leftDigits  = Decimal::Unpack(left);
+        // const auto rightDigits = Decimal::Unpack(right);
+        //
+        // auto productDigits = Decimal::MultiplyDigits(leftDigits, rightDigits);
+        //
+        // Decimal::TrimLeadingZeros(productDigits, fractionIndex);
+        // Decimal::TrimTrailingZeros(productDigits, fractionIndex);
+        // Decimal::PadDecimalParts(productDigits, fractionIndex);
+        //
+        // const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
+        //
+        // return Decimal(packed);
+        return Decimal();
     }
 
     Decimal Decimal::Divide(
@@ -411,11 +412,11 @@ namespace DataTypes {
     }
 
     Decimal::Decimal(const byte_t* data, const Int dataSize){
-        this->bytes = std::vector(data, data + dataSize);
+        // this->bytes = std::vector(data, data + dataSize);
     }
 
     Decimal::Decimal(const std::vector<byte_t> &value){
-        this->bytes = value;
+        // this->bytes = value;
     }
 
     Decimal::Decimal(const bool value){
@@ -454,9 +455,9 @@ namespace DataTypes {
 
     Decimal::~Decimal() = default;
 
-    bool Decimal::IsPositive() const { return ( this->bytes.at(0) >> 7 ) & 0x01; }
+    bool Decimal::IsPositive() const { return ( this->_data.at(0) >> 7 ) & 0x01; }
 
-    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->bytes.at(0) & 0x7F); }
+    fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->_data.at(0) & 0x7F); }
 
     String Decimal::ToString(const ::Memory::IAllocator* allocator) const{
         const auto isPositive = this->IsPositive();
@@ -478,27 +479,27 @@ namespace DataTypes {
 
         const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + ( isPositive ? 0 : 1);
 
-        result.insert(fractionIndex,  ".");
-
-        return result;
+        // result.insert(fractionIndex,  ".");
+        //
+        // return result;
     }
 
-    const byte_t* Decimal::GetRawData() const { return this->bytes.data(); }
+    const byte_t* Decimal::GetRawData() const { return this->_data.data(); }
 
-    Int Decimal::GetRawDataSize() const { return this->bytes.size(); }
+    Int Decimal::GetRawDataSize() const { return this->_data.size(); }
 
-    const std::vector<byte_t>& Decimal::GetData() const { return this->bytes; }
+    const std::vector<byte_t>& Decimal::GetData() const { return std::vector<byte_t>(); }
 
     Int Decimal::Size(const Int precision){
         return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
     }
 
     double Decimal::ToDouble() const{
-        return std::stod(this->ToString());
+        // return std::stod(this->ToString());
     }
 
     std::ostream & operator<<(std::ostream &os, const Decimal &decimal){
-        os << decimal.ToString();
+        // os << decimal.ToString();
         return os;
     }
 

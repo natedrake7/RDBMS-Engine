@@ -26,7 +26,7 @@ WriteAheadLogger::WriteAheadLogger(const std::string& logFilePath): Logger(logFi
   }
 
   WriteAheadLogger & WriteAheadLogger::Get() {
-    const auto& logFilePath = Constants::WRITE_AHEAD_LOG_FILE.data();
+    const auto& logFilePath = Constants::WRITE_AHEAD_LOG_FILE.Data();
 
     static WriteAheadLogger instance(logFilePath);
     return instance;

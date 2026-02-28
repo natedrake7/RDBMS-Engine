@@ -1,6 +1,7 @@
 #pragma once
 #include "DataTypes/DataTypes.h"
 #include <limits>
+#include <string_view>
 
 
 constexpr Int ITOS_BUFFER_SIZE = 32;

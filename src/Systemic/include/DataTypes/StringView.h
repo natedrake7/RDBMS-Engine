@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include <cstring>
 #include <span>
-
 #include "DataTypes.h"
+#include <ostream>
 
 namespace Memory{
     class IAllocator;
@@ -55,19 +55,10 @@ namespace DataTypes{
         }
 
         StringView& operator=(StringView&& other) noexcept;
-        constexpr StringView& operator=(const StringView& other){
-            if (this == &other)
-                return *this;
-
-            this->_data = other._data;
-            this->_size = other._size;
-            return *this;
-        }
+        constexpr StringView& operator=(const StringView& other)= default;
         constexpr ~StringView() = default;
 
-        [[nodiscard]] constexpr const char* Data() const{
-            return this->_data;
-        }
+        [[nodiscard]] constexpr const char* Data() const noexcept{ return this->_data; }
 
         //operators
         friend std::ostream& operator<<(std::ostream& os, const StringView& sv);
@@ -75,6 +66,7 @@ namespace DataTypes{
             return this->_data[index];
         }
 
+        //Equality Operators
         [[nodiscard]] constexpr bool operator==(const char* other) const{
             return this->Equals(other, this->_size);
         }
@@ -91,15 +83,118 @@ namespace DataTypes{
             return !(*this == other);
         }
 
+        //Comparison Operators
+        [[nodiscard]] constexpr bool operator<(const char* other) const {
+            const auto otherSize = StringView::CalculateSize(other);
+
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other, size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const StringView& other) const noexcept{
+            const auto size = std::min(this->_size, other._size);
+            const auto cmp = std::memcmp(this->_data, other._data, size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < other._size;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const std::string& other) const {
+            const auto otherSize = static_cast<Int>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const std::string_view& other) const {
+            const auto otherSize = static_cast<Int>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const char* other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const StringView& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const std::string& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const std::string_view& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator>(const StringView& other) const noexcept{
+            const auto size = std::min(this->_size, other._size);
+            const auto cmp = std::memcmp(this->_data, other._data, size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > other._size;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const char* other) const {
+            const auto otherSize = StringView::CalculateSize(other);
+
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other, size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const std::string& other) const {
+            const auto otherSize = static_cast<Int>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const std::string_view& other) const {
+            const auto otherSize = static_cast<Int>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const char* other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const StringView& other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const std::string& other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const std::string_view& other) const {
+            return !(*this < other);
+        }
+
         operator std::string_view() const;
         operator std::span<const char>() const;
 
         //functions
         [[nodiscard]] StringView Substring(Int startIndex, Int length) const;
 
-        [[nodiscard]] constexpr Int Size()const{
-            return this->_size;
-        }
+        [[nodiscard]] constexpr Int Size()const{ return this->_size; }
 
         [[nodiscard]] Int IndexOf(char c) const;
         [[nodiscard]] bool Contains(const StringView& other, StringComparisonType type) const;
@@ -112,8 +207,13 @@ namespace DataTypes{
         // STL compatibility
         using const_iterator = const char*;
 
-        [[nodiscard]] const_iterator begin() const;
-        [[nodiscard]] const_iterator end() const;
+        [[nodiscard]] constexpr const_iterator begin() const{
+            return this->_data;
+        }
+        
+        [[nodiscard]] constexpr const_iterator end() const{
+            return this->_data + this->_size;
+        }
 
         static constexpr Int CalculateSize(const char* str){
             if (!str) return 0;

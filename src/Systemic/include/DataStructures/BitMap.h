@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include <vector>
 #include "../DataTypes/DataTypes.h"
+#include <fstream>
 
-namespace Memory
-{
+namespace Memory{
     class IAllocator;
 }
 
@@ -16,7 +16,7 @@ namespace ByteMaps{
 
     protected:
         void Resize(bit_map_size_t newSize);
-        Int HeapSize()const;
+        [[nodiscard]] Int HeapSize()const;
 
         BitMap(object_t* data, bit_map_size_t size);
 
