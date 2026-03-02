@@ -4,6 +4,7 @@
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
+#include "DataTypes/DataTypes.StaticData.h"
 
 namespace DatabaseEngine::StorageTypes {
      Column::Column(
@@ -28,12 +29,13 @@ namespace DatabaseEngine::StorageTypes {
         const Table* table
     ){
         const auto normalizedType = Functions::String::NormalizeString(header.type);
+        const auto strView = DataTypes::StringView(normalizedType);
 
         this->name = header.name;
         this->allowNulls = false;
-        this->header.columnType = ColumnTypesDictionary.Get(normalizedType);
+        this->header.columnType = ColumnTypesDictionary.Get(&strView);
 
-        const auto size = ColumnTypeSizes.Get(normalizedType);
+        const auto size = ColumnTypeSizes.Get(&strView);
 
         this->header.recordSize = size == 0 ? header.size : size;
         this->header.columnIndex = ordinalPosition;

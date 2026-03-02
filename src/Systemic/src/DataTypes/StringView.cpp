@@ -103,6 +103,9 @@ namespace DataTypes{
         other._data = nullptr;
     }
 
+    StringView::StringView(const std::string& other)
+        : _data(other.data()), _size(static_cast<Int>(other.size())){}
+
     StringView& StringView::operator=(StringView&& other) noexcept{
         if (this == &other)
             return *this;

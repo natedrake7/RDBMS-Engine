@@ -13,6 +13,7 @@
 #include "Pages/Additional/RowReference.h"
 
 #include "../../../Systemic/include/DataTypes/Variable.h"
+#include "DataTypes/DataTypes.StaticData.h"
 
 namespace Expressions{
      static Dictionary<Constants::FunctionType, std::function<Value(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& args)>> FunctionDictionary{
@@ -353,29 +354,29 @@ namespace Expressions{
     Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
         switch (this->operation) {
             case BinaryOperator::Add:
-              return this->left->Evaluate(context) + this->right->Evaluate(context);
+                return this->left->Evaluate(context) + this->right->Evaluate(context);
             case BinaryOperator::Subtract:
-              return this->left->Evaluate(context) - this->right->Evaluate(context);
+                return this->left->Evaluate(context) - this->right->Evaluate(context);
             case BinaryOperator::Multiply:
-              return this->left->Evaluate(context) * this->right->Evaluate(context);
+                return this->left->Evaluate(context) * this->right->Evaluate(context);
             case BinaryOperator::Divide:
-              return this->left->Evaluate(context) / this->right->Evaluate(context);
+                return this->left->Evaluate(context) / this->right->Evaluate(context);
             case BinaryOperator::Modulo:
-              return this->left->Evaluate(context) % this->right->Evaluate(context);
+                return this->left->Evaluate(context) % this->right->Evaluate(context);
             case BinaryOperator::Equal:
-              return this->left->Evaluate(context) == this->right->Evaluate(context);
+                return this->left->Evaluate(context) == this->right->Evaluate(context);
             case BinaryOperator::EqualIgnoreOrdinalCase:
-              return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
+                return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
             case BinaryOperator::NotEqual:
-              return this->left->Evaluate(context) != this->right->Evaluate(context);
+                return this->left->Evaluate(context) != this->right->Evaluate(context);
             case BinaryOperator::Greater:
-              return this->left->Evaluate(context) > this->right->Evaluate(context);
+                return this->left->Evaluate(context) > this->right->Evaluate(context);
             case BinaryOperator::GreaterEqual:
-              return this->left->Evaluate(context) >= this->right->Evaluate(context);
+                return this->left->Evaluate(context) >= this->right->Evaluate(context);
             case BinaryOperator::Less:
-              return this->left->Evaluate(context) < this->right->Evaluate(context);
+                return this->left->Evaluate(context) < this->right->Evaluate(context);
             case BinaryOperator::LessEqual:
-              return this->left->Evaluate(context) <= this->right->Evaluate(context);
+                return this->left->Evaluate(context) <= this->right->Evaluate(context);
             default:
               throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
@@ -388,9 +389,9 @@ namespace Expressions{
             case BinaryOperator::Multiply:
             case BinaryOperator::Divide:
             case BinaryOperator::Modulo: {
-              const auto& leftType = this->left->GetReturnType();
-              const auto& rightType = this->right->GetReturnType();
-              return Value::PromoteType(leftType, rightType);
+                const auto& leftType = this->left->GetReturnType();
+                const auto& rightType = this->right->GetReturnType();
+                return Value::PromoteType(leftType, rightType);
             }
             case BinaryOperator::Equal:
             case BinaryOperator::EqualIgnoreOrdinalCase:
@@ -408,15 +409,15 @@ namespace Expressions{
     bool BinaryExpression::ValidateOperation() const {
         switch (this->operation) {
             case BinaryOperator::Add:
-            return this->ValidateAddition();
+                return this->ValidateAddition();
             case BinaryOperator::Subtract:
-            return this->ValidateSubtraction();
+                return this->ValidateSubtraction();
             case BinaryOperator::Multiply:
-            return this->ValidateMultiplication();
+                return this->ValidateMultiplication();
             case BinaryOperator::Divide:
-            return this->ValidateDivision();
+                return this->ValidateDivision();
             case BinaryOperator::Modulo:
-            return this->ValidateModulo();
+                return this->ValidateModulo();
             case BinaryOperator::Equal:
             case BinaryOperator::EqualIgnoreOrdinalCase:
             case BinaryOperator::NotEqual:
@@ -424,9 +425,9 @@ namespace Expressions{
             case BinaryOperator::GreaterEqual:
             case BinaryOperator::Less:
             case BinaryOperator::LessEqual:
-            return true;
+                return true;
             default:
-            throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+                throw std::runtime_error("Unknown operator" + std::to_string(static_cast<Int>(this->operation)));
         }
     }
 
@@ -463,11 +464,17 @@ namespace Expressions{
         }
 
         if (!DataTypes::Coercions::IsCoercionAllowed(returnType, expectedType, info.allowImplicitCast)) {
-          errorMessage = "Function: " + info.name +
-            " expects argument " + std::to_string(index + 1) +
-            " to be of type: " + ColumnTypesToStringDictionary.Get(expectedType) +
-            ", but got type: " + ColumnTypesToStringDictionary.Get(returnType);
-          return false;
+            std::ostringstream os;
+
+            os  << "Function: "
+                << info.name
+                << " expects argument "
+                << std::to_string(index + 1)
+                << " to be of type: "
+                << DataTypeToStringDictionary.Get(expectedType).Data()
+                << ", but got type: "
+                << DataTypeToStringDictionary.Get(returnType).Data();
+            return false;
         }
 
         return true;
@@ -477,9 +484,9 @@ namespace Expressions{
         std::ostringstream os;
 
         os  << "Cannot cast safely type: "
-          << ColumnTypesToStringDictionary.Get(fromType)
+          << DataTypeToStringDictionary.Get(fromType)
           << " to type "
-          << ColumnTypesToStringDictionary.Get(toType);
+          << DataTypeToStringDictionary.Get(toType);
 
         errorMessage = os.str();
     }
@@ -513,62 +520,62 @@ namespace Expressions{
 
     Value FunctionExpression::Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Length(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::Length(field.AsStringView()), context.allocator, 0);
     }
 
     Value FunctionExpression::TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimLeft(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::TrimLeft(field.AsStringView()), context.allocator, 0);
     }
 
     Value FunctionExpression::TrimRight(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::TrimRight(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::TrimRight(field.AsStringView()), context.allocator, 0);
     }
 
     Value FunctionExpression::Trim(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Trim(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::Trim(field.AsStringView()), context.allocator, 0);
     }
 
     Value FunctionExpression::AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Ascii(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::Ascii(field.AsStringView()), context.allocator, 0);
     }
 
     Value FunctionExpression::Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Char(field.AsInt()), context.allocator, 0);
+        return Value(DataTypes::String::Char(field.AsInt(), context.allocator), context.allocator, 0);
     }
 
     Value FunctionExpression::CharIndex(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& subStr = arguments[0].AsString();
+        const auto& subStr = arguments[0].AsStringView();
 
-        const auto& str = arguments[1].AsString();
+        const auto& str = arguments[1].AsStringView();
 
         const int pos = (arguments.Size() > 2)
                           ? arguments[2].AsInt()
                           : 0;
 
-        return Value(Functions::String::CharIndex(subStr, str, pos), context.allocator, 0);
+        return Value(DataTypes::String::CharIndex(subStr, str, pos), context.allocator, 0);
     }
 
     Value FunctionExpression::Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Lower(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::Lower(field.AsStringView(), context.allocator), context.allocator, 0);
     }
 
     Value FunctionExpression::Upper(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(Functions::String::Upper(field.AsString()), context.allocator, 0);
+        return Value(DataTypes::String::Upper(field.AsStringView(), context.allocator), context.allocator, 0);
     }
 
     Value FunctionExpression::Replace(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& str = arguments[0].AsString();
-        const auto& subStr = arguments[1].AsString();
-        const auto& replaceStr = arguments[2].AsString();
+        const auto& str = arguments[0].AsStringView();
+        const auto& subStr = arguments[1].AsStringView();
+        const auto& replaceStr = arguments[2].AsStringView();
 
-        return Value(Functions::String::Replace(str, subStr, replaceStr), context.allocator, 0);
+        return Value(DataTypes::String::Replace(str, subStr, replaceStr, context.allocator), context.allocator, 0);
     }
 
     Value FunctionExpression::Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -576,32 +583,32 @@ namespace Expressions{
         const auto& startPos = arguments[1].AsInt();
         const auto& endPos = arguments[2].AsInt();
 
-        return Value(Functions::String::SubString(field, startPos, endPos), context.allocator, 0);
+        return Value(DataTypes::String::SubString(field, startPos, endPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Left(field, startPos), context.allocator, 0);
+        return Value(DataTypes::String::Left(field, startPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0].AsString();
         const auto& startPos = arguments[1].AsInt();
 
-        return Value(Functions::String::Right(field, startPos), context.allocator, 0);
+        return Value(DataTypes::String::Right(field, startPos), context.allocator, 0);
     }
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& str = arguments[0].AsString();
-        return Value(Functions::String::Reverse(str), context.allocator, 0);
+        return Value(DataTypes::String::Reverse(str), context.allocator, 0);
     }
 
     Value FunctionExpression::Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& size = arguments[0].AsInt();
 
-        return Value(Functions::String::Space(size), context.allocator, 0);
+        return Value(DataTypes::String::Space(size, context.allocator), context.allocator, 0);
     }
 
     Value FunctionExpression::GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -814,9 +821,9 @@ namespace Expressions{
         }
     }
 
-    VariableExpression::VariableExpression(const std::string &name) {
+    VariableExpression::VariableExpression(const std::string &name, const ::Memory::IAllocator* allocator) {
         this->name = name;
-        this->normalizedName = Functions::String::NormalizeString(this->name);
+        this->normalizedName = DataTypes::String::Normalize(this->name, allocator);
         this->dataType = DataType::Unknown;
         this->expressionType = ExpressionType::Variable;
     }

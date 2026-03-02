@@ -272,7 +272,7 @@ namespace Expressions{
       std::string normalizedName;
       DataType dataType;
 
-      explicit VariableExpression(const std::string& name);
+      explicit VariableExpression(const std::string& name, const ::Memory::IAllocator* allocator);
 
       [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
       [[nodiscard]]DataType GetReturnType() const override;

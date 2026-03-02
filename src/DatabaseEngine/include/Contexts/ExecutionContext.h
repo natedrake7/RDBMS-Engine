@@ -2,9 +2,8 @@
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../Managers/GlobalMemoryManager.h"
 #include "../Memory/Allocator.h"
-#include "DataStructures/Dictionary.h"
+#include "../../Systemic/include/DataStructures/Dictionary.h"
 
 namespace Memory{
     class IAllocator;

@@ -9,6 +9,7 @@
 #include <nlohmann/json.hpp>
 
 #include "DataStorage/Table.h"
+#include "DataTypes/DataTypes.StaticData.h"
 #include "Managers/GlobalMemoryManager.h"
 
 namespace Headers {
@@ -89,14 +90,14 @@ namespace DatabaseEngine {
     block_size_t columnSize = 0;
 
     const auto normalizedColumnType = Functions::String::NormalizeString(columnHeader.type);
-
-    if (!ColumnTypeSizes.TryGetValue(normalizedColumnType, columnSize))
+    const auto strView = DataTypes::StringView(normalizedColumnType);
+    if (!ColumnTypeSizes.TryGetValue(strView, columnSize))
      throw std::runtime_error("Column type " + columnHeader.type + " does not exist");
 
     if (columnSize == 0)
-     columnSize = columnHeader.size;
+        columnSize = columnHeader.size;
 
-    const auto columnType = ColumnTypesDictionary.Get(normalizedColumnType);
+    const auto columnType = ColumnTypesDictionary.Get(&strView);
 
     for (const auto& key: tableHeader.primaryKey) {
      if (columnHeader.name != key)
@@ -113,7 +114,15 @@ namespace DatabaseEngine {
     );
 
     if (columnHeader.hasIdentity)
-     columnPtr->SetIdentity(Headers::IdentityColumnsHeader(tableHeader.id, columnIndex, 1, 1, 1, true, 10000));
+     columnPtr->SetIdentity(Headers::IdentityColumnsHeader(
+         tableHeader.id,
+         columnIndex,
+         1,
+         1,
+         1,
+         true,
+         10000
+    ));
 
     columns.push_back(columnPtr);
    }
@@ -174,13 +183,14 @@ namespace DatabaseEngine {
       for (auto& column: table.columns) {
         counter++;
         const auto normalizedColumnType = Functions::String::NormalizeString(column.type);
+          const auto strView = DataTypes::StringView(normalizedColumnType);
 
-        auto columnSize = ColumnTypeSizes.Get(normalizedColumnType);
+        auto columnSize = ColumnTypeSizes.Get(strView);
 
         if (columnSize == 0)
           columnSize = column.size;
 
-        const auto& type = ColumnTypesDictionary.Get(normalizedColumnType);
+        const auto& type = ColumnTypesDictionary.Get(strView);
 
         const auto columnResult =
           this->InsertColumnToMasterDb(
@@ -304,51 +314,56 @@ namespace DatabaseEngine {
       .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(),
       .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(),
       .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)].AsBool(),
-      .additionalInfo = {
-        .createdAt = data[static_cast<column_index_t>(SysDatabases::CreatedAt)].AsDateTime(),
-        .lastModified = data[static_cast<column_index_t>(SysDatabases::LastModifiedAt)].AsDateTime(),
-        .lastModifiedBy = data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)].AsString(),
-        .version = data[static_cast<column_index_t>(SysDatabases::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysDatabases::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDatabases::DeletedAt)].IsNull()
+      .additionalInfo = Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysDatabases::CreatedAt)].AsDateTime(),
+        data[static_cast<column_index_t>(SysDatabases::LastModifiedAt)].AsDateTime(),
+        data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)].AsString(),
+        data[static_cast<column_index_t>(SysDatabases::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysDatabases::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysDatabases::DeletedAt)].IsNull()
                   ? DataTypes::DateTime()
-                  : data[static_cast<column_index_t>(SysDatabases::DeletedAt)].AsDateTime(),
-        },
+                  : data[static_cast<column_index_t>(SysDatabases::DeletedAt)].AsDateTime()
+      ),
       .tables = std::move(dbTables),
       .schemas = std::move(schemas)
     };
 }
 
-  Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize(allocator);
-    const auto& data = materializedRow.Data();
+    Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
+        const auto materializedRow = rowPtr.Materialize(allocator);
+        const auto& data = materializedRow.Data();
 
-    return Headers::SchemaHeader{
-      data[static_cast<column_index_t>(SysSchemas::SchemaId)].AsInt(),
-      data[static_cast<column_index_t>(SysSchemas::DatabaseId)].AsInt(),
-      data[static_cast<column_index_t>(SysSchemas::Name)].AsString(),
-      data[static_cast<column_index_t>(SysSchemas::CreatedAt)].AsDateTime(),
-      data[static_cast<column_index_t>(SysSchemas::LastModifiedAt)].AsDateTime(),
-      data[static_cast<column_index_t>(SysSchemas::LastModifiedBy)].AsString()
-    };
-  }
+        auto header = Headers::SchemaHeader(
+            data[static_cast<column_index_t>(SysSchemas::SchemaId)].AsInt(),
+            data[static_cast<column_index_t>(SysSchemas::DatabaseId)].AsInt(),
+            data[static_cast<column_index_t>(SysSchemas::Name)].AsString()
+        );
 
-  Headers::TableHeader SystemCatalog::ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
-    const auto& data = materializedRow.Data();
+        header.additionalInfo.createdAt = data[static_cast<column_index_t>(SysSchemas::CreatedAt)].AsDateTime();
+        header.additionalInfo.lastModified = data[static_cast<column_index_t>(SysSchemas::LastModifiedAt)].AsDateTime();
+        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysSchemas::LastModifiedBy)].AsString();
 
-    return Headers::TableHeader{
-      data[static_cast<column_index_t>(SysTables::DatabaseId)].AsInt(),
-      data[static_cast<column_index_t>(SysTables::TableId)].AsInt(),
-      data[static_cast<column_index_t>(SysTables::SchemaId)].AsInt(),
-      data[static_cast<column_index_t>(SysTables::Name)].AsString(),
-      data[static_cast<column_index_t>(SysTables::OrdinalPosition)].AsSmallInt(),
-      data[static_cast<column_index_t>(SysTables::IsSystemTable)].AsBool(),
-      data[static_cast<column_index_t>(SysTables::CreatedAt)].AsDateTime(),
-      data[static_cast<column_index_t>(SysTables::LastModifiedAt)].AsDateTime(),
-      data[static_cast<column_index_t>(SysTables::LastModifiedBy)].AsString()
-      };
-  }
+        return header;
+    }
+
+    Headers::TableHeader SystemCatalog::ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
+        const auto materializedRow = rowPtr.Materialize(allocator);
+        const auto& data = materializedRow.Data();
+
+        auto header = Headers::TableHeader();
+
+        header.databaseId = data[static_cast<column_index_t>(SysTables::DatabaseId)].AsInt();
+        header.id = data[static_cast<column_index_t>(SysTables::TableId)].AsInt();
+        header.schemaId = data[static_cast<column_index_t>(SysTables::SchemaId)].AsInt();
+        header.name = data[static_cast<column_index_t>(SysTables::Name)].AsString();
+        header.ordinalPosition = data[static_cast<column_index_t>(SysTables::OrdinalPosition)].AsSmallInt();
+        header.isSystem = data[static_cast<column_index_t>(SysTables::IsSystemTable)].AsBool();
+        header.additionalInfo.createdAt = data[static_cast<column_index_t>(SysTables::CreatedAt)].AsDateTime();
+        header.additionalInfo.lastModified = data[static_cast<column_index_t>(SysTables::LastModifiedAt)].AsDateTime();
+        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysTables::LastModifiedBy)].AsString();
+
+        return header;
+    }
 
   Headers::ColumnHeader SystemCatalog::ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
       const auto materializedRow = rowPtr.Materialize(allocator);
@@ -369,16 +384,16 @@ namespace DatabaseEngine {
           .isNullable = data[static_cast<column_index_t>(SysColumns::IsNullable)].AsBool(),
           .ordinalPosition = data[static_cast<column_index_t>(SysColumns::OrdinalPosition)].AsSmallInt(),
           .isSystem = data[static_cast<column_index_t>(SysColumns::IsSystemColumn)].AsBool(),
-          .additionalInfo{
-            .createdAt = data[static_cast<column_index_t>(SysColumns::CreatedAt)].AsDateTime(),
-            .lastModified = data[static_cast<column_index_t>(SysColumns::LastModifiedAt)].AsDateTime(),
-            .lastModifiedBy = data[static_cast<column_index_t>(SysColumns::LastModifiedBy)].AsString(),
-            .version = data[static_cast<column_index_t>(SysColumns::Version)].AsInt(),
-            .isDeleted = data[static_cast<column_index_t>(SysColumns::IsDeleted)].AsBool(),
-            .deletedAt = data[static_cast<column_index_t>(SysColumns::DeletedAt)].IsNull()
-                      ? DataTypes::DateTime::Now()
-                      : data[static_cast<column_index_t>(SysColumns::DeletedAt)].AsDateTime(),
-            }
+          .additionalInfo = Headers::AuditInformation(
+            data[static_cast<column_index_t>(SysColumns::CreatedAt)].AsDateTime(),
+            data[static_cast<column_index_t>(SysColumns::LastModifiedAt)].AsDateTime(),
+            data[static_cast<column_index_t>(SysColumns::LastModifiedBy)].AsString(),
+            data[static_cast<column_index_t>(SysColumns::Version)].AsInt(),
+            data[static_cast<column_index_t>(SysColumns::IsDeleted)].AsBool(),
+            data[static_cast<column_index_t>(SysColumns::DeletedAt)].IsNull()
+                ? DataTypes::DateTime()
+                : data[static_cast<column_index_t>(SysColumns::DeletedAt)].AsDateTime()
+            )
       };
   }
 
@@ -392,16 +407,16 @@ namespace DatabaseEngine {
         .name = data[static_cast<column_index_t>(SysIndexes::Name)].AsString(),
         .isClustered = data[static_cast<column_index_t>(SysIndexes::IsClustered)].AsBool(),
         .isDisabled = data[static_cast<column_index_t>(SysIndexes::IsDisabled)].AsBool(),
-          .additionalInfo{
-          .createdAt = data[static_cast<column_index_t>(SysIndexes::CreatedAt)].AsDateTime(),
-          .lastModified = data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)].AsDateTime(),
-          .lastModifiedBy = data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
-          .version = data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
-          .isDeleted = data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
-          .deletedAt = data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
+        .additionalInfo = Headers::AuditInformation(
+          data[static_cast<column_index_t>(SysIndexes::CreatedAt)].AsDateTime(),
+          data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)].AsDateTime(),
+          data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
+          data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
+          data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
+          data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
                 ? DataTypes::DateTime()
                 : data[static_cast<column_index_t>(SysIndexes::DeletedAt)].AsDateTime()
-          },
+        ),
     };
   }
 
@@ -414,13 +429,13 @@ namespace DatabaseEngine {
       .columnId = data[static_cast<column_index_t>(SysIndexColumns::ColumnId)].AsInt(),
       .ordinalPosition = data[static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)].AsSmallInt(),
       .isIncluded = data[static_cast<column_index_t>(SysIndexColumns::IsIncluded)].AsBool(),
-      .additionalInfo{
-        .version = data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
+      .additionalInfo = Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].AsDateTime()
-      }
+      )
     };
   }
 
@@ -428,22 +443,22 @@ namespace DatabaseEngine {
     const auto materializedRow = rowPtr.Materialize(allocator);
     const auto& data = materializedRow.Data();
 
-    return Headers::IdentityColumnsHeader{
-      .tableId = data[static_cast<column_index_t>(SysIdentityColumns::TableId)].AsInt(),
-      .columnId = data[static_cast<column_index_t>(SysIdentityColumns::ColumnId)].AsInt(),
-      .seedValue = data[static_cast<column_index_t>(SysIdentityColumns::SeedValue)].AsInt(),
-      .increment = data[static_cast<column_index_t>(SysIdentityColumns::IncrementValue)].AsInt(),
-      .lastValue = data[static_cast<column_index_t>(SysIdentityColumns::LastValue)].AsBigInt(),
-      .isCached = data[static_cast<column_index_t>(SysIdentityColumns::IsCached)].AsBool(),
-      .cacheBlock = data[static_cast<column_index_t>(SysIdentityColumns::CacheBlock)].AsInt(),
-      .additionalInfo{
-        .version = data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
+    return Headers::IdentityColumnsHeader(
+      data[static_cast<column_index_t>(SysIdentityColumns::TableId)].AsInt(),
+      data[static_cast<column_index_t>(SysIdentityColumns::ColumnId)].AsInt(),
+      data[static_cast<column_index_t>(SysIdentityColumns::SeedValue)].AsInt(),
+      data[static_cast<column_index_t>(SysIdentityColumns::IncrementValue)].AsInt(),
+      data[static_cast<column_index_t>(SysIdentityColumns::LastValue)].AsBigInt(),
+      data[static_cast<column_index_t>(SysIdentityColumns::IsCached)].AsBool(),
+      data[static_cast<column_index_t>(SysIdentityColumns::CacheBlock)].AsInt(),
+      Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].AsDateTime()
-      }
-    };
+      )
+    );
   }
 
   Headers::ConstraintsHeader SystemCatalog::ToConstraintsHeader(
@@ -464,16 +479,16 @@ namespace DatabaseEngine {
       .indexId = indexHeader.id,
       .index = std::move(indexHeader),
       .columns = std::move(constraintColumns),
-      .additionalInfo{
-        .createdAt = data[static_cast<column_index_t>(SysConstraints::CreatedAt)].AsDateTime(),
-        .lastModified = data[static_cast<column_index_t>(SysConstraints::LastModifiedAt)].AsDateTime(),
-        .lastModifiedBy = data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)].AsString(),
-        .version = data[static_cast<column_index_t>(SysConstraints::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysConstraints::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraints::DeletedAt)].IsNull()
+      .additionalInfo = Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysConstraints::CreatedAt)].AsDateTime(),
+        data[static_cast<column_index_t>(SysConstraints::LastModifiedAt)].AsDateTime(),
+        data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)].AsString(),
+        data[static_cast<column_index_t>(SysConstraints::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysConstraints::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysConstraints::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
-              : data[static_cast<column_index_t>(SysConstraints::DeletedAt)].AsDateTime() //might crash, is nullable
-      },
+              : data[static_cast<column_index_t>(SysConstraints::DeletedAt)].AsDateTime()
+      ),
     };
   }
 
@@ -485,13 +500,13 @@ namespace DatabaseEngine {
       .constraintId = data[static_cast<column_index_t>(SysConstraintColumns::ConstraintId)].AsInt(),
       .columnId = data[static_cast<column_index_t>(SysConstraintColumns::ColumnId)].AsInt(),
       .ordinalPosition = data[static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)].AsInt(),
-      .additionalInfo{
-        .version = data[static_cast<column_index_t>(SysConstraintColumns::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].IsNull()
+      .additionalInfo = Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysConstraintColumns::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].AsDateTime()
-      },
+      ),
     };
   }
 
@@ -502,13 +517,13 @@ namespace DatabaseEngine {
     return Headers::DefaultValuesHeader{
       .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)].AsInt(),
       .value = data[static_cast<column_index_t>(SysDefaultValues::Value)].AsString(),
-      .additionalInfo{
-        .version = data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
-        .isDeleted = data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
-        .deletedAt = data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
+      .additionalInfo = Headers::AuditInformation(
+        data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
+        data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
+        data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].AsDateTime()
-      },
+      ),
     };
   }
 
@@ -1295,7 +1310,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
      roles.emplace_back(
        data[0].AsInt(),
-       data[1].AsString(),
+       std::string(data[1].AsString().Data(), data[1].AsString().Size()),
        static_cast<Security::Permission>(data[2].AsInt()),
        data[3].AsBool()
      );
@@ -1320,8 +1335,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
      users.emplace_back(
          data[0].AsInt(),
-         data[1].AsString(),
-         data[2].AsString(),
+         data[1].AsStdString(),
+         data[2].AsStdString(),
          data[3].AsInt(),
          nullptr,
          data[4].AsBool()
@@ -1405,7 +1420,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     Dictionary<std::string, Headers::SchemaHeader> selectedSchemas;
 
     for (const auto& schema : schemas)
-      selectedSchemas.Add(schema.name, schema);
+      selectedSchemas.Add(std::string(schema.name.Data(), schema.name.Size()), schema);
 
     return selectedSchemas;
   }
@@ -1429,7 +1444,8 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
       const auto materializedRow = row.Materialize(allocator);
       const auto currentSchemaName = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::Name));
 
-      if (Functions::String::Lower(currentSchemaName.AsString())
+      const auto schemaNameStr = currentSchemaName.AsString();
+      if (Functions::String::Lower(std::string(schemaNameStr.Data(), schemaNameStr.Size()))
           == Functions::String::Lower(schema)) {
 
         if (schemaId != nullptr)
@@ -1484,7 +1500,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         const std::string &tableName
     ) const{
         const auto databaseHeader = this->SelectDatabase(allocator, dbName);
-        return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.data());
+        return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.Data());
     }
 
   Headers::TableHeader SystemCatalog::SelectTable(
@@ -1618,7 +1634,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         Dictionary<std::string, Headers::ColumnHeader> selectedColumns;
         for (const auto& column: columns)
-            selectedColumns.Add(Functions::String::Lower(column.name), column);
+            selectedColumns.Add(Functions::String::Lower(std::string(column.name.Data(), column.name.Size())), column);
 
         return selectedColumns;
     }

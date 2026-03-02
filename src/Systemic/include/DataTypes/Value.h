@@ -6,7 +6,7 @@
 
 #include "DataTypes.h"
 #include "StringView.h"
-#include "DataStructures/ConstexprDictionary.h"
+#include "../DataStructures/ConstexprDictionary.h"
 
 namespace Memory{
     class IAllocator;
@@ -109,6 +109,7 @@ class Value {
         Value(BigInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::String& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::StringView& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
@@ -150,6 +151,7 @@ class Value {
         [[nodiscard]] Int AsInt()const;
         [[nodiscard]] BigInt AsBigInt()const;
         [[nodiscard]] DataTypes::String AsString()const;
+        [[nodiscard]] std::string AsStdString()const;
         [[nodiscard]] DataTypes::StringView AsStringView()const;
         [[nodiscard]] std::u16string AsUnicodeString()const;
         [[nodiscard]] DataTypes::Decimal AsDecimal()const;

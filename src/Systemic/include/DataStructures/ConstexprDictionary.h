@@ -47,6 +47,22 @@ class ConstexprDictionary{
             return false;
         }
 
+        [[nodiscard]] constexpr const Value& operator[](const Key* key) const noexcept {
+            const size_t idx = Hasher::Hash(*key) % Capacity;
+            for (size_t i = 0; i < Capacity; ++i) {
+                const size_t slot = (idx + i) % Capacity;
+                const auto& pair = this->buckets[slot];
+
+                if (!this->occupied[slot])
+                    return pair.value;
+
+                if (pair.key == *key)
+                    return pair.value;
+            }
+
+            return this->buckets[idx].value;
+        }
+
         [[nodiscard]] constexpr const Value& operator[](const Key key) const noexcept {
             const size_t idx = Hasher::Hash(key) % Capacity;
             for (size_t i = 0; i < Capacity; ++i) {
@@ -63,11 +79,11 @@ class ConstexprDictionary{
             return this->buckets[idx].value;
         }
 
-        // [[nodiscard]] constexpr  Value& Get(const Key& key) const noexcept {
-        //     return this->operator[](key);
-        // }
+        [[nodiscard]] constexpr const Value& Get(const Key* key) const noexcept {
+            return this->operator[](key);
+        }
 
-        [[nodiscard]] constexpr const Value& Get(const Key key) const noexcept {
+        [[nodiscard]] constexpr Value Get(const Key key) const noexcept {
             return this->operator[](key);
         }
 

@@ -113,7 +113,7 @@ namespace DatabaseEngine::StorageTypes{
         const auto val = value.AsString();
         const auto& columnHeader = column->GetColumnHeader();
 
-        const auto size = val.size();
+        const auto size = val.Size();
         if (size > columnHeader.recordSize) {
             std::ostringstream ss;
 

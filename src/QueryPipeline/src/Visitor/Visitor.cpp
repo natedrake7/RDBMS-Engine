@@ -6,6 +6,8 @@
 #include "../../include/CompileContext.h"
 #include <vector>
 
+#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
+
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
     std::vector<std::any> statements;
@@ -193,7 +195,9 @@ namespace QueryPipeline {
                 ? context->sign()->getText() + context->DECIMAL_REGEX()->getText()
                 : context->DECIMAL_REGEX()->getText();
 
-            auto value = Value(DataTypes::Decimal(decimalStr), this->_compileContext->GetAllocator(), 0);
+            const auto view = DataTypes::StringView(decimalStr.c_str(), decimalStr.size());
+            const auto decimal = DataTypes::Decimal(view);
+            auto value = Value(decimal, this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
 
@@ -642,17 +646,19 @@ namespace QueryPipeline {
         return std::any(value);
     }
 
-  //optional type inference is recommended
-  antlrcpp::Any SQLVisitorImplementation::visitVariableType(SQLParser::VariableTypeContext *context){
-    DataType type;
+    //optional type inference is recommended
+    antlrcpp::Any SQLVisitorImplementation::visitVariableType(SQLParser::VariableTypeContext *context){
+        DataType type;
 
-    const auto text = context->getText();
+        const auto text = context->getText();
+        const auto normalizedText = Functions::String::NormalizeString(text);
+        const auto view = DataTypes::StringView(normalizedText.c_str(), normalizedText.size());
 
-    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(text), type))
-      throw SyntaxError("Datatype: " + text + " does not exist", CreatePositionErrorMessage(context));
+        if (!ColumnTypesDictionary.TryGetValue(view, type))
+            throw SyntaxError("Datatype: " + text + " does not exist", CreatePositionErrorMessage(context));
 
-    return std::any(type);
-  }
+        return std::any(type);
+    }
 
     antlrcpp::Any SQLVisitorImplementation::visitSetVariableStatement(SQLParser::SetVariableStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::SetVariableStatement>();
@@ -711,7 +717,8 @@ namespace QueryPipeline {
 
         if (context->variableName())
             wrapper.expression = this->_compileContext->Allocate<Expressions::VariableExpression>(
-                std::any_cast<std::string>(visit(context->variableName()))
+                std::any_cast<std::string>(visit(context->variableName())),
+                this->_compileContext->GetAllocator()
             );
             return std::any(wrapper);
 

@@ -2,6 +2,7 @@
 #include "../../DatabaseEngine/include/DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/ConstexprDictionary.h"
+#include "../../Systemic/include/DataStructures/ConstexprHashSet.h"
 
 namespace QueryPipeline::PipelineConstants {
     typedef uint16_t cursor_id_t;

@@ -472,11 +472,28 @@ Value::Value(
     this->type = DataType::String;
 }
 
-Value::Value(const DataTypes::String &data, const Memory::IAllocator *allocator, column_index_t index){
+Value::Value(
+    const DataTypes::String &data,
+    const Memory::IAllocator *allocator,
+    const column_index_t index
+){
     this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
     std::memcpy(this->data, data.Data(), data.Size());
     this->size = data.Size();
 
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataType::String;
+}
+
+Value::Value(
+    const DataTypes::StringView& data,
+    const Memory::IAllocator* allocator,
+    const column_index_t index
+){
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
+    std::memcpy(this->data, data.Data(), data.Size());
+    this->size = data.Size();
     this->_allocator = allocator;
     this->columnIndex = index;
     this->type = DataType::String;
@@ -659,6 +676,10 @@ int64_t Value::AsBigInt() const {
 
 DataTypes::String Value::AsString() const {
     return DataTypes::Coercions::ToString(*this);
+}
+
+std::string Value::AsStdString() const{
+    return std::string(reinterpret_cast<const char*>(this->data), this->size);
 }
 
 DataTypes::StringView Value::AsStringView() const{
@@ -1058,7 +1079,7 @@ Value operator!=(const Value &lhs, const Value &rhs){
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
 
-    Value::Null();
+    return Value::Null();
 }
 
 const Memory::IAllocator* Value::GetAllocator() const{ return this->_allocator;}

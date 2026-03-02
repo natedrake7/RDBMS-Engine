@@ -54,6 +54,8 @@ namespace DataTypes{
             return *this;
         }
 
+        explicit StringView(const std::string& other);
+
         StringView& operator=(StringView&& other) noexcept;
         constexpr StringView& operator=(const StringView& other)= default;
         constexpr ~StringView() = default;

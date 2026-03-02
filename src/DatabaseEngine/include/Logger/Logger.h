@@ -3,12 +3,11 @@
 #include "../DataStorage/Row.h"
 #include "Logger.Structures.h"
 #include "../../../Systemic/include/DataStructures/HashSet.h"
-#include "DataStructures/ConstexprDictionary.h"
-
+#include "../../../Systemic/include/DataStructures/Dictionary.h"
 #include <cstdint>
 #include <mutex>
 
-#include "DataStructures/Dictionary.h"
+
 
 namespace DatabaseEngine::Logging {
     enum OperationType : UnsignedTinyInt{

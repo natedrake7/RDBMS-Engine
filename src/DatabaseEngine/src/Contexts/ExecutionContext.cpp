@@ -8,8 +8,9 @@ namespace DatabaseEngine{
         const Int initialAllocatorSize
     )   : snapshot(snapshot),
           allocator(initialAllocatorSize),
-          variables(&variables),
-          batchSize(batchSize) {}
+          batchSize(batchSize){
+        this->variables = &variables;
+    }
 
     ExecutionContext::ExecutionContext()
     : variables(nullptr), batchSize(0){}

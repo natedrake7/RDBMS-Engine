@@ -19,7 +19,7 @@ namespace Functions::String {
     return str.substr(2, str.size() - 3);
   }
 
-  inline std::string Space(const int& size) {
+  inline std::string Space(const Int size) {
       return std::string(size, ' ');
   }
   //
@@ -44,8 +44,7 @@ namespace Functions::String {
         return result;
     }
 
-    inline int Ascii(const std::string &str)
-    {
+    inline int Ascii(const std::string &str){
         if(str.empty())
             return 0;
 
@@ -135,16 +134,14 @@ namespace Functions::String {
         return str.substr(firstIndex, lastIndex - firstIndex + 1);
     }
 
-    inline int Length(const std::string &str)
-    {
-      if(str.empty())
-          return 0;
+    inline int Length(const std::string &str){
+        if(str.empty())
+            return 0;
 
-      return static_cast<int>(str.size());
+        return static_cast<int>(str.size());
     }
 
-    inline std::string TrimLeft(const std::string &str)
-    {
+    inline std::string TrimLeft(const std::string &str){
         if(str.empty())
             return str;
 

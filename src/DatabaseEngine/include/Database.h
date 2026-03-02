@@ -82,9 +82,9 @@ protected:
     static int CalculateExtentsToAllocate(Int pagesToAllocate);
 
 public:
-    explicit Database(const std::string &dbName, const bool& isServerInitialization = false);
+    explicit Database(const DataTypes::String& dbName, const bool& isServerInitialization = false);
 
-    explicit Database(const std::string& dbName, const std::vector<Headers::sysTable>& tables);
+    explicit Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables);
 
     ~Database();
 

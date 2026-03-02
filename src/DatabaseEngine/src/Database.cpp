@@ -119,9 +119,9 @@ namespace DatabaseEngine
         return pageId / 8;
     }
 
-    std::string Database::CreateDatabasePath(const std::string & dbName){ return dbName + "/" + dbName; }
+    std::string Database::CreateDatabasePath(const DataTypes::String& dbName){ return dbName.Concat() + "/" + dbName; }
 
-    void Database::PopulateFilenames(const std::string& dbName){
+    void Database::PopulateFilenames(const DataTypes::String& dbName){
         const auto& path = Database::CreateDatabasePath(dbName);
 
         this->filename = path + ".db";
@@ -130,7 +130,7 @@ namespace DatabaseEngine
         this->systemFilename = path + "_sys" + ".db";
     }
 
-    Database::Database(const std::string &dbName, const std::vector<Headers::sysTable>& tables){
+    Database::Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables){
         this->PopulateFilenames(dbName);
 
         const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFilename);
