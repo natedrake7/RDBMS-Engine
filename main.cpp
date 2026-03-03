@@ -105,6 +105,8 @@
 //Binary operations should allocate a new value but only then.
 
 //Make MemoryAllocator needs to be abstract on systemic and  implement in database engine.
+//Use misc allocator for all mallocs and free through it
+//make it static and call it on your own
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
