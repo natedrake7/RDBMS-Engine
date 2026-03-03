@@ -69,7 +69,7 @@ namespace DatabaseEngine {
     }
 
     void SystemCatalog::UseCatalogDatabase() {
-        this->masterDb = AllocateMiscEntity<Database>(this->sysDbName, this->sysTables);
+        this->masterDb = AllocateMiscEntity<Database>(CATALOG_ID, this->sysDbName, this->sysTables);
         this->masterDb->GetColumnsHeaders();
         this->masterDb->GetIdentityColumns();
     }
@@ -820,8 +820,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   Errors::RuntimeStatus  SystemCatalog::InsertSchemaToMasterDb(
     const ExecutionContext& executionContext,
     const Int databaseId,
-    const std::string &schemaName,
-    const std::string &user,
+    const DataTypes::StringView& schemaName,
+    const DataTypes::StringView& user,
     const Int version,
     const bool isDeleted
   ) const{
@@ -885,7 +885,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
     const ExecutionContext& executionContext,
     const Int tableId,
-    const std::string &columnName,
+    const DataTypes::StringView& columnName,
     const DataType columnType,
     const Int columnSize,
     const TinyInt precision,
@@ -937,10 +937,10 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   Errors::RuntimeStatus SystemCatalog::InsertIndexToMasterDb(
     const ExecutionContext& executionContext,
     const Int tableId,
-    const std::string &indexName,
+    const DataTypes::StringView& indexName,
     const bool isClustered,
     const bool isDisabled,
-    const std::string &user,
+    const DataTypes::StringView& user,
     const Int version,
     const bool isDeleted
   ) const{
@@ -998,11 +998,11 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
   Errors::RuntimeStatus SystemCatalog::InsertConstraintToMasterDb(
       const ExecutionContext& executionContext,
       const Int tableId,
-      const std::string & constraintName,
-      const Headers::ConstraintType & constraintType,
+      const DataTypes::StringView&  constraintName,
+      const Headers::ConstraintType& constraintType,
       const bool  isDisabled,
       const Int *constraintIndexId,
-      const std::string & user,
+      const DataTypes::StringView&  user,
       const Int version,
       const bool isDeleted
   ) const{
@@ -1231,7 +1231,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertRoleToMasterDb(
     const ExecutionContext& executionContext,
-    const std::string &roleName,
+    const DataTypes::StringView& roleName,
     const Security::Permission &permissions,
     const bool isSystem,
     const Int version,
@@ -1262,8 +1262,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
   Errors::RuntimeStatus SystemCatalog::InsertUserToMasterDb(
     const ExecutionContext& executionContext,
-    const std::string &username,
-    const std::string &passwordHash,
+    const DataTypes::StringView& username,
+    const DataTypes::StringView& passwordHash,
     const Int roleId,
     const bool isActive,
     const Int version,
@@ -1346,7 +1346,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
    return users;
  }
 
- bool SystemCatalog::DatabaseExists(const ::Memory::IAllocator* allocator, const std::string &dbName) const{
+ bool SystemCatalog::DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const{
       auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
       DataStructures::Array<Pages::RowReference> selectedDatabases;
 
@@ -1360,7 +1360,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       return !selectedDatabases.Empty();
 }
 
-    Headers::DatabaseHeader SystemCatalog::SelectDatabase(const ::Memory::IAllocator* allocator, const std::string &name) const{
+    Headers::DatabaseHeader SystemCatalog::SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const{
         auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
         auto constantExpr = Expressions::ConstantExpression(Value(name, allocator, static_cast<column_index_t>(SysDatabases::Name)));
 
@@ -1428,7 +1428,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
   bool SystemCatalog::SchemaExists(
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
-        const std::string &schema,
+        const DataTypes::StringView& schema,
         int* schemaId
 ) const{
     DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 1);
@@ -1458,7 +1458,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     return false;
   }
 
-    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const ::Memory::IAllocator* allocator, const std::string &dbName) const{
+    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const{
         const auto databaseHeader = this->SelectDatabase(allocator, dbName);
         return this->SelectTables(allocator, databaseHeader.id);
     }
@@ -1496,8 +1496,8 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
     Headers::TableHeader SystemCatalog::SelectTable(
         const ::Memory::IAllocator* allocator,
-        const std::string &dbName,
-        const std::string &tableName
+        const DataTypes::StringView& dbName,
+        const DataTypes::StringView& tableName
     ) const{
         const auto databaseHeader = this->SelectDatabase(allocator, dbName);
         return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.Data());
@@ -1506,7 +1506,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
   Headers::TableHeader SystemCatalog::SelectTable(
     const ::Memory::IAllocator* allocator,
     const Int databaseId,
-    const std::string &tableName,
+    const DataTypes::StringView& tableName,
     const std::string& schema
   ) const{
 

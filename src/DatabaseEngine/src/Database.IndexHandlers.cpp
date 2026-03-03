@@ -76,6 +76,7 @@ namespace DatabaseEngine {
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
+
             this->filename,
             tableHeader.allocationPageId,
             table

@@ -89,16 +89,16 @@ namespace DatabaseEngine {
 
       std::vector<Security::Role*> InsertSystemRoles()const;
       Security::User* InsertSystemUsers(
-        const std::string& hashedPassword,
+        const DataTypes::StringView& hashedPassword,
         Int defaultRoleId
       )const;
 
       [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
           const ExecutionContext& executionContext,
-          const std::string& dbName,
-          const std::string& dbPath,
+          const DataTypes::StringView& dbName,
+          const DataTypes::StringView& dbPath,
           bool isSystem = false,
-          const std::string& user = "system",
+          const DataTypes::StringView& user = "system",
           Int version = 0,
           bool isDeleted = false
       ) const;
@@ -106,8 +106,8 @@ namespace DatabaseEngine {
     [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
         const ExecutionContext& executionContext,
         Int databaseId,
-        const std::string& schemaName,
-        const std::string& user = "system",
+        const DataTypes::StringView& schemaName,
+        const DataTypes::StringView& user = "system",
         Int version = 0,
         bool isDeleted = false
     ) const;
@@ -116,10 +116,10 @@ namespace DatabaseEngine {
         const ExecutionContext& executionContext,
         Int databaseId,
         Int schemaId,
-        const std::string& tableName,
+        const DataTypes::StringView& tableName,
         SmallInt ordinalPosition,
         bool isSystem = false,
-        const std::string& user = "system",
+        const DataTypes::StringView& user = "system",
         Int version = 0,
         bool isDeleted = false
     ) const;
@@ -127,7 +127,7 @@ namespace DatabaseEngine {
     [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
         const ExecutionContext& executionContext,
         Int tableId,
-        const std::string& columnName,
+        const DataTypes::StringView& columnName,
         DataType columnType,
         Int columnSize,
         TinyInt precision,
@@ -135,7 +135,7 @@ namespace DatabaseEngine {
         bool isNullable,
         Int ordinalPosition,
         bool isSystem = false,
-        const std::string& user = "system",
+        const DataTypes::StringView& user = "system",
         Int version = 0,
         bool isDeleted = false
     ) const;
@@ -146,7 +146,7 @@ namespace DatabaseEngine {
         const std::string &indexName,
         bool isClustered,
         bool isDisabled = false,
-        const std::string& user = "system",
+        const DataTypes::StringView& user = "system",
         Int version = 0,
         bool isDeleted = false
     ) const;
@@ -164,11 +164,11 @@ namespace DatabaseEngine {
     [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
       const ExecutionContext& executionContext,
         Int tableId,
-        const std::string& constraintName,
+        const DataTypes::StringView& constraintName,
         const Headers::ConstraintType& constraintType,
         bool isDisabled,
         const Int* constraintIndexId,
-        const std::string& user = "system",
+        const DataTypes::StringView& user = "system",
         Int version = 0,
         bool isDeleted = false
     ) const;
@@ -238,7 +238,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertRoleToMasterDb(
       const ExecutionContext& executionContext,
-      const std::string& roleName,
+      const DataTypes::StringView& roleName,
       const Security::Permission& permissions,
       bool isSystem = true,
       Int version = 0,
@@ -247,8 +247,8 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus InsertUserToMasterDb(
       const ExecutionContext& executionContext,
-      const std::string& username,
-      const std::string& passwordHash,
+      const DataTypes::StringView& username,
+      const DataTypes::StringView& passwordHash,
       Int roleId,
       bool isActive = false,
       Int version = 0,
@@ -257,32 +257,32 @@ namespace DatabaseEngine {
 
     [[nodiscard]] std::vector<Security::Role> SelectRoles(const ::Memory::IAllocator* allocator)const;
     [[nodiscard]] std::vector<Security::User> SelectUsers(const ::Memory::IAllocator* allocator)const;
-    [[nodiscard]] bool DatabaseExists(const ::Memory::IAllocator* allocator, const std::string& dbName) const;
-    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const std::string& name) const;
+    [[nodiscard]] bool DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
+    [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const;
     [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int databaseId) const;
     [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
     [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
     [[nodiscard]] bool SchemaExists(
         const ::Memory::IAllocator* allocator,
         Int databaseId,
-        const std::string& schema,
+        const DataTypes::StringView& schema,
         int* schemaId = nullptr
     ) const;
-    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const std::string& dbName) const;
+    [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
     [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(
         const ::Memory::IAllocator* allocator,
         Int databaseId
     ) const;
     [[nodiscard]] Headers::TableHeader SelectTable(
         const ::Memory::IAllocator* allocator,
-        const std::string& dbName,
-        const std::string& tableName
+        const DataTypes::StringView& dbName,
+        const DataTypes::StringView& tableName
     ) const;
     [[nodiscard]] Headers::TableHeader SelectTable(
         const ::Memory::IAllocator* allocator,
         Int databaseId,
-        const std::string& tableName,
-        const std::string& schema
+        const DataTypes::StringView& tableName,
+        const DataTypes::StringView& schema
     ) const;
     [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
     [[nodiscard]] Headers::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
@@ -356,7 +356,7 @@ namespace DatabaseEngine {
 
     [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
         const ExecutionContext& executionContext,
-        const std::string& username,
+        const DataTypes::StringView& username,
         Int userId,
         Int roleId
     )const;

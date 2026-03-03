@@ -2,6 +2,8 @@
 #include "DatabaseConstants.h"
 #include <string>
 #include <vector>
+
+#include "BufferPool/FileManager.h"
 #include "DataStorage/Column.h"
 #include "Logger/Logger.h"
 #include "Pages/IndexPageView.h"
@@ -45,18 +47,25 @@ namespace DatabaseEngine {
     };
 
 class Database {
-    DatabaseHeader header;
+    MultiThreading::ReadWriteMutex gamPageMutex;
+    MultiThreading::ReadWriteMutex pfsPageMutex;
+    Dictionary<Int, table_id_t> tableIdsDictionary;
+
     DataTypes::String name;
     DataTypes::String filename;
     DataTypes::StringView fileExtension;
     DataTypes::String systemFilename;
 
-    Dictionary<Int, table_id_t> tableIdsDictionary;
-
     std::vector<StorageTypes::Table *> tables;
 
-    MultiThreading::ReadWriteMutex gamPageMutex;
-    MultiThreading::ReadWriteMutex pfsPageMutex;
+    DatabaseHeader header;
+
+    DataTypes::StringView filenameView;
+    DataTypes::StringView systemFilenameView;
+    Storage::FileKey dataFileKey;
+    Storage::FileKey systemFileKey;
+
+    Int id;
 
 protected:
 
@@ -65,7 +74,6 @@ protected:
     void WriteHeaderToFile() const;
 
     static bool IsSystemPage(page_id_t pageId);
-
 
     std::vector<extent_id_t> AllocateNewExtents(
       Int pagesToAllocate,
@@ -81,10 +89,18 @@ protected:
 
     static int CalculateExtentsToAllocate(Int pagesToAllocate);
 
-public:
-    explicit Database(const DataTypes::String& dbName, const bool& isServerInitialization = false);
+    void InitializeStaticData();
 
-    explicit Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables);
+public:
+    explicit Database(
+        const DataTypes::String& dbName,
+        const bool& isServerInitialization = false
+    );
+
+    explicit Database(
+        const DataTypes::String& dbName,
+        const std::vector<Headers::sysTable>& tables
+    );
 
     ~Database();
 
@@ -127,7 +143,11 @@ public:
         const DataTypes::RowIdentifier& rowId
     );
 
-    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const DataTypes::String& filename, page_id_t pageId);
+    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(
+        Storage::FileKey sysFileKey,
+        const DataTypes::StringView& filenameView,
+        page_id_t pageId
+    );
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
 
@@ -230,7 +250,7 @@ public:
     const std::vector<StorageTypes::Table*>& GetTables() const;
 };
 
-void CreateDatabase(const DataTypes::String& dbName);
+void CreateDatabase(Int databaseId, const DataTypes::String& dbName);
 
 Database* UseSystemDatabase(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables);
 

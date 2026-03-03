@@ -16,25 +16,20 @@ StorageManager::StorageManager(){
     this->clockHand = 0;
 }
 
-// DataTypes::String StorageManager::CreateKey(const DataTypes::StringView& filename, const page_id_t pageId){
-//   return filename + std::to_string(pageId);
-// }
-
 StorageManager::~StorageManager() {
-    for (const auto frame : this->pageTable | std::views::values) {
-        const auto* page = this->_memoryManager->GetFrame(frame);
+    for (const auto frameIndex : this->pageTable | std::views::values) {
+        const auto* frame = this->_memoryManager->GetFrame(frameIndex);
 
-        if (page == nullptr)
+        if (frame == nullptr)
             continue;
 
-        this->RemovePageWithoutKeyDeletion(page);
-        // delete page;
+        this->RemovePageWithoutKeyDeletion(frame);
     }
 }
 
 StorageManager& StorageManager::Get(){
-  static StorageManager storageManager;
-  return storageManager;
+    static StorageManager storageManager;
+    return storageManager;
 }
 
 void StorageManager::CreateFile(
