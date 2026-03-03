@@ -10,6 +10,8 @@ typedef int16_t SmallInt;
 typedef int32_t Int;
 typedef int64_t BigInt;
 
+typedef Int file_descriptor_t;
+
 typedef uint8_t byte_t;
 
 // block types

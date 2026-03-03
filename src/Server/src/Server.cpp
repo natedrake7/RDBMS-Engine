@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include "ValidationMessages.h"
+#include "../../DatabaseEngine/include/Managers/GlobalMemoryManager.h"
 
 namespace Network {
    Server::Server(){
@@ -231,9 +232,9 @@ namespace Network {
         MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
 
         if (this->databases.TryGetValue(databaseId, db))
-        return db;
+            return db;
 
-        db = new DatabaseEngine::Database(dbHeader.name, isServerInitialization);
+        db = DatabaseEngine::AllocateMiscEntity<DatabaseEngine::Database>(dbHeader.name, isServerInitialization);
 
         this->databases.Add(databaseId, db);
 

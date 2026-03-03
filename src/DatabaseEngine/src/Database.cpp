@@ -119,15 +119,17 @@ namespace DatabaseEngine
         return pageId / 8;
     }
 
-    std::string Database::CreateDatabasePath(const DataTypes::String& dbName){ return dbName.Concat() + "/" + dbName; }
+    DataTypes::String Database::CreateDatabasePath(const DataTypes::String& dbName){ return dbName.Concat("/", dbName);}
 
     void Database::PopulateFilenames(const DataTypes::String& dbName){
         const auto& path = Database::CreateDatabasePath(dbName);
 
-        this->filename = path + ".db";
-        this->fileExtension = ".db";
+        this->filename = path.Concat(DATA_FILE_EXTENSION);
+
+        this->filename = path.Concat(DATA_FILE_EXTENSION);
+        this->fileExtension = DATA_FILE_EXTENSION;
         this->name = dbName;
-        this->systemFilename = path + "_sys" + ".db";
+        this->systemFilename = path.Concat(SYS_EXTENSION, DATA_FILE_EXTENSION);
     }
 
     Database::Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables){
@@ -152,7 +154,7 @@ namespace DatabaseEngine
         }
     }
 
-    Database::Database(const std::string &dbName, const bool& isServerInitialization) {
+    Database::Database(const DataTypes::String& dbName, const bool& isServerInitialization) {
         static auto& catalog = SystemCatalog::Get();
 
         this->PopulateFilenames(dbName);
@@ -349,7 +351,7 @@ namespace DatabaseEngine
     //     return this->tables.at(this->tableIdsDictionary.Get(tableId));
     // }
 
-    void Database::DeleteTable(const std::string& tableName)
+    void Database::DeleteTable(const DataTypes::String& tableName)
     {
         const StorageTypes::Table* table = nullptr;
         std::vector<StorageTypes::Table*>::iterator it;
@@ -395,22 +397,23 @@ namespace DatabaseEngine
         // table->Delete(nullptr);
     }
 
-    void CreateDatabase(const std::string &dbName){
-        const auto& path = Database::CreateDatabasePath(dbName);
+    void CreateDatabase(const DataTypes::String& dbName){
+        const auto path = Database::CreateDatabasePath(dbName);
 
-        Storage::StorageManager::Get().CreateFile(path, ".db");
+        Storage::StorageManager::Get().CreateFile(path, DATA_FILE_EXTENSION);
 
-        const auto sysDbName = path + "_sys";
+        const auto sysDbName = path.Concat(SYS_EXTENSION);
 
-        Storage::StorageManager::Get().CreateFile(sysDbName, ".db");
+        Storage::StorageManager::Get().CreateFile(sysDbName, DATA_FILE_EXTENSION);
 
         constexpr page_id_t firstGamPageId = 2;
         constexpr page_id_t firstPfsPageId = 1;
-        
-        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysDbName + ".db", firstGamPageId);
-        Storage::StorageManager::Get().CreatePageFreeSpacePage(sysDbName + ".db", firstPfsPageId);
 
-        const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysDbName + ".db");
+        const auto sysDbFileName = sysDbName.Concat(DATA_FILE_EXTENSION);
+        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysDbFileName, firstGamPageId);
+        Storage::StorageManager::Get().CreatePageFreeSpacePage(sysDbFileName, firstPfsPageId);
+
+        const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysDbFileName);
 
         headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamPageId));
     }
@@ -420,10 +423,8 @@ namespace DatabaseEngine
     }
 
     void Database::DeleteDatabase() const{
-        const std::string path = this->filename;
-
-        if (remove(path.c_str()) != 0)
-            throw std::runtime_error("Database " + this->filename + " could not be deleted");
+        if (remove(this->filename.Data()) != 0)
+            throw std::runtime_error("Database " + std::string(this->filename.Data(), this->filename.Size()) + " could not be deleted");
     }
 
     Pages::PageView Database::FindOrAllocateNextDataPage(
@@ -458,7 +459,7 @@ namespace DatabaseEngine
         return page;
     }
 
-    Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(const std::string& filename, const page_id_t  pageId){
+    Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(const DataTypes::String& filename, const page_id_t  pageId){
         const auto pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
         return Storage::StorageManager::Get().GetPageFreeSpacePage(filename, pageFreeSpacePageId);
     }
@@ -926,7 +927,7 @@ namespace DatabaseEngine
 //                   : nullptr;
     }
 
-    std::string Database::GetFileName() const { return this->filename; }
+    DataTypes::StringView Database::GetFileName() const { return this->filename.ToView(); }
 
     void Database::GetIdentityColumns()const{
         const Memory::Allocator allocator;
@@ -968,7 +969,7 @@ namespace DatabaseEngine
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }
 
-    std::string Database::GetSystemFilename() const{ return this->systemFilename; }
+    DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilename.ToView(); }
 
     DatabaseHeader::DatabaseHeader(){
         this->numberOfTables = 0;

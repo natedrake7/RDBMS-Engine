@@ -4,9 +4,9 @@
 
 #include "../../BTree.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
+#include "BufferPool/StorageManager.h"
 
-namespace Pages
-{
+namespace Pages{
     struct IndexAllocationPageAdditionalHeader;
 }
 
@@ -17,7 +17,7 @@ namespace DatabaseEngine::StorageTypes{
 namespace Pages{
     struct Frame{
         mutable MultiThreading::ReadWriteMutex latch;
-        std::string filename;
+        DataTypes::StringView filename;
 
         union{
             IndexPageAdditionalHeader* indexHeaderPtr;
@@ -30,6 +30,7 @@ namespace Pages{
         PageHeader* headerPtr;
         log_sequence_number_t logSequenceNumber;
 
+        Storage::FileKey fileKey;
         std::atomic<int> pinCount;
 
         std::atomic<PagePriority> priority;

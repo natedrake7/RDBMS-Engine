@@ -3,12 +3,7 @@
 #include "StringView.h"
 #include "DataTypes.h"
 #include <ostream>
-
-#include "Memory/IAllocator.h"
-
-namespace Memory{
-    class IAllocator;
-}
+#include "../Memory/IAllocator.h"
 
 namespace DataTypes{
     class String{
@@ -144,6 +139,8 @@ namespace DataTypes{
             String& operator+=(const std::string& other);
 
             [[nodiscard]] const char* Data()const;
+
+            [[nodiscard]] StringView ToView()const;
 
             //functions
             template<typename... Args>

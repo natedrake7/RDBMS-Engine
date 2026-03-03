@@ -8,6 +8,7 @@ namespace Constants{
     static constexpr auto WRITE_AHEAD_LOG_FILE = DataTypes::StringView("wal.log");
     static constexpr auto UNDO_LOG_FILE = DataTypes::StringView("undo.log");
     static constexpr auto DATA_FILE_EXTENSION = DataTypes::StringView(".data");
+    static constexpr auto SYS_EXTENSION = DataTypes::StringView("_sys");
 
     static constexpr size_t PAGE_SIZE = 8 * 1024;
     static constexpr size_t MAX_NUMBER_OF_PAGES = 100000;

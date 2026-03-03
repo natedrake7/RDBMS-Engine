@@ -21,12 +21,39 @@ namespace DatabaseEngine {
   }
 } // namespace DatabaseEngine
 
+namespace Storage{
+    struct PageKey{
+        Int databaseId;
+        page_id_t pageId;
+
+        bool operator==(const PageKey& other) const{
+            return this->databaseId == other.databaseId
+                && this->pageId == other.pageId;
+        }
+
+        explicit PageKey(const Int databaseId, const page_id_t pageId)
+            : databaseId(databaseId), pageId(pageId) {}
+
+        static PageKey Create(const Int databaseId, const page_id_t pageId){
+            return PageKey(databaseId, pageId);
+        }
+    };
+}
+
+template<>
+struct std::hash<Storage::PageKey> {
+    std::size_t operator()(const Storage::PageKey& key) const noexcept{
+        return std::hash<page_id_t>()(key.databaseId) ^ std::hash<Int>()(key.pageId);
+    }
+};
+
 namespace Storage {
+
     class StorageManager final{
         Int capacity;
         Int clockHand;
         // std::vector<Pages::Frame*> frames;
-        Dictionary<std::string, Int> pageTable; // pageId -> frame index
+        Dictionary<PageKey, Int> pageTable; // pageId -> frame index
 
         DatabaseEngine::BufferPoolMemoryManager* _memoryManager;
 
@@ -38,57 +65,119 @@ namespace Storage {
     protected:
         explicit StorageManager();
 
-        static std::string CreateKey(const std::string& filename, page_id_t pageId);
+        // static DataTypes::String CreateKey(const DataTypes::StringView& filename, page_id_t pageId);
         Pages::Frame* EvictPage();
         void RemovePageWithoutKeyDeletion(const Pages::Frame* framePtr);
-        Pages::Frame* OpenExtent(const page_id_t& pageId, const std::string& filename, extent_id_t extentId, const DatabaseEngine::StorageTypes::Table *table);
+        Pages::Frame* OpenExtent(
+            FileKey fileKey,
+            page_id_t pageId,
+            extent_id_t extentId,
+            const DataTypes::StringView& filename,
+            const DatabaseEngine::StorageTypes::Table *table
+        );
         static void SetReadFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
         static void SetWriteFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
-        bool IsPageCached(const std::string& filename, page_id_t pageId)const;
-        Pages::Frame* CreateFrame(const std::string &filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
-        Pages::Frame* GetRawPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
+        inline bool IsPageCached(PageKey key) const;
+        Pages::Frame* CreateFrame(FileKey fileKey, const DataTypes::StringView& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
+        Pages::Frame* GetRawPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId,
+            const DatabaseEngine::StorageTypes::Table *table
+        );
 
     public:
         static StorageManager& Get();
         ~StorageManager();
-        void CreateFile(const std::string& fileName, const std::string& extension)const;
-        Pages::PageView CreatePage(const std::string& filename, const DatabaseEngine::StorageTypes::Table *table , page_id_t pageId);
-        Pages::PageView GetPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
-        Pages::HeaderPageView GetHeaderPage(const std::string &filename);
-        Pages::HeaderPageView CreateHeaderPage(const std::string &filename);
-        Pages::LargeObjectView CreateLargeDataPage(const std::string& filename, page_id_t pageId);
-        Pages::LargeObjectView GetLargeDataPage(const std::string& filename, page_id_t pageId, const DatabaseEngine::StorageTypes::Table *table);
-        Pages::OverflowPageView CreateOverflowPage(
-            const std::string& filename,
+        void CreateFile(
+            FileKey key,
+            const DataTypes::StringView& filename,
+            const DataTypes::StringView& extension
+        );
+        Pages::PageView CreatePage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            const DatabaseEngine::StorageTypes::Table *table,
             page_id_t pageId
         );
-        Pages::OverflowPageView GetOverflowPage(
-            const std::string& filename,
+        Pages::PageView GetPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
             page_id_t pageId,
             const DatabaseEngine::StorageTypes::Table *table
         );
-        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(const std::string &filename, page_id_t pageId);
-        Pages::GlobalAllocationPageView GetGlobalAllocationMapPage(const std::string& filename, page_id_t pageId);
+        Pages::HeaderPageView GetHeaderPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename
+        );
+        Pages::HeaderPageView CreateHeaderPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename
+        );
+        Pages::LargeObjectView CreateLargeDataPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
+        Pages::LargeObjectView GetLargeDataPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId,
+            const DatabaseEngine::StorageTypes::Table *table
+        );
+        Pages::OverflowPageView CreateOverflowPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
+        Pages::OverflowPageView GetOverflowPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId,
+            const DatabaseEngine::StorageTypes::Table *table
+        );
+        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
+        Pages::GlobalAllocationPageView GetGlobalAllocationMapPage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
         Pages::AllocationPageView CreateAllocationPage(
-            const std::string& filename,
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
             table_id_t tableId,
             page_id_t pageId,
             extent_id_t startingExtentId
         );
         Pages::AllocationPageView GetAllocationPage(
-            const std::string& filename,
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
             page_id_t pageId,
             const DatabaseEngine::StorageTypes::Table *table
         );
-        Pages::PageFreeSpaceView CreatePageFreeSpacePage(const std::string &filename, page_id_t pageId);
-        Pages::PageFreeSpaceView GetPageFreeSpacePage(const std::string& filename, page_id_t pageId);
+        Pages::PageFreeSpaceView CreatePageFreeSpacePage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
+        Pages::PageFreeSpaceView GetPageFreeSpacePage(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId
+        );
         Pages::IndexPageView CreateIndexPage(
-            const std::string& filename,
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
             const DatabaseEngine::StorageTypes::Table* table,
             page_id_t pageId
         );
         Pages::IndexPageView GetIndexPage(
-            const std::string& filename,
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
             page_id_t pageId,
             const DatabaseEngine::StorageTypes::Table* table
         );

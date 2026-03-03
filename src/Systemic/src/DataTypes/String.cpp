@@ -503,21 +503,8 @@ namespace DataTypes{
         return this->_data;
     }
 
-    String String::Concat(const String& Args, ...){
-        va_list args;
-        va_start(args, Args);
-
-        String result = Args;
-        while (true){
-            const String& arg = va_arg(args, String);
-            if (arg._data == nullptr)
-                break;
-
-            result = result.Concat(arg);
-        }
-
-        va_end(args);
-        return result;
+    StringView String::ToView() const{
+        return StringView(this->_data, this->_size);
     }
 
     String String::Concat(const String& other) const{

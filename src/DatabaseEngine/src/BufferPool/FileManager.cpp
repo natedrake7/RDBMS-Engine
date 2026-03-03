@@ -1,121 +1,139 @@
 ﻿#include "../../include/BufferPool/FileManager.h"
 
+#include <fcntl.h>
+#include <functional>
+
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 
 #include <filesystem>
 #include <ranges>
-namespace fs = std::filesystem;
+#ifdef WIN32
+    #include <io.h>
+    #define F_OK 0
+    #define access _access
+    #define flush _commit
+    #define lseek _lseeki64
+#else
+    #include <unistd.h>
+    #define flush fdatasync
+    #define lseek ::lseek
+#endif
+
 
 namespace Storage{
+    File::File(const file_descriptor_t fd)
+        : fd(fd){}
 
-    File::File(const std::string& filename)
-    {
-        this->name = filename;
-        this->filePtr = new std::fstream(filename.c_str(), std::ios::out | std::ios::in | std::ios::binary);
+    Int File::Read(void* data, const size_t size, const size_t offSet) const{
+        lseek(this->fd, size, SEEK_SET);
+        const auto result = ::read(this->fd + offSet, data, size);
+
+        if (result < 0)
+            throw std::runtime_error("File::Read: Failed to read from file");
+
+        return result;
     }
 
-    File::~File()
-    {
-        this->filePtr->flush();
-        this->filePtr->close();
+    Int File::Write(const void* data, const size_t size, const size_t offSet) const{
+        lseek(this->fd, size, SEEK_SET);
+        const auto result = ::write(this->fd + offSet, data, size);
 
-        delete this->filePtr;
-        filePtr = nullptr;
+        if (result != size)
+            throw std::runtime_error("File::Write: Failed to write to file");
+
+        return result;
+    }
+
+    void File::Flush() const{ ::flush(this->fd); }
+
+    file_descriptor_t FileManager::OpenFile(const FileKey key, const DataTypes::StringView& fileName)
+    {
+        const auto fd = ::open(fileName.Data(), O_RDWR | O_CREAT | O_BINARY, 0644);
+        if (fd < 0)
+            throw std::runtime_error("FileManager::Open: File could not be opened");
+
+        MultiThreading::WriterGuard lock(&this->tableMutex);
+        this->fileTable.Add(key, fd);
+        return fd;
     }
 
     FileManager::FileManager() = default;
 
-    FileManager::~FileManager()
-    {
-        for(const auto &file : this->fileTable | std::views::values)
-            delete file;
+    FileManager::~FileManager(){
+        for(const auto file : this->fileTable | std::views::values)
+            ::close(file);
     }
 
-    void FileManager::CreateFile(const std::string& fileName, const std::string& extension)const
-    {
+    void FileManager::CreateFile(
+        const FileKey key,
+        const DataTypes::StringView& fileName,
+        const DataTypes::StringView& extension
+    ){
         {
             MultiThreading::ReaderGuard lock(&this->tableMutex);
-
-            if (this->fileTable.Contains(fileName))
+            if (this->fileTable.Contains(key))
                 throw std::runtime_error("File already exists");
         }
 
-        std::ifstream fileExists(fileName + extension);
+        char path[DIRECTORY_SIZE];
+        std::snprintf(path, sizeof(path), "%s%s", fileName.Data(), extension.Data());
 
-        if(fileExists)
-            throw std::runtime_error("Database with name: " + fileName +" already exists");
+        if (access(path, F_OK) == 0)
+            throw std::runtime_error("FileManager::CreateFile: File already exists");
 
-        fileExists.close();
+        char parentDir[DIRECTORY_SIZE];
+        std::strncpy(parentDir, path, sizeof(parentDir));
+        parentDir[sizeof(parentDir) - 1] = '\0';
 
-        auto fullPath = fs::path(fileName + extension);
+        auto* lastSlash = std::strrchr(parentDir, '/');
+        if (lastSlash == nullptr)
+            lastSlash = std::strrchr(parentDir, '\\');
 
-        auto parentDir = fullPath.parent_path();
+        if (lastSlash){
+            *lastSlash = '\0';
 
-        if(!parentDir.empty() && !fs::exists(parentDir))
-          fs::create_directories(parentDir);
+#ifdef _WIN32
+            mkdir(parentDir);
+#else
+            mkdir(parentDir, 0755);
+#endif
+        }
 
-        std::ofstream file(fileName + extension);
+        const auto fd = ::open(path, O_WRONLY | O_CREAT | O_BINARY, 0644);
+        if (fd < 0)
+            throw std::runtime_error("FileManager::CreateFile: Database File could not be created");
 
-        if(!file)
-            throw std::runtime_error("Database " + fileName + " could not be created");
+        MultiThreading::WriterGuard lock(&this->tableMutex);
 
-        file.close();
+        if (this->fileTable.Contains(key))
+            return;
+
+        this->fileTable.Add(key, fd);
     }
 
-    std::fstream* FileManager::GetFile(const std::string& fileName)
-    {
+    File FileManager::GetFile(
+        const FileKey key,
+        const DataTypes::StringView& fileName
+    ){
         {
             MultiThreading::ReaderGuard lock(&this->tableMutex);
 
-            File* file = nullptr;
-            if (this->fileTable.TryGetValue(fileName, file))
-                return file->filePtr;
+            Int fd = 0;
+            if (this->fileTable.TryGetValue(key, fd))
+                return File(fd);
         }
 
-        return this->OpenFile(fileName);
+        return File(this->OpenFile(key, fileName));
     }
 
-    void FileManager::CloseFile(const std::string& fileName)
-    {
+    void FileManager::CloseFile(const FileKey key) const{
         MultiThreading::WriterGuard lock(&this->tableMutex);
 
-        File* file = nullptr;
-        if (!this->fileTable.TryGetValue(fileName, file))
+        file_descriptor_t fd = 0;
+        if (!this->fileTable.TryGetValue(key, fd))
             return;
 
-        delete file;
-        this->fileTable.Remove(fileName);
+        ::close(fd);
     }
-
-    std::fstream* FileManager::OpenFile(const std::string& fileName)
-    {
-        // if(this->filesList.size() == MAX_OPEN_FILES)
-        //     this->RemoveFile();
-
-        auto* file = new File(fileName);
-
-        if(!file->filePtr->is_open())
-        {
-            delete file;
-            throw std::runtime_error("File could not be opened");
-        }
-
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-
-        this->fileTable.Add(fileName, file);
-
-        return file->filePtr;
-    }
-
-    // void FileManager::RemoveFile()
-    // {
-    //     const auto& fileIterator = prev(this->filesList.end());
-    //
-    //     this->cache.erase((*fileIterator)->name);
-    //
-    //     delete *fileIterator;
-    //
-    //     this->filesList.erase(fileIterator);
-    // }
 };

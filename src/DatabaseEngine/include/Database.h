@@ -46,10 +46,10 @@ namespace DatabaseEngine {
 
 class Database {
     DatabaseHeader header;
-    std::string name;
-    std::string filename;
-    std::string fileExtension;
-    std::string systemFilename;
+    DataTypes::String name;
+    DataTypes::String filename;
+    DataTypes::StringView fileExtension;
+    DataTypes::String systemFilename;
 
     Dictionary<Int, table_id_t> tableIdsDictionary;
 
@@ -60,7 +60,7 @@ class Database {
 
 protected:
 
-    void PopulateFilenames(const std::string& dbName);
+    void PopulateFilenames(const DataTypes::String& dbName);
 
     void WriteHeaderToFile() const;
 
@@ -106,7 +106,7 @@ public:
       table_id_t tableOrdinal
     );
 
-    static std::string CreateDatabasePath(const std::string& dbName);
+    static DataTypes::String CreateDatabasePath(const DataTypes::String& dbName);
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const std::vector<column_index_t>& indexedColumns,
@@ -127,7 +127,7 @@ public:
         const DataTypes::RowIdentifier& rowId
     );
 
-    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const std::string& filename, page_id_t pageId);
+    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(const DataTypes::String& filename, page_id_t pageId);
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
 
@@ -163,7 +163,7 @@ public:
 
     // [[nodiscard]] StorageTypes::Table *OpenTableById(table_id_t tableId) const;
 
-    void DeleteTable(const std::string& tableName);
+    void DeleteTable(const DataTypes::String& tableName);
 
     void DeleteDatabase() const;
 
@@ -188,9 +188,9 @@ public:
       page_id_t treeId = 0
     );
 
-    [[nodiscard]] std::string GetFileName() const;
+    [[nodiscard]] DataTypes::StringView GetFileName() const;
 
-    [[nodiscard]] std::string GetSystemFilename() const;
+    [[nodiscard]] DataTypes::StringView GetSystemFilename() const;
 
     static page_id_t CalculateExtentFirstPageId(const extent_id_t &extentId);
 
@@ -230,8 +230,8 @@ public:
     const std::vector<StorageTypes::Table*>& GetTables() const;
 };
 
-void CreateDatabase(const std::string &dbName);
+void CreateDatabase(const DataTypes::String& dbName);
 
-Database* UseSystemDatabase(const std::string& dbName, const std::vector<Headers::sysTable>& tables);
+Database* UseSystemDatabase(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables);
 
 }; // namespace DatabaseEngine
