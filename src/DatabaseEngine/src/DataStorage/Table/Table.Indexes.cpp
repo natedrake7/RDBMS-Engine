@@ -7,6 +7,7 @@
 #include "../../../include/BufferPool/StorageManager.h"
 #include "Contexts/ExecutionContext.h"
 #include "Managers/GlobalMemoryManager.h"
+#include "Memory/MiscAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
     void Table::GetClusteredIndexFromDisk() const{
@@ -22,9 +23,10 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        const auto& filename = this->database->GetFileName();
+        const auto filename = this->database->GetFileName();
+        const auto dataKey = this->database->GetDataFileKey();
 
-        return Storage::StorageManager::Get().GetIndexPage(filename, indexPageId, this);
+        return Storage::StorageManager::Get().GetIndexPage(dataKey, filename, indexPageId, this);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
@@ -234,10 +236,17 @@ namespace DatabaseEngine::StorageTypes {
             executionContext
         );
 
+        const auto fileKey = this->database->GetDataFileKey();
+        const auto filename = this->database->GetFileName();
         if (expression != nullptr) {
 
             for (const auto& rowId : rowIds) {
-                const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
+                const auto page = Storage::StorageManager::Get().GetPage(
+                    fileKey,
+                    filename,
+                    rowId.pageId,
+                    this
+                );
 
                 MultiThreading::ReaderGuard lock(&page.Latch());
 
@@ -256,7 +265,12 @@ namespace DatabaseEngine::StorageTypes {
         }
 
         for (const auto& rowId : rowIds) {
-            const auto page = Storage::StorageManager::Get().GetPage(this->GetFileName(), rowId.pageId, this);
+            const auto page = Storage::StorageManager::Get().GetPage(
+                fileKey,
+                filename,
+                rowId.pageId,
+                this
+            );
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
@@ -336,7 +350,11 @@ namespace DatabaseEngine::StorageTypes {
         if(this->clusteredIndexedTree != nullptr)
             return this->clusteredIndexedTree;
 
-        this->clusteredIndexedTree = AllocateMiscEntity<Indexing::BTree>(this, this->header.clusteredIndexPageId, TreeType::Clustered);
+        this->clusteredIndexedTree = Memory::MiscAllocator::Get().Allocate<Indexing::BTree>(
+            this,
+            this->header.clusteredIndexPageId,
+            TreeType::Clustered
+        );
 
         if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
             return this->clusteredIndexedTree;
@@ -359,7 +377,12 @@ namespace DatabaseEngine::StorageTypes {
 
           if (nonClusteredTree == nullptr){
               const auto indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
-              nonClusteredTree = AllocateMiscEntity<Indexing::BTree>(this, indexPageId, TreeType::NonClustered, nonClusteredIndexId);
+              nonClusteredTree = Memory::MiscAllocator::Get().Allocate<Indexing::BTree>(
+                  this,
+                  indexPageId,
+                  TreeType::NonClustered,
+                  nonClusteredIndexId
+                );
 
               if (indexPageId == INVALID_PAGE_ID)
                   return nonClusteredTree;

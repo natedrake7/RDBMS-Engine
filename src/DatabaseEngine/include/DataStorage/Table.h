@@ -196,7 +196,7 @@ namespace DatabaseEngine::StorageTypes
         * Functions to access table metadata.
         * @{
         */
-            [[nodiscard]] std::string GetFileName() const;
+            [[nodiscard]] DataTypes::StringView GetFileNameView() const;
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
             [[nodiscard]] const std::vector<Column *> &GetColumns() const;

@@ -8,6 +8,7 @@
 #include <ranges>
 
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../../Systemic/include/DataTypes/StringView.h"
 
 namespace Security {
   RoleManager::RoleManager() = default;
@@ -27,7 +28,7 @@ namespace Security {
     return role;
   }
 
-  const Role* RoleManager::GetRole(const std::string &name)const{
+  const Role* RoleManager::GetRole(const DataTypes::StringView& name)const{
     Role* role = nullptr;
 
     MultiThreading::ReaderGuard guard(&this->mutex);
@@ -39,11 +40,11 @@ namespace Security {
     return role;
   }
 
-  bool RoleManager::AddRole(const std::string &name, Role* role){
+  bool RoleManager::AddRole(const DataTypes::StringView& name, Role* role){
     MultiThreading::WriterGuard guard(&this->mutex);
 
     if (this->rolesNames.Contains(name)){
-      std::cerr << "Role" << name << " already exists." << std::endl;
+      std::cerr << "Role" << name.Data() << " already exists." << std::endl;
       return false;
     }
 
@@ -53,7 +54,7 @@ namespace Security {
     return true;
   }
 
-  bool RoleManager::RemoveRole(const std::string &name){
+  bool RoleManager::RemoveRole(const DataTypes::StringView& name){
     MultiThreading::WriterGuard guard(&this->mutex);
 
     Role *role = nullptr;

@@ -239,7 +239,7 @@ namespace DatabaseEngine {
         std::vector<Headers::ColumnStatistics> &columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) {
-        const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(table->GetFileName(), iamPageId, table);
+        const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(table->GetFileNameView(), iamPageId, table);
 
         std::vector<extent_id_t> extents;
         iamPage.GetAllocatedExtents(&extents, 0);

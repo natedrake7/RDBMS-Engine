@@ -23,8 +23,8 @@ namespace DatabaseEngine {
 
     Database* masterDb;
 
-    std::string sysDbName;
-    std::string sysDbPath;
+    DataTypes::String sysDbName;
+    DataTypes::String sysDbPath;
 
     std::vector<Headers::sysTable> sysTables;
     ExecutionContext baseExecutionContext;
@@ -88,10 +88,10 @@ namespace DatabaseEngine {
       std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
 
       std::vector<Security::Role*> InsertSystemRoles()const;
-      Security::User* InsertSystemUsers(
-        const DataTypes::StringView& hashedPassword,
-        Int defaultRoleId
-      )const;
+        Security::User* InsertSystemUsers(
+            const DataTypes::String& hashedPassword,
+            Int defaultRoleId
+        )const;
 
       [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
           const ExecutionContext& executionContext,
@@ -143,7 +143,7 @@ namespace DatabaseEngine {
     [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
         const ExecutionContext& executionContext,
         Int tableId,
-        const std::string &indexName,
+        const DataTypes::StringView& indexName,
         bool isClustered,
         bool isDisabled = false,
         const DataTypes::StringView& user = "system",

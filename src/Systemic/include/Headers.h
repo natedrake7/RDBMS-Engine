@@ -366,8 +366,8 @@ namespace Headers {
   };
 
   struct sysColumn {
-    std::string name;
-    std::string type;
+    DataTypes::String name;
+    DataTypes::String type;
     Int id;
     int size = 0;
     int _default = 0;
@@ -376,11 +376,11 @@ namespace Headers {
   };
 
   struct sysTable {
-    std::string name;
+    DataTypes::String name;
     Int id;
     bool hasIdentity;
     std::vector<sysColumn> columns;
-    std::vector<std::string> primaryKey;
+    std::vector<DataTypes::String> primaryKey;
   };
 
   struct Index{

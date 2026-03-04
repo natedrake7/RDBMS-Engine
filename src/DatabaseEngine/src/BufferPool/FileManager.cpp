@@ -136,4 +136,8 @@ namespace Storage{
 
         ::close(fd);
     }
+
+    bool FileManager::FileExists(const DataTypes::StringView& fileName){
+        return access(fileName.Data(), F_OK) == 0;
+    }
 };

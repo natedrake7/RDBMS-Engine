@@ -33,16 +33,15 @@ namespace Pages{
 
 namespace Indexing{
     class BTree final{
-        page_id_t rootPageId;
+        DatabaseEngine::Database* database;
+        DatabaseEngine::StorageTypes::Table* table;
 
         Int degree;
         Int keySize;
 
-        TreeType type;
         Int nonClusteredIndexId;
-
-        DatabaseEngine::Database* database;
-        DatabaseEngine::StorageTypes::Table* table;
+        page_id_t rootPageId;
+        TreeType type;
 
         static void AssignLeavesConnections(
             const Pages::IndexPageView& child,

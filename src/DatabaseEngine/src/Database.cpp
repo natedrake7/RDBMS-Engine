@@ -16,6 +16,7 @@
 
 #include "Managers/GlobalMemoryManager.h"
 #include "Memory/Allocator.h"
+#include "Memory/MiscAllocator.h"
 
 namespace DatabaseEngine
 {
@@ -140,7 +141,7 @@ namespace DatabaseEngine
         this->header = *headerPage.GetDatabaseHeaderPtr();
 
         for (int i = 0; i < tables.size(); i++) {
-          HashSet<std::string> primaryKeysSet(tables[i].primaryKey);
+          HashSet primaryKeysSet(tables[i].primaryKey);
           Headers::Index index;
 
           for(int j = 0;j < tables[i].columns.size(); j++){
@@ -168,7 +169,7 @@ namespace DatabaseEngine
 
         //query get from masterDb
         const Memory::Allocator allocator;
-        const auto masterDbData = catalog.SelectTables(&allocator, dbName);
+        const auto masterDbData = catalog.SelectTables(&allocator, this->name.ToView());
         const auto& headerPageTables = headerPage.GetTableHeaders();
 
         if (headerPageTables.size() != masterDbData.size())
@@ -183,9 +184,9 @@ namespace DatabaseEngine
         auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
         headerPage.SetDatabaseHeader(this->header);
 
-        for (const auto* dbTable : this->tables){
+        for (auto* dbTable : this->tables){
             headerPage.SetTableHeader(dbTable->GetHeader());
-            DeallocateMiscEntity(dbTable);
+            Memory::MiscAllocator::Get().Free(dbTable);
         }
 
         headerPage.WriteTableHeadersToDisk();
@@ -288,7 +289,14 @@ namespace DatabaseEngine
         const Headers::Index *clusteredKeyIndexes,
         const std::vector<Headers::Index> *nonClusteredIndexes)
     {
-        auto* table = AllocateMiscEntity<StorageTypes::Table>(tableId, ordinalPosition, columns, this, clusteredKeyIndexes, nonClusteredIndexes);
+        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(
+            tableId,
+            ordinalPosition,
+            columns,
+            this,
+            clusteredKeyIndexes,
+            nonClusteredIndexes
+        );
         this->tables.push_back(table);
         this->header.numberOfTables = this->tables.size();
 
@@ -300,7 +308,7 @@ namespace DatabaseEngine
     void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
         static auto& catalog = SystemCatalog::Get();
 
-        auto* table = AllocateMiscEntity<StorageTypes::Table>(masterDbHeader, tableHeader, this);
+        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(masterDbHeader, tableHeader, this);
 
         const Memory::Allocator allocator;
         const auto& masterDbColumns = catalog.SelectColumns(&allocator, masterDbHeader.id);
@@ -308,7 +316,7 @@ namespace DatabaseEngine
             if (masterDbColumn.isSystem)
                 continue;
 
-            auto* column = AllocateMiscEntity<StorageTypes::Column>(masterDbColumn, table);
+            auto* column = Memory::MiscAllocator::Get().Allocate<StorageTypes::Column>(masterDbColumn, table);
             table->AddColumn(column);
         }
 
@@ -328,7 +336,7 @@ namespace DatabaseEngine
         const Headers::Index& primaryKey,
         const Int ordinalPosition
     ){
-        auto* table = AllocateMiscEntity<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
+        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
         this->tables.push_back(table);
     }
 
@@ -1005,7 +1013,7 @@ namespace DatabaseEngine
 //                   : nullptr;
     }
 
-    DataTypes::StringView Database::GetFileName() const { return this->filename.ToView(); }
+    DataTypes::StringView Database::GetFileName() const { return this->filenameView; }
 
     void Database::GetIdentityColumns()const{
         const Memory::Allocator allocator;
@@ -1047,7 +1055,11 @@ namespace DatabaseEngine
 
     const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }
 
-    DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilename.ToView(); }
+    DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilenameView; }
+
+    Storage::FileKey Database::GetDataFileKey() const{ return this->dataFileKey; }
+
+    Storage::FileKey Database::GetSystemFileKey() const{ return this->systemFileKey; }
 
     DatabaseHeader::DatabaseHeader(){
         this->numberOfTables = 0;

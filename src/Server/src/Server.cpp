@@ -69,7 +69,7 @@ namespace Network {
 
     const DatabaseEngine::Memory::Allocator allocator;
     for (auto& role : this->systemCatalog->SelectRoles(&allocator))
-      const auto _ = this->roleManager.AddRole(role.name, new Security::Role(std::move(role)));
+      const auto _ = this->roleManager.AddRole(role.name.ToView(), new Security::Role(std::move(role)));
 
     for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
       const auto* role = this->roleManager.GetRole(user.roleId);

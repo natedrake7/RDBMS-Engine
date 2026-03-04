@@ -226,3 +226,16 @@ namespace DataTypes{
         }
     };
 }
+
+template <>
+struct std::hash<DataTypes::StringView> {
+    size_t operator()(const DataTypes::StringView& str) const noexcept {
+        // FNV-1a hash
+        size_t hash = 14695981039346656037ULL;
+        for (size_t i = 0; i < str.Size(); ++i) {
+            hash ^= static_cast<size_t>(str.Data()[i]);
+            hash *= 1099511628211ULL;
+        }
+        return hash;
+    }
+};

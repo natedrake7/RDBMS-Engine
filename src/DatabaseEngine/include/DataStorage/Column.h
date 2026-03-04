@@ -25,14 +25,14 @@ namespace DatabaseEngine::StorageTypes
         ColumnHeader header;
         IdentityManager identityManager;
 
-        std::string name;
+        DataTypes::String name;
         const Table *table;
         bool allowNulls;
         bool isOverflowed;
 
     public:
         Column(
-            const std::string& columnName,
+            const DataTypes::String& columnName,
             DataType type,
             row_size_t recordSize,
             column_index_t index,
@@ -52,9 +52,9 @@ namespace DatabaseEngine::StorageTypes
 
         ~Column();
 
-        [[nodiscard]] const std::string& GetColumnName() const;
+        [[nodiscard]] const DataTypes::String& GetColumnName() const;
 
-        void SetColumnName(const std::string& otherName);
+        void SetColumnName(const DataTypes::String& otherName);
 
         [[nodiscard]] DataType Type() const;
 

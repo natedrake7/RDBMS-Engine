@@ -92,12 +92,12 @@ protected:
     void InitializeStaticData();
 
 public:
-    explicit Database(
+    Database(
         const DataTypes::String& dbName,
         const bool& isServerInitialization = false
     );
 
-    explicit Database(
+    Database(
         const DataTypes::String& dbName,
         const std::vector<Headers::sysTable>& tables
     );
@@ -208,9 +208,10 @@ public:
       page_id_t treeId = 0
     );
 
-    [[nodiscard]] DataTypes::StringView GetFileName() const;
-
-    [[nodiscard]] DataTypes::StringView GetSystemFilename() const;
+    [[nodiscard]] inline DataTypes::StringView GetFileName() const;
+    [[nodiscard]] inline DataTypes::StringView GetSystemFilename() const;
+    [[nodiscard]] inline Storage::FileKey GetDataFileKey() const;
+    [[nodiscard]] inline Storage::FileKey GetSystemFileKey() const;
 
     static page_id_t CalculateExtentFirstPageId(const extent_id_t &extentId);
 

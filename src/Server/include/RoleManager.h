@@ -2,15 +2,14 @@
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-
-#include <string>
+#include "../../Systemic/include/DataTypes/StringView.h"
 
 namespace Security {
     struct Role;
 
     class RoleManager {
     Dictionary<Int, Role*> roles;
-    Dictionary<std::string, Int> rolesNames;
+    Dictionary<DataTypes::StringView, Int> rolesNames;
 
     mutable MultiThreading::ReadWriteMutex mutex;
     public:
@@ -18,8 +17,8 @@ namespace Security {
       ~RoleManager();
 
       [[nodiscard]] const Role* GetRole(Int roleId)const;
-      [[nodiscard]] const Role* GetRole(const std::string& name)const;
-      [[nodiscard]] bool AddRole(const std::string& name, Role* role);
-      [[nodiscard]] bool RemoveRole(const std::string& name);
+      [[nodiscard]] const Role* GetRole(const DataTypes::StringView& name)const;
+      [[nodiscard]] bool AddRole(const DataTypes::StringView& name, Role* role);
+      [[nodiscard]] bool RemoveRole(const DataTypes::StringView& name);
   };
 }

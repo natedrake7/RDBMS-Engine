@@ -373,7 +373,12 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
-        return Storage::StorageManager::Get().GetIndexPage(this->database->GetFileName(), pageId, this->table);
+        return Storage::StorageManager::Get().GetIndexPage(
+            this->database->GetDataFileKey(),
+            this->database->GetFileName(),
+            pageId,
+            this->table
+        );
     }
 
     Int BTree::CalculateTreeDegree(
@@ -894,7 +899,11 @@ namespace Indexing{
     }
 
     void BTree::UpdatePfsPage(const Pages::IndexPageView& node) const{
-        const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node.PageId());
+        const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(
+            this->database->GetSystemFileKey(),
+            this->database->GetSystemFilename(),
+            node.PageId()
+        );
 
         MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage.Latch());
         MultiThreading::WriterGuard pageLock(&node.Latch());

@@ -9,6 +9,13 @@ namespace Constants{
     static constexpr auto UNDO_LOG_FILE = DataTypes::StringView("undo.log");
     static constexpr auto DATA_FILE_EXTENSION = DataTypes::StringView(".data");
     static constexpr auto SYS_EXTENSION = DataTypes::StringView("_sys");
+    static constexpr auto DEFAULT_SCHEMA_NAME = DataTypes::StringView("dbo");
+
+    static constexpr Int DEFAULT_IDENTITY_SEED = 1;
+    static constexpr Int DEFAULT_IDENTITY_INCREMENT = 1;
+    static constexpr Int DEFAULT_IDENTITY_VALUE = 1;
+    static constexpr Int DEFAULT_IDENTITY_CACHE_BLOCK = 10000;
+
 
     static constexpr size_t PAGE_SIZE = 8 * 1024;
     static constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
@@ -176,7 +183,6 @@ namespace Constants{
         NullIf = 121
     };
 
-    static constexpr auto DEFAULT_SCHEMA_NAME = DataTypes::StringView("dbo");
     static constexpr auto ADMIN_NAME = DataTypes::StringView("admin");
     static constexpr auto DB_OWNER_NAME = DataTypes::StringView("db_owner");
     static constexpr auto DB_WRITER_NAME = DataTypes::StringView("db_writer");

@@ -5,10 +5,11 @@
 #include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
+#include "Memory/MiscAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
      Column::Column(
-         const std::string& columnName,
+         const DataTypes::String& columnName,
          const DataType type,
          const row_size_t recordSize,
          const column_index_t index,
@@ -28,8 +29,8 @@ namespace DatabaseEngine::StorageTypes {
         const column_index_t ordinalPosition ,
         const Table* table
     ){
-        const auto normalizedType = Functions::String::NormalizeString(header.type);
-        const auto strView = DataTypes::StringView(normalizedType);
+        const auto normalizedType = DataTypes::String::Normalize(header.type);
+        const auto strView = normalizedType.ToView();
 
         this->name = header.name;
         this->allowNulls = false;
@@ -56,9 +57,9 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::~Column() = default;
 
-    const std::string& Column::GetColumnName() const{ return this->name; }
+    const DataTypes::String& Column::GetColumnName() const{ return this->name; }
 
-    void Column::SetColumnName(const std::string &otherName){ this->name = otherName;}
+    void Column::SetColumnName(const DataTypes::String &otherName){ this->name = otherName;}
 
     DataType Column::Type() const { return this->header.columnType; }
 

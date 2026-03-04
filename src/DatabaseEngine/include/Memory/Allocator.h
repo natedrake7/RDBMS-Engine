@@ -31,5 +31,6 @@ namespace DatabaseEngine::Memory{
 
             void* AllocateRaw(UnsignedInt size)const override;
             void Reset() const override;
+            void Free(void* ptr, Int size) const override;
     };
 }

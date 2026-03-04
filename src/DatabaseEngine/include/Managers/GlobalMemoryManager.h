@@ -57,43 +57,4 @@ namespace DatabaseEngine{
 
             void Log(std::ostream& os, ::Memory::MemoryLogLevel level)const;
     };
-
-
-    template <typename Entity, typename... Args>
-    Entity* AllocateMiscEntity(Args&&... args){
-        static auto& globalMemoryManager = GlobalMemoryManager::Get();
-        const auto _ = globalMemoryManager.TryReserveForMisc(sizeof(Entity));
-
-        if (!globalMemoryManager.TryReserveForMisc(sizeof(Entity)))
-            throw std::bad_alloc();
-
-        try {
-            return new Entity(std::forward<Args>(args)...);
-        } catch (...) {
-            globalMemoryManager.ReleaseMiscReservation(sizeof(Entity));
-            throw;
-        }
-    }
-
-    template <typename Entity>
-    Entity* AllocateMiscEntity(){
-        static auto& globalMemoryManager = GlobalMemoryManager::Get();
-        const auto _ = globalMemoryManager.TryReserveForMisc(sizeof(Entity));
-
-        if (!globalMemoryManager.TryReserveForMisc(sizeof(Entity)))
-            throw std::bad_alloc();
-
-        try {
-            return new Entity();
-        } catch (...) {
-            globalMemoryManager.ReleaseMiscReservation(sizeof(Entity));
-            throw;
-        }
-    }
-
-    template <typename Entity>
-    void DeallocateMiscEntity(Entity* ptr){
-        GlobalMemoryManager::Get().ReleaseMiscReservation(sizeof(Entity));
-        delete ptr;
-    }
 }

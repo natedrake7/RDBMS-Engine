@@ -76,8 +76,8 @@ namespace DatabaseEngine {
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
-
-            this->filename,
+            this->dataFileKey,
+            this->filenameView,
             tableHeader.allocationPageId,
             table
         );
@@ -90,7 +90,11 @@ namespace DatabaseEngine {
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++){
                 {
-                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFilename, nextIndexPageId);
+                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
+                        this->systemFileKey,
+                        this->systemFilenameView,
+                        nextIndexPageId
+                    );
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
 
@@ -102,7 +106,12 @@ namespace DatabaseEngine {
                         continue;
                 }
 
-                auto indexPage = Storage::StorageManager::Get().GetIndexPage(this->filename, nextIndexPageId, table);
+                auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+                    this->dataFileKey,
+                    this->filenameView,
+                    nextIndexPageId,
+                    table
+                );
 
                 // if (!indexPage.IsValid())
                 //     continue;

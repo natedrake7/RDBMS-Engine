@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "DataTypes/String.h"
 
 namespace Security {
   enum class Permission : UnsignedInt {
@@ -67,12 +68,12 @@ namespace Security {
   struct Role {
     Int id;
 
-    std::string name;
+    DataTypes::String name;
     Permission permission;
 
     bool isSystem;
 
-    Role(const Int id, const std::string& name, const Permission permission, const bool isSystem)
+    Role(const Int id, const DataTypes::String& name, const Permission permission, const bool isSystem)
       : id(id), name(name), permission(permission), isSystem(isSystem) {}
     Role(const Role& role) {
       this->id = role.id;
@@ -97,8 +98,8 @@ namespace Security {
   struct User {
     Int id;
 
-    std::string name;
-    std::string passwordHash;
+    DataTypes::String name;
+    DataTypes::String passwordHash;
 
     Int roleId;
     const Role* role;
@@ -114,8 +115,8 @@ namespace Security {
 
     User(
         const Int id,
-        const std::string& name,
-        const std::string& passwordHash,
+        const DataTypes::String& name,
+        const DataTypes::String& passwordHash,
         const Int roleId,
         const Role* role,
         const bool isActive

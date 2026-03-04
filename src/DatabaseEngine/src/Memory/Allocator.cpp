@@ -93,4 +93,9 @@ namespace DatabaseEngine::Memory{
 
         GlobalMemoryManager::Get().ReleaseExecutionReservation(totalMemoryFreed);
     }
+
+    void Allocator::Free(void* ptr, Int size) const{
+        throw std::runtime_error("Allocator::Free: Not implemented");
+        // No-op since we free entire chunks at once in Reset()
+    }
 }

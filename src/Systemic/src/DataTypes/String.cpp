@@ -7,6 +7,11 @@
 #include "Memory/IAllocator.h"
 
 namespace DataTypes{
+    void String::PotentiallyDeallocate(const Int oldCapacity) const{
+        if (this->_allocator->IsOfType(Memory::IAllocator::MISC_ALLOCATOR_TYPE))
+            this->_allocator->Free(this->_data, oldCapacity);
+    }
+
     void String::CalculateCapacity(const Int size){
         if (this->_capacity == 0)
             this->_capacity = 1;
@@ -109,6 +114,24 @@ namespace DataTypes{
         }
 
         return false;
+    }
+
+    String& String::Append(const char* data, const Int size){
+        const Int newSize = this->_size + size;
+        const auto oldCapacity = this->_capacity;
+
+        if (!this->CanFit(newSize))
+            this->CalculateCapacity(newSize);
+
+        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
+
+        std::memcpy(newStr, this->_data, this->_size);
+        std::memcpy(newStr + this->_size, data, size);
+
+        this->PotentiallyDeallocate(oldCapacity);
+        this->_data = newStr;
+        this->_size = newSize;
+        return *this;
     }
 
     String String::Normalize(
@@ -348,6 +371,16 @@ namespace DataTypes{
         this->_capacity = size;
     }
 
+    String::String(const char* str, const Int size, const Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+        this->_data = static_cast<char*>(allocator->AllocateRaw(size));
+
+        std::memcpy(this->_data, str, size);
+
+        this->_size = size;
+        this->_capacity = size;
+    }
+
     String::String(const char* str, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
 
@@ -397,6 +430,7 @@ namespace DataTypes{
     String& String::operator=(String&& other) noexcept{
         if (this == &other)
             return *this;
+
         this->_allocator = other._allocator;
         this->_data = other._data;
 
@@ -413,7 +447,31 @@ namespace DataTypes{
         return String(allocator, 0);
     }
 
-    String::~String() = default;
+    void String::SetAllocator(const Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+    }
+
+    void String::Reserve(const Int size){
+        if (this->_capacity >= size)
+            return;
+
+        auto newCapacity = this->_capacity == 0 ? 1 : this->_capacity * 2;
+        while (newCapacity < size)
+            newCapacity *= 2;
+
+        auto* newData = static_cast<char*>(this->_allocator->AllocateRaw(newCapacity));
+        std::memcpy(newData, this->_data, this->_size);
+
+        this->PotentiallyDeallocate(this->_capacity);
+
+        this->_data = newData;
+        this->_capacity = newCapacity;
+    }
+
+    String::~String(){
+        if (this->_allocator->IsOfType(Memory::IAllocator::MISC_ALLOCATOR_TYPE))
+            this->_allocator->Free(this->_data, this->_capacity);
+    }
 
     std::ostream& operator<<(std::ostream& os, const String& sv){
         os.write(sv._data, sv._size);
@@ -505,6 +563,10 @@ namespace DataTypes{
 
     StringView String::ToView() const{
         return StringView(this->_data, this->_size);
+    }
+
+    String String::FromView(const StringView& str, const Memory::IAllocator* allocator){
+        return String(str.Data(), str.Size(), allocator);
     }
 
     String String::Concat(const String& other) const{
@@ -600,71 +662,23 @@ namespace DataTypes{
     }
 
     String& String::Append(const String& other){
-        const Int newSize = this->_size + other._size;
-        if (!this->CanFit(newSize))
-            this->CalculateCapacity(newSize);
-
-        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
-
-        std::memcpy(newStr, this->_data, this->_size);
-        std::memcpy(newStr + this->_size, other._data, other._size);
-
-        return *this;
-
+        return this->Append(other.Data(), other.Size());
     }
 
     String& String::Append(const StringView& other){
-        const Int newSize = this->_size + other.Size();
-        if (!this->CanFit(newSize))
-            this->CalculateCapacity(newSize);
-
-        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
-
-        std::memcpy(newStr, this->_data, this->_size);
-        std::memcpy(newStr + this->_size, other.Data(), other.Size());
-
-        return *this;
+        return this->Append(other.Data(), other.Size());
     }
 
     String& String::Append(const char* other){
-        const auto otherSize = static_cast<Int>(std::strlen(other));
-        const Int newSize = this->_size + otherSize;
-
-        if (!this->CanFit(newSize))
-            this->CalculateCapacity(newSize);
-
-        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
-
-        std::memcpy(newStr, this->_data, this->_size);
-        std::memcpy(newStr + this->_size, other, otherSize);
-
-        return *this;
+        return this->Append(other, static_cast<Int>(std::strlen(other)));
     }
 
     String& String::Append(const std::string_view other){
-        const Int newSize = static_cast<Int>(this->_size + other.size());
-
-        if (!this->CanFit(newSize))
-            this->CalculateCapacity(newSize);
-
-        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
-        std::memcpy(newStr, this->_data, this->_size);
-        std::memcpy(newStr + this->_size, other.data(), other.size());
-
-        return *this;
+        return this->Append(other.data(), other.size());
     }
 
     String& String::Append(const std::string& other){
-        const Int newSize = static_cast<Int>(this->_size + other.size());
-
-        if (!this->CanFit(newSize))
-            this->CalculateCapacity(newSize);
-
-        auto* newStr = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
-        std::memcpy(newStr, this->_data, this->_size);
-        std::memcpy(newStr + this->_size, other.data(), other.size());
-
-        return *this;
+        return this->Append(other.data(), other.size());
     }
 
     void String::Insert(const Int pos, const char* data, const Int size){
@@ -672,6 +686,8 @@ namespace DataTypes{
             throw std::out_of_range("String::Insert: Position out of range.");
 
         const Int newSize = this->_size + size;
+        const auto oldCapacity = this->_capacity;
+
         if (!this->CanFit(newSize))
             this->CalculateCapacity(newSize);
 
@@ -680,6 +696,8 @@ namespace DataTypes{
         std::memcpy(newStr, this->_data, pos);
         std::memcpy(newStr + pos, data, size);
         std::memcpy(newStr + pos + size, this->_data + pos, this->_size - pos);
+
+        this->PotentiallyDeallocate(oldCapacity);
 
         this->_size = newSize;
         this->_data = newStr;

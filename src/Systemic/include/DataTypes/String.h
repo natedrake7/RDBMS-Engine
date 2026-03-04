@@ -12,6 +12,8 @@ namespace DataTypes{
         Int _size;
         Int _capacity;
 
+        void PotentiallyDeallocate(Int oldCapacity)const;
+
         void CalculateCapacity(Int size);
         [[nodiscard]] bool CanFit(Int size) const;
 
@@ -23,6 +25,11 @@ namespace DataTypes{
         [[nodiscard]] inline bool EndsWithIgnoreCase(const char* other, Int size) const;
         [[nodiscard]] inline bool Contains(const char* other, Int size) const;
         [[nodiscard]] inline bool ContainsIgnoreCase(const char* other, Int size) const;
+
+        [[nodiscard]] inline String& Append(
+            const char* data,
+            Int size
+        );
 
         [[nodiscard]] static inline String Normalize(
             const char* str,
@@ -104,12 +111,17 @@ namespace DataTypes{
             String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
             String(const char* str, const ::Memory::IAllocator* allocator);
             String(char* str, Int size, const ::Memory::IAllocator* allocator);
+            String(const char* str, Int size, const ::Memory::IAllocator* allocator);
             String(const String& other);
             String& operator=(const String& other);
             String(String&& other) noexcept;
             String& operator=(String&& other) noexcept;
 
             static String Empty(const ::Memory::IAllocator* allocator);
+
+            void SetAllocator(const ::Memory::IAllocator* allocator);
+
+            void Reserve(Int size);
 
             ~String();
 
@@ -141,6 +153,7 @@ namespace DataTypes{
             [[nodiscard]] const char* Data()const;
 
             [[nodiscard]] StringView ToView()const;
+            [[nodiscard]] static String FromView(const StringView& str, const ::Memory::IAllocator* allocator);
 
             //functions
             template<typename... Args>
@@ -153,6 +166,13 @@ namespace DataTypes{
             [[nodiscard]] static String Concat(const StringView& lhs, const StringView& rhs, const ::Memory::IAllocator* allocator);
             [[nodiscard]] static String Concat(const String& lhs, const String& rhs, const ::Memory::IAllocator* allocator);
             [[nodiscard]] static String Concat(const char* lhs, const char* rhs, const ::Memory::IAllocator* allocator);
+
+            template<typename... Args>
+            [[nodiscard]] static String Join(
+                const Memory::IAllocator* allocator,
+                char delimiter,
+                const Args&... args
+            );
 
             [[nodiscard]] String& Append(const String& other);
             [[nodiscard]] String& Append(const StringView& other);
@@ -354,6 +374,54 @@ String String::Concat(const Args&... args) const {
     }(args), ...);
 
     return String(buf, totalSize, this->_allocator);
+}
+
+template <typename ... Args>
+String String::Join(const Memory::IAllocator* allocator, const char delimiter, const Args&... args){
+    Int totalSize = sizeof...(Args) > 1 ? static_cast<Int>(sizeof...(Args) - 1) : 0;
+    ([&]<typename Type>(const Type& arg) {
+        if constexpr (std::is_same_v<std::decay_t<Type>, String>)
+            totalSize += arg.Size();
+        else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
+            totalSize += arg.Size();
+        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>)
+            totalSize += static_cast<Int>(arg.size());
+        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>)
+            totalSize += static_cast<Int>(arg.size());
+        else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
+                           std::is_same_v<std::decay_t<Type>, const char*>)
+            totalSize += static_cast<Int>(std::strlen(arg));
+    }(args), ...);
+
+    // Allocate and copy
+    Int offset = 0;
+    auto* data = static_cast<char*>(allocator->AllocateRaw(totalSize));
+
+    ([&]<typename Type>(const Type& arg) {
+        if (offset != 0)
+            data[offset++] = delimiter;
+
+        if constexpr (std::is_same_v<std::decay_t<Type>, String>) {
+            std::memcpy(data + offset, arg.Data(), arg.Size());
+            offset += arg.Size();
+        } else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>) {
+            std::memcpy(data + offset, arg.Data(), arg.Size());
+            offset += arg.Size();
+        } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>) {
+            std::memcpy(data + offset, arg.data(), arg.size());
+            offset += static_cast<Int>(arg.size());
+        } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>) {
+            std::memcpy(data + offset, arg.data(), arg.size());
+            offset += static_cast<Int>(arg.size());
+        } else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
+                             std::is_same_v<std::decay_t<Type>, const char*>) {
+            const auto len = static_cast<Int>(std::strlen(arg));
+            std::memcpy(data + offset, arg, len);
+            offset += len;
+        }
+    }(args), ...);
+
+    return String(data, totalSize, allocator);
 }
 }
 

@@ -120,10 +120,20 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Pages::LargeObjectView Table::GetLargeDataPage(const page_id_t pageId) const {
-      return Storage::StorageManager::Get().GetLargeDataPage(this->database->GetFileName(), pageId, this);
+        return Storage::StorageManager::Get().GetLargeDataPage(
+            this->database->GetDataFileKey(),
+            this->database->GetFileName(),
+            pageId,
+            this
+        );
     }
 
     Pages::OverflowPageView Table::GetOverflowPage(const page_id_t pageId) const{
-      return Storage::StorageManager::Get().GetOverflowPage(this->database->GetFileName(), pageId, this);
+        return Storage::StorageManager::Get().GetOverflowPage(
+            this->database->GetDataFileKey(),
+            this->database->GetFileName(),
+            pageId,
+            this
+        );
     }
 }
