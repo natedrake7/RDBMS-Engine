@@ -70,8 +70,8 @@ namespace Headers {
   };
 
     struct IdentityColumnsHeader{
-        Int tableId = INVALID_TABLE_ID;
-        Int columnId = INVALID_COLUMN_ID;
+        Int tableId;
+        Int columnId;
         Int seedValue;
         Int increment;
         BigInt lastValue;
@@ -81,6 +81,8 @@ namespace Headers {
         AuditInformation additionalInfo;
 
         IdentityColumnsHeader() {
+            this->tableId = INVALID_TABLE_ID;
+            this->columnId = INVALID_COLUMN_ID;
             this->seedValue = 0;
             this->increment = 1;
             this->lastValue = 0;
@@ -383,12 +385,15 @@ namespace Headers {
     std::vector<DataTypes::String> primaryKey;
   };
 
-  struct Index{
-    std::vector<UnsignedTinyInt> columns;
+    struct Index{
+        UnsignedTinyInt columns[10];
+        Int size;
 
-    explicit Index(std::vector<UnsignedTinyInt>& columns)
-      : columns(std::move(columns)) {}
+        explicit Index(const UnsignedTinyInt* columns, const Int size){
+            std::memcpy(this->columns, columns, size * sizeof(UnsignedTinyInt));
+            this->size = size;
+        }
 
-    Index() = default;
-  };
+        Index() = default;
+    };
 }

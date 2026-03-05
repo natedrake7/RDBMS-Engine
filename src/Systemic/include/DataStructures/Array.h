@@ -13,72 +13,14 @@ namespace DataStructures{
         Int _capacity;
 
     public:
-        Array(){
-            this->_data = nullptr;
-            this->_size = 0;
-            this->_capacity = 0;
-        }
+        Array(): _data(nullptr), _size(0), _capacity(0){}
 
-        explicit Array(Int capacity){
-            this->_data = static_cast<T*>(std::malloc(capacity * sizeof(T)));
-            this->_size = 0;
-            this->_capacity = capacity;
-        }
+        virtual ~Array() = default;
 
-        Array(Int capacity, T value){
-            this->_data = static_cast<T*>(std::malloc(capacity * sizeof(T)));
-            this->_size = 0;
-            this->_capacity = capacity;
+        virtual void Resize(Int newCapacity) = 0;
+        virtual void Reserve(Int newCapacity) = 0;
 
-            //????
-            std::memcpy(this->_data, &value, capacity * sizeof(T));
-        }
-
-        Array(const Array& other){
-            this->_data = static_cast<T*>(std::malloc(other._capacity * sizeof(T)));
-            std::memcpy(this->_data, other._data, other._size * sizeof(T));
-
-            this->_size = other._size;
-            this->_capacity = other._capacity;
-        }
-
-        Array& operator=(const Array& other){
-            if (this == &other)
-                return *this;
-
-            this->_data = static_cast<T*>(std::malloc(other._capacity * sizeof(T)));
-            std::memcpy(this->_data, other._data, other._size * sizeof(T));
-
-            this->_size = other._size;
-            this->_capacity = other._capacity;
-
-            return *this;
-        }
-
-        Array(Array&& other) noexcept{
-            this->_data = other._data;
-            this->_size = other._size;
-            this->_capacity = other._capacity;
-
-            other._data = nullptr;
-        }
-
-        Array& operator=(Array&& other) noexcept{
-            if (this == &other)
-                return *this;
-
-            this->_data = other._data;
-            this->_size = other._size;
-            this->_capacity = other._capacity;
-
-            other._data = nullptr;
-
-            return *this;
-        }
-
-        virtual ~Array(){
-            std::free(this->_data);
-        }
+        void Clear() { this->_size = 0; }
 
         void Push(T&& value){
             if (this->_size >= this->_capacity){
@@ -116,27 +58,13 @@ namespace DataStructures{
             this->_size = index;
         }
 
-        virtual void Resize(Int newCapacity){
-            if (newCapacity <= this->_capacity)
-                return;
-
-            T* newData = static_cast<T*>(std::malloc(newCapacity * sizeof(T)));
-            std::memcpy(newData, this->_data, this->_size * sizeof(T));
-            this->_data = newData;
-            this->_capacity = newCapacity;
+        T& At(const Int index){
+            return this->_data[](index);
         }
 
-        virtual void Reserve(Int newCapacity){
-            if (newCapacity <= this->_capacity)
-                return;
-
-            T* newData = static_cast<T*>(std::malloc(newCapacity * sizeof(T)));
-            std::memcpy(newData, this->_data, this->_size * sizeof(T));
-            this->_data = newData;
-            this->_capacity = newCapacity;
+        const T& At(const Int index) const{
+            return this->_data[](index);
         }
-
-        void Clear() { this->_size = 0; }
 
         T& Start(){
             if (this->_size == 0)

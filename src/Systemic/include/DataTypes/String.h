@@ -12,8 +12,6 @@ namespace DataTypes{
         Int _size;
         Int _capacity;
 
-        void PotentiallyDeallocate(Int oldCapacity)const;
-
         void CalculateCapacity(Int size);
         [[nodiscard]] bool CanFit(Int size) const;
 
@@ -108,6 +106,7 @@ namespace DataTypes{
             String();
             String(const ::Memory::IAllocator* allocator);
             String(const ::Memory::IAllocator* allocator, Int size);
+            String(const String& str, const ::Memory::IAllocator* allocator);
             String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
             String(const char* str, const ::Memory::IAllocator* allocator);
             String(char* str, Int size, const ::Memory::IAllocator* allocator);
@@ -157,7 +156,10 @@ namespace DataTypes{
 
             //functions
             template<typename... Args>
-            [[nodiscard]] String Concat(const Args&... args) const;
+            [[nodiscard]] static String Concat(const ::Memory::IAllocator* allocator, const Args&... args);
+
+            template<typename... Args>
+            [[nodiscard]] String ConcatInPlace(const Args&... args) const;
             [[nodiscard]] String Concat(const String& other) const;
             [[nodiscard]] String Concat(const char* other) const;
             [[nodiscard]] String Concat(const StringView& other) const;
@@ -174,11 +176,11 @@ namespace DataTypes{
                 const Args&... args
             );
 
-            [[nodiscard]] String& Append(const String& other);
-            [[nodiscard]] String& Append(const StringView& other);
-            [[nodiscard]] String& Append(const char* other);
-            [[nodiscard]] String& Append(std::string_view other);
-            [[nodiscard]] String& Append(const std::string& other);
+            String& Append(const String& other);
+            String& Append(const StringView& other);
+            String& Append(const char* other);
+            String& Append(std::string_view other);
+            String& Append(const std::string& other);
 
             void Insert(Int pos, const char* data, Int size);
 
@@ -327,8 +329,53 @@ namespace DataTypes{
             [[nodiscard]] reverse_iterator rend() const;
     };
 
+    template <typename...Args>
+    String String::Concat(const Memory::IAllocator* allocator, const Args&... args){
+        // Calculate total size first
+        Int totalSize = 0;
+        ([&]<typename Type>(const Type& arg) {
+            if constexpr (std::is_same_v<std::decay_t<Type>, String>)
+                totalSize += arg.Size();
+            else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
+                totalSize += arg.Size();
+            else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>)
+                totalSize += static_cast<Int>(arg.size());
+            else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>)
+                totalSize += static_cast<Int>(arg.size());
+            else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
+                               std::is_same_v<std::decay_t<Type>, const char*>)
+                totalSize += static_cast<Int>(std::strlen(arg));
+        }(args), ...);
+
+        // Allocate and copy
+        auto* buf = static_cast<char*>(allocator->AllocateRaw(totalSize));
+        Int offset = 0;
+        ([&]<typename Type>(const Type& arg) {
+            if constexpr (std::is_same_v<std::decay_t<Type>, String>) {
+                std::memcpy(buf + offset, arg.Data(), arg.Size());
+                offset += arg.Size();
+            } else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>) {
+                std::memcpy(buf + offset, arg.Data(), arg.Size());
+                offset += arg.Size();
+            } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>) {
+                std::memcpy(buf + offset, arg.data(), arg.size());
+                offset += static_cast<Int>(arg.size());
+            } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>) {
+                std::memcpy(buf + offset, arg.data(), arg.size());
+                offset += static_cast<Int>(arg.size());
+            } else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
+                                 std::is_same_v<std::decay_t<Type>, const char*>) {
+                const auto len = static_cast<Int>(std::strlen(arg));
+                std::memcpy(buf + offset, arg, len);
+                offset += len;
+            }
+        }(args), ...);
+
+        return String(buf, totalSize, allocator);
+    }
+
 template<typename... Args>
-String String::Concat(const Args&... args) const {
+String String::ConcatInPlace(const Args&... args) const {
     // Calculate total size first
     Int totalSize = this->_size;
     ([&]<typename Type>(const Type& arg) {

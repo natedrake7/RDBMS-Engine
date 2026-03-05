@@ -22,7 +22,7 @@
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
 #include "Managers/GlobalMemoryManager.h"
-#include "Memory/MiscAllocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
       TableHeader::TableHeader() {
@@ -68,7 +68,7 @@ namespace DatabaseEngine::StorageTypes {
 
       void Table::PopulateClusteredIndexCache(const Headers::Index& index){
         for (const auto& columnIndex: index.columns) {
-          const auto* column = this->columns[columnIndex];
+          const auto* column = this->_columns[columnIndex];
           this->clusteredIndexColumnsCache.Add(column->GetColumnId());
         }
       }
@@ -188,6 +188,17 @@ namespace DatabaseEngine::StorageTypes {
         versionDatabase.InsertRow(rowRef, versionPtr, this);
     }
 
+    Table::Table(const table_id_t tableId, const Int ordinalPosition, Database* database){
+        this->database = database;
+        this->header.tableId = tableId;
+        this->header.ordinalPosition = ordinalPosition;
+        this->header.numberOfColumns = 0;
+        this->clusteredIndexedTree = nullptr;
+
+        this->_columns.SetAllocator(&this->_allocator);
+        this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
+    }
+
     Table::Table(
         const table_id_t tableId,
         const Int ordinalPosition,
@@ -197,7 +208,7 @@ namespace DatabaseEngine::StorageTypes {
         const std::vector<Headers::Index> *nonClusteredIndexes
       ){
 //        this->schema = schema;
-        this->columns = columns;
+        // this->_columns = columns;
         this->database = database;
         this->header.numberOfColumns = columns.size();
         this->header.tableId = tableId;
@@ -250,7 +261,7 @@ namespace DatabaseEngine::StorageTypes {
         this->clusteredIndexedTree = nullptr;
 
         for (int i = 0;i < systemHeader.columns.size(); i++){
-            auto* column = Memory::MiscAllocator::Get().Allocate<Column>(systemHeader.columns[i], i,  this);
+            auto* column = Memory::PersistentAllocator::Get().Allocate<Column>(systemHeader.columns[i], i,  this);
             this->AddColumn(column);
         }
 
@@ -269,8 +280,8 @@ namespace DatabaseEngine::StorageTypes {
         // auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
         // headerPage.SetTableHeader(this->header.ordinalPosition, this->header);
 
-        for (auto* column : this->columns)
-            Memory::MiscAllocator::Get().Free(column);
+        for (auto* column : this->_columns)
+            Memory::PersistentAllocator::Get().Free(column);
     }
 
     Errors::RuntimeStatus Table::BatchInsert(
@@ -501,14 +512,14 @@ namespace DatabaseEngine::StorageTypes {
 
     DataTypes::StringView Table::GetFileNameView() const{ return this->database->GetFileName(); }
 
-    column_number_t Table::GetNumberOfColumns() const { return this->columns.size(); }
+    column_number_t Table::GetNumberOfColumns() const { return this->_columns.size(); }
 
     const TableHeader &Table::GetHeader() const { return this->header; }
 
-    const std::vector<Column *> &Table::GetColumns() const { return this->columns; }
+    const std::vector<Column *> &Table::GetColumns() const { return this->_columns; }
 
     void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
-        for (const auto* column : this->columns)
+        for (const auto* column : this->_columns)
           array->Push(column);
       }
 
@@ -902,7 +913,19 @@ namespace DatabaseEngine::StorageTypes {
 
     page_id_t Table::GetIndexAllocationMapPageId() const{ return this->header.allocationPageId; }
 
-    void Table::AddColumn(Column *column) { this->columns.push_back(column); }
+    void Table::AddColumn(Column *column) { this->_columns.Push(column); }
+
+    Column* Table::AddColumn(
+        const DataTypes::String& columnName,
+        DataType type,
+        row_size_t recordSize,
+        column_index_t index,
+        bool allowNulls
+    ){
+          auto* column = this->_allocator.Allocate<Column>(columnName, type, recordSize, index, allowNulls);
+          this->_columns.Push(column);
+          return column;
+    }
 
     table_id_t Table::GetTableId() const { return this->header.tableId; }
 
@@ -920,7 +943,7 @@ namespace DatabaseEngine::StorageTypes {
     {
         row_size_t maximumRowSize = 0;
 
-        for (const auto &column : this->columns)
+        for (const auto &column : this->_columns)
             maximumRowSize += column->isColumnLOB()
                 ? Constants::LARGE_OBJECT_POINTER_SIZE
                 : column->Size();
@@ -940,7 +963,7 @@ namespace DatabaseEngine::StorageTypes {
       for(const auto& column : this->header.clusteredIndex.columns)
         clusteredColumns.Add(column);
 
-      for (auto &column : this->columns) {
+      for (auto &column : this->_columns) {
         const auto& columnSize = column->Size();
 
         if (column->isColumnOverflowed())
@@ -974,7 +997,7 @@ namespace DatabaseEngine::StorageTypes {
 
           if(treeId == 0){
             for(const auto& columnIndex: this->header.clusteredIndex.columns)
-                columnDatatypes.emplace_back(this->columns[columnIndex]->Type());
+                columnDatatypes.emplace_back(this->_columns[columnIndex]->Type());
 
             return columnDatatypes;
           }
@@ -1159,7 +1182,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     void Table::RetrieveDefaultValuesFromCatalog(const ::Memory::IAllocator* allocator) const{
-        for(const auto& column: this->columns) {
+        for(const auto& column: this->_columns) {
           const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(allocator, column->GetColumnId());
 
           if (systemHeader.columnId == INVALID_COLUMN_ID)
@@ -1172,13 +1195,13 @@ namespace DatabaseEngine::StorageTypes {
     void Table::RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const{
       const auto headers = SystemCatalog::Get().SelectColumns(allocator, this->header.tableId);
 
-      assert(headers.size() == this->columns.size());
+      assert(headers.size() == this->_columns.size());
 
       if (headers.empty())
         return;
 
-      for (int i = 0;i < this->columns.size(); i++) {
-        auto& column = columns[i];
+      for (int i = 0;i < this->_columns.size(); i++) {
+        auto& column = _columns[i];
 
         column->SetColumnId(headers[i].id);
       }
@@ -1192,7 +1215,7 @@ namespace DatabaseEngine::StorageTypes {
         if(headers.empty())
           return;
 
-        for(const auto& column: this->columns){
+        for(const auto& column: this->_columns){
           for (const auto& identity: headers) {
             if(column->GetColumnId() != identity.columnId)
               continue;
@@ -1211,7 +1234,7 @@ namespace DatabaseEngine::StorageTypes {
       if(identityHeaders.empty())
         return;
 
-      for(const auto& column: this->columns){
+      for(const auto& column: this->_columns){
         for (const auto& identity: identityHeaders) {
 
           if(column->GetColumnId() != identity.columnId)
@@ -1231,7 +1254,7 @@ namespace DatabaseEngine::StorageTypes {
         if (identityHeaders.empty())
           return;
 
-        for(const auto& column: this->columns){
+        for(const auto& column: this->_columns){
 
           if (columnId != column->GetColumnId())
             continue;
@@ -1249,7 +1272,7 @@ namespace DatabaseEngine::StorageTypes {
   void Table::RetrieveIndexesFromCatalog(const ::Memory::IAllocator* allocator){
         Dictionary<Int, Column*> columnsDict;
 
-        for (auto& column: this->columns)
+        for (auto& column: this->_columns)
           columnsDict.Add(column->GetColumnId(), column);
 
         const auto indexes = SystemCatalog::Get().SelectIndexes(allocator, this->header.tableId);
@@ -1273,14 +1296,17 @@ namespace DatabaseEngine::StorageTypes {
         }
     }
 
-    void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
-        for (const auto& column: this->columns)
+  void Table::SetPrimaryKeyIndexedColumns(const column_index_t* _array, const Int size){
+          this->header.clusteredIndex = Headers::Index(_array, size);
+  }
+
+  void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
+        for (const auto& column: this->_columns)
             column->UpdateMetadata(allocator);
     }
 
   void Table::UpdateColumnName(const column_index_t index, const std::string &name)const{
-      auto* column = this->columns.at(index);
-
+      auto* column = this->_columns[index];
       column->SetColumnName(name);
   }
 void Table::PopulateColumn(const column_index_t index, const Value &defaultValue){
@@ -1384,7 +1410,7 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         const column_index_t index
     ){
         //add also last updated at deleted at etc...
-        const auto* removedColumn = this->columns.at(index);
+        const auto* removedColumn = this->_columns.at(index);
 
         const auto& server = SystemCatalog::Get();
 
@@ -1398,10 +1424,10 @@ void Table::PopulateColumn(const column_index_t index, const Value &defaultValue
         auto result = server.UpdateColumnById(context.GetAllocator(), removedColumn->GetColumnId(), updates);
 
         this->HandleRemoveColumn(removedColumn->OrdinalPosition());
-        this->columns.erase(this->columns.begin() + index);
+        this->_columns.erase(this->_columns.begin() + index);
 
-        for (int i = index; i < this->columns.size(); i++) {
-            const auto& column = this->columns[i];
+        for (int i = index; i < this->_columns.size(); i++) {
+            const auto& column = this->_columns[i];
 
             column->SetOrdinalPosition(i);
 

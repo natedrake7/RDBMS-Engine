@@ -1,17 +1,11 @@
 ﻿#include "../../include/DataTypes/String.h"
-
+#include "../../include/Memory/IAllocator.h"
 #include <cstdarg>
 #include <cstring>
 #include <ostream>
 
-#include "Memory/IAllocator.h"
 
 namespace DataTypes{
-    void String::PotentiallyDeallocate(const Int oldCapacity) const{
-        if (this->_allocator->IsOfType(Memory::IAllocator::MISC_ALLOCATOR_TYPE))
-            this->_allocator->Free(this->_data, oldCapacity);
-    }
-
     void String::CalculateCapacity(const Int size){
         if (this->_capacity == 0)
             this->_capacity = 1;
@@ -118,7 +112,6 @@ namespace DataTypes{
 
     String& String::Append(const char* data, const Int size){
         const Int newSize = this->_size + size;
-        const auto oldCapacity = this->_capacity;
 
         if (!this->CanFit(newSize))
             this->CalculateCapacity(newSize);
@@ -128,7 +121,6 @@ namespace DataTypes{
         std::memcpy(newStr, this->_data, this->_size);
         std::memcpy(newStr + this->_size, data, size);
 
-        this->PotentiallyDeallocate(oldCapacity);
         this->_data = newStr;
         this->_size = newSize;
         return *this;
@@ -362,6 +354,14 @@ namespace DataTypes{
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
     }
 
+    String::String(const String& str, const Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+        this->_data = static_cast<char*>(allocator->AllocateRaw(str._size));
+        std::memcpy(this->_data, str._data, str._size);
+        this->_size = str._size;
+        this->_capacity = str._capacity;
+    }
+
     String::String(const object_t* str, const Int size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
@@ -462,16 +462,11 @@ namespace DataTypes{
         auto* newData = static_cast<char*>(this->_allocator->AllocateRaw(newCapacity));
         std::memcpy(newData, this->_data, this->_size);
 
-        this->PotentiallyDeallocate(this->_capacity);
-
         this->_data = newData;
         this->_capacity = newCapacity;
     }
 
-    String::~String(){
-        if (this->_allocator->IsOfType(Memory::IAllocator::MISC_ALLOCATOR_TYPE))
-            this->_allocator->Free(this->_data, this->_capacity);
-    }
+    String::~String() = default;
 
     std::ostream& operator<<(std::ostream& os, const String& sv){
         os.write(sv._data, sv._size);
@@ -686,7 +681,6 @@ namespace DataTypes{
             throw std::out_of_range("String::Insert: Position out of range.");
 
         const Int newSize = this->_size + size;
-        const auto oldCapacity = this->_capacity;
 
         if (!this->CanFit(newSize))
             this->CalculateCapacity(newSize);
@@ -696,8 +690,6 @@ namespace DataTypes{
         std::memcpy(newStr, this->_data, pos);
         std::memcpy(newStr + pos, data, size);
         std::memcpy(newStr + pos + size, this->_data + pos, this->_size - pos);
-
-        this->PotentiallyDeallocate(oldCapacity);
 
         this->_size = newSize;
         this->_data = newStr;

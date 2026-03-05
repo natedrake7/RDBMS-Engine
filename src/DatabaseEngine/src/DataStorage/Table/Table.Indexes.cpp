@@ -7,7 +7,7 @@
 #include "../../../include/BufferPool/StorageManager.h"
 #include "Contexts/ExecutionContext.h"
 #include "Managers/GlobalMemoryManager.h"
-#include "Memory/MiscAllocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
     void Table::GetClusteredIndexFromDisk() const{
@@ -350,7 +350,7 @@ namespace DatabaseEngine::StorageTypes {
         if(this->clusteredIndexedTree != nullptr)
             return this->clusteredIndexedTree;
 
-        this->clusteredIndexedTree = Memory::MiscAllocator::Get().Allocate<Indexing::BTree>(
+        this->clusteredIndexedTree = Memory::PersistentAllocator::Get().Allocate<Indexing::BTree>(
             this,
             this->header.clusteredIndexPageId,
             TreeType::Clustered
@@ -377,7 +377,7 @@ namespace DatabaseEngine::StorageTypes {
 
           if (nonClusteredTree == nullptr){
               const auto indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
-              nonClusteredTree = Memory::MiscAllocator::Get().Allocate<Indexing::BTree>(
+              nonClusteredTree = Memory::PersistentAllocator::Get().Allocate<Indexing::BTree>(
                   this,
                   indexPageId,
                   TreeType::NonClustered,
@@ -404,8 +404,8 @@ namespace DatabaseEngine::StorageTypes {
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(
                 executionContext,
-                this->columns.at(columnId),
-                static_cast<Int>(this->columns.size())
+                this->_columns.at(columnId),
+                static_cast<Int>(this->_columns.size())
             );
 
             key.InsertKey(DataTypes::Indexing::Key(value));
@@ -424,7 +424,7 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& column : this->header.clusteredIndex.columns)
             clusteredColumns.Add(column);
 
-        for (const auto &column : this->columns)
+        for (const auto &column : this->_columns)
             if(clusteredColumns.Contains(column->OrdinalPosition()))
                 keySize += column->Size();
 
@@ -438,7 +438,7 @@ namespace DatabaseEngine::StorageTypes {
         for(const auto& column : this->header.nonClusteredIndexes.at(indexPos).columns)
             clusteredColumns.Add(column);
 
-        for (const auto &column : this->columns)
+        for (const auto &column : this->_columns)
             if(clusteredColumns.Contains(column->OrdinalPosition()))
                 keySize += column->Size();
 

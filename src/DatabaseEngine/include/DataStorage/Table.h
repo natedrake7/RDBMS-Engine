@@ -8,6 +8,8 @@
 #include "../BTree.h"
 #include "../Logger/Logger.h"
 #include "../Pages/OverflowPageView.h"
+#include "Memory/Allocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace Pages{
     class LargeObjectView;
@@ -66,15 +68,14 @@ namespace DatabaseEngine::StorageTypes
 
     class Table final{
         TableHeader header;
-
-        std::vector<Column*> columns;
-        Database *database;
-
         HashSet<column_id_t> clusteredIndexColumnsCache;
+        DataStructures::PolymorphicArray<Indexing::BTree*> nonClusteredIndexedTrees;
+        DataStructures::PolymorphicArray<Column*> _columns;
 
+        Memory::PersistentAllocator _allocator;
+
+        Database *database;
         Indexing::BTree* clusteredIndexedTree;
-        std::vector<Indexing::BTree*> nonClusteredIndexedTrees;
-
         protected:
             static bool VectorContainsIndex(const std::vector<column_index_t>& vector, column_index_t index, int& indexPosition);
 
@@ -133,6 +134,7 @@ namespace DatabaseEngine::StorageTypes
         * Functions to create and destroy Table objects.
         * @{
         */
+            Table(table_id_t tableId, Int ordinalPosition, Database *database);
             Table(
               table_id_t tableId,
               Int ordinalPosition,
@@ -431,6 +433,13 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             void AddColumn(Column *column);
+            Column* AddColumn(
+                const DataTypes::String& columnName,
+                DataType type,
+                row_size_t recordSize,
+                column_index_t index,
+                bool allowNulls
+            );
             void HandleAddColumn(
                 const ExecutionContext& executionContext,
                 const Pages::PageView* page,
@@ -460,5 +469,6 @@ namespace DatabaseEngine::StorageTypes
 
         /** @} End of System Catalog Integration Functions */
 
+        void SetPrimaryKeyIndexedColumns(const column_index_t* _array, Int size);
     };
 }

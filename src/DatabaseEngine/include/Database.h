@@ -1,10 +1,11 @@
 ﻿#pragma once
 #include "DatabaseConstants.h"
-#include <string>
 #include <vector>
 
+#include  "Memory/PersistentAllocator.h"
 #include "BufferPool/FileManager.h"
 #include "DataStorage/Column.h"
+#include "DataStructures/PolymorphicArray.h"
 #include "Logger/Logger.h"
 #include "Pages/IndexPageView.h"
 #include "Pages/LargeObjectView.h"
@@ -18,7 +19,7 @@ namespace Memory{
 
 namespace Indexing {
     class BTree;
-} // namespace Indexing
+}
 
 namespace DatabaseEngine::StorageTypes {
     class Table;
@@ -46,17 +47,20 @@ namespace DatabaseEngine {
         DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
     };
 
-class Database {
+class Database final{
     MultiThreading::ReadWriteMutex gamPageMutex;
     MultiThreading::ReadWriteMutex pfsPageMutex;
-    Dictionary<Int, table_id_t> tableIdsDictionary;
+
+    // Dictionary<Int, table_id_t> tableIdsDictionary;
+
+    Memory::PersistentAllocator _allocator;
 
     DataTypes::String name;
     DataTypes::String filename;
-    DataTypes::StringView fileExtension;
     DataTypes::String systemFilename;
+    DataTypes::StringView fileExtension;
 
-    std::vector<StorageTypes::Table *> tables;
+    DataStructures::PolymorphicArray<StorageTypes::Table*> _tables;
 
     DatabaseHeader header;
 
@@ -67,9 +71,7 @@ class Database {
 
     Int id;
 
-protected:
-
-    void PopulateFilenames(const DataTypes::String& dbName);
+    void PopulateFilenames(const ::Memory::IAllocator* tempAllocator, const DataTypes::String& dbName);
 
     void WriteHeaderToFile() const;
 
@@ -122,8 +124,6 @@ public:
       table_id_t tableOrdinal
     );
 
-    static DataTypes::String CreateDatabasePath(const DataTypes::String& dbName);
-
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
       const std::vector<column_index_t>& indexedColumns,
       const StorageTypes::InsertPayload& payload
@@ -150,29 +150,34 @@ public:
     );
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
-
     static page_id_t GetPfsAssociatedPage(page_id_t pageId);
-
     static page_id_t CalculateSystemPageOffset(page_id_t pageId);
-
     static page_id_t CalculateNextGamPageId(page_id_t currentGamPageId);
-
     static byte_t GetObjectSizeToCategory(const row_size_t &size);
 
-    StorageTypes::Table *CreateTable(
-      table_id_t tableId,
-      Int ordinalPosition,
-      const std::vector<StorageTypes::Column *> &columns,
-      const Headers::Index *clusteredKeyIndexes = nullptr,
-      const std::vector<Headers::Index> *nonClusteredIndexes = nullptr);
+    StorageTypes::Table* CreateTable(
+        table_id_t tableId,
+        Int ordinalPosition
+    );
 
-    void CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader);
+    StorageTypes::Table *CreateTable(
+        table_id_t tableId,
+        Int ordinalPosition,
+        const std::vector<StorageTypes::Column *> &columns,
+        const Headers::Index *clusteredKeyIndexes = nullptr,
+        const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
+    );
 
     void CreateTable(
-      const Headers::sysTable& sysHeader,
-      const StorageTypes::TableHeader &tableHeader,
-      const Headers::Index& primaryKey,
-      Int ordinalPosition
+        const Headers::TableHeader& masterDbHeader,
+        const StorageTypes::TableHeader &tableHeader
+    );
+
+    void CreateTable(
+        const Headers::sysTable& sysHeader,
+        const StorageTypes::TableHeader &tableHeader,
+        const Headers::Index& primaryKey,
+        Int ordinalPosition
     );
 
     static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
@@ -248,11 +253,8 @@ public:
 
     void UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const;
 
-    const std::vector<StorageTypes::Table*>& GetTables() const;
+    const DataStructures::Array<StorageTypes::Table*>& GetTables() const;
 };
 
 void CreateDatabase(Int databaseId, const DataTypes::String& dbName);
-
-Database* UseSystemDatabase(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables);
-
 }; // namespace DatabaseEngine

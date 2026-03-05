@@ -179,7 +179,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/src/Contexts/ExecutionContext.cpp
         src/DatabaseEngine/include/Memory/Allocator.h
         src/DatabaseEngine/src/Memory/Allocator.cpp
-        src/DatabaseEngine/src/Memory/MiscAllocator.cpp
+        src/DatabaseEngine/src/Memory/PersistentAllocator.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

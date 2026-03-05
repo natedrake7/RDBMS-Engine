@@ -16,7 +16,7 @@
 
 #include "Managers/GlobalMemoryManager.h"
 #include "Memory/Allocator.h"
-#include "Memory/MiscAllocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine
 {
@@ -81,131 +81,17 @@ namespace DatabaseEngine
 //      return gamPageId;
 //    }
 
-    page_id_t Database::CalculateSystemPageOffset(const page_id_t pageId)
-    {
-        page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+    void Database::PopulateFilenames(const ::Memory::IAllocator* tempAllocator, const DataTypes::String& dbName){
+        const auto path = DataTypes::String::Concat(tempAllocator, dbName, "/", dbName);
 
-//        if (pfsPages == 0)
-//            pfsPages = 1;
+        const auto tempFilename = DataTypes::String::Concat(tempAllocator, path, DATA_FILE_EXTENSION);
+        const auto tempSysFilename = DataTypes::String::Concat(tempAllocator, path, SYS_EXTENSION);
 
-        page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
+        this->filename = DataTypes::String(tempFilename, &this->_allocator);
+        this->systemFilename = DataTypes::String(tempSysFilename, &this->_allocator);
+        this->name = DataTypes::String(dbName, &this->_allocator);
 
-//        if (gamPages == 0)
-//            gamPages = 1;
-
-        return pageId ;//+ pfsPages + gamPages + 1;
-    }
-
-    page_id_t Database::CalculateNextGamPageId(const page_id_t currentGamPageId) {
-        return currentGamPageId + NEXT_GAM_PAGE_ID_OFFSET;
-    }
-
-    byte_t Database::GetObjectSizeToCategory(const row_size_t &size)
-    {
-      const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
-
-      // Direct mapping to 7levels (0-7)
-      return static_cast<byte_t>(freeSpacePercentage * 7);
-    }
-
-    page_id_t Database::CalculateExtentFirstPageId(const extent_id_t &extentId){
-        return extentId * EXTENT_SIZE;
-    }
-
-    page_id_t Database::CalculateGamPageId(const extent_id_t &extentId) {
-        return static_cast<page_id_t>(std::ceil(static_cast<float>(extentId) / static_cast<float>(GAM_PAGE_SIZE)) + 2);
-    }
-
-    extent_id_t Database::CalculateExtentId(const page_id_t pageId){
-        return pageId / 8;
-    }
-
-    DataTypes::String Database::CreateDatabasePath(const DataTypes::String& dbName){ return dbName.Concat("/", dbName);}
-
-    void Database::PopulateFilenames(const DataTypes::String& dbName){
-        const auto& path = Database::CreateDatabasePath(dbName);
-
-        this->filename = path.Concat(DATA_FILE_EXTENSION);
-
-        this->filename = path.Concat(DATA_FILE_EXTENSION);
         this->fileExtension = DATA_FILE_EXTENSION;
-        this->name = dbName;
-        this->systemFilename = path.Concat(SYS_EXTENSION, DATA_FILE_EXTENSION);
-    }
-
-    Database::Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables){
-        this->PopulateFilenames(dbName);
-
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
-
-        this->header = *headerPage.GetDatabaseHeaderPtr();
-
-        for (int i = 0; i < tables.size(); i++) {
-          HashSet primaryKeysSet(tables[i].primaryKey);
-          Headers::Index index;
-
-          for(int j = 0;j < tables[i].columns.size(); j++){
-              const auto& column = tables[i].columns[j];
-
-              if(primaryKeysSet.Contains(column.name))
-                index.columns.push_back(j);
-          }
-
-          this->CreateTable(tables[i], headerPage.GetTableHeader(i), index, i);
-        }
-    }
-
-    Database::Database(const DataTypes::String& dbName, const bool& isServerInitialization) {
-        static auto& catalog = SystemCatalog::Get();
-
-        this->PopulateFilenames(dbName);
-
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
-
-        this->header = *headerPage.GetDatabaseHeaderPtr();
-
-        if (isServerInitialization)
-            return;
-
-        //query get from masterDb
-        const Memory::Allocator allocator;
-        const auto masterDbData = catalog.SelectTables(&allocator, this->name.ToView());
-        const auto& headerPageTables = headerPage.GetTableHeaders();
-
-        if (headerPageTables.size() != masterDbData.size())
-            return;
-
-        for (int i = 0;i < masterDbData.size(); i++)
-            this->CreateTable(masterDbData[i], headerPageTables[i]);
-    }
-
-    Database::~Database(){
-        // save db header;
-        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
-        headerPage.SetDatabaseHeader(this->header);
-
-        for (auto* dbTable : this->tables){
-            headerPage.SetTableHeader(dbTable->GetHeader());
-            Memory::MiscAllocator::Get().Free(dbTable);
-        }
-
-        headerPage.WriteTableHeadersToDisk();
-    }
-
-    std::vector<Logging::LogEntry> Database::RecoverLogs(){
-        return {};
-        // return this->writeAheadLogger->RecoverLogs(this->tables);
-    }
-
-    void Database::EnterRecoveryMode()const{
-        const auto logs = DatabaseEngine::Database::RecoverLogs();
-
-        if (logs.empty()) {
-            std::cout << "No logs to recover." << std::endl;
-            return;
-        }
-        for (const auto& log : logs)
-            this->ApplyRecoveryLog(log);
     }
 
     void Database::ApplyRecoveryLog(const Logging::LogEntry &logEntry)const{
@@ -213,7 +99,7 @@ namespace DatabaseEngine
             return;
 
         if (Logging::RowAffectedOperationTypes.Contains(logEntry.operation)) {
-            auto* table = this->tables.at(logEntry.tableOrdinalPosition);
+            auto* table = this->_tables[logEntry.tableOrdinalPosition];
 
             // auto row = logEntry.GetRow();
 
@@ -238,6 +124,82 @@ namespace DatabaseEngine
         this->systemFilenameView = this->systemFilename.ToView();
         this->dataFileKey = Storage::FileKey::Create(this->id, Storage::FileType::Data);
         this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
+    }
+
+    Database::Database(const DataTypes::String& dbName, const bool& isServerInitialization) {
+        static auto& catalog = SystemCatalog::Get();
+        const Memory::Allocator tempAllocator;
+
+        this->PopulateFilenames(&tempAllocator, dbName);
+
+        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
+            this->systemFileKey,
+            this->systemFilenameView
+        );
+
+        this->header = *headerPage.GetDatabaseHeaderPtr();
+
+        if (isServerInitialization) return;
+
+        //query get from masterDb
+        const auto masterDbData = catalog.SelectTables(&tempAllocator, this->name.ToView());
+        const auto& headerPageTables = headerPage.GetTableHeaders();
+
+        if (headerPageTables.size() != masterDbData.size()) return;
+
+        for (int i = 0;i < masterDbData.size(); i++)
+            this->CreateTable(masterDbData[i], headerPageTables[i]);
+    }
+
+    Database::Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables){
+        const Memory::Allocator tempAllocator;
+        this->PopulateFilenames(&tempAllocator, dbName);
+
+        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+
+        this->header = *headerPage.GetDatabaseHeaderPtr();
+
+        for (int i = 0; i < tables.size(); i++) {
+            HashSet primaryKeysSet(tables[i].primaryKey);
+            Headers::Index index;
+
+            for(int j = 0;j < tables[i].columns.size(); j++){
+                const auto& column = tables[i].columns[j];
+
+                if(primaryKeysSet.Contains(column.name))
+                    index.columns.push_back(j);
+            }
+
+            this->CreateTable(tables[i], headerPage.GetTableHeader(i), index, i);
+        }
+    }
+
+    Database::~Database(){
+        // save db header;
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+        headerPage.SetDatabaseHeader(this->header);
+
+        for (const auto* dbTable : this->_tables){
+            headerPage.SetTableHeader(dbTable->GetHeader());
+        }
+
+        headerPage.WriteTableHeadersToDisk();
+    }
+
+    std::vector<Logging::LogEntry> Database::RecoverLogs(){
+        return {};
+        // return this->writeAheadLogger->RecoverLogs(this->_tables);
+    }
+
+    void Database::EnterRecoveryMode()const{
+        const auto logs = DatabaseEngine::Database::RecoverLogs();
+
+        if (logs.empty()) {
+            std::cout << "No logs to recover." << std::endl;
+            return;
+        }
+        for (const auto& log : logs)
+            this->ApplyRecoveryLog(log);
     }
 
     void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) {
@@ -282,14 +244,50 @@ namespace DatabaseEngine
         return logger.Log(logEntry);
     }
 
+    page_id_t Database::CalculateSystemPageOffset(const page_id_t pageId)
+    {
+        page_id_t pfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
+
+        //        if (pfsPages == 0)
+        //            pfsPages = 1;
+
+        page_id_t gamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
+
+        //        if (gamPages == 0)
+        //            gamPages = 1;
+
+        return pageId ;//+ pfsPages + gamPages + 1;
+    }
+
+    page_id_t Database::CalculateNextGamPageId(const page_id_t currentGamPageId) {
+        return currentGamPageId + NEXT_GAM_PAGE_ID_OFFSET;
+    }
+
+    byte_t Database::GetObjectSizeToCategory(const row_size_t &size)
+    {
+        const float freeSpacePercentage = static_cast<float>(size) / PAGE_SIZE;
+
+        // Direct mapping to 7levels (0-7)
+        return static_cast<byte_t>(freeSpacePercentage * 7);
+    }
+
+    StorageTypes::Table* Database::CreateTable(
+        const table_id_t tableId,
+        const Int ordinalPosition
+    ){
+        auto* table = this->_allocator.Allocate<StorageTypes::Table>(tableId, ordinalPosition, this);
+        this->_tables.Push(table);
+        return table;
+    }
+
     StorageTypes::Table *Database::CreateTable(
         const table_id_t tableId,
         const Int ordinalPosition,
         const std::vector<StorageTypes::Column *> &columns,
         const Headers::Index *clusteredKeyIndexes,
-        const std::vector<Headers::Index> *nonClusteredIndexes)
-    {
-        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(
+        const std::vector<Headers::Index> *nonClusteredIndexes
+    ){
+        auto* table = this->_allocator.Allocate<StorageTypes::Table>(
             tableId,
             ordinalPosition,
             columns,
@@ -297,26 +295,23 @@ namespace DatabaseEngine
             clusteredKeyIndexes,
             nonClusteredIndexes
         );
-        this->tables.push_back(table);
-        this->header.numberOfTables = this->tables.size();
-
-        this->tableIdsDictionary.Add(tableId, ordinalPosition);
-
+        this->_tables.Push(table);
+        this->header.numberOfTables = this->_tables.Size();
         return table;
     }
 
     void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
         static auto& catalog = SystemCatalog::Get();
 
-        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(masterDbHeader, tableHeader, this);
+        auto* table = this->_allocator.Allocate<StorageTypes::Table>(masterDbHeader, tableHeader, this);
 
         const Memory::Allocator allocator;
-        const auto& masterDbColumns = catalog.SelectColumns(&allocator, masterDbHeader.id);
+        const auto masterDbColumns = catalog.SelectColumns(&allocator, masterDbHeader.id);
         for (const auto & masterDbColumn : masterDbColumns) {
             if (masterDbColumn.isSystem)
                 continue;
 
-            auto* column = Memory::MiscAllocator::Get().Allocate<StorageTypes::Column>(masterDbColumn, table);
+            auto* column = this->_allocator.Allocate<StorageTypes::Column>(masterDbColumn, table);
             table->AddColumn(column);
         }
 
@@ -327,7 +322,7 @@ namespace DatabaseEngine
         table->RetrieveIndexesFromCatalog(&allocator);
         table->RetrieveDefaultValuesFromCatalog(&allocator);
 
-        this->tables.push_back(table);
+        this->_tables.Push(table);
     }
 
     void Database::CreateTable(
@@ -336,8 +331,8 @@ namespace DatabaseEngine
         const Headers::Index& primaryKey,
         const Int ordinalPosition
     ){
-        auto* table = Memory::MiscAllocator::Get().Allocate<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
-        this->tables.push_back(table);
+        auto* table = this->_allocator.Allocate<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
+        this->_tables.Push(table);
     }
 
     void Database::InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns){
@@ -346,9 +341,21 @@ namespace DatabaseEngine
 
     }
 
+    page_id_t Database::CalculateExtentFirstPageId(const extent_id_t &extentId){
+        return extentId * EXTENT_SIZE;
+    }
+
+    page_id_t Database::CalculateGamPageId(const extent_id_t &extentId) {
+        return static_cast<page_id_t>(std::ceil(static_cast<float>(extentId) / static_cast<float>(GAM_PAGE_SIZE)) + 2);
+    }
+
+    extent_id_t Database::CalculateExtentId(const page_id_t pageId){
+        return pageId / 8;
+    }
+
     //    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
 //    {
-//        for (const auto &table : this->tables)
+//        for (const auto &table : this->_tables)
 //        {
 //            if (table->GetTableName() == tableName
 //                && table->GetSchema() == schemaName)
@@ -359,11 +366,11 @@ namespace DatabaseEngine
 //    }
 
     StorageTypes::Table * Database::OpenTable(const table_id_t tableId) const{
-        return this->tables.at(tableId);
+        return this->_tables[tableId];
     }
 
     // StorageTypes::Table * Database::OpenTableById(const table_id_t tableId) const{
-    //     return this->tables.at(this->tableIdsDictionary.Get(tableId));
+    //     return this->_tables.At(this->tableIdsDictionary.Get(tableId));
     // }
 
     void Database::DeleteTable(const DataTypes::String& tableName)
@@ -371,14 +378,14 @@ namespace DatabaseEngine
         const StorageTypes::Table* table = nullptr;
         std::vector<StorageTypes::Table*>::iterator it;
 
-        for (it = this->tables.begin(); it != this->tables.end(); it++)
-        {
-//            if ((*it)->GetTableName() == tableName)
-//            {
-//                table = *it;
-//                break;
-//            }
-        }
+//         for (it = this->_tables.begin(); it != this->_tables.end(); it++)
+//         {
+// //            if ((*it)->GetTableName() == tableName)
+// //            {
+// //                table = *it;
+// //                break;
+// //            }
+//         }
 
         if (table == nullptr)
             return;
@@ -391,7 +398,7 @@ namespace DatabaseEngine
         //
         // if (indexAllocationMapPage.Get() == nullptr)
         // {
-        //     this->tables.erase(it);
+        //     this->_tables.erase(it);
         //     delete table;
         //     return;
         // }
@@ -417,7 +424,7 @@ namespace DatabaseEngine
     }
 
     void CreateDatabase(const Int databaseId, const DataTypes::String& dbName){
-        const auto path = Database::CreateDatabasePath(dbName);
+        const auto path = dbName.ConcatInPlace("/", dbName);
         const auto pathView = path.ToView();
 
         const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
@@ -440,10 +447,6 @@ namespace DatabaseEngine
 
         const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysKey, sysDbNameView);
         headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamPageId));
-    }
-
-    Database* UseSystemDatabase(const std::string & dbName, const std::vector<Headers::sysTable> & tables){
-      return nullptr;
     }
 
     void Database::DeleteDatabase() const{
@@ -498,7 +501,7 @@ namespace DatabaseEngine
     }
 
     void Database::TruncateTable(const table_id_t  tableId) const{
-        auto* table = this->tables.at(tableId);
+        auto* table = this->_tables[tableId];
 
         auto indexAllocationMapPageId = table->GetHeader().allocationPageId;
 
@@ -592,7 +595,7 @@ namespace DatabaseEngine
 
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, this->systemFilenameView, pageId);
 
-                auto dataPage = Storage::StorageManager::Get().CreatePage(this->dataFileKey, this->filenameView, this->tables[tableId], pageId);
+                auto dataPage = Storage::StorageManager::Get().CreatePage(this->dataFileKey, this->filenameView, this->_tables[tableId], pageId);
 
                 MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
                 MultiThreading::WriterGuard dataPageLock(&dataPage.Latch());
@@ -651,7 +654,7 @@ namespace DatabaseEngine
 
         const auto extents = this->AllocateNewExtents(extentsToAllocate, tableOrdinalPosition, lowerLimit);
 
-        const auto& table = this->tables.at(tableOrdinalPosition);
+        const auto& table = this->_tables[tableOrdinalPosition];
         const auto indexedColumnDatatypes = table->GetColumnTypeByTreeId(treeType);
 
         Pages::IndexPageView page;
@@ -701,7 +704,7 @@ namespace DatabaseEngine
         std::vector<extent_id_t> allocatedExtents;
         allocatedExtents.reserve(extentsToAllocate);
 
-        const auto* table = this->tables[tableId];
+        const auto* table = this->_tables[tableId];
         const page_id_t indexAllocationMapPageId = table->GetHeader().allocationPageId;
         bool newGamPageCreated = false;
 
@@ -800,7 +803,7 @@ namespace DatabaseEngine
                 }
 
                 // Update table header with new IAM page ID
-                this->tables[tableId]->UpdateIndexAllocationMapPageId(newPageId);
+                this->_tables[tableId]->UpdateIndexAllocationMapPageId(newPageId);
             }
             else {
                 // Table already has IAM page - get it
@@ -851,18 +854,18 @@ namespace DatabaseEngine
 
     const StorageTypes::Table *Database::GetTable(const table_id_t tableId) const
     {
-        if (tableId >= this->tables.size())
+        if (tableId >= this->_tables.Size())
             throw std::out_of_range("No table with ID: " + std::to_string(tableId) + " exists");
 
-        return this->tables[tableId];
+        return this->_tables[tableId];
     }
 
     Pages::LargeObjectView Database::GetTableLastLargeDataPage(const table_id_t tableId)const
     {
-        if (tableId >= this->tables.size())
+        if (tableId >= this->_tables.Size())
             return Pages::LargeObjectView();
 
-        const auto* table = this->tables[tableId];
+        const auto* table = this->_tables[tableId];
 
         const auto& tableMapPageId = table->GetHeader().allocationPageId;
 
@@ -902,7 +905,7 @@ namespace DatabaseEngine
                     this->dataFileKey,
                     this->filenameView,
                     pageId,
-                    this->tables[tableId]
+                    this->_tables[tableId]
                 );
 
                 if (lastLargeDataPage.PageSize() == 0)
@@ -914,10 +917,10 @@ namespace DatabaseEngine
     }
 
     Pages::OverflowPageView Database::GetLastOverflowPage(const table_id_t  tableId, const block_size_t& size){
-        if (tableId >= this->tables.size())
+        if (tableId >= this->_tables.Size())
             return {};
 
-        const auto& table = this->tables[tableId];
+        const auto& table = this->_tables[tableId];
 
         const auto& allocationPageId = table->GetHeader().allocationPageId;
 
@@ -981,13 +984,13 @@ namespace DatabaseEngine
             this->dataFileKey,
             this->filenameView,
             pageId,
-            this->tables[tableId]
+            this->_tables[tableId]
         );
 
-//        if (tableId >= this->tables.size())
+//        if (tableId >= this->_tables.size())
 //            return nullptr;
 //
-//        const page_id_t tableMapPageId = this->tables[tableId]->GetTableHeader().indexAllocationMapPageId;
+//        const page_id_t tableMapPageId = this->_tables[tableId]->GetTableHeader().indexAllocationMapPageId;
 //
 //        const IndexAllocationMapPage *tableMapPage = StorageManager::Get().GetIndexAllocationMapPage(this->filename, tableMapPageId);
 //
@@ -1009,7 +1012,7 @@ namespace DatabaseEngine
 //        }
 //
 //        return (extentFound)
-//                   ? StorageManager::Get().GetLargeDataPage(this->filename, pageId, associatedExtentId, this->tables[tableId])
+//                   ? StorageManager::Get().GetLargeDataPage(this->filename, pageId, associatedExtentId, this->_tables[tableId])
 //                   : nullptr;
     }
 
@@ -1017,31 +1020,31 @@ namespace DatabaseEngine
 
     void Database::GetIdentityColumns()const{
         const Memory::Allocator allocator;
-        for(const auto& table: this->tables)
+        for(const auto& table: this->_tables)
             table->RetrieveIdentityColumnsFromCatalog(&allocator);
     }
 
     void Database::UpdateIdentityManagersIds()const{
         const Memory::Allocator allocator;
-        for(const auto& table: this->tables)
+        for(const auto& table: this->_tables)
             table->UpdateCatalogIdentityColumns(&allocator);
     }
 
     void Database::GetColumnsHeaders() const{
         const Memory::Allocator allocator;
-        for (const auto& table : this->tables)
+        for (const auto& table : this->_tables)
             table->RetrieveColumnHeadersFromCatalog(&allocator);
     }
 
     void Database::GetDefaultValues() const{
         const Memory::Allocator allocator;
-        for (const auto& table : this->tables)
+        for (const auto& table : this->_tables)
             table->RetrieveDefaultValuesFromCatalog(&allocator);
     }
 
     void Database::GetIndexes() const{
         const Memory::Allocator allocator;
-        for (const auto& table : this->tables)
+        for (const auto& table : this->_tables)
             table->RetrieveIndexesFromCatalog(&allocator);
     }
 
@@ -1049,11 +1052,11 @@ namespace DatabaseEngine
     }
 
     void Database::UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const{
-        for(const auto& table: this->tables)
+        for(const auto& table: this->_tables)
             table->UpdateSystemCatalog(allocator);
     }
 
-    const std::vector<StorageTypes::Table *> & Database::GetTables() const{ return this->tables; }
+    const DataStructures::Array<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
 
     DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilenameView; }
 

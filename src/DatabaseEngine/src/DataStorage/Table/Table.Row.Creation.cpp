@@ -6,11 +6,11 @@
 namespace DatabaseEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,
-        const Memory::IAllocator* allocator,
+        const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
         const std::vector<Value> &inputData
     ) const{
-        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->columns.size()));
+        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->_columns.size()));
         rowHeader.version.createdTransactionId = transactionId;
 
         // First pass: determine how many non-NULL columns we have
@@ -18,7 +18,7 @@ namespace DatabaseEngine::StorageTypes{
         UnsignedSmallInt dataSize = 0;
 
         UnsignedInt intermediateComputedColumns = 0;
-        for (const auto& column : this->columns){
+        for (const auto& column : this->_columns){
             dataSize += column->Size();
 
             const auto columnOrdinal = column->OrdinalPosition();
@@ -44,7 +44,7 @@ namespace DatabaseEngine::StorageTypes{
 
         //calculate header size and offset
         // Header: version header + 3 bitmaps
-        const auto bitmapBytes = static_cast<Int>(std::ceil(static_cast<double>(this->columns.size()) / 8.0));
+        const auto bitmapBytes = static_cast<Int>(std::ceil(static_cast<double>(this->_columns.size()) / 8.0));
         const auto bitmapSize = 3 * bitmapBytes;
         Int dataSizesOffset = Constants::ROW_VERSION_HEADER_SIZE + bitmapSize;
 
@@ -53,7 +53,7 @@ namespace DatabaseEngine::StorageTypes{
 
         auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
         intermediateComputedColumns = 0;
-        for (const auto& column : this->columns){
+        for (const auto& column : this->_columns){
             //ignore auto-computed columns even if specified
             if (column->HasIdentity()){
                 const auto columnSize = column->Size();
@@ -129,14 +129,14 @@ namespace DatabaseEngine::StorageTypes{
         const transaction_id_t transactionId,
         const std::vector<Value>& inputData
     ) const{
-        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->columns.size()));
+        auto rowHeader = RowHeader(allocator, static_cast<Int>(this->_columns.size()));
         rowHeader.version.createdTransactionId = transactionId;
 
         // First pass: determine how many non-NULL columns we have
         UnsignedSmallInt nonNullColumnCount = 0;
         UnsignedSmallInt dataSize = 0;
 
-        for (const auto& column : this->columns){
+        for (const auto& column : this->_columns){
             dataSize += column->Size();
 
             const auto columnOrdinal = column->OrdinalPosition();
@@ -155,7 +155,7 @@ namespace DatabaseEngine::StorageTypes{
 
         //calculate header size and offset
         // Header: version header + 3 bitmaps
-        const auto bitmapBytes = static_cast<Int>(std::ceil(static_cast<double>(this->columns.size()) / 8.0));
+        const auto bitmapBytes = static_cast<Int>(std::ceil(static_cast<double>(this->_columns.size()) / 8.0));
         const auto bitmapSize = 3 * bitmapBytes;
         Int dataSizesOffset = Constants::ROW_VERSION_HEADER_SIZE + bitmapSize;
 
@@ -163,7 +163,7 @@ namespace DatabaseEngine::StorageTypes{
         const auto dataOffSet = dataSizesOffset + nonNullColumnCount * sizeof(block_size_t);
 
         auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
-        for (const auto& column : this->columns){
+        for (const auto& column : this->_columns){
             const auto& index = column->OrdinalPosition();
             const auto& value = inputData.at(index);
 

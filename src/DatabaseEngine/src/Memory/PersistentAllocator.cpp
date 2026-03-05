@@ -1,12 +1,10 @@
-﻿#include "../../include/Memory/Allocator.h"
+﻿#include "../../include/Memory/PersistentAllocator.h"
 #include "../../include/Managers/GlobalMemoryManager.h"
 #include "../../include/Memory/Chunk.h"
-#include <iostream>
-#include <ostream>
 
 
 namespace DatabaseEngine::Memory{
-    UnsignedInt Allocator::NewChunkCapacity(const UnsignedInt size) const{
+    UnsignedInt PersistentAllocator::NewChunkCapacity(const UnsignedInt size) const{
         if (size > Chunk::MAX_SIZE)
             return size;
 
@@ -16,7 +14,7 @@ namespace DatabaseEngine::Memory{
         return std::min(this->_tail->_size * 2, Chunk::MAX_SIZE);
     }
 
-    void Allocator::AllocateNewChunk(const UnsignedInt size) const{
+    void PersistentAllocator::AllocateNewChunk(const UnsignedInt size) const{
         const auto newChunkSize = this->NewChunkCapacity(size);
 
         while (GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){}
@@ -36,22 +34,22 @@ namespace DatabaseEngine::Memory{
         this->_tail = newChunk;
     }
 
-    Allocator::Allocator(){
+    PersistentAllocator::PersistentAllocator(){
         this->_head = nullptr;
         this->_tail = nullptr;
     }
 
-    Allocator::Allocator(const UnsignedInt capacity){
+    PersistentAllocator::PersistentAllocator(const UnsignedInt capacity){
         this->_head = nullptr;
         this->_tail = nullptr;
         this->AllocateNewChunk(capacity);
     }
 
-    Allocator::~Allocator(){
-        this->Allocator::Reset();
+    PersistentAllocator::~PersistentAllocator(){
+        this->PersistentAllocator::Reset();
     }
 
-    Allocator::Allocator(Allocator&& other) noexcept{
+    PersistentAllocator::PersistentAllocator(PersistentAllocator&& other) noexcept{
         this->_head = other._head;
         this->_tail = other._tail;
 
@@ -59,7 +57,7 @@ namespace DatabaseEngine::Memory{
         other._tail = nullptr;
     }
 
-    Allocator& Allocator::operator=(Allocator&& other) noexcept{
+    PersistentAllocator& PersistentAllocator::operator=(PersistentAllocator&& other) noexcept{
         if (this == &other)
             return *this;
 
@@ -72,7 +70,7 @@ namespace DatabaseEngine::Memory{
         return *this;
     }
 
-    void* Allocator::AllocateRaw(const UnsignedInt size)const{
+    void* PersistentAllocator::AllocateRaw(const UnsignedInt size)const{
         if (this->_head == nullptr || this->_tail->_offset + size > this->_tail->_size)
             this->AllocateNewChunk(size);
 
@@ -81,7 +79,7 @@ namespace DatabaseEngine::Memory{
         return ptr;
     }
 
-    void Allocator::Reset() const{
+    void PersistentAllocator::Reset() const{
         auto* node = this->_head;
         Int totalMemoryFreed = 0;
         while(node != nullptr){

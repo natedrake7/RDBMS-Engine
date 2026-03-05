@@ -5,7 +5,7 @@
 #include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
-#include "Memory/MiscAllocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
      Column::Column(

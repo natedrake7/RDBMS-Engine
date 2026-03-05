@@ -11,7 +11,7 @@
 
 #include "../../../DatabaseEngine/include/Database.h"
 #include "../../../DatabaseEngine/include/Memory/Allocator.h"
-#include "../../../DatabaseEngine/include/Memory/MiscAllocator.h"
+#include "../../../DatabaseEngine/include/Memory/PersistentAllocator.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
@@ -23,7 +23,7 @@ namespace Security {
   // }
 
     UserManager::~UserManager(){
-        auto& allocator = DatabaseEngine::Memory::MiscAllocator::Get();
+        auto& allocator = DatabaseEngine::Memory::PersistentAllocator::Get();
         for (const auto* user : this->users | std::views::values)
             allocator.Free(user);
     }
@@ -69,7 +69,7 @@ namespace Security {
 
         if (result != Argon2_ErrorCodes::ARGON2_OK)return false;
 
-        outHash = DataTypes::String(hash, sizeof(hash), &DatabaseEngine::Memory::MiscAllocator::Get());
+        outHash = DataTypes::String(hash, sizeof(hash), &DatabaseEngine::Memory::PersistentAllocator::Get());
         return true;
     }
 
@@ -86,7 +86,7 @@ namespace Security {
             return false;
         }
 
-        auto* user = DatabaseEngine::Memory::MiscAllocator::Get().Allocate<User>(
+        auto* user = DatabaseEngine::Memory::PersistentAllocator::Get().Allocate<User>(
             id,
             name,
             passwordHash,
@@ -117,7 +117,7 @@ namespace Security {
         if (!this->users.TryGetValue(name, user)) return false;
 
         this->users.Remove(name);
-        DatabaseEngine::Memory::MiscAllocator::Get().Free(user);
+        DatabaseEngine::Memory::PersistentAllocator::Get().Free(user);
         return true;
     }
 

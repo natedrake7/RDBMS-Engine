@@ -88,10 +88,7 @@ namespace DataStructures{
             return *this;
         }
 
-        ~PolymorphicArray() override{
-            this->_data = nullptr;
-            // this->_allocator->Deallocate(this->_data);
-        }
+        ~PolymorphicArray() override = default;
 
         void Resize(Int newCapacity) override{
             if (newCapacity <= this->_capacity)
