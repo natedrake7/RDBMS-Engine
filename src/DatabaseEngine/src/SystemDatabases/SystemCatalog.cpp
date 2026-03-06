@@ -11,15 +11,6 @@
 #include "Converter.h"
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
-#include "Memory/PersistentAllocator.h"
-
-namespace DataTypes{
-    void from_json(const nlohmann::json& j, String& str) {
-        const auto value = j.get<std::string>();
-        str.Reserve(value.size());
-        str.Append(value);
-    }
-}
 
 namespace Headers {
     void from_json(const nlohmann::json& j, sysColumn& sysColumn) {
@@ -90,7 +81,7 @@ namespace DatabaseEngine {
     }
 
     void SystemCatalog::CreateCatalogDatabase(const DataTypes::String& dbName) {
-        CreateDatabase(CATALOG_ID, dbName);
+        CreateDatabase(SYSTEM_CATALOG_ID, dbName);
         this->masterDb = new Database(dbName, true);
 
         for (int i = 0;i < this->sysTables.size(); i++) {
@@ -239,8 +230,8 @@ namespace DatabaseEngine {
             // DataTypes::String concatenatedColumns(baseContext.GetAllocator());
             DataTypes::String _columns("PK", baseContext.GetAllocator());
 
-            for (int j = 0; j < table.primaryKey.size(); j++) {
-                const auto key = columnNameToIndex.Get(table.primaryKey[j]);
+            for (const auto& j : table.primaryKey) {
+                const auto key = columnNameToIndex.Get(j);
 
                 char buffer[3];
                 snprintf(buffer, sizeof(buffer), "%d", key);
@@ -248,7 +239,7 @@ namespace DatabaseEngine {
                 // concatenatedColumns = DataTypes::String::Join(baseContext.GetAllocator(), ',', concatenatedColumns, buffer);
                 // concatenatedColumns +=  j > 0  ? "," + std::to_string(key) : std::to_string(key);
 
-                _columns += "_" + table.primaryKey[j];
+                _columns += "_" + j;
             }
 
             //TODO keep the last value keys
@@ -695,22 +686,24 @@ namespace DatabaseEngine {
  }
 
   DataStructures::PolymorphicArray<Security::Role*> SystemCatalog::InsertSystemRoles(const ExecutionContext& baseContext)const{
-   std::vector<Security::Role*> roles;
+    auto* tempAllocator = baseContext.GetAllocator();
 
-    const auto& miscAllocator = Memory::PersistentAllocator::Get();
+    DataStructures::PolymorphicArray<Security::Role*> roles(tempAllocator);
 
     auto result = this->InsertRoleToMasterDb(
-      baseContext,
-      Constants::ADMIN_NAME,
-      Constants::ADMIN_PERMISSIONS
+        baseContext,
+        Constants::ADMIN_NAME,
+        Constants::ADMIN_PERMISSIONS
     );
 
-    roles.push_back(miscAllocator.Allocate<Security::Role>(
+    auto* adminRole = tempAllocator->Allocate<Security::Role>(
         result.primaryKey.AsInt(),
-        DataTypes::String::FromView(Constants::ADMIN_NAME, &miscAllocator),
+        DataTypes::String::FromView(Constants::ADMIN_NAME, tempAllocator),
         Constants::ADMIN_PERMISSIONS,
         true
-    ));
+    );
+
+    roles.Push(adminRole);
 
     result = this->InsertRoleToMasterDb(
         baseContext,
@@ -718,12 +711,14 @@ namespace DatabaseEngine {
         Constants::DB_OWNER_PERMISSIONS
     );
 
-   roles.push_back(miscAllocator.Allocate<Security::Role>(
+    auto* dbOwnerRole = tempAllocator->Allocate<Security::Role>(
         result.primaryKey.AsInt(),
-        DataTypes::String::FromView(Constants::DB_OWNER_NAME, &miscAllocator),
+        DataTypes::String::FromView(Constants::DB_OWNER_NAME, tempAllocator),
         Constants::DB_OWNER_PERMISSIONS,
         true
-    ));
+    );
+
+   roles.Push(dbOwnerRole);
 
     result = this->InsertRoleToMasterDb(
         baseContext,
@@ -731,12 +726,14 @@ namespace DatabaseEngine {
         Constants::DB_WRITER_PERMISSIONS
     );
 
-    roles.push_back(miscAllocator.Allocate<Security::Role>(
+    auto* dbWriterRole = tempAllocator->Allocate<Security::Role>(
         result.primaryKey.AsInt(),
-        DataTypes::String::FromView(Constants::DB_WRITER_NAME, &miscAllocator),
+        DataTypes::String::FromView(Constants::DB_WRITER_NAME, tempAllocator),
         Constants::DB_WRITER_PERMISSIONS,
         true
-    ));
+    );
+
+    roles.Push(dbWriterRole);
 
     result = this->InsertRoleToMasterDb(
         baseContext,
@@ -744,12 +741,14 @@ namespace DatabaseEngine {
         Constants::DB_READER_PERMISSIONS
     );
 
-    roles.push_back(miscAllocator.Allocate<Security::Role>(
+    auto* dbReaderRole = tempAllocator->Allocate<Security::Role>(
         result.primaryKey.AsInt(),
-        DataTypes::String::FromView(Constants::DB_READER_NAME, &miscAllocator),
+        DataTypes::String::FromView(Constants::DB_READER_NAME, tempAllocator),
         Constants::DB_READER_PERMISSIONS,
         true
-    ));
+    );
+
+    roles.Push(dbReaderRole);
 
     result = this->InsertRoleToMasterDb(
         baseContext,
@@ -757,40 +756,43 @@ namespace DatabaseEngine {
         Constants::GUEST_PERMISSIONS
     );
 
-    roles.push_back(miscAllocator.Allocate<Security::Role>(
+    auto* guestRole = tempAllocator->Allocate<Security::Role>(
         result.primaryKey.AsInt(),
-        DataTypes::String::FromView(Constants::GUEST_NAME, &miscAllocator),
+        DataTypes::String::FromView(Constants::GUEST_NAME, tempAllocator),
         Constants::GUEST_PERMISSIONS,
         true
-    ));
+    );
 
-   return roles;
+    roles.Push(guestRole);
+
+    return roles;
   }
 
-  Security::User* SystemCatalog::InsertSystemUsers(
-      const DataTypes::String& hashedPassword,
-      const Int defaultRoleId
-)const{
-    const auto result =
-      this->InsertUserToMasterDb(
-          this->baseExecutionContext,
-        Constants::ADMIN_NAME,
-        hashedPassword.ToView(),
-        defaultRoleId,
-        true
-      );
+    Security::User* SystemCatalog::InsertSystemUsers(
+        const ExecutionContext& baseContext,
+        const DataTypes::String& hashedPassword,
+        const Int defaultRoleId
+    )const{
+        const auto result =
+            this->InsertUserToMasterDb(
+                baseContext,
+                Constants::ADMIN_NAME,
+                hashedPassword.ToView(),
+                defaultRoleId,
+                true
+            );
 
-    const auto str = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), &Memory::PersistentAllocator::Get());
+        const auto str = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), baseContext.GetAllocator());
 
-   return new Security::User(
-      result.primaryKey.AsInt(),
-      str,
-      hashedPassword,
-      defaultRoleId,
-      nullptr,
-      true
-   );
-  }
+        return new Security::User(
+            result.primaryKey.AsInt(),
+            str,
+            hashedPassword,
+            defaultRoleId,
+            nullptr,
+            true
+        );
+    }
 
 Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     const ExecutionContext& executionContext,
@@ -1185,29 +1187,30 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     return result;
   }
 
-  Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
-    const ::Memory::IAllocator* allocator,
-    const Int columnId,
-    const Value &min,
-    const Value &max,
-    const Int rowCount,
-    const BigInt distinctCount
-  ) const {
+    Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
+        const ExecutionContext& executionContext,
+        const Int columnId,
+        const Value &min,
+        const Value &max,
+        const Int rowCount,
+        const BigInt distinctCount
+    ) const {
+        const auto* allocator = executionContext.GetAllocator();
 
-    const std::vector fields = {
-      Value(columnId, allocator, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
-      Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
-      Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
-      Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-      Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
-    };
+        const std::vector fields = {
+            Value(columnId, allocator, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
+            Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
+            Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
+            Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
+        };
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    auto result = table->InsertRow(this->baseExecutionContext, fields);
-    std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
-    return result;
-  }
+        auto result = table->InsertRow(executionContext, fields);
+        std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
+        return result;
+    }
 
   Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
     const ExecutionContext& executionContext,
@@ -1361,7 +1364,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
  bool SystemCatalog::DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const{
       auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-      DataStructures::Array<Pages::RowReference> selectedDatabases;
+      DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
 
       auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
       auto constantExpr = Expressions::ConstantExpression(Value(dbName, allocator, static_cast<column_index_t>(SysDatabases::Name)));
@@ -1384,7 +1387,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         );
 
         auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-        DataStructures::Array<Pages::RowReference> selectedDatabases;
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
 
         sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
@@ -1395,7 +1398,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
 Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAllocator* allocator, const Int databaseId) const{
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-  DataStructures::Array<Pages::RowReference> selectedDatabases;
+  DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
 
   DataTypes::Indexing::Key key;
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
@@ -1528,7 +1531,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.Empty())
       return {};
 
-    DataStructures::Array<Pages::RowReference> selectedTables;
+    DataStructures::PolymorphicArray<Pages::RowReference> selectedTables(allocator);
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
     auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
@@ -1591,25 +1594,25 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return selectedConstraintsHeader;
     }
 
-  Headers::ColumnHeader SystemCatalog::SelectColumnById(
+    Headers::ColumnHeader SystemCatalog::SelectColumnById(
         const ::Memory::IAllocator* allocator,
-      const Int tableId,
-      const Int columnId
+        const Int tableId,
+        const Int columnId
     ) const{
-    DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 1);
-    auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 1);
+        auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
-    DataTypes::Indexing::Key key;
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
+        DataTypes::Indexing::Key key;
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-    sysColumns->ClusteredIndexSeek(this->baseExecutionContext, &selectedColumns, key, nullptr);
+        sysColumns->SystemClusteredIndexSeek(allocator, &selectedColumns, key, nullptr);
 
-    if (selectedColumns.Empty())
-      return {};
+        if (selectedColumns.Empty())
+            return {};
 
-    return SystemCatalog::ToColumnHeader(allocator, selectedColumns.Start());
-  }
+        return SystemCatalog::ToColumnHeader(allocator, selectedColumns.Start());
+    }
 
     std::vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(
         const ::Memory::IAllocator* allocator,
@@ -1704,7 +1707,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         const Int indexId
     ) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
-        DataStructures::Array<Pages::RowReference> rows;
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
 
         DataTypes::Indexing::Key key;
         key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
@@ -1909,7 +1912,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         DataTypes::Indexing::Key key;
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-        DataStructures::Array<Pages::RowReference> rows;
+        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
         for (const auto& row : rows)

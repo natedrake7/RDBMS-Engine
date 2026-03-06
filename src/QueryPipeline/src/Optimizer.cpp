@@ -3,7 +3,6 @@
 #include "CostEstimator.h"
 #include "DatabaseConstants.h"
 #include "Parser.h"
-#include "../include/LogicalPlan.h"
 #include "Managers/StatisticsManager.h"
 #include "SystemDatabases/SystemCatalog.h"
 

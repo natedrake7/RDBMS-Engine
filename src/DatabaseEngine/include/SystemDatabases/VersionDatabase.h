@@ -4,71 +4,82 @@
 #include "../../Systemic/include/Errors.h"
 
 namespace DatabaseEngine{
-  class VersionDatabase {
+    class VersionDatabase {
     DatabaseHeader header;
-    std::string name;
-    std::string filename;
-    std::string fileExtension;
-    std::string systemFilename;
+        MultiThreading::ReadWriteMutex lastUsedPageMutex;
+        MultiThreading::ReadWriteMutex gamPageMutex;
+        MultiThreading::ReadWriteMutex pfsPageMutex;
 
-    MultiThreading::ReadWriteMutex lastUsedPageMutex;
-    page_id_t lastUsedPageId;
+        DataTypes::String filename;
+        DataTypes::String systemFilename;
 
-    MultiThreading::ReadWriteMutex gamPageMutex;
-    MultiThreading::ReadWriteMutex pfsPageMutex;
+        DataTypes::StringView fileExtension;
+        DataTypes::StringView filenameView;
+        DataTypes::StringView systemFilenameView;
 
-    static std::string CreateDatabasePath(const std::string& dbName);
+        Storage::FileKey dataFileKey;
+        Storage::FileKey systemFileKey;
 
-    void PopulateFilenames();
-    void WriteHeaderToFile()const;
+        Memory::PersistentAllocator _allocator;
 
-    bool AllocateNewExtent(
-        page_id_t& newPageId,
-        extent_id_t& newExtentId
-    );
+        page_id_t lastUsedPageId;
 
-    Pages::PageView TryGetLastUndoPage(
-        const StorageTypes::Table* table,
-        row_size_t size
-    );
+        void PopulateFilenames(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
+        void WriteHeaderToFile()const;
 
-    Pages::PageView CreateUndoPage();
-    Pages::PageView GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
+        bool AllocateNewExtent(
+            page_id_t& newPageId,
+            extent_id_t& newExtentId
+        );
 
-    VersionDatabase();
-    ~VersionDatabase();
+        Pages::PageView TryGetLastUndoPage(
+            const StorageTypes::Table* table,
+            row_size_t size
+        );
 
-    void ReadConfiguration(std::string_view configPath);
+        Pages::PageView CreateUndoPage();
+        Pages::PageView GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
 
-    [[nodiscard]] bool VersionDatabaseExists()const;
+        VersionDatabase();
+        ~VersionDatabase();
 
-    public:
-      VersionDatabase(VersionDatabase const&) = delete;
-      void operator=(VersionDatabase const&) = delete;
-      VersionDatabase(VersionDatabase&&) = delete;
-      void operator=(VersionDatabase&&) = delete;
+        static std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::StringView& configPath
+        );
 
-      static VersionDatabase& Get();
+        [[nodiscard]] bool VersionDatabaseExists()const;
 
-      void Initialize(std::string_view configPath);
+        public:
+            VersionDatabase(VersionDatabase const&) = delete;
+            void operator=(VersionDatabase const&) = delete;
+            VersionDatabase(VersionDatabase&&) = delete;
+            void operator=(VersionDatabase&&) = delete;
 
-      Errors::RuntimeStatus InsertRow(
-        const Pages::RawRowReference& rowRef,
-        StorageTypes::RowVersionPointer& rowPointer,
-        const StorageTypes::Table* table
-      );
-      Pages::RowReference RetrieveRowReference(
-        const ::Memory::IAllocator* allocator,
-        const Snapshot& snapshot,
-        const StorageTypes::RowVersionPointer& rowPointer,
-        const StorageTypes::Table* table
-      )const;
-      [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
+            static VersionDatabase& Get();
 
-      [[nodiscard]] extent_id_t CleanupVersionedData(
-        const ::Memory::IAllocator* allocator,
-        transaction_id_t transactionId,
-        extent_id_t startingExtentId = 0
-      )const;
-  };
+            void Initialize(
+                const ExecutionContext& baseContext,
+                const DataTypes::StringView& configPath
+            );
+
+            Errors::RuntimeStatus InsertRow(
+                const Pages::RawRowReference& rowRef,
+                StorageTypes::RowVersionPointer& rowPointer,
+                const StorageTypes::Table* table
+            );
+            Pages::RowReference RetrieveRowReference(
+                const ::Memory::IAllocator* allocator,
+                const Snapshot& snapshot,
+                const StorageTypes::RowVersionPointer& rowPointer,
+                const StorageTypes::Table* table
+            )const;
+            [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
+
+            [[nodiscard]] extent_id_t CleanupVersionedData(
+                const ::Memory::IAllocator* allocator,
+                transaction_id_t transactionId,
+                extent_id_t startingExtentId = 0
+            )const;
+    };
 }

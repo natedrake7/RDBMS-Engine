@@ -1,6 +1,6 @@
 #pragma once
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "DataTypes/String.h"
+#include "../../Systemic/include/DataTypes/String.h"
 
 namespace Security {
   enum class Permission : UnsignedInt {

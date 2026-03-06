@@ -3,6 +3,8 @@
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../Managers/IdentityManager.h"
+#include "Memory/Allocator.h"
+#include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine::StorageTypes
 {
@@ -11,14 +13,14 @@ namespace DatabaseEngine::StorageTypes
     class Row;
 
     struct ColumnHeader{
+        Headers::DefaultValuesHeader defaultValue;
+
         Int id;
-        DataType columnType;
         column_index_t columnIndex;
         row_size_t recordSize;
         TinyInt precision;
         TinyInt scale;
-
-        Headers::DefaultValuesHeader defaultValue;
+        DataType columnType;
     };
 
     class Column{
@@ -26,6 +28,9 @@ namespace DatabaseEngine::StorageTypes
         IdentityManager identityManager;
 
         DataTypes::String name;
+
+        Memory::PersistentAllocator _allocator;
+
         const Table *table;
         bool allowNulls;
         bool isOverflowed;

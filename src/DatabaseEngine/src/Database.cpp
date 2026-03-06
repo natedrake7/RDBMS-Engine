@@ -163,11 +163,12 @@ namespace DatabaseEngine
             HashSet primaryKeysSet(tables[i].primaryKey);
             Headers::Index index;
 
+            Int counter = 0;
             for(int j = 0;j < tables[i].columns.size(); j++){
                 const auto& column = tables[i].columns[j];
 
                 if(primaryKeysSet.Contains(column.name))
-                    index.columns.push_back(j);
+                    index.columns[counter++] = j;
             }
 
             this->CreateTable(tables[i], headerPage.GetTableHeader(i), index, i);
@@ -280,25 +281,25 @@ namespace DatabaseEngine
         return table;
     }
 
-    StorageTypes::Table *Database::CreateTable(
-        const table_id_t tableId,
-        const Int ordinalPosition,
-        const std::vector<StorageTypes::Column *> &columns,
-        const Headers::Index *clusteredKeyIndexes,
-        const std::vector<Headers::Index> *nonClusteredIndexes
-    ){
-        auto* table = this->_allocator.Allocate<StorageTypes::Table>(
-            tableId,
-            ordinalPosition,
-            columns,
-            this,
-            clusteredKeyIndexes,
-            nonClusteredIndexes
-        );
-        this->_tables.Push(table);
-        this->header.numberOfTables = this->_tables.Size();
-        return table;
-    }
+    // StorageTypes::Table *Database::CreateTable(
+    //     const table_id_t tableId,
+    //     const Int ordinalPosition,
+    //     const std::vector<StorageTypes::Column *> &columns,
+    //     const Headers::Index *clusteredKeyIndexes,
+    //     const std::vector<Headers::Index> *nonClusteredIndexes
+    // ){
+    //     // auto* table = this->_allocator.Allocate<StorageTypes::Table>(
+    //     //     tableId,
+    //     //     ordinalPosition,
+    //     //     columns,
+    //     //     this,
+    //     //     clusteredKeyIndexes,
+    //     //     nonClusteredIndexes
+    //     // );
+    //     // this->_tables.Push(table);
+    //     // this->header.numberOfTables = this->_tables.Size();
+    //     // return table;
+    // }
 
     void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
         static auto& catalog = SystemCatalog::Get();

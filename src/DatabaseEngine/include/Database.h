@@ -160,13 +160,13 @@ public:
         Int ordinalPosition
     );
 
-    StorageTypes::Table *CreateTable(
-        table_id_t tableId,
-        Int ordinalPosition,
-        const std::vector<StorageTypes::Column *> &columns,
-        const Headers::Index *clusteredKeyIndexes = nullptr,
-        const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
-    );
+    // StorageTypes::Table *CreateTable(
+    //     table_id_t tableId,
+    //     Int ordinalPosition,
+    //     const std::vector<StorageTypes::Column *> &columns,
+    //     const Headers::Index *clusteredKeyIndexes = nullptr,
+    //     const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
+    // );
 
     void CreateTable(
         const Headers::TableHeader& masterDbHeader,
@@ -213,10 +213,10 @@ public:
       page_id_t treeId = 0
     );
 
-    [[nodiscard]] inline DataTypes::StringView GetFileName() const;
-    [[nodiscard]] inline DataTypes::StringView GetSystemFilename() const;
-    [[nodiscard]] inline Storage::FileKey GetDataFileKey() const;
-    [[nodiscard]] inline Storage::FileKey GetSystemFileKey() const;
+    [[nodiscard]] DataTypes::StringView GetFileName() const;
+    [[nodiscard]] DataTypes::StringView GetSystemFilename() const;
+    [[nodiscard]] Storage::FileKey GetDataFileKey() const;
+    [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
 
     static page_id_t CalculateExtentFirstPageId(const extent_id_t &extentId);
 

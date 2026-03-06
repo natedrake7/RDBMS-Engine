@@ -4,6 +4,7 @@
 #include "../../../../Systemic/include/DataStructures/Array.h"
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
+#include "DataStructures/PolymorphicArray.h"
 
 namespace DatabaseEngine
 {
@@ -28,7 +29,9 @@ namespace Pages{
 
         bool isHeaderInitialized;
 
-        DataStructures::Array<RowReference> joinedRows;
+        DataStructures::PolymorphicArray<RowReference> joinedRows;
+
+        explicit RowLazyState(const ::Memory::IAllocator* allocator);
     };
 
     struct RowReference{

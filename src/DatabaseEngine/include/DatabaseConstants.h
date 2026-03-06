@@ -97,7 +97,9 @@ namespace Constants{
     static constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;
     static constexpr page_id_t HEADER_PAGE_ID = 0;
 
-    static constexpr Int CATALOG_ID = 1;
+    static constexpr Int SYSTEM_CATALOG_ID = 1;
+    static constexpr Int VERSION_DATABASE_ID = -1;
+    static constexpr Int TEMPORARY_DATABASE_ID = -2;
 
     static constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 

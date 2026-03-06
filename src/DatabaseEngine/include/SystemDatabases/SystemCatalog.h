@@ -80,15 +80,16 @@ namespace DatabaseEngine {
 
         static SystemCatalog& Get();
 
-        Database* GetDatabase()const;
+        [[nodiscard]] Database* GetDatabase()const;
 
         [[nodiscard]]bool Initialize(std::string_view configPath);
         void Shutdown();
 
-        std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
+        [[nodiscard]] std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
 
-        DataStructures::PolymorphicArray<Security::Role*> InsertSystemRoles(const ExecutionContext& baseContext)const;
-        Security::User* InsertSystemUsers(
+        [[nodiscard]] DataStructures::PolymorphicArray<Security::Role*> InsertSystemRoles(const ExecutionContext& baseContext)const;
+        [[nodiscard]] Security::User* InsertSystemUsers(
+            const ExecutionContext& baseContext,
             const DataTypes::String& hashedPassword,
             Int defaultRoleId
         )const;
@@ -219,7 +220,7 @@ namespace DatabaseEngine {
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
-            const ::Memory::IAllocator* allocator,
+            const ExecutionContext& executionContext,
             Int columnId,
             const Value& min,
             const Value& max,

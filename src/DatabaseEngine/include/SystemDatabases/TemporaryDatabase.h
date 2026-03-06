@@ -2,6 +2,7 @@
 #include <atomic>
 #include <string>
 
+#include "Coercions.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace DatabaseEngine {
@@ -12,17 +13,20 @@ namespace DatabaseEngine {
     class Database;
 
     class TemporaryDatabase {
-        std::string name;
-        std::string path;
+        DataTypes::String name;
+        DataTypes::String path;
 
-        Database* db;
+        Database* _db;
         std::atomic<int> currentOrdinalPosition;
 
-        void ReadConfiguration(std::string_view configPath);
+        static std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::StringView& configPath
+        );
         TemporaryDatabase();
         ~TemporaryDatabase();
 
-        bool Exists()const;
+        static bool Exists(const DataTypes::StringView& filename);
         void ClearTemporaryFiles() const;
 
         [[nodiscard]] Int GetNextOrdinalPosition();
@@ -34,7 +38,10 @@ namespace DatabaseEngine {
             void operator=(TemporaryDatabase&&) = delete;
 
             static TemporaryDatabase &Get();
-            void Initialize(std::string_view configPath);
+            void Initialize(
+                const ::Memory::IAllocator* allocator,
+                const DataTypes::StringView& configPath
+            );
 
             [[nodiscard]] StorageTypes::Table* CreateTable();
             [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;

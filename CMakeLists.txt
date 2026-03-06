@@ -87,8 +87,11 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/src/Memory/Functions.cpp
         src/Systemic/src/DataTypes/StringView.cpp
-        src/Systemic/include/DataTypes/String.h
         src/Systemic/src/DataTypes/String.cpp
+)
+
+target_link_libraries(Systemic
+    PRIVATE nlohmann_json::nlohmann_json
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

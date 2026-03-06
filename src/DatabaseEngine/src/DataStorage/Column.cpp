@@ -15,7 +15,7 @@ namespace DatabaseEngine::StorageTypes {
          const column_index_t index,
          const bool allowNulls
     ){
-        this->name = columnName;
+        this->SetColumnName(columnName);
         this->header.recordSize = recordSize;
         this->allowNulls = allowNulls;
         this->header.columnType = type;
@@ -32,7 +32,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto normalizedType = DataTypes::String::Normalize(header.type);
         const auto strView = normalizedType.ToView();
 
-        this->name = header.name;
+        this->SetColumnName(header.name);
         this->allowNulls = false;
         this->header.columnType = ColumnTypesDictionary.Get(&strView);
 
@@ -46,7 +46,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table){
         this->header.id = masterDbHeader.id;
-        this->name = masterDbHeader.name;
+        this->SetColumnName(masterDbHeader.name);
         this->allowNulls = masterDbHeader.isNullable;
         this->header.columnType = static_cast<DataType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;
@@ -55,11 +55,13 @@ namespace DatabaseEngine::StorageTypes {
         this->isOverflowed = false;
     }
 
-    Column::~Column() = default;
+    Column::~Column(){
+        this->_allocator.Reset();
+    }
 
     const DataTypes::String& Column::GetColumnName() const{ return this->name; }
 
-    void Column::SetColumnName(const DataTypes::String &otherName){ this->name = otherName;}
+    void Column::SetColumnName(const DataTypes::String &otherName){ this->name = DataTypes::String::FromView(otherName.ToView(), &this->_allocator);}
 
     DataType Column::Type() const { return this->header.columnType; }
 

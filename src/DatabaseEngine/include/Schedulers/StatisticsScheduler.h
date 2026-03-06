@@ -50,11 +50,7 @@ namespace DatabaseEngine {
     );
 
     void UpdateDatabaseStatistics(const Database* database)const;
-    void UpdateTableStatistics(
-      StorageTypes::Table* table,
-      const std::string& systemFilename,
-      const std::string& filename
-    )const;
+    void UpdateTableStatistics(StorageTypes::Table* table)const;
 
     [[nodiscard]] static bool UpdateIndexStatistics(
       StorageTypes::Table* table,
@@ -67,15 +63,13 @@ namespace DatabaseEngine {
     static void UpdateHeapStatistics(
       const StorageTypes::Table* table,
       page_id_t iamPageId,
-      const std::string& systemFilename,
-      const std::string& filename,
       Headers::TableStatistics& tableStatistics,
       std::vector<Headers::ColumnStatistics>& columnStatistics,
       Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     );
 
     void UpdateCatalogStatistics(
-        const ::Memory::IAllocator* allocator,
+        const ExecutionContext& baseContext,
         const Headers::TableStatistics& tableStatistics,
         const std::vector<Headers::ColumnStatistics>& columnStatistics,
         const std::vector<Headers::IndexStatistics>& indexStatistics,

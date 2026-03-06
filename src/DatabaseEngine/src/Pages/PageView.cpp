@@ -14,7 +14,7 @@ namespace Pages{
 
     PageHeader::~PageHeader() = default;
 
-    void PageView::SetFileName(const std::string& otherFilename) const{
+    void PageView::SetFileName(const DataTypes::StringView& otherFilename) const{
         this->framePtr->filename = otherFilename;
     }
 
@@ -418,7 +418,7 @@ namespace Pages{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         const auto& columns = this->framePtr->table->GetColumns();
-        const auto columnsSize = static_cast<const Int>(columns.size());
+        const auto columnsSize = columns.Size();
 
         page_offset_t offSet = keySize + slot.GetOffset();
 
@@ -508,7 +508,7 @@ namespace Pages{
         const auto& columns = this->framePtr->table->GetColumns();
 
         if (!rowPtr->lazyState->isHeaderInitialized)
-            this->InitializeRowReferenceCache(rowPtr, static_cast<Int>(columns.size()));
+            this->InitializeRowReferenceCache(rowPtr, columns.Size());
 
         block_size_t offSet = rowPtr->lazyState->dataOffset;
         for (int i = 0; i < columnIndex; i++){

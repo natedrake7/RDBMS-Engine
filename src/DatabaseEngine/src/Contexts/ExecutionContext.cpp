@@ -1,10 +1,12 @@
 ﻿#include "../../include/Contexts/ExecutionContext.h"
 
+#include "Coercions.h"
+
 namespace DatabaseEngine{
     ExecutionContext::ExecutionContext(
         const Snapshot& snapshot,
         const Int batchSize,
-        const Dictionary<std::string, Variable>& variables,
+        const Dictionary<DataTypes::String, Variable>& variables,
         const Int initialAllocatorSize
     )   : snapshot(snapshot),
           allocator(initialAllocatorSize),
@@ -49,7 +51,7 @@ namespace DatabaseEngine{
         return &this->allocator;
     }
 
-    const Dictionary<std::string, Variable>* ExecutionContext::GetVariables() const{
+    const Dictionary<DataTypes::String, Variable>* ExecutionContext::GetVariables() const{
         return this->variables;
     }
 
@@ -71,5 +73,9 @@ namespace DatabaseEngine{
 
     void* ExecutionContext::Allocate(const Int size) const{
         return this->allocator.AllocateRaw(size);
+    }
+
+    ExecutionContext ExecutionContext::BaseContext(){
+        return ExecutionContext();
     }
 }

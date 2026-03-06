@@ -5,6 +5,10 @@
 #include "../Memory/Allocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 
+namespace DataTypes{
+    class String;
+}
+
 namespace Memory{
     class IAllocator;
 }
@@ -55,7 +59,7 @@ namespace DatabaseEngine {
     class ExecutionContext {
         Snapshot snapshot;
         Memory::Allocator allocator;
-        const Dictionary<std::string, Variable>* variables;
+        const Dictionary<DataTypes::String, Variable>* variables;
         Int batchSize;
 
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
@@ -64,7 +68,7 @@ namespace DatabaseEngine {
             ExecutionContext(
                 const Snapshot &snapshot,
                 Int batchSize,
-                const Dictionary<std::string, Variable>& variables,
+                const Dictionary<DataTypes::String, Variable>& variables,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -76,7 +80,7 @@ namespace DatabaseEngine {
             void SetBatchSize(Int size);
 
             [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
-            const Dictionary<std::string, Variable>* GetVariables()const;
+            const Dictionary<DataTypes::String, Variable>* GetVariables()const;
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
@@ -92,5 +96,7 @@ namespace DatabaseEngine {
             T* Allocate(Args&&... args) const{
                 return new (this->Allocate(sizeof(T))) T(std::forward<Args>(args)...);
             }
+
+            static ExecutionContext BaseContext();
     };
 }

@@ -399,15 +399,13 @@ namespace Indexing{
           return calculatedDegree;
         }
 
-        const std::vector<DatabaseEngine::StorageTypes::Column*>& columns = otherTable->GetColumns();
+        const auto& columns = otherTable->GetColumns();
 
         const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
         Int computedKeySize = 0;
-        for(const auto& columnPos: index.columns)
-        {
-            const DatabaseEngine::StorageTypes::Column* column = columns.at(columnPos);
-
+        for(const auto& columnPos: index.columns){
+            const auto* column = columns[columnPos];
             computedKeySize += column->Size();
         }
 

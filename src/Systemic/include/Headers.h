@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "../../DatabaseEngine/include/Pages/IndexPageView.h"
+#include "DataStructures/StaticArray.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/Value.h"
 
@@ -386,13 +388,10 @@ namespace Headers {
   };
 
     struct Index{
-        UnsignedTinyInt columns[10];
-        Int size;
+        DataStructures::StaticArray<UnsignedTinyInt, 10> columns;
 
-        explicit Index(const UnsignedTinyInt* columns, const Int size){
-            std::memcpy(this->columns, columns, size * sizeof(UnsignedTinyInt));
-            this->size = size;
-        }
+        explicit Index(const UnsignedTinyInt* columns, const Int size)
+            : columns(columns, size) {}
 
         Index() = default;
     };

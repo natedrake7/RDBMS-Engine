@@ -98,20 +98,14 @@ namespace DatabaseEngine {
             ) continue;
 
             std::cout << "Updating statistics for table: " << cacheStats.tableId << std::endl;
-
-            this->UpdateTableStatistics(table, database->GetSystemFilename(), database->GetFileName());
+            this->UpdateTableStatistics(table);
         }
     }
 
-    void StatisticsScheduler::UpdateTableStatistics(
-        StorageTypes::Table *table,
-        const std::string& systemFilename,
-        const std::string& filename
-    )const {
+    void StatisticsScheduler::UpdateTableStatistics(StorageTypes::Table *table)const {
         const auto iamPageId = table->GetIndexAllocationMapPageId();
 
-        if (iamPageId == INVALID_PAGE_ID)
-            return;
+        if (iamPageId == INVALID_PAGE_ID) return;
 
         auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
@@ -119,7 +113,7 @@ namespace DatabaseEngine {
         Dictionary<Int, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
         std::vector<Headers::ColumnStatistics> columnStatistics;
 
-        const Memory::Allocator allocator;
+        const auto _baseContext = ExecutionContext::BaseContext();
         for (const auto& column : table->GetColumns()) {
             const auto& columnId = column->GetColumnId();
 
@@ -134,7 +128,7 @@ namespace DatabaseEngine {
             );
 
             sortedValues.Add(columnId, {});
-            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(&allocator, tableStatistics.tableId, columnId);
+            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(_baseContext.GetAllocator(), tableStatistics.tableId, columnId);
             columnHistogramsDictionary.Add(columnId, std::move(histograms));
         }
 
@@ -142,7 +136,7 @@ namespace DatabaseEngine {
 
         bool clusteredIndexUpdated = false;
         if (indexStatistics.empty()){
-            const auto indexes = SystemCatalog::Get().SelectIndexes(&allocator, tableStatistics.tableId);
+            const auto indexes = SystemCatalog::Get().SelectIndexes(_baseContext.GetAllocator(), tableStatistics.tableId);
 
             for (const auto& index : indexes){
                 auto indexStats = Headers::IndexStatistics(tableStatistics.tableId, index.id);
@@ -179,8 +173,6 @@ namespace DatabaseEngine {
             StatisticsScheduler::UpdateHeapStatistics(
                 table,
                 iamPageId,
-                systemFilename,
-                filename,
                 tableStatistics,
                 columnStatistics,
                 sortedValues
@@ -200,7 +192,13 @@ namespace DatabaseEngine {
 
         //Update catalog
         this->UpdateCache(tableStatistics, columnStatistics, indexStatistics);
-        this->UpdateCatalogStatistics(&allocator, tableStatistics, columnStatistics, indexStatistics, columnHistogramsDictionary);
+        this->UpdateCatalogStatistics(
+            _baseContext,
+            tableStatistics,
+            columnStatistics,
+            indexStatistics,
+            columnHistogramsDictionary
+        );
     }
 
     bool StatisticsScheduler::UpdateIndexStatistics(
@@ -215,10 +213,10 @@ namespace DatabaseEngine {
         if (table->IsClustered()) {
             const auto* tree = table->GetClusteredIndexedTree();
             tree->CalculateIndexStatistics(
-            indexStatistics,
-            tableStatistics,
-            columnStatistics,
-            sortedValues
+                indexStatistics,
+                tableStatistics,
+                columnStatistics,
+                sortedValues
             );
 
             return true;
@@ -233,13 +231,23 @@ namespace DatabaseEngine {
     void StatisticsScheduler::UpdateHeapStatistics(
         const StorageTypes::Table *table,
         const page_id_t iamPageId,
-        const std::string& systemFilename,
-        const std::string& filename,
         Headers::TableStatistics &tableStatistics,
         std::vector<Headers::ColumnStatistics> &columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) {
-        const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(table->GetFileNameView(), iamPageId, table);
+
+        const auto dataKey = table->GetDataFileKey();
+        const auto filename = table->GetFileNameView();
+
+        const auto systemKey = table->GetSystemFileKey();
+        const auto systemFilename = table->GetSystemFileNameView();
+
+        const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(
+            dataKey,
+            filename,
+            iamPageId,
+            table
+        );
 
         std::vector<extent_id_t> extents;
         iamPage.GetAllocatedExtents(&extents, 0);
@@ -254,7 +262,11 @@ namespace DatabaseEngine {
         for (const auto& extentId : extents) {
             const page_id_t extentFirstPageId = extentId * EXTENT_SIZE;
 
-            const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(systemFilename, extentFirstPageId);
+            const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(
+                systemKey,
+                systemFilename,
+                extentFirstPageId
+            );
 
             const auto firstDataPageId = (iamPage.PageId() != extentFirstPageId)
                        ? extentFirstPageId
@@ -268,7 +280,12 @@ namespace DatabaseEngine {
                     && pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA
                 ) break;
 
-                auto page = Storage::StorageManager::Get().GetPage(filename, extentPageId, table);
+                auto page = Storage::StorageManager::Get().GetPage(
+                    dataKey,
+                    filename,
+                    extentPageId,
+                    table
+                );
 
                 bool successfulLock = false;
                 auto lock = MultiThreading::ReaderGuard::TryLock(&page.Latch(), successfulLock);
@@ -319,7 +336,7 @@ namespace DatabaseEngine {
     }
 
     void StatisticsScheduler::UpdateCatalogStatistics(
-        const ::Memory::IAllocator* allocator,
+        const ExecutionContext& baseContext,
         const Headers::TableStatistics &tableStatistics,
         const std::vector<Headers::ColumnStatistics> &columnStatistics,
         const std::vector<Headers::IndexStatistics>& indexStatistics,
@@ -327,7 +344,7 @@ namespace DatabaseEngine {
     )const {
 
         this->catalog->UpdateTableStatisticsById(
-            allocator,
+            baseContext.GetAllocator(),
             tableStatistics.tableId,
             tableStatistics.rowCount,
             tableStatistics.averageRowSize,
@@ -336,7 +353,7 @@ namespace DatabaseEngine {
 
         for (const auto& colStats : columnStatistics) {
             this->catalog->UpdateColumnStatisticsById(
-                allocator,
+                baseContext.GetAllocator(),
                 colStats.columnId,
                 colStats.distinctCount,
                 colStats.nullCount,
@@ -347,7 +364,7 @@ namespace DatabaseEngine {
 
         for (const auto& indexStats : indexStatistics) {
             this->catalog->UpdateIndexStatisticsById(
-                allocator,
+                baseContext.GetAllocator(),
                 tableStatistics.tableId,
                 indexStats.indexId,
                 indexStats.leafPages,
@@ -363,7 +380,7 @@ namespace DatabaseEngine {
             for (const auto& histogram : histograms){
                 auto res = (histogram.histogramId == INVALID_HISTOGRAM_ID)
                     ? this->catalog->InsertColumnHistogramsToMasterDb(
-                        allocator,
+                        baseContext,
                         columnId,
                         histogram.rangeStart,
                         histogram.rangeEnd,
@@ -371,7 +388,7 @@ namespace DatabaseEngine {
                         histogram.distinctCount
                     )
                     : this->catalog->UpdateHistogramBucket(
-                        allocator,
+                        baseContext.GetAllocator(),
                         columnId, histogram.histogramId,
                         histogram.rangeStart,
                         histogram.rangeEnd,

@@ -40,7 +40,7 @@ namespace Pages{
         Frame* framePtr;
         UnsignedSmallInt initialOffset;
 
-        void SetFileName(const std::string &otherFilename) const;
+        void SetFileName(const DataTypes::StringView& otherFilename) const;
         void SetPageId(page_id_t pageId) const;
 
         [[nodiscard]] page_offset_t NewInsertOffset() const;

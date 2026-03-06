@@ -59,11 +59,11 @@ namespace DataStructures{
         }
 
         T& At(const Int index){
-            return this->_data[](index);
+            return this->_data[index];
         }
 
         const T& At(const Int index) const{
-            return this->_data[](index);
+            return this->_data[index];
         }
 
         T& Start(){

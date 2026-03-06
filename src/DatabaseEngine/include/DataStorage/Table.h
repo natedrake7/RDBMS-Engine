@@ -8,6 +8,7 @@
 #include "../BTree.h"
 #include "../Logger/Logger.h"
 #include "../Pages/OverflowPageView.h"
+#include "BufferPool/FileManager.h"
 #include "Memory/Allocator.h"
 #include "Memory/PersistentAllocator.h"
 
@@ -31,10 +32,6 @@ namespace Indexing{
 
 namespace DatabaseEngine{
     class Database;
-
-    namespace StorageTypes{
-        class Row;
-    }
 }
 
 namespace ByteMaps{
@@ -43,13 +40,9 @@ namespace ByteMaps{
 
 namespace DatabaseEngine::StorageTypes
 {
-    class Block;
-    class Column;
-    struct ColumnHeader;
-
     struct TableHeader{
         table_id_t tableId;
-        int16_t ordinalPosition;
+        SmallInt ordinalPosition;
 
         page_id_t allocationPageId;
         column_number_t numberOfColumns;
@@ -57,25 +50,25 @@ namespace DatabaseEngine::StorageTypes
         page_id_t clusteredIndexPageId;
         std::vector<page_id_t> nonClusteredIndexPageIds;
 
-        // bitmaps to store the composite key
-        Headers::Index clusteredIndex;
-        std::vector<Headers::Index> nonClusteredIndexes;
-
         TableHeader();
         ~TableHeader();
         TableHeader &operator=(const TableHeader &tableHeader);
     };
 
     class Table final{
-        TableHeader header;
         HashSet<column_id_t> clusteredIndexColumnsCache;
+        TableHeader header;
         DataStructures::PolymorphicArray<Indexing::BTree*> nonClusteredIndexedTrees;
         DataStructures::PolymorphicArray<Column*> _columns;
 
         Memory::PersistentAllocator _allocator;
 
+        Headers::Index clusteredIndexHeader;
+        DataStructures::PolymorphicArray<Headers::Index> nonClusteredIndexes;
+
         Database *database;
         Indexing::BTree* clusteredIndexedTree;
+
         protected:
             static bool VectorContainsIndex(const std::vector<column_index_t>& vector, column_index_t index, int& indexPosition);
 
@@ -135,14 +128,14 @@ namespace DatabaseEngine::StorageTypes
         * @{
         */
             Table(table_id_t tableId, Int ordinalPosition, Database *database);
-            Table(
-              table_id_t tableId,
-              Int ordinalPosition,
-              const std::vector<Column *> &columns,
-              Database *database,
-              const Headers::Index* clusteredIndex = nullptr,
-              const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
-            );
+            // Table(
+            //   table_id_t tableId,
+            //   Int ordinalPosition,
+            //   const std::vector<Column *> &columns,
+            //   Database *database,
+            //   const Headers::Index* clusteredIndex = nullptr,
+            //   const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
+            // );
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
             Table(
@@ -198,13 +191,16 @@ namespace DatabaseEngine::StorageTypes
         * Functions to access table metadata.
         * @{
         */
+            [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
+            [[nodiscard]] Storage::FileKey GetDataFileKey() const;
             [[nodiscard]] DataTypes::StringView GetFileNameView() const;
+            [[nodiscard]] DataTypes::StringView GetSystemFileNameView() const;
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
-            [[nodiscard]] const std::vector<Column *> &GetColumns() const;
+            [[nodiscard]] const DataStructures::Array<Column*>& GetColumns() const;
             void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
-            [[nodiscard]] const std::vector<column_index_t>& GetClusteredIndex() const;
+            [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
             [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
             [[nodiscard]] table_id_t GetTableId() const;
             [[nodiscard]] TableType GetType() const;
@@ -373,7 +369,7 @@ namespace DatabaseEngine::StorageTypes
         * Functions that manage indexes and pages
         * @{
         */
-            Int CreateNonClusteredIndex(std::vector<column_index_t>& columnIndices);
+            Int CreateNonClusteredIndex(const std::vector<column_index_t>& columnIndices);
             void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
             page_id_t GetIndexAllocationMapPageId()const;
 
@@ -389,7 +385,7 @@ namespace DatabaseEngine::StorageTypes
 
             DataTypes::Indexing::Key CreateKey(
                 const ExecutionContext& executionContext,
-                const std::vector<column_index_t>& indexedColumns,
+                const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
                 const InsertPayload& payload
             ) const;
 
@@ -447,7 +443,7 @@ namespace DatabaseEngine::StorageTypes
                 column_index_t index,
                 const Value& defaultValue
             ) const;
-            void UpdateColumnName(column_index_t index, const std::string& name)const;
+            void UpdateColumnName(column_index_t index, const DataTypes::String& name)const;
             void RemoveColumn(const ExecutionContext& context, column_index_t index);
             static void HandleRemoveColumn(Pages::PageView* page, QueryResult& row, column_index_t index);
             void HandleRemoveColumn(column_index_t index);

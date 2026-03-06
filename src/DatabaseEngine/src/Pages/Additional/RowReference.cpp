@@ -3,6 +3,9 @@
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
+    RowLazyState::RowLazyState(const Memory::IAllocator* allocator)
+        : dataOffset(0), isHeaderInitialized(false), joinedRows(allocator){}
+
    RowReference::RowReference(){
         this->pageView = nullptr;
         this->indexPosition = 0;
@@ -20,7 +23,7 @@ namespace Pages{
         this->indexPosition = indexPosition;
         this->keySize = offset;
 
-        this->lazyState = allocator->Allocate<RowLazyState>();
+        this->lazyState = allocator->Allocate<RowLazyState>(allocator);
         this->lazyState->dataOffset = 0;
         this->lazyState->isHeaderInitialized = false;
     }
