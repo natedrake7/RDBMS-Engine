@@ -8,9 +8,9 @@
 #include "../BTree.h"
 #include "../Logger/Logger.h"
 #include "../Pages/OverflowPageView.h"
-#include "BufferPool/FileManager.h"
-#include "Memory/Allocator.h"
-#include "Memory/PersistentAllocator.h"
+#include "../BufferPool/FileManager.h"
+#include "../Memory/Allocator.h"
+#include "../Memory/PersistentAllocator.h"
 
 namespace Pages{
     class LargeObjectView;

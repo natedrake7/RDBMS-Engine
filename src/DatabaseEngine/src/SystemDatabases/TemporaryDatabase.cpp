@@ -5,6 +5,7 @@
 
 #include "Database.h"
 #include "Managers/GlobalMemoryManager.h"
+#include "../../include/Extensions/StringExtensions.h"
 
 namespace DatabaseEngine {
     std::tuple<DataTypes::String, DataTypes::String> TemporaryDatabase::ReadConfiguration(

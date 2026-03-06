@@ -54,7 +54,7 @@ namespace Expressions{
           { Constants::FunctionType::Coalesce,   &FunctionExpression::Coalesce },
     };
 
-    static Dictionary<Constants::FunctionType, std::function<bool(const std::vector<Expressions::Expression*>& arguments, std::string& errorMessage)>> FunctionAdditionalValidationsDictionary{
+    static Dictionary<Constants::FunctionType, std::function<bool(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage)>> FunctionAdditionalValidationsDictionary{
           {Constants::FunctionType::NullIf,     &FunctionExpression::ValidateNullIf},
           {Constants::FunctionType::Coalesce,   &FunctionExpression::ValidateCoalesce},
     };
@@ -175,7 +175,7 @@ namespace Expressions{
 
     const FunctionExpression * Expression::AsFunction() const{ return this->IsFunction() ? static_cast<const FunctionExpression*>(this) : nullptr; }
 
-    ColumnExpression::ColumnExpression(const std::string &name, const std::string &tableAlias){
+    ColumnExpression::ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias){
         this->alias = name;
         this->tableAlias = tableAlias;
 
@@ -221,7 +221,7 @@ namespace Expressions{
 
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
-    bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.empty();}
+    bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
 
     ConstantExpression::ConstantExpression(const Value &value){
         this->value = value;
@@ -431,7 +431,7 @@ namespace Expressions{
         }
     }
 
-    bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const{
+    bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const{
         const auto& expectedType = info.expectedTypes.front();
 
         for (int i = 0;i < this->arguments.size(); i++)
@@ -441,7 +441,7 @@ namespace Expressions{
         return true;
     }
 
-    bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, std::string &errorMessage) const{
+    bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, DataTypes::String& errorMessage) const{
         for (int i = 0;i < this->arguments.size(); i++)
           if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
             return false;
@@ -451,15 +451,21 @@ namespace Expressions{
 
     bool FunctionExpression::ValidateReturnType(
         const FunctionInfo &info,
-        std::string &errorMessage,
+        DataTypes::String& errorMessage,
         const DataType expectedType,
         const DataType returnType,
         const Int index
     ) {
         if (returnType == DataType::Unknown) {
-          errorMessage = "Function: " + info.name +
-            " has an argument at position " + std::to_string(index + 1) +
-            " with invalid type";
+
+            errorMessage = errorMessage.ConcatInPlace(
+                "Function: ",
+                info.name,
+                " has an argument at position ",
+                std::to_string(index + 1),
+                " with invalid type"
+            );
+
           return false;
         }
 
@@ -480,18 +486,18 @@ namespace Expressions{
         return true;
     }
 
-    void FunctionExpression::ConstructInvalidCastMessage(std::string &errorMessage, const DataType fromType, const DataType toType) {
+    void FunctionExpression::ConstructInvalidCastMessage(DataTypes::String& errorMessage, const DataType fromType, const DataType toType) {
         std::ostringstream os;
 
-        os  << "Cannot cast safely type: "
-          << DataTypeToStringDictionary.Get(fromType)
-          << " to type "
-          << DataTypeToStringDictionary.Get(toType);
-
-        errorMessage = os.str();
+        errorMessage = errorMessage.ConcatInPlace(
+            "Cannot cast safely type: ",
+            DataTypeToStringDictionary.Get(fromType),
+            " to type: ",
+            DataTypeToStringDictionary.Get(toType)
+        );
     }
 
-    bool FunctionExpression::PerformAdditionalValidations(std::string& errorMessage)const {
+    bool FunctionExpression::PerformAdditionalValidations(DataTypes::String& errorMessage)const {
         return FunctionAdditionalValidationsDictionary.Get(this->functionType)(this->arguments, errorMessage);
     }
 
@@ -628,7 +634,7 @@ namespace Expressions{
                  : firstArg;
     }
 
-    bool FunctionExpression::ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, std::string &errorMessage) {
+    bool FunctionExpression::ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage) {
         const auto& firstArgumentType = arguments[0]->GetReturnType();
         const auto& secondArgumentType = arguments[1]->GetReturnType();
 
@@ -659,7 +665,7 @@ namespace Expressions{
         return arguments[0];
     }
 
-    bool FunctionExpression::ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, std::string &errorMessage){
+    bool FunctionExpression::ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage){
         auto promotedType = DataType::String;
 
         std::vector<DataType> argTypes;
@@ -680,21 +686,20 @@ namespace Expressions{
         return true;
     }
 
-    bool FunctionExpression::ValidateNumberOfArguments(std::string& errorMessage)const {
+    bool FunctionExpression::ValidateNumberOfArguments(DataTypes::String& errorMessage)const {
         const auto& info = FunctionInfoDictionary.Get(this->functionType);
 
         const auto argSize = this->arguments.size();
         if (argSize < info.minArgs || (argSize > info.maxArgs && info.maxArgs != UNLIMITED_ARGS)) {
-
-          std::ostringstream message;
-
-          message << "Function: " << info.name
-            << " expects number of arguments from: "
-            << info.minArgs << " to "
-            << (info.maxArgs == UNLIMITED_ARGS ? "unlimited" : std::to_string(info.maxArgs))
-            << " but " << argSize << " were given";
-
-          errorMessage = message.str();
+            errorMessage = errorMessage.ConcatInPlace(
+                "Function: ",
+                info.name,
+                " expects number of arguments from: ",
+                std::to_string(info.minArgs),
+                "to "
+                ,(info.maxArgs == UNLIMITED_ARGS ? "unlimited" : std::to_string(info.maxArgs))
+                , " but " , std::to_string(argSize) , " were given"
+            );
           return false;
         }
 
@@ -821,7 +826,7 @@ namespace Expressions{
         }
     }
 
-    VariableExpression::VariableExpression(const std::string &name, const ::Memory::IAllocator* allocator) {
+    VariableExpression::VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator) {
         this->name = name;
         this->normalizedName = DataTypes::String::Normalize(this->name, allocator);
         this->dataType = DataType::Unknown;

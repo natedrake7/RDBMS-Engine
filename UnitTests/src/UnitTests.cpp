@@ -1,9 +1,6 @@
 ﻿#include "../include/UnitTests.h"
 
 #include <iostream>
-
-#include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../DatabaseEngine/include/DataStorage/Column.h"
 #include "../../DatabaseEngine/include/DataStorage/Table.h"
 #ifdef __linux__
     #include <csignal>

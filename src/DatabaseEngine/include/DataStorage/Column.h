@@ -1,13 +1,11 @@
 ﻿#pragma once
-#include <string>
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../Managers/IdentityManager.h"
-#include "Memory/Allocator.h"
-#include "Memory/PersistentAllocator.h"
+#include "../Memory/Allocator.h"
+#include "../Memory/PersistentAllocator.h"
 
-namespace DatabaseEngine::StorageTypes
-{
+namespace DatabaseEngine::StorageTypes{
     class Table;
     class Block;
     class Row;

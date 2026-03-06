@@ -1,10 +1,9 @@
 ﻿#pragma once
-
-#include "Constants.h"
+#include "../../../Systemic/include/Constants.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../../Systemic/include/Guards/ReadWriteMutex.h"
-#include "DataTypes/DataTypes.h"
-#include "DataTypes/String.h"
+#include "../../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../../Systemic/include/DataTypes/String.h"
 
 namespace DataTypes{
     class StringView;

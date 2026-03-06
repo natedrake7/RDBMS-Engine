@@ -1,8 +1,6 @@
 ﻿#pragma once
 #include <atomic>
-#include <string>
-
-#include "Coercions.h"
+#include "../../Systemic/include/Coercions.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace DatabaseEngine {

@@ -99,7 +99,7 @@ namespace QueryPipeline{
         this->cursors.SetAllocator(this->_context.GetAllocator());
     }
 
-     void QueryContext::CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables){
+     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables){
         for (const auto& [key, variable] : sessionVariables)
             this->_scope.variables.ForceAdd(key, variable.GetType());
     }

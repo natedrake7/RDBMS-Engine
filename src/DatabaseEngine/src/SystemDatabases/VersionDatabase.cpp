@@ -7,6 +7,7 @@
 #include <nlohmann/json.hpp>
 
 #include "Contexts/ExecutionContext.h"
+#include "../../include/Extensions/StringExtensions.h"
 
 namespace DatabaseEngine {
     VersionDatabase& VersionDatabase::Get(){

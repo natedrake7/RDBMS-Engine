@@ -25,7 +25,7 @@ namespace QueryPipeline{
     class Cursor;
 
     struct CompileValidationScope {
-        Dictionary<std::string, DataType> variables;
+        Dictionary<DataTypes::String, DataType> variables;
     };
 
     // struct StatementValidationScope {
@@ -46,7 +46,7 @@ namespace QueryPipeline{
         QueryContext(QueryContext&& other) noexcept;
         QueryContext& operator=(QueryContext&& other) noexcept;
 
-        void CreateValidationScope(const Dictionary<std::string, Variable>& sessionVariables);
+        void CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables);
         const ::Memory::IAllocator* GetAllocator()const;
     };
 

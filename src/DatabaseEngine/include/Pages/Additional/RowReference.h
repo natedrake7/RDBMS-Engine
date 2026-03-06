@@ -1,10 +1,9 @@
 ﻿#pragma once
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../../../Systemic/include/DataStructures/Array.h"
 #include "../../DataStorage/Row.h"
 #include "../PageView.h"
-#include "DataStructures/PolymorphicArray.h"
+#include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 namespace DatabaseEngine
 {

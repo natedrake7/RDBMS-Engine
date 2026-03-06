@@ -5,7 +5,7 @@
 #include  "Memory/PersistentAllocator.h"
 #include "BufferPool/FileManager.h"
 #include "DataStorage/Column.h"
-#include "DataStructures/PolymorphicArray.h"
+#include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "Logger/Logger.h"
 #include "Pages/IndexPageView.h"
 #include "Pages/LargeObjectView.h"

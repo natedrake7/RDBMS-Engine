@@ -19,10 +19,10 @@ namespace Network {
     DataTypes::DateTime createdAt;
     DataTypes::DateTime lastActive;
 
-    int32_t databaseId;
+    Int databaseId;
 
     SortedDictionary<UnsignedSmallInt, QueryPipeline::Cursor*> cursors;
-    Dictionary<std::string, Variable> variables;
+    Dictionary<DataTypes::String, Variable> variables;
 
     UnsignedSmallInt nextCursorId;
 

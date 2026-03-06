@@ -90,10 +90,6 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/String.cpp
 )
 
-target_link_libraries(Systemic
-    PRIVATE nlohmann_json::nlohmann_json
-)
-
 target_include_directories(Systemic PUBLIC src/Systemic/include)
 
 add_library(QueryPipeline STATIC
@@ -183,6 +179,7 @@ add_library(DatabaseEngine STATIC
         src/DatabaseEngine/include/Memory/Allocator.h
         src/DatabaseEngine/src/Memory/Allocator.cpp
         src/DatabaseEngine/src/Memory/PersistentAllocator.cpp
+        src/DatabaseEngine/src/Extensions/StringExtensions.cpp
 )
 
 target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)

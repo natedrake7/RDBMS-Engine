@@ -405,10 +405,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
     PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(QueryContext& context){
-        Headers::Index index;
-
-        index.columns = std::move(primaryKey);
-
+        Headers::Index index(this->primaryKey.data(), this->primaryKey.size());
         return context._context.Allocate<PhysicalPlan::PhysicalTableCreate>(this->sessionId, this->table, this->columns, index, this->constraintName);
     }
 

@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <span>
-#include <nlohmann/json.hpp>
-#include <nlohmann/json_fwd.hpp>
 
 #include "StringView.h"
 #include "DataTypes.h"
@@ -487,12 +485,3 @@ struct std::hash<DataTypes::String> {
         return hash;
     }
 };
-
-namespace DataTypes{
-    inline void from_json(const nlohmann::json& j, String& str) {
-        const auto value = j.get<std::string>();
-        str.Reserve(static_cast<Int>(value.size()));
-        str.Append(value);
-    }
-}
-

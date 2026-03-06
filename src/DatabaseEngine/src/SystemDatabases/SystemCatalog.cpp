@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <nlohmann/json.hpp>
+#include "../../include/Extensions/StringExtensions.h"
 
 #include "Converter.h"
 #include "DataStorage/Table.h"

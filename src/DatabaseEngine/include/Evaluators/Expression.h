@@ -47,7 +47,7 @@ namespace Expressions{
         const Pages::RowReference* innerRow;
 
         const Memory::IAllocator* allocator;
-        const Dictionary<std::string, Variable>* variables;
+        const Dictionary<DataTypes::String, Variable>* variables;
 
         EvaluationContextType type;
 
@@ -77,7 +77,7 @@ namespace Expressions{
 
     class Expression {
     public:
-        std::string name;
+        DataTypes::String name;
         column_index_t columnIndex;
         ExpressionType expressionType;
 
@@ -116,8 +116,8 @@ namespace Expressions{
 
     class ColumnExpression final : public Expression {
     public:
-        std::string alias;
-        std::string tableAlias;
+        DataTypes::String alias;
+        DataTypes::String tableAlias;
 
         int32_t tableId;
         int32_t columnId;
@@ -127,7 +127,7 @@ namespace Expressions{
 
         column_index_t index;
 
-        ColumnExpression(const std::string& name, const std::string& tableAlias);
+        ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias);
         explicit ColumnExpression(column_index_t index);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -170,17 +170,17 @@ namespace Expressions{
     };
 
     class FunctionExpression final : public Expression {
-        [[nodiscard]] bool ValidateUnlimitedArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
-        [[nodiscard]] bool ValidateArgumentTypes(const FunctionInfo& info, std::string& errorMessage)const;
+        [[nodiscard]] bool ValidateUnlimitedArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const;
+        [[nodiscard]] bool ValidateArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const;
         [[nodiscard]] static bool ValidateReturnType(
         const FunctionInfo& info,
-            std::string& errorMessage,
+            DataTypes::String& errorMessage,
             DataType expectedType,
             DataType returnType,
             Int index
         );
-        static void ConstructInvalidCastMessage(std::string& errorMessage, DataType fromType, DataType toType);
-        bool PerformAdditionalValidations(std::string& errorMessage)const;
+        static void ConstructInvalidCastMessage(DataTypes::String& errorMessage, DataType fromType, DataType toType);
+        bool PerformAdditionalValidations(DataTypes::String& errorMessage)const;
 
     public:
         std::vector<Expression*> arguments;
@@ -215,12 +215,12 @@ namespace Expressions{
 
         //Null Checking Functions
         [[nodiscard]] static Value NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
-        [[nodiscard]] static bool ValidateNullIf(const std::vector<Expression*>& arguments, std::string& errorMessage);
+        [[nodiscard]] static bool ValidateNullIf(const std::vector<Expression*>& arguments, DataTypes::String& errorMessage);
 
         [[nodiscard]] static Value Coalesce(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
-        [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expression*>& arguments, std::string& errorMessage);
+        [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expression*>& arguments, DataTypes::String& errorMessage);
 
-        [[nodiscard]] bool ValidateNumberOfArguments(std::string& errorMessage)const;
+        [[nodiscard]] bool ValidateNumberOfArguments(DataTypes::String& errorMessage)const;
         [[nodiscard]] DataType GetReturnType() const override;
     };
 
@@ -268,11 +268,11 @@ namespace Expressions{
 
     class VariableExpression final : public Expression {
     public:
-      std::string name;
-      std::string normalizedName;
+      DataTypes::String name;
+      DataTypes::String normalizedName;
       DataType dataType;
 
-      explicit VariableExpression(const std::string& name, const ::Memory::IAllocator* allocator);
+      explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
 
       [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
       [[nodiscard]]DataType GetReturnType() const override;
