@@ -8,34 +8,40 @@
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 #include <iostream>
 #include <ranges>
+#include <ValidationMessages.h>
 
 #include "Optimizer.h"
 #include "Parser.h"
+#include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
 namespace QueryPipeline::Statements {
-
-  Statement::Statement(){
-    this->databaseId = INVALID_DATABASE_ID;
-    this->table = nullptr;
-    this->server = &Network::Server::Get();
-    this->catalog = &DatabaseEngine::SystemCatalog::Get();
-  }
-
-  Errors::ValidationStatus Statement::CompileBase()const{
-    const auto* session = this->server->GetSession(this->sessionId);
-
-    if (!session || !session->user || !session->user->role)
-      return {Errors::ValidationError::Error, "Failed to get user session"};
-
-    if (!session->user->role->HasPermission(this->RequiredPermissions())) {
-        std::ostringstream os;
-      os  << "User: " << session->user->name << " is not authorized to perform this action.";
-
-      return {Errors::ValidationError::Error, os.str()};
+    Statement::Statement(){
+        this->databaseId = INVALID_DATABASE_ID;
+        this->table = nullptr;
+        this->server = &Network::Server::Get();
+        this->catalog = &DatabaseEngine::SystemCatalog::Get();
     }
 
-    return {Errors::ValidationError::Ok, ""};
-  }
+    Errors::ValidationStatus Statement::CompileBase(const QueryContext& context)const{
+        const auto* session = this->server->GetSession(this->sessionId);
+
+        Errors::ValidationStatus validationStatus(context.GetAllocator());
+
+        if (!session || !session->user || !session->user->role){
+            validationStatus.code = Errors::ValidationError::Error;
+            validationStatus.message = DataTypes::String::FromView(
+                Messages::FAILED_TO_FETCH_USER_SESSION,
+                context.GetAllocator()
+            );
+        }
+
+        if (!session->user->role->HasPermission(this->RequiredPermissions())) {
+            validationStatus.code = Errors::ValidationError::Error;
+            validationStatus.message = DataTypes::String::Concat(context.GetAllocator(), "User", session->user->name, " is not authorized to perform this action.");
+        }
+
+        return validationStatus;
+    }
 
   Errors::ValidationStatus Statement::Compile(QueryContext& context){
     auto result = this->CompileBase();
@@ -50,76 +56,73 @@ namespace QueryPipeline::Statements {
      this->expression = nullptr;
    }
 
-  Errors::ValidationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
-    const auto& type = this->variable.GetType();
+    Errors::ValidationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
+        const auto& type = this->variable.GetType();
 
-    if (this->expression) {
-      auto res = CompileExpression(context, this->expression);
+        auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
+        if (this->expression) {
+            auto res = CompileExpression(context, this->expression);
 
-      if (!res.IsOk())
-        return res;
+            if (!res.IsOk()) return res;
 
-      if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
-          std::ostringstream os;
+            if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
+                validationStatus.code = Errors::ValidationError::Error;
+                validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+            this->expression->GetReturnType(),
+            type
+                );
 
-        os  << "Cannot convert from: "
-          << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
-          << " to type: " << ColumnTypesToStringDictionary.Get(type)
-          << " safely";
+                return validationStatus;
+            }
 
-        return {Errors::ValidationError::Error, os.str()};
-      }
+            if (type == DataType::Unknown)
+                this->variable.SetType(this->expression->GetReturnType());
+        }
 
-      if (type == DataType::Unknown)
-        this->variable.SetType(this->expression->GetReturnType());
+        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+        return validationStatus;
     }
 
-    context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
-
-    return {};
-  }
-
-  constexpr Security::Permission DeclareVariableStatement::RequiredPermissions()const {
-    return Constants::DB_WRITER_PERMISSIONS;
-  }
-
-  LogicalPlan * DeclareVariableStatement::ToLogical(QueryContext& context) {
-    return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
-  }
-
-   SetVariableStatement::SetVariableStatement() {
-     this->expression = nullptr;
-   }
-
-  Errors::ValidationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
-    const auto& type = this->variable.GetType();
-
-    if (this->expression) {
-      auto res = CompileExpression(context, this->expression);
-
-      if (!res.IsOk())
-        return res;
-
-      if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
-
-          std::ostringstream os;
-
-        os  << "Cannot convert from: "
-          << ColumnTypesToStringDictionary.Get(this->expression->GetReturnType())
-          << " to type: " << ColumnTypesToStringDictionary.Get(type)
-          << " safely";
-
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      if (type == DataType::Unknown)
-        this->variable.SetType(this->expression->GetReturnType());
+    constexpr Security::Permission DeclareVariableStatement::RequiredPermissions()const {
+        return Constants::DB_WRITER_PERMISSIONS;
     }
 
-    context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+    LogicalPlan * DeclareVariableStatement::ToLogical(QueryContext& context) {
+        return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
+    }
 
-    return {};
-  }
+    SetVariableStatement::SetVariableStatement() {
+        this->expression = nullptr;
+    }
+
+    Errors::ValidationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
+        const auto& type = this->variable.GetType();
+
+        auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
+        if (this->expression) {
+            auto res = CompileExpression(context, this->expression);
+
+            if (!res.IsOk()) return res;
+
+            if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
+                validationStatus.code = Errors::ValidationError::Error;
+                validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    this->expression->GetReturnType(),
+                    type
+                );
+
+                return validationStatus;
+            }
+
+            if (type == DataType::Unknown)
+                this->variable.SetType(this->expression->GetReturnType());
+        }
+
+        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+        return validationStatus;
+    }
 
   constexpr Security::Permission SetVariableStatement::RequiredPermissions() const {
     return Constants::DB_WRITER_PERMISSIONS;
@@ -130,96 +133,76 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateUserStatement::CompileDerived(QueryContext& context){
-    if (this->username.empty())
-      return {Errors::ValidationError::Error,  "username cannot be empty"};
+    if (this->username.Empty())
+        return Errors::ValidationStatus::Error(Messages::EMPTY_USERNAME, context.GetAllocator());
+    if (this->password.Empty())
+        return Errors::ValidationStatus::Error(Messages::EMPTY_PASSWORD, context.GetAllocator());
+    if (this->role.Empty())
+        return Errors::ValidationStatus::Error(Messages::EMPTY_ROLE, context.GetAllocator());
+    if (this->server->UserExists(this->username))
+        return Errors::ValidationStatus::Error(Messages::USER_ALREADY_EXISTS, context.GetAllocator());
+    if (!this->server->RoleExists(this->role))
+        return Errors::ValidationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
 
-    if (this->password.empty())
-      return {Errors::ValidationError::Error,  "password cannot be empty"};
-
-    if (this->role.empty())
-      return {Errors::ValidationError::Error,  "role cannot be empty"};
-
-    std::ostringstream os;
-    if (this->server->UserExists(this->username)) {
-      os << "User with username: " << this->username << " already exists.";
-
-      return {Errors::ValidationError::Error,  os.str()};
-    }
-
-    if (!this->server->RoleExists(this->role)) {
-      os << "Role: " << this->role << " does not exist.";
-
-      return {Errors::ValidationError::Error,  os.str()};
-    }
-
-    return {Errors::ValidationError::Ok,  ""};
+    return Errors::ValidationStatus(context.GetAllocator());
   }
 
   constexpr Security::Permission CreateUserStatement::RequiredPermissions() const{
     return Constants::ADMIN_PERMISSIONS;
   }
 
-  LogicalPlan* CreateUserStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
-  }
-
-  Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
-      std::ostringstream os;
-    if (!this->server->UserExists(this->username)) {
-      os << "User: " << this->username << " does not exist.";
-      return {Errors::ValidationError::Error, os.str()};
+    LogicalPlan* CreateUserStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
     }
 
-    if (!this->server->RoleExists(this->role)) {
-      os << "Role: " << this->role << " does not exist.";
-      return {Errors::ValidationError::Error, os.str()};
+    Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
+        if (!this->server->UserExists(this->username))
+            return Errors::ValidationStatus::Error(Messages::USER_DOES_NOT_EXIST, context.GetAllocator());
+        if (!this->server->RoleExists(this->role))
+            return Errors::ValidationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
+        return Errors::ValidationStatus(context.GetAllocator());
     }
 
-    return {};
-  }
+    constexpr Security::Permission GrantRoleStatement::RequiredPermissions() const{
+        return Constants::ADMIN_PERMISSIONS;
+    }
 
-  constexpr Security::Permission GrantRoleStatement::RequiredPermissions() const{
-    return Constants::ADMIN_PERMISSIONS;
-  }
+    LogicalPlan * GrantRoleStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
+    }
 
-  LogicalPlan * GrantRoleStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
-  }
+    Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
+        auto result = this->table->Validate(context, this->databaseId);
 
-  Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
-    auto result = this->table->Validate(context, this->databaseId);
+        if (!result.IsOk()) return result;
 
-    if (!result.IsOk())
-      return result;
+        if (this->where.expression == nullptr) return result;
 
-    if (this->where.expression == nullptr)
-      return result;
+        const auto columnsDict = this->catalog->SelectColumnsToDictionary(
+            context.GetAllocator(),
+            this->table->tableId
+        );
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(
-        context.GetAllocator(),
-        this->table->tableId
-    );
+        return result;
+        // return this->where.expression->Validate(columnsDict);
+    }
 
-    return result;
-    // return this->where.expression->Validate(columnsDict);
-  }
+    constexpr Security::Permission DeleteStatement::RequiredPermissions() const{
+        return Constants::DB_WRITER_PERMISSIONS;
+    }
 
-  constexpr Security::Permission DeleteStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
-  }
+    LogicalPlan * DeleteStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalDelete>(this->table, this->where.expression);
+    }
 
-  LogicalPlan * DeleteStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalDelete>(this->table, this->where.expression);
-  }
-
-  JoinStatement::JoinStatement() {
-    this->type = JoinType::Inner;
-    this->table = nullptr;
-    this->expression = nullptr;
-  }
+    JoinStatement::JoinStatement() {
+        this->type = JoinType::Inner;
+        this->table = nullptr;
+        this->expression = nullptr;
+    }
 
   Errors::ValidationStatus JoinStatement::CompileDerived(QueryContext& context){
-    return {};
+    return Errors::ValidationStatus(context.GetAllocator());
   }
 
   Errors::ValidationStatus JoinStatement::Validate(const QueryContext& context, const Int databaseId){
@@ -256,8 +239,8 @@ namespace QueryPipeline::Statements {
   // }
 
   StatementValidationScope::StatementValidationScope(
-    const Dictionary<std::string, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>> &tablesColumnsDictionary,
+    const Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary,
+    Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>> &tablesColumnsDictionary,
     Statement *statement,
     int *indexPos
   ) {
@@ -292,28 +275,28 @@ namespace QueryPipeline::Statements {
       this->size = 0;
   }
 
-  ColumnType::ColumnType(const std::string &name){
+  ColumnType::ColumnType(const DataTypes::String& name){
     this->name = name;
     this->size = 0;
   }
 
-  ColumnType::ColumnType(const std::string &name, const Int size){
+  ColumnType::ColumnType(const DataTypes::String& name, const Int size){
     this->name = name;
     this->size = size;
   }
 
-  ColumnType::ColumnType(std::string& name, const Int size){
+  ColumnType::ColumnType(DataTypes::String& name, const Int size){
       this->name = std::move(name);
       this->size = size;
   }
 
-  ColumnType::ColumnType(const std::string& name, const DecimalType decimal){
+  ColumnType::ColumnType(const DataTypes::String& name, const DecimalType decimal){
       this->size = 0;
       this->name = name;
       this->decimal = decimal;
   }
 
-  ColumnType::ColumnType(std::string &name, const DecimalType decimal){
+  ColumnType::ColumnType(DataTypes::String& name, const DecimalType decimal){
     this->name = std::move(name);
     this->decimal = decimal;
     this->size = 0;
@@ -350,9 +333,9 @@ namespace QueryPipeline::Statements {
 
   OrderByStatement::~OrderByStatement() = default;
 
-  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict){
+  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict){
 
-    HashSet<std::string> selectColumnMap;
+    HashSet<DataTypes::String> selectColumnMap;
     // for (const auto& selectColumn : selectColumns) {
     //   selectColumnMap.Add(selectColumn->name.name);
     // }
@@ -372,30 +355,32 @@ namespace QueryPipeline::Statements {
     return true;
   }
 
-  DataSource::DataSource() {
+  DataSource::DataSource(const ::Memory::IAllocator* allocator) {
     this->databaseId = INVALID_DATABASE_ID;
     this->tableId = INVALID_TABLE_ID;
     this->schemaId = INVALID_SCHEMA_ID;
     this->ordinalPosition = INVALID_ORDINAL_POS;
-    this->schema = "dbo";
+    this->schema = DataTypes::String::FromView(DEFAULT_SCHEMA_NAME, allocator);
     this->server = &Network::Server::Get();
     this->catalog = &DatabaseEngine::SystemCatalog::Get();
   }
 
-  std::string DataSource::GetAlias() const{
-    return this->alias.empty()
+  DataTypes::String DataSource::GetAlias() const{
+    return this->alias.Empty()
              ? this->GetFullName()
              : this->alias;
   }
 
-  std::string DataSource::GetFullName() const {
-    return (this->database.empty() ? "" : this->database + ".") + this->schema + "." + this->name;
+  DataTypes::String DataSource::GetFullName() const {
+
+
+    return (this->database.Empty() ? "" : this->database + ".") + this->schema + "." + this->name;
   }
 
   Errors::ValidationStatus DataSource::Validate(const QueryContext& context, const Int selectedDatabaseId) {
-    const auto tableHeader = (!this->database.empty())
-                               ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
-                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
+    const auto tableHeader = (!this->database.Empty())
+                               ? this->catalog->SelectTable(context.GetAllocator(), this->database.ToView(), this->name.ToView())
+                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name.ToView(), this->schema.ToView());
 
     if (tableHeader.id == INVALID_TABLE_ID){
         std::ostringstream os;
@@ -412,9 +397,9 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
-    const auto tableHeader = (!this->database.empty())
-                               ? this->catalog->SelectTable(context.GetAllocator(), this->database, this->name)
-                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name, this->schema);
+    const auto tableHeader = (!this->database.Empty())
+                               ? this->catalog->SelectTable(context.GetAllocator(), this->database.ToView(), this->name.ToView())
+                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name.ToView(), this->schema.ToView());
 
     if (tableHeader.id != INVALID_TABLE_ID){
         std::ostringstream os;
@@ -437,7 +422,8 @@ namespace QueryPipeline::Statements {
     const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
     Headers::SchemaHeader schemaHeader;
 
-    if (!schemasDict.TryGetValue(Functions::String::Lower(this->table->schema), schemaHeader)) {
+    this->table->schema.ToLowerInPlace();
+    if (!schemasDict.TryGetValue(this->table->schema, schemaHeader)) {
         std::ostringstream os;
       os << "Schema: " << this->table->schema << "does not exist.";
       return {Errors::ValidationError::Error, os.str()};
@@ -449,14 +435,14 @@ namespace QueryPipeline::Statements {
 
   Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
     NewColumn*& column,
-    Dictionary<std::string, column_index_t>& columnNamesToIndexes,
+    Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
     bool& primaryKeyFound,
     column_index_t& index
   ){
     UnsignedSmallInt columnSize;
       std::ostringstream os;
 
-    if (!ColumnTypeSizes.TryGetValue(column->type.name, columnSize)) {
+    if (!ColumnTypeSizes.TryGetValue(column->type.name.ToView(), columnSize)) {
       os << "Column Type: " + column->type.name + " does not exist";
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -464,7 +450,7 @@ namespace QueryPipeline::Statements {
     if (columnSize != 0)
       column->type.size = columnSize;
 
-    const auto& dataType = ColumnTypesDictionary.Get(column->type.name);
+    const auto& dataType = ColumnTypesDictionary.Get(column->type.name.ToView());
 
     if (dataType == DataType::Decimal) {
       if (!column->type.decimal.Validate()) {
@@ -510,7 +496,7 @@ namespace QueryPipeline::Statements {
 
     column_index_t indexPosition = 0;
     bool primaryKeyFound = false;
-    Dictionary<std::string, column_index_t> columnNamesToIndexes;
+    Dictionary<DataTypes::String, column_index_t> columnNamesToIndexes;
 
     for (auto& column: this->columns)
       this->CompileColumnExpression(
@@ -554,8 +540,8 @@ namespace QueryPipeline::Statements {
 
   SelectStatement::~SelectStatement() = default;
 
-  Dictionary<std::string, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
-    Dictionary<std::string, column_index_t> dict;
+  Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
+    Dictionary<DataTypes::String, column_index_t> dict;
 
     for (int i = 0;i < this->results.size(); i++) {
       const auto& resultExpr = this->results[i];
@@ -591,7 +577,7 @@ namespace QueryPipeline::Statements {
     return {};
   }
 
-  Errors::ValidationStatus SelectStatement::Compile(QueryContext& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+  Errors::ValidationStatus SelectStatement::Compile(QueryContext& context, Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary){
     //Add Base Table to the dictionaries
     tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
     this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
@@ -634,7 +620,7 @@ namespace QueryPipeline::Statements {
     if (this->orderBy == nullptr)
       return {};
 
-    Dictionary<std::string, const Expressions::Expression*> postProjectionAliases;
+    Dictionary<DataTypes::String, const Expressions::Expression*> postProjectionAliases;
 
     for (const auto* resultExpr : this->results) {
       if (resultExpr->name.empty())
@@ -744,7 +730,7 @@ namespace QueryPipeline::Statements {
 
   void SelectStatement::BuildOrderByStatement(
     LogicalPlan*& current,
-    const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary
+    const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
   ) const{
     if(this->orderBy == nullptr)
       return;
@@ -770,7 +756,7 @@ namespace QueryPipeline::Statements {
     if (!tableResult.IsOk())
       return tableResult;
 
-    Dictionary<std::string, table_id_t> aliasesDictionary;
+    Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
 
     for (const auto& join: this->joins) {
       auto joinResult = join->Validate(context, this->databaseId);
@@ -820,7 +806,7 @@ namespace QueryPipeline::Statements {
   }
 
   Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
-    if (this->catalog->DatabaseExists(context.GetAllocator(), this->name)) {
+    if (this->catalog->DatabaseExists(context.GetAllocator(), this->name.ToView())) {
         std::ostringstream os;
       os << "Database " + this->name + " already exists";
 
@@ -934,7 +920,7 @@ namespace QueryPipeline::Statements {
       insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
   }
 
-  Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName) const{
+  Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const DataTypes::String& columnName) const{
     const auto valueType = expression->GetReturnType();
 
     const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
@@ -967,9 +953,9 @@ namespace QueryPipeline::Statements {
     }
 
     os << "Cannot update column " << columnHeader.name << " of type "
-      << ColumnTypesToStringDictionary.Get(columnType)
+      << DataTypeToStringDictionary.Get(columnType)
       << " with value of type "
-      << ColumnTypesToStringDictionary.Get(valueType);
+      << DataTypeToStringDictionary.Get(valueType);
 
     return {Errors::ValidationError::Error, os.str()};
   }
@@ -1001,7 +987,7 @@ namespace QueryPipeline::Statements {
   bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
   Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context){
-    Dictionary<std::string, table_id_t> tableAliasesDictionary{
+    Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary{
       {this->table->GetAlias(), this->table->tableId}
     };
 
@@ -1165,14 +1151,14 @@ namespace QueryPipeline::Statements {
     }
 
     os << "Cannot update column " << update->name.name << " of type "
-      << ColumnTypesToStringDictionary.Get(update->name.returnType)
+      << DataTypeToStringDictionary.Get(update->name.returnType)
       << " with value of type "
-      << ColumnTypesToStringDictionary.Get(valueType);
+      << DataTypeToStringDictionary.Get(valueType);
 
     return {Errors::ValidationError::Error, os.str()};
   }
 
-    Errors::ValidationStatus UpdateStatement::ResolveAliases(QueryContext& context, Dictionary<std::string, table_id_t> &tableAliasesDictionary){
+    Errors::ValidationStatus UpdateStatement::ResolveAliases(QueryContext& context, Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary){
         //Add Base Table to the dictionaries
         tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
         this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
@@ -1222,7 +1208,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
   if (!tableStatus.IsOk())
     return tableStatus;
 
-  Dictionary<std::string, table_id_t> aliasesDictionary;
+  Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
   return this->ResolveAliases(context, aliasesDictionary);
 }
 
@@ -1284,7 +1270,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     return context._context.Allocate<LogicalIndexCreate>(this->sessionId, this->table, this->name, this->columnIndices);
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
       std::ostringstream os;
 
     auto* newColumn = this->column.newColumn;
@@ -1328,7 +1314,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
       std::ostringstream os;
 
@@ -1350,7 +1336,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
         && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType)))){
       os << "Cannot alter column " << alterColumn->name.name << " from type: "
-        << ColumnTypesToStringDictionary.Get(static_cast<DataType>(header.dataType))
+        << DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType))
         << "to type: " << alterColumn->type.name;
 
       return {Errors::ValidationError::Error, os.str()};
@@ -1368,7 +1354,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const QueryContext& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const QueryContext& context, const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
       std::ostringstream os;
     Headers::ColumnHeader header;
 
@@ -1398,7 +1384,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     return {};
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
     Headers::ColumnHeader header;
 
     auto* renameColumn = this->column.renameColumn;
@@ -1527,8 +1513,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
         std::ostringstream os;
 
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+      const auto& leftTypeStr = DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType());
+      const auto& rightTypeStr = DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
       return {Errors::ValidationError::Error, os.str()};
@@ -1537,9 +1523,9 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (!binaryExpr->ValidateOperation()) {
         std::ostringstream os;
       os  << "Invalid operation between datatypes: "
-        << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+        << DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType())
         << " and "
-        << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+        << DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1563,8 +1549,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
         std::ostringstream os;
 
-      const auto& leftTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+      const auto& leftTypeStr = DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType());
+      const auto& rightTypeStr = DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
       return {Errors::ValidationError::Error, os.str()};
@@ -1573,9 +1559,9 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (!binaryExpr->ValidateOperation()) {
         std::ostringstream os;
       os  << "Invalid operation between datatypes: "
-        << ColumnTypesToStringDictionary.Get(binaryExpr->left->GetReturnType())
+        << DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType())
         << " and "
-        << ColumnTypesToStringDictionary.Get(binaryExpr->right->GetReturnType());
+        << DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
 
       return {Errors::ValidationError::Error, os.str()};
     }
@@ -1639,7 +1625,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     //validate functionExpression
-    std::string errorMessage;
+    DataTypes::String errorMessage;
     if (!funcExpr->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
@@ -1662,7 +1648,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     //validate number of arguments
-    std::string errorMessage;
+    DataTypes::String errorMessage;
     if (!funcExpr->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
@@ -1688,7 +1674,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
           std::ostringstream os;
 
         os  << "Expression of type: "
-          << ColumnTypesToStringDictionary.Get(branch->GetReturnType())
+          << DataTypeToStringDictionary.Get(branch->GetReturnType())
           << " cannot be used as a branching condition";
 
         return {Errors::ValidationError::Error, os.str()};
@@ -2013,8 +1999,8 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
   }
 
   void AssignColumnsFromWildCardExpression(
-    const Dictionary<std::string, Headers::ColumnHeader> &columnsDict,
-    const std::string& tableAlias,
+    const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
+    const DataTypes::String& tableAlias,
     const StatementValidationScope& statementValidationScope,
     std::vector<Expressions::Expression*>& results
   ) {
@@ -2213,7 +2199,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionExpression(
     Expressions::Expression *expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   ){
     switch (expression->expressionType) {
     case Expressions::ExpressionType::Binary:
@@ -2238,7 +2224,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionColumnExpression(
     Expressions::ColumnExpression *column,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   ){
     const Expressions::Expression* expression;
     if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
@@ -2254,7 +2240,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionBinaryExpression(
     const Expressions::BinaryExpression *expression,
-    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
   ){
     return CompilePostProjectionExpression(expression->left, postProjectionAliases)
       && CompilePostProjectionExpression(expression->right, postProjectionAliases);
@@ -2262,7 +2248,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionLogicalExpression(
     const Expressions::LogicalExpression *expression,
-    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
   ){
     return CompilePostProjectionExpression(expression->left, postProjectionAliases)
       && CompilePostProjectionExpression(expression->right, postProjectionAliases);
@@ -2270,7 +2256,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionFunctionExpression(
     const Expressions::FunctionExpression *expression,
-    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
   ){
     for (auto* childExpr : expression->arguments) {
       auto childExprStatus = CompilePostProjectionExpression(childExpr, postProjectionAliases);
@@ -2280,7 +2266,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     //validate number of arguments
-    std::string errorMessage;
+    DataTypes::String errorMessage;
     if (!expression->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
@@ -2289,7 +2275,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
   Errors::ValidationStatus CompilePostProjectionBranchExpression(
     const Expressions::BranchExpression *expression,
-    const Dictionary<std::string, const Expressions::Expression *> &postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
   ){
     for (const auto& argument : expression->arguments) {
       auto result = CompilePostProjectionExpression(argument, postProjectionAliases);
@@ -2316,7 +2302,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
   }
 
     void AssignPostProjectionIndicesToExpression(
-    const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
     Expressions::Expression *expression
     ){
         switch (expression->expressionType) {
@@ -2344,7 +2330,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToBinaryExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         const Expressions::BinaryExpression *expression
     ){
         AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2352,7 +2338,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToLogicalExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         const Expressions::LogicalExpression *expression
     ){
         AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->left);
@@ -2360,7 +2346,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToFunctionExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         const Expressions::FunctionExpression *expression
     ){
         for (auto* childExpr : expression->arguments)
@@ -2368,7 +2354,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToBranchExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         const Expressions::BranchExpression *expression
     ) {
         for (auto* argument : expression->arguments)
@@ -2385,7 +2371,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToBranchExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         Expressions::BranchExpression *expression
     ){
         for (auto*& argument : expression->arguments)
@@ -2399,7 +2385,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     void AssignPostProjectionIndicesToColumnExpression(
-        const Dictionary<std::string, column_index_t> &columnIndicesDictionary,
+        const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         Expressions::ColumnExpression *expression
     ) {
         expression->index = columnIndicesDictionary.Get(expression->alias);
@@ -2407,7 +2393,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
     Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
         std::ostringstream os;
-        os  << "Expression of type: " << ColumnTypesToStringDictionary.Get(type)
+        os  << "Expression of type: " << DataTypeToStringDictionary.Get(type)
             << " cannot be converted to type: Bool";
 
         return Errors::ValidationStatus(Errors::ValidationError::Error, os.str());

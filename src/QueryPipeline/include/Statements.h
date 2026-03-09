@@ -37,8 +37,8 @@ namespace QueryPipeline::Statements {
     struct SelectStatement;
 
   struct ColumnName {
-    std::string name;
-    std::string alias;
+    DataTypes::String name;
+    DataTypes::String alias;
 
     Int tableId;
     Int columnId;
@@ -47,14 +47,14 @@ namespace QueryPipeline::Statements {
   };
 
   struct StatementValidationScope {
-    const Dictionary<std::string, table_id_t>* tableAliasesDictionary;
-    Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>* tablesColumnsDictionary;
+    const Dictionary<DataTypes::String, table_id_t>* tableAliasesDictionary;
+    Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>>* tablesColumnsDictionary;
     int* indexPos;
     Statement* statement;
 
     StatementValidationScope(
-      const Dictionary<std::string, table_id_t>& tableAliasesDictionary,
-      Dictionary<int, Dictionary<std::string, Headers::ColumnHeader>>& tablesColumnsDictionary,
+      const Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary,
+      Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>>& tablesColumnsDictionary,
       Statement* statement,
       int* indexPos = nullptr
     );
@@ -70,18 +70,18 @@ namespace QueryPipeline::Statements {
   };
 
     struct ColumnType {
-        std::string name;
+        DataTypes::String name;
         int size;
 
         DecimalType decimal;
 
 
         ColumnType();
-        explicit ColumnType(const std::string& name);
-        ColumnType(const std::string& name, Int size);
-        ColumnType(std::string& name, Int size);
-        ColumnType(const std::string& name, DecimalType decimal);
-        ColumnType(std::string& name, DecimalType decimal);
+        explicit ColumnType(const DataTypes::String& name);
+        ColumnType(const DataTypes::String& name, Int size);
+        ColumnType(DataTypes::String& name, Int size);
+        ColumnType(const DataTypes::String& name, DecimalType decimal);
+        ColumnType(DataTypes::String& name, DecimalType decimal);
     };
 
   struct Identity{
@@ -143,7 +143,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct PrimaryKeyConstraint {
-    std::string name;
+    DataTypes::String name;
     std::vector<ColumnName> columns;
   };
 
@@ -158,16 +158,16 @@ namespace QueryPipeline::Statements {
     std::vector<OrderColumn*> columns;
 
     ~OrderByStatement();
-    bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<std::string, Headers::ColumnHeader>& columnsDict);
+    bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict);
   };
 
 //can be a table a view or a subquery or a function returning a table literally many things
 //add inheritance
   struct DataSource {
-    std::string database;
-    std::string schema;
-    std::string name;
-    std::string alias;
+    DataTypes::String database;
+    DataTypes::String schema;
+    DataTypes::String name;
+    DataTypes::String alias;
 
     Int databaseId;
     Int tableId;
@@ -177,9 +177,9 @@ namespace QueryPipeline::Statements {
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
 
-    DataSource();
-    [[nodiscard]] std::string GetAlias() const;
-    [[nodiscard]] std::string GetFullName()const;
+    DataSource(const ::Memory::IAllocator* allocator);
+    [[nodiscard]] DataTypes::String GetAlias() const;
+    [[nodiscard]] DataTypes::String GetFullName()const;
     [[nodiscard]] Errors::ValidationStatus Validate(const QueryContext& context, Int selectedDatabaseId);
     [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
   };
@@ -193,7 +193,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct Statement {
-    Dictionary<Int, Dictionary<std::string, Headers::ColumnHeader>> tableColumnsDictionary;
+    Dictionary<Int, Dictionary<DataTypes::String, Headers::ColumnHeader>> tableColumnsDictionary;
     DataTypes::Guid sessionId;
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
@@ -205,7 +205,7 @@ namespace QueryPipeline::Statements {
 
     virtual Errors::ValidationStatus CompileDerived(QueryContext& context) = 0;
     virtual constexpr Security::Permission RequiredPermissions()const = 0;
-    Errors::ValidationStatus CompileBase()const;
+    Errors::ValidationStatus CompileBase(const QueryContext& context)const;
     Errors::ValidationStatus Compile(QueryContext& context);
     virtual LogicalPlan* ToLogical(QueryContext& context) = 0;
   };
@@ -234,9 +234,9 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateUserStatement final: Statement {
-      std::string username;
-      std::string password;
-      std::string role;
+      DataTypes::String username;
+      DataTypes::String password;
+      DataTypes::String role;
 
       CreateUserStatement() = default;
       ~CreateUserStatement() override = default;
@@ -247,8 +247,8 @@ namespace QueryPipeline::Statements {
   };
 
   struct GrantRoleStatement final : Statement {
-    std::string username;
-    std::string role;
+    DataTypes::String username;
+    DataTypes::String role;
 
     GrantRoleStatement() = default;
     ~GrantRoleStatement() override = default;
@@ -295,7 +295,7 @@ namespace QueryPipeline::Statements {
     Errors::ValidationStatus CompileSchema(const QueryContext& context) const;
     Errors::ValidationStatus CompileColumnExpression(
       NewColumn*& column,
-      Dictionary<std::string, column_index_t>& columnNamesToIndexes,
+      Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
       bool& primaryKeyFound,
       column_index_t& index
     );
@@ -316,13 +316,13 @@ namespace QueryPipeline::Statements {
     SelectStatement();
     ~SelectStatement() override;
 
-    [[nodiscard]] Dictionary<std::string, column_index_t> CreatePostProjectionIndicesDictionary()const;
+    [[nodiscard]] Dictionary<DataTypes::String, column_index_t> CreatePostProjectionIndicesDictionary()const;
     [[nodiscard]] bool HasTopStatement()const;
     [[nodiscard]] bool HasJoins()const;
     [[nodiscard]] bool HasWhere()const;
     [[nodiscard]] bool IsConstant()const;
     [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(QueryContext& context);
-    [[nodiscard]] Errors::ValidationStatus Compile(QueryContext& context, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    [[nodiscard]] Errors::ValidationStatus Compile(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary);
     [[nodiscard]] Errors::ValidationStatus CompileWhereClause(QueryContext& context, StatementValidationScope& statementValidationScope);
     [[nodiscard]] static LogicalPlan* BuildTableScanPlan(
         const QueryContext& context,
@@ -339,14 +339,14 @@ namespace QueryPipeline::Statements {
         const std::vector<table_id_t>& joinOrder
     )const;
     void AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const;
-    void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<std::string, column_index_t>& postProjectionIndicesDictionary) const;
+    void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary) const;
     [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
     [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
   };
 
   struct CreateDbStatement final : Statement{
-    std::string name;
+    DataTypes::String name;
 
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -354,7 +354,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct DropDbStatement final : Statement{
-    std::string name;
+    DataTypes::String name;
 
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -362,7 +362,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct UseDatabaseStatement final : Statement {
-    std::string name;
+    DataTypes::String name;
 
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -384,7 +384,7 @@ namespace QueryPipeline::Statements {
         const Headers::DefaultValuesHeader& defaultValue
     );
     void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
-    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const Expressions::Expression* expression, const std::string& columnName)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const Expressions::Expression* expression, const DataTypes::String& columnName)const;
     [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context)const;
     [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context);
@@ -394,7 +394,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateSchemaStatement final : Statement {
-    std::string name;
+    DataTypes::String name;
 
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -414,15 +414,15 @@ namespace QueryPipeline::Statements {
     WhereClause where;
 
     [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const UpdateColumn* update)const;
-    Errors::ValidationStatus ResolveAliases(QueryContext& context, Dictionary<std::string, table_id_t>& tableAliasesDictionary);
+    Errors::ValidationStatus ResolveAliases(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary);
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan * ToLogical(QueryContext& context) override;
   };
 
   struct CreateIndexStatement final : Statement {
-    std::string name;
-    std::vector<std::string> columns;
+    DataTypes::String name;
+    std::vector<DataTypes::String> columns;
     std::vector<column_index_t> columnIndices;
     bool isUnique;
 
@@ -441,10 +441,10 @@ namespace QueryPipeline::Statements {
       RenameColumn* renameColumn;
     } column;
 
-    [[nodiscard]] Errors::ValidationStatus CompileAddColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const QueryContext& context, const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<std::string, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileAddColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const QueryContext& context, const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan * ToLogical(QueryContext& context) override;
@@ -566,8 +566,8 @@ namespace QueryPipeline::Statements {
   );
 
   static void AssignColumnsFromWildCardExpression(
-    const Dictionary<std::string, Headers::ColumnHeader> &columnsDict,
-    const std::string& tableAlias,
+    const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
+    const DataTypes::String& tableAlias,
     const StatementValidationScope& statementValidationScope,
     std::vector<Expressions::Expression*>& results
   );
@@ -665,32 +665,32 @@ static void AssignConstantToExpression(const QueryContext& context, Expressions:
    */
   static Errors::ValidationStatus CompilePostProjectionExpression(
     Expressions::Expression *expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   static Errors::ValidationStatus CompilePostProjectionColumnExpression(
     Expressions::ColumnExpression* column,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   static Errors::ValidationStatus CompilePostProjectionBinaryExpression(
     const Expressions::BinaryExpression* expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   static Errors::ValidationStatus CompilePostProjectionLogicalExpression(
     const Expressions::LogicalExpression* expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   static Errors::ValidationStatus CompilePostProjectionFunctionExpression(
     const Expressions::FunctionExpression* expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   static Errors::ValidationStatus CompilePostProjectionBranchExpression(
     const Expressions::BranchExpression* expression,
-    const Dictionary<std::string, const Expressions::Expression*>& postProjectionAliases
+    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
   );
 
   /** @} End of Post Projection Alias Resolvement Functions */
@@ -703,32 +703,32 @@ static void AssignConstantToExpression(const QueryContext& context, Expressions:
    */
 
   static void AssignPostProjectionIndicesToExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     Expressions::Expression* expression
   );
 
   static void AssignPostProjectionIndicesToBinaryExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     const Expressions::BinaryExpression* expression
   );
 
   static void AssignPostProjectionIndicesToLogicalExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     const Expressions::LogicalExpression* expression
   );
 
   static void AssignPostProjectionIndicesToFunctionExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     const Expressions::FunctionExpression* expression
   );
 
   static void AssignPostProjectionIndicesToBranchExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     const Expressions::BranchExpression* expression
   );
 
   static void AssignPostProjectionIndicesToColumnExpression(
-    const Dictionary<std::string, column_index_t>& columnIndicesDictionary,
+    const Dictionary<DataTypes::String, column_index_t>& columnIndicesDictionary,
     Expressions::ColumnExpression* expression
   );
 

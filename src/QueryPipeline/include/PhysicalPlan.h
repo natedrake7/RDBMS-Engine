@@ -29,7 +29,7 @@ namespace DatabaseEngine {
 
 namespace QueryPipeline::PhysicalPlan{
   struct ExecutionResult {
-      DataStructures::PolymorphicArray<std::string> displayColumnNames;
+      DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
       DataStructures::PolymorphicArray<const DatabaseEngine::StorageTypes::Column*> columns;
       DataStructures::PolymorphicArray<Pages::RowReference> rows;
       DataStructures::PolymorphicArray<QueryResult> results;
@@ -38,10 +38,14 @@ namespace QueryPipeline::PhysicalPlan{
 
       bool canFetchMore;
 
-      ExecutionResult();
+      // ExecutionResult();
       explicit ExecutionResult(const DatabaseEngine::ExecutionContext& context);
-      ExecutionResult(const Errors::RuntimeError& code, const std::string& message);
-      ExecutionResult(const Errors::RuntimeError& code, std::string_view message);
+      ExecutionResult(const Errors::RuntimeError& code, const DataTypes::String& message);
+      ExecutionResult(
+          const Errors::RuntimeError& code,
+          const DataTypes::StringView& message,
+          const ::Memory::IAllocator* allocator
+     );
 
       ExecutionResult(ExecutionResult&& other) noexcept;
       ExecutionResult& operator=(ExecutionResult&& other) noexcept;
@@ -89,28 +93,28 @@ namespace QueryPipeline::PhysicalPlan{
    */
 
   class PhysicalCreateUser final : public ExecutionNode {
-    std::string username;
-    std::string password;
-    std::string roleName;
+    DataTypes::String username;
+    DataTypes::String password;
+    DataTypes::String roleName;
     public:
-      explicit PhysicalCreateUser(std::string& username, std::string& password, std::string& role);
+      explicit PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role);
       ~PhysicalCreateUser()override = default;
       ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context)override;
   };
 
   class PhysicalGrantRole final : public ExecutionNode {
-      std::string username;
-      std::string roleName;
+      DataTypes::String username;
+      DataTypes::String roleName;
     public:
-      explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, std::string& username, std::string& roleName);
+      explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName);
       ~PhysicalGrantRole()override = default;
       ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context)override;
   };
 
   class PhysicalCreateDatabase final : public ExecutionNode{
-      std::string dbName;
+      DataTypes::String dbName;
     public:
-      explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& name);
+      explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name);
       ~PhysicalCreateDatabase() override = default;
       ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
@@ -126,18 +130,18 @@ namespace QueryPipeline::PhysicalPlan{
   };
 
   class PhysicalSchemaCreate final : public ExecutionNode{
-    std::string schemaName;
+    DataTypes::String schemaName;
     Int databaseId;
 
     public:
-      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, std::string& schemaName);
+      explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, DataTypes::String& schemaName);
       ~PhysicalSchemaCreate() override = default;
       ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
   };
 
   class PhysicalTableCreate final : public ExecutionNode{
     Statements::DataSource*  table;
-    std::string constraintName;
+    DataTypes::String constraintName;
     std::vector<Statements::NewColumn*> columns;
     Headers::Index primaryKey;
 
@@ -146,8 +150,8 @@ namespace QueryPipeline::PhysicalPlan{
       const DataTypes::Guid& sessionId,
       Statements::DataSource*  table,
       std::vector<Statements::NewColumn*>& columns,
-      Headers::Index& primaryKey,
-      std::string& constraintName
+      const Headers::Index& primaryKey,
+      DataTypes::String& constraintName
     );
     ~PhysicalTableCreate()override;
     ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;
@@ -155,14 +159,14 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalIndexCreate final : public ExecutionNode {
     Statements::DataSource* table;
-    std::string constraintName;
+    DataTypes::String constraintName;
     std::vector<column_index_t> columns;
 
   public:
     PhysicalIndexCreate(
         const DataTypes::Guid& sessionId,
         Statements::DataSource*  table,
-        std::string& constraintName,
+        DataTypes::String& constraintName,
         std::vector<column_index_t>& columns
     );
     ExecutionResult Execute(const DatabaseEngine::ExecutionContext& context) override;

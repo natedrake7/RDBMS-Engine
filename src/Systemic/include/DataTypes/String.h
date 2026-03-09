@@ -108,8 +108,10 @@ namespace DataTypes{
             String(const ::Memory::IAllocator* allocator);
             String(const ::Memory::IAllocator* allocator, Int size);
             String(const String& str, const ::Memory::IAllocator* allocator);
+            String(const StringView& str, const ::Memory::IAllocator* allocator);
             String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
             String(const char* str, const ::Memory::IAllocator* allocator);
+            String(const std::string& str, const ::Memory::IAllocator* allocator);
             String(char* str, Int size, const ::Memory::IAllocator* allocator);
             String(const char* str, Int size, const ::Memory::IAllocator* allocator);
             String(const String& other);

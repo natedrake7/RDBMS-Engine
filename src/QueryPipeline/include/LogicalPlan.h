@@ -27,15 +27,15 @@ namespace QueryPipeline {
 
   class LogicalCreateUser final : public LogicalPlan {
     public:
-      std::string username;
-      std::string password;
-      std::string role;
+      DataTypes::String username;
+      DataTypes::String password;
+      DataTypes::String role;
 
     explicit LogicalCreateUser(
       const DataTypes::Guid& sessionId,
-      std::string&  username,
-      std::string & password,
-      std::string & role
+      DataTypes::String&  username,
+      DataTypes::String& password,
+      DataTypes::String& role
     );
     ~LogicalCreateUser()override;
     PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
@@ -43,18 +43,18 @@ namespace QueryPipeline {
 
   class LogicalGrantRole final: public LogicalPlan {
     public:
-      std::string username;
-      std::string role;
+      DataTypes::String username;
+      DataTypes::String role;
 
-    explicit LogicalGrantRole(const DataTypes::Guid& sessionId, std::string & username, std::string & role);
+    explicit LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String & username, DataTypes::String & role);
     ~LogicalGrantRole()override = default;
     PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
   };
 
   class LogicalCreateDatabase final : public LogicalPlan {
     public:
-      std::string dbName;
-      explicit LogicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& dbName);
+      DataTypes::String dbName;
+      explicit LogicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& dbName);
       PhysicalPlan::PhysicalCreateDatabase* ToPhysical(QueryContext& context)override;
   };
 
@@ -182,9 +182,9 @@ namespace QueryPipeline {
 
   class LogicalSchemaCreate final : public LogicalPlan {
     public:
-      std::string schemaName;
+      DataTypes::String schemaName;
       Int databaseId;
-      explicit LogicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, std::string& schemaName);
+      explicit LogicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, DataTypes::String& schemaName);
       PhysicalPlan::PhysicalSchemaCreate* ToPhysical(QueryContext& context)override;
   };
 
@@ -210,31 +210,32 @@ namespace QueryPipeline {
         PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
     };
 
-  class LogicalTableCreate final : public LogicalPlan {
+    class LogicalTableCreate final : public LogicalPlan {
     public:
-      Statements::DataSource* table;
-      std::string constraintName;
-      std::vector<Statements::NewColumn*> columns;
-      std::vector<column_index_t> primaryKey;
+        Statements::DataSource* table;
+        DataTypes::String constraintName;
+        std::vector<Statements::NewColumn*> columns;
+        std::vector<column_index_t> primaryKey;
 
-      explicit LogicalTableCreate(
-        const DataTypes::Guid& sessionId,
-        Statements::DataSource* table,
-        std::vector<Statements::NewColumn*>& columns,
-        std::vector<column_index_t> primaryKey,
-        std::string  constraintName);
-      PhysicalPlan::PhysicalTableCreate* ToPhysical(QueryContext& context)override;
-  };
+        explicit LogicalTableCreate(
+            const DataTypes::Guid& sessionId,
+            Statements::DataSource* table,
+            std::vector<Statements::NewColumn*>& columns,
+            std::vector<column_index_t> primaryKey,
+            DataTypes::String& constraintName
+        );
+        PhysicalPlan::PhysicalTableCreate* ToPhysical(QueryContext& context)override;
+    };
 
   class LogicalIndexCreate final : public LogicalPlan {
     public:
     Statements::DataSource* table;
-    std::string constraintName;
+    DataTypes::String constraintName;
     std::vector<column_index_t> columns;
     explicit LogicalIndexCreate(
       const DataTypes::Guid& sessionId,
       Statements::DataSource* table,
-      std::string& constraintName,
+      DataTypes::String& constraintName,
       std::vector<column_index_t>& columns
     );
     PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;

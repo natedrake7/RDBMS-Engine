@@ -1,22 +1,22 @@
 #pragma once
-#include "../Functions/StringFunctions.h"
+#include "String.h"
 #include "../../include/DataTypes/Value.h"
 
 class Variable {
   Value value;
   DataType type;
 
-  std::string name;
-  std::string normalizedName;
+  DataTypes::String name;
+  DataTypes::String normalizedName;
 
   public:
     Variable() {
       this->type = DataType::Unknown;
     }
 
-    Variable(Value& value, const DataType& type, std::string& name)
+    Variable(Value& value, const DataType& type, DataTypes::String& name)
       : value(std::move(value)), type(type), name(std::move(name)) {
-      this->normalizedName = Functions::String::NormalizeString(this->name);
+      this->normalizedName = DataTypes::String::Normalize(this->name);
     }
 
     Variable(Variable&& other)noexcept {
@@ -67,15 +67,15 @@ class Variable {
 
     [[nodiscard]] Value& GetValue(){return this->value;}
     [[nodiscard]] const DataType& GetType() const { return this->type; }
-    [[nodiscard]] const std::string& GetName() const { return this->name; }
-    [[nodiscard]] const std::string& GetNormalizedName() const { return this->normalizedName; }
+    [[nodiscard]] const DataTypes::String& GetName() const { return this->name; }
+    [[nodiscard]] const DataTypes::String& GetNormalizedName() const { return this->normalizedName; }
 
     void SetValue(Value& other) { this->value = std::move(other); }
     void SetValue(const Value& other) { this->value = other; }
 
     void SetType(const DataType& other) { this->type = other; }
-    void SetName(std::string& other) {
+    void SetName(DataTypes::String& other) {
       this->name = std::move(other);
-      this->normalizedName = Functions::String::NormalizeString(this->name);
+      this->normalizedName = DataTypes::String::Normalize(this->name);
     }
 };

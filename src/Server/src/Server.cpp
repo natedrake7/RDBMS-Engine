@@ -20,25 +20,23 @@ namespace Network {
 
   Server::~Server() = default;
 
-  void Server::CreateSystemRoles() {
-    const auto roles = this->systemCatalog->InsertSystemRoles();
+  void Server::CreateSystemRoles(const DatabaseEngine::ExecutionContext& baseContext) {
+    const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
     for (const auto& role : roles)
-      const auto _ = this->roleManager.AddRole(role->name, role);
+      const auto _ = this->roleManager.AddRole(role->name.ToView(), role);
   }
 
-  void Server::CreateSystemUsers() {
-    const auto admin = std::string(Constants::ADMIN_NAME);
+  void Server::CreateSystemUsers(const DatabaseEngine::ExecutionContext& baseContext) {
+    const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
 
-    const auto defaultRole = this->roleManager.GetRole(admin);
-
-    std::string hashedPassword;
-    if (Security::UserManager::HashPassword(admin, hashedPassword) == false) {
+    DataTypes::String hashedPassword(baseContext.GetAllocator());
+    if (Security::UserManager::HashPassword(Constants::ADMIN_NAME, hashedPassword) == false) {
       std::cerr << "Failed to hash password for admin user" << std::endl;
       return;
     }
 
-    auto* user = this->systemCatalog->InsertSystemUsers(hashedPassword, defaultRole->id);
+    auto* user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
 
     user->role = defaultRole;
     const auto _ = this->userManager.AddSystemUser(user);
@@ -50,12 +48,13 @@ namespace Network {
     return instance;
   }
 
-  void Server::Initialize(const std::string_view configPath){
+  void Server::Initialize(const DataTypes::StringView& configPath){
+    const DatabaseEngine::ExecutionContext _baseContext;
     this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
-    this->temporaryDatabase->Initialize(configPath);
+    this->temporaryDatabase->Initialize(_baseContext.GetAllocator(), configPath);
 
     this->versionDatabase = &DatabaseEngine::VersionDatabase::Get();
-    this->versionDatabase->Initialize(configPath);
+    this->versionDatabase->Initialize(_baseContext, configPath);
 
     this->systemCatalog = &DatabaseEngine::SystemCatalog::Get();
     if (this->systemCatalog->Initialize(configPath)){
@@ -80,12 +79,12 @@ namespace Network {
   Errors::RuntimeStatus Server::GrantRole(
     const DatabaseEngine::ExecutionContext& context,
     const DataTypes::Guid& currentSessionId,
-    const std::string &username,
+    const DataTypes::String& username,
     const Security::Role *role
   )const{
     Int userId = -1;
 
-    if (!this->userManager.GrantRole(username, role, userId))
+    if (!this->userManager.GrantRole(username.ToView(), role, userId))
       return {
         Errors::RuntimeError::Error,
         "Failed to grant role: " + role->name + " to user: " + username,
@@ -113,14 +112,14 @@ namespace Network {
         );
     }
 
-  bool Server::UserExists(const std::string &userName) const{
+  bool Server::UserExists(const DataTypes::String& userName) const{
     return this->userManager.GetUser(userName) != nullptr;
   }
 
   bool Server::CreateUser(
       const DatabaseEngine::ExecutionContext& context,
-      const std::string &userName,
-      const std::string &password,
+      const DataTypes::String& userName,
+      const DataTypes::String& password,
       const std::string& roleName
     ){
     if (this->userManager.GetUser(userName) != nullptr)
@@ -158,15 +157,15 @@ namespace Network {
     return this->userManager.AddUser(result.primaryKey.AsInt(), userName, hashedPassword, role);
   }
 
-  const Security::User * Server::Authenticate(const std::string &username, const std::string &password)const{
+  const Security::User * Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{
     return this->userManager.Authenticate(username, password);
   }
 
-  bool Server::RoleExists(const std::string &role) const{
+  bool Server::RoleExists(const DataTypes::String& role) const{
     return this->roleManager.GetRole(role) != nullptr;
   }
 
-  const Security::Role * Server::GetRole(const std::string &roleName)const {
+  const Security::Role * Server::GetRole(const DataTypes::String& roleName)const {
     return this->roleManager.GetRole(roleName);
   }
 

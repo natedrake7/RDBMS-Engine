@@ -5,6 +5,7 @@
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../../DatabaseEngine/include/DataStorage/Table.h"
+#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
 namespace QueryPipeline::PhysicalPlan{
 
@@ -14,7 +15,8 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalAddColumn::~PhysicalAddColumn() = default;
 
   ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionContext& context){
-    const auto columnType = ColumnTypesDictionary.Get(Functions::String::NormalizeString(this->column->type.name));
+    this->column->type.name.ToLowerInPlace();
+    const auto columnType = ColumnTypesDictionary.Get(this->column->type.name.ToView());
 
     auto result = ExecutionResult();
 
@@ -28,7 +30,7 @@ namespace QueryPipeline::PhysicalPlan{
         this->catalog->InsertColumnToMasterDb(
           context,
           this->table->tableId,
-          this->column->name.name,
+          this->column->name.name.ToView(),
           columnType,
           this->column->type.size,
           this->column->type.decimal.precision,
@@ -36,7 +38,7 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->isNullable,
           this->column->index,
           false,
-          this->session->user->name
+          this->session->user->name.ToView()
           );
 
       if (!result.status.IsOk())

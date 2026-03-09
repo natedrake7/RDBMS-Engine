@@ -25,7 +25,7 @@ namespace DatabaseEngine {
 
         std::vector<Headers::sysTable> sysTables;
 
-        std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(const ::Memory::IAllocator* allocator, std::string_view configPath);
+        std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(const ::Memory::IAllocator* allocator, const DataTypes::StringView& configPath);
         [[nodiscard]] static bool CatalogExists(const DataTypes::StringView& path);
         void UseCatalogDatabase(const DataTypes::String& dbName);
         void CreateCatalogDatabase(const DataTypes::String& dbName);
@@ -82,7 +82,7 @@ namespace DatabaseEngine {
 
         [[nodiscard]] Database* GetDatabase()const;
 
-        [[nodiscard]]bool Initialize(std::string_view configPath);
+        [[nodiscard]]bool Initialize(const DataTypes::StringView& configPath);
         void Shutdown();
 
         [[nodiscard]] std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
@@ -262,7 +262,7 @@ namespace DatabaseEngine {
         [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const;
         [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int databaseId) const;
         [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
-        [[nodiscard]] Dictionary<std::string, Headers::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
+        [[nodiscard]] Dictionary<DataTypes::String, Headers::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
         [[nodiscard]] bool SchemaExists(
             const ::Memory::IAllocator* allocator,
             Int databaseId,
@@ -288,7 +288,7 @@ namespace DatabaseEngine {
         [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Headers::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
         [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] Dictionary<std::string, Headers::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
+        [[nodiscard]] Dictionary<DataTypes::String, Headers::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Headers::IndexHeader SelectIndexById(const ::Memory::IAllocator* allocator, Int indexId) const;
         [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int indexId) const;

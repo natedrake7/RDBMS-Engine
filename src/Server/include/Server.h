@@ -38,27 +38,27 @@ namespace Network {
     Server();
     ~Server();
 
-    void CreateSystemRoles();
-    void CreateSystemUsers();
+    void CreateSystemRoles(const DatabaseEngine::ExecutionContext& baseContext);
+    void CreateSystemUsers(const DatabaseEngine::ExecutionContext& baseContext);
 
   public:
     [[nodiscard]] static Server& Get();
-    void Initialize(std::string_view configPath);
+    void Initialize(const DataTypes::StringView& configPath);
     void Shutdown();
 
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(
         const DatabaseEngine::ExecutionContext& context,
         const DataTypes::Guid& currentSessionId,
-        const std::string& username,
+        const DataTypes::String& username,
         const Security::Role* role
     )const;
-    bool UserExists(const std::string& userName)const;
+    bool UserExists(const DataTypes::String& userName)const;
     bool CreateUser(
         const DatabaseEngine::ExecutionContext& context,
-        const std::string& userName,
-        const std::string& password,
-        const std::string& roleName
+        const DataTypes::String& userName,
+        const DataTypes::String& password,
+        const DataTypes::String& roleName
     );
     Errors::RuntimeStatus UpdateUserById(
         const DatabaseEngine::ExecutionContext& context,
@@ -66,10 +66,10 @@ namespace Network {
         Int userId,
         Int roleId
     )const;
-    [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
+    [[nodiscard]] const Security::User* Authenticate(const DataTypes::String& username, const DataTypes::String& password)const;
 
-    bool RoleExists(const std::string& role)const;
-    const Security::Role* GetRole(const std::string& roleName)const;
+    bool RoleExists(const DataTypes::String& role)const;
+    const Security::Role* GetRole(const DataTypes::String& roleName)const;
 
     //Session Functions
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);

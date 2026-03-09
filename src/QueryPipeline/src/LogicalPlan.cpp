@@ -31,7 +31,7 @@ namespace QueryPipeline {
     return context._context.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
   }
 
-  LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId, std::string& username, std::string& password, std::string& role)
+  LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId,DataTypes::String& username,DataTypes::String& password,DataTypes::String& role)
     : LogicalPlan(sessionId), username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
 
   LogicalCreateUser::~LogicalCreateUser() = default;
@@ -40,14 +40,14 @@ namespace QueryPipeline {
     return context._context.Allocate<PhysicalPlan::PhysicalCreateUser>(this->username, this->password, this->role);
   }
 
-  LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, std::string &username, std::string &role)
+  LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& role)
     : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
   PhysicalPlan::ExecutionNode * LogicalGrantRole::ToPhysical(QueryContext& context) {
     return context._context.Allocate<PhysicalPlan::PhysicalGrantRole>(this->sessionId, this->username, this->role);
   }
 
-  LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId, std::string& dbName) : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
+  LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId,DataTypes::String& dbName) : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
 
   PhysicalPlan::PhysicalCreateDatabase * LogicalCreateDatabase::ToPhysical(QueryContext& context){
     return context._context.Allocate<PhysicalPlan::PhysicalCreateDatabase>(this->sessionId, this->dbName);
@@ -308,7 +308,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return context._context.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->columnsIndices);
   }
 
-  LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, std::string &schemaName)
+  LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
     : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
   PhysicalPlan::PhysicalSchemaCreate * LogicalSchemaCreate::ToPhysical(QueryContext& context){
@@ -400,19 +400,25 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         Statements::DataSource*  table,
         std::vector<Statements::NewColumn*>& columns,
         std::vector<column_index_t> primaryKey,
-        std::string  constraintName
+        DataTypes::String& constraintName
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
     PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(QueryContext& context){
         Headers::Index index(this->primaryKey.data(), this->primaryKey.size());
-        return context._context.Allocate<PhysicalPlan::PhysicalTableCreate>(this->sessionId, this->table, this->columns, index, this->constraintName);
+        return context._context.Allocate<PhysicalPlan::PhysicalTableCreate>(
+            this->sessionId,
+            this->table,
+            this->columns,
+            index,
+            this->constraintName
+        );
     }
 
     LogicalIndexCreate::LogicalIndexCreate(
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
-        std::string &constraintName,
+        DataTypes::String& constraintName,
         std::vector<column_index_t> &columns
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 

@@ -139,9 +139,9 @@ namespace QueryPipeline {
         return std::any(expression);
     }
 
-  antlrcpp::Any SQLVisitorImplementation::visitCaseExpression(SQLParser::CaseExpressionContext *context) {
+    antlrcpp::Any SQLVisitorImplementation::visitCaseExpression(SQLParser::CaseExpressionContext *context) {
 
-  }
+    }
 
     antlrcpp::Any SQLVisitorImplementation::visitTernaryExpression(SQLParser::TernaryExpressionContext *context){
         auto* expression = this->_compileContext->Allocate<Expressions::BranchExpression>(Expressions::BranchType::Ternary);
@@ -429,15 +429,16 @@ namespace QueryPipeline {
         Statements::ColumnName columnName;
 
         if (context->columnAlias())
-            columnName.alias = std::any_cast<std::string>(visit(context->columnAlias()));
+            columnName.alias = std::any_cast<DataTypes::String>(visit(context->columnAlias()));
 
         if (context->identifier()) {
-            columnName.name = std::any_cast<std::string>(visit(context->identifier()));
+            columnName.name = std::any_cast<DataTypes::String>(visit(context->identifier()));
             return std::any(columnName);
         }
 
         if (context->MULTIPLICATION()) {
-            columnName.name = context->MULTIPLICATION()->getText();
+            const auto value = context->MULTIPLICATION()->getText();
+            columnName.name = DataTypes::String(value, this->_compileContext->GetAllocator());
             return std::any(columnName);
         }
 
@@ -475,8 +476,9 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitIdentifier(SQLParser::IdentifierContext *context){
-        auto value = context->IDENTIFIER()->getText();
-        return std::any(value);
+        const auto value = context->IDENTIFIER()->getText();
+        auto castValue = DataTypes::String(value, this->_compileContext->GetAllocator());
+        return std::any(castValue);
     }
 
     std::vector<Statements::ColumnName> SQLVisitorImplementation::GetColumnsList(SQLParser::ColumnListContext *context){
@@ -717,7 +719,7 @@ namespace QueryPipeline {
 
         if (context->variableName())
             wrapper.expression = this->_compileContext->Allocate<Expressions::VariableExpression>(
-                std::any_cast<std::string>(visit(context->variableName())),
+                std::any_cast<DataTypes::String>(visit(context->variableName())),
                 this->_compileContext->GetAllocator()
             );
             return std::any(wrapper);
@@ -780,7 +782,12 @@ namespace QueryPipeline {
             expression = this->_compileContext->Allocate<Expressions::LogicalExpression>(expression, right, Expressions::LogicalType::Or);
         }
 
-        expression->name = (context->alias()) ? std::any_cast<std::string>(visit(context->alias())) : "";
+        if (context->alias()){
+            auto value = std::any_cast<DataTypes::String>(visit(context->alias()));
+            expression->name = std::move(value);
+        }
+        else
+          expression->name = DataTypes::String::Empty(this->_compileContext->GetAllocator());
 
         auto wrapper = ExpressionWrapper{ expression };
         return std::any(wrapper);

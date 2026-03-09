@@ -362,6 +362,14 @@ namespace DataTypes{
         this->_capacity = str._capacity;
     }
 
+    String::String(const StringView& str, const Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+        this->_data = static_cast<char*>(allocator->AllocateRaw(str.Size()));
+        std::memcpy(this->_data, str.Data(), str.Size());
+        this->_size = str.Size();
+        this->_capacity = str.Size();
+    }
+
     String::String(const object_t* str, const Int size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
@@ -389,6 +397,14 @@ namespace DataTypes{
 
         this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
         std::strcpy(this->_data, str);
+    }
+
+    String::String(const std::string& str, const Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+        this->_size = static_cast<Int>(str.size());
+        this->_capacity = this->_size;
+        this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
+        std::strcpy(this->_data, str.data());
     }
 
     String::String(char* str, const Int size, const Memory::IAllocator* allocator){

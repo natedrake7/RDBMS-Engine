@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <string>
 
 #include "Key.h"
 #include "RowIdentifier.h"
@@ -25,33 +24,55 @@ namespace Errors {
 
   struct RuntimeStatus {
     RuntimeError code;
-    std::string message;
+    DataTypes::String message;
 
     DataTypes::Indexing::Key primaryKey;
     DataTypes::RowIdentifier rowId;
 
-    RuntimeStatus() {
+    explicit RuntimeStatus(const ::Memory::IAllocator* allocator) {
       this->code = RuntimeError::Ok;
-      this->message = "";
+      this->message = DataTypes::String::Empty(allocator);
       this->primaryKey = DataTypes::Indexing::Key();
     }
 
-    RuntimeStatus(const RuntimeError code, std::string& message){
+    // RuntimeStatus(const RuntimeError code, DataTypes::String& message){
+    //     this->code = code;
+    //     this->message = std::move(message);
+    //     this->primaryKey = DataTypes::Indexing::Key();
+    // }
+    //
+    // RuntimeStatus(const RuntimeError code, const DataTypes::String_view message){
+    //     this->code = code;
+    //     this->message = DataTypes::String(message);
+    //     this->primaryKey = DataTypes::Indexing::Key();
+    // }
+    //
+    // RuntimeStatus(const RuntimeError code, const DataTypes::String&  message){
+    //   this->code = code;
+    //   this->message = message;
+    //   this->primaryKey = DataTypes::Indexing::Key();
+    // }
+
+    RuntimeStatus(){
+        this->code = RuntimeError::Ok;
+    }
+
+    RuntimeStatus(const RuntimeError code, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator){
+        this->code = code;
+        this->message = DataTypes::String(message, allocator);
+        this->primaryKey = DataTypes::Indexing::Key();
+    }
+
+    RuntimeStatus(const RuntimeError code, DataTypes::String& message){
         this->code = code;
         this->message = std::move(message);
         this->primaryKey = DataTypes::Indexing::Key();
     }
 
-    RuntimeStatus(const RuntimeError code, const std::string_view message){
+    RuntimeStatus(const RuntimeError code, DataTypes::String&& message){
         this->code = code;
-        this->message = std::string(message);
+        this->message = std::move(message);
         this->primaryKey = DataTypes::Indexing::Key();
-    }
-
-    RuntimeStatus(const RuntimeError code, const std::string&  message){
-      this->code = code;
-      this->message = message;
-      this->primaryKey = DataTypes::Indexing::Key();
     }
 
     RuntimeStatus(RuntimeStatus&& other) noexcept {
@@ -83,22 +104,38 @@ namespace Errors {
 
   struct ValidationStatus {
     ValidationError code;
-    std::string message;
+    DataTypes::String message;
 
-    ValidationStatus() {
+    explicit ValidationStatus(const ::Memory::IAllocator* allocator) {
       this->code = ValidationError::Ok;
-      this->message = "";
+      this->message = DataTypes::String::Empty(allocator);
     }
 
-    ValidationStatus(const ValidationError code, const std::string&  message){
+    ValidationStatus(const ValidationError code, const DataTypes::String& message){
       this->code = code;
       this->message = message;
+    }
+
+    ValidationStatus(
+        const ValidationError code,
+        const DataTypes::StringView& message,
+        const ::Memory::IAllocator* allocator
+    ){
+        this->code = code;
+        this->message = DataTypes::String(message, allocator);
+    }
+
+    static ValidationStatus Error(
+        const DataTypes::StringView& message,
+        const ::Memory::IAllocator* allocator
+    ){
+        return ValidationStatus(ValidationError::Error, message, allocator);
     }
 
     [[nodiscard]] bool IsOk()const { return this->code == ValidationError::Ok; }
   };
 
-  inline ValidationStatus operator&&(const ValidationStatus& lhs, const ValidationStatus& rhs) {
+  inline ValidationStatus operator&&(ValidationStatus& lhs, ValidationStatus& rhs) {
     if (!lhs.IsOk())
       return lhs;
 
@@ -110,14 +147,14 @@ namespace Errors {
 
   struct Error {
     bool hasError;
-    std::string message;
+    DataTypes::String message;
 
-    Error() {
+    explicit Error(const ::Memory::IAllocator* allocator) {
       this->hasError = false;
-      this->message = "";
+      this->message = DataTypes::String::Empty(allocator);
     }
 
-    Error(const bool hasError, const std::string&  message){
+    Error(const bool hasError, const DataTypes::String& message){
       this->hasError = hasError;
       this->message = message;
     }

@@ -39,7 +39,7 @@ public:
 
     static T Stoi(const DataTypes::String& input) { return Stoi(input.Data()); }
 
-    static DataTypes::Decimal Stod(const std::string& input) {
+    static DataTypes::Decimal Stod(const DataTypes::StringView& input) {
         return DataTypes::Decimal(input);
     }
 

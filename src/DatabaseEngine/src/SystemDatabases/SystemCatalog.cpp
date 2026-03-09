@@ -7,7 +7,6 @@
 
 #include <iostream>
 #include <nlohmann/json.hpp>
-#include "../../include/Extensions/StringExtensions.h"
 
 #include "Converter.h"
 #include "DataStorage/Table.h"
@@ -45,12 +44,12 @@ namespace DatabaseEngine {
 
     std::tuple<DataTypes::String, DataTypes::String> SystemCatalog::ReadConfiguration(
         const ::Memory::IAllocator* allocator,
-        const std::string_view configPath
+        const DataTypes::StringView& configPath
     ) {
-        std::ifstream file(configPath.data());
+        std::ifstream file(configPath.Data());
 
         if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + std::string(configPath) + " could not be opened");
+            throw std::runtime_error("System Tables file: " + std::string(configPath.Data(), configPath.Size()) + " could not be opened");
 
         nlohmann::json jsonFile;
 
@@ -614,7 +613,7 @@ namespace DatabaseEngine {
 
   Database* SystemCatalog::GetDatabase() const{ return this->masterDb; }
 
-  bool SystemCatalog::Initialize(const std::string_view configPath) {
+  bool SystemCatalog::Initialize(const DataTypes::StringView& configPath) {
     const ExecutionContext _baseContext;
     const auto [sysDbName, sysDbPath] = this->ReadConfiguration(_baseContext.GetAllocator(), configPath);
 
@@ -1431,13 +1430,13 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
      return schemas;
   }
 
-  Dictionary<std::string, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, const Int databaseId) const{
+  Dictionary<DataTypes::String, Headers::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, const Int databaseId) const{
     const auto& schemas = this->SelectSchemas(allocator, databaseId);
 
-    Dictionary<std::string, Headers::SchemaHeader> selectedSchemas;
+    Dictionary<DataTypes::String, Headers::SchemaHeader> selectedSchemas;
 
     for (const auto& schema : schemas)
-      selectedSchemas.Add(std::string(schema.name.Data(), schema.name.Size()), schema);
+      selectedSchemas.Add(schema.name, schema);
 
     return selectedSchemas;
   }
@@ -1644,15 +1643,15 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return selectedColumnHeaders;
     }
 
-    Dictionary<std::string, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(
+    Dictionary<DataTypes::String, Headers::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
         const auto columns = this->SelectColumns(allocator, tableId);
 
-        Dictionary<std::string, Headers::ColumnHeader> selectedColumns;
+        Dictionary<DataTypes::String, Headers::ColumnHeader> selectedColumns;
         for (const auto& column: columns)
-            selectedColumns.Add(Functions::String::Lower(std::string(column.name.Data(), column.name.Size())), column);
+            selectedColumns.Add(column.name.ToLower(), column);
 
         return selectedColumns;
     }
