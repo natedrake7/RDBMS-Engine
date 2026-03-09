@@ -463,6 +463,10 @@ namespace DataTypes{
         return String(allocator, 0);
     }
 
+    String String::Null(){
+        return String();
+    }
+
     void String::SetAllocator(const Memory::IAllocator* allocator){
         this->_allocator = allocator;
     }

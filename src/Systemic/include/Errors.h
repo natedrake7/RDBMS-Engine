@@ -106,6 +106,10 @@ namespace Errors {
     ValidationError code;
     DataTypes::String message;
 
+    ValidationStatus() {
+      this->code = ValidationError::Ok;
+    }
+
     explicit ValidationStatus(const ::Memory::IAllocator* allocator) {
       this->code = ValidationError::Ok;
       this->message = DataTypes::String::Empty(allocator);
@@ -114,6 +118,11 @@ namespace Errors {
     ValidationStatus(const ValidationError code, const DataTypes::String& message){
       this->code = code;
       this->message = message;
+    }
+
+    ValidationStatus(const ValidationError code, DataTypes::String&& message) noexcept {
+      this->code = code;
+      this->message = std::move(message);
     }
 
     ValidationStatus(
@@ -132,10 +141,18 @@ namespace Errors {
         return ValidationStatus(ValidationError::Error, message, allocator);
     }
 
+    static ValidationStatus Error(DataTypes::String&& message){
+        return ValidationStatus(ValidationError::Error, std::move(message));
+    }
+
+    static ValidationStatus Ok(){
+        return ValidationStatus(ValidationError::Ok, DataTypes::String::Null());
+    }
+
     [[nodiscard]] bool IsOk()const { return this->code == ValidationError::Ok; }
   };
 
-  inline ValidationStatus operator&&(ValidationStatus& lhs, ValidationStatus& rhs) {
+  inline ValidationStatus operator&&(const ValidationStatus& lhs, const ValidationStatus& rhs) {
     if (!lhs.IsOk())
       return lhs;
 

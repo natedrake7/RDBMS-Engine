@@ -207,7 +207,7 @@ namespace QueryPipeline{
     LogicalPlan* Parser::BuildLogicalPlan(QueryContext& result, Statements::Statement* statement){
         auto validation = statement->Compile(result);
         if (!validation.IsOk()) {
-            result.status = Errors::Error(true, validation.message);
+            result.status = Errors::Error(true, validation.message, result.GetAllocator());
             return nullptr;
         }
 

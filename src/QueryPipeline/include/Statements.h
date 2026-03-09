@@ -92,7 +92,7 @@ namespace QueryPipeline::Statements {
     Identity() = default;
     ~Identity() = default;
 
-    [[nodiscard]] Errors::ValidationStatus Validate() const;
+    [[nodiscard]] Errors::ValidationStatus Validate(const QueryContext& context) const;
   };
 
   struct NewColumn {
@@ -177,10 +177,13 @@ namespace QueryPipeline::Statements {
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
 
-    DataSource(const ::Memory::IAllocator* allocator);
-    [[nodiscard]] DataTypes::String GetAlias() const;
-    [[nodiscard]] DataTypes::String GetFullName()const;
-    [[nodiscard]] Errors::ValidationStatus Validate(const QueryContext& context, Int selectedDatabaseId);
+    explicit DataSource(const ::Memory::IAllocator* allocator);
+    [[nodiscard]] DataTypes::String GetAlias(const QueryContext& context) const;
+    [[nodiscard]] DataTypes::String GetFullName(const QueryContext& context)const;
+    [[nodiscard]] Errors::ValidationStatus Validate(
+        const QueryContext& context,
+        Int selectedDatabaseId
+    );
     [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
   };
 
@@ -294,10 +297,11 @@ namespace QueryPipeline::Statements {
 
     Errors::ValidationStatus CompileSchema(const QueryContext& context) const;
     Errors::ValidationStatus CompileColumnExpression(
-      NewColumn*& column,
-      Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
-      bool& primaryKeyFound,
-      column_index_t& index
+        const QueryContext& context,
+        NewColumn*& column,
+        Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
+        bool& primaryKeyFound,
+        column_index_t& index
     );
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     LogicalPlan* ToLogical(QueryContext& context) override;
@@ -384,7 +388,11 @@ namespace QueryPipeline::Statements {
         const Headers::DefaultValuesHeader& defaultValue
     );
     void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
-    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const Expressions::Expression* expression, const DataTypes::String& columnName)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
+        const QueryContext& context,
+        const Expressions::Expression* expression,
+        const DataTypes::String& columnName
+    )const;
     [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context)const;
     [[nodiscard]] bool HasSelectStatement() const;
     [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context);
@@ -402,8 +410,8 @@ namespace QueryPipeline::Statements {
   };
 
   struct UpdateColumn{
-    ColumnName name;
     Expressions::Expression* value;
+    ColumnName name;
 
     UpdateColumn();
     ~UpdateColumn();
@@ -413,7 +421,10 @@ namespace QueryPipeline::Statements {
     std::vector<UpdateColumn*> updates;
     WhereClause where;
 
-    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(const UpdateColumn* update)const;
+    [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
+        const QueryContext& context,
+        const UpdateColumn* update
+    )const;
     Errors::ValidationStatus ResolveAliases(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary);
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -441,8 +452,14 @@ namespace QueryPipeline::Statements {
       RenameColumn* renameColumn;
     } column;
 
-    [[nodiscard]] Errors::ValidationStatus CompileAddColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileAddColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const;
+    [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const;
     [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const QueryContext& context, const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
     [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
@@ -740,7 +757,7 @@ static void AssignConstantToExpression(const QueryContext& context, Expressions:
    * @{
    */
 
-  static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(DataType type);
+  static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
 
   /** @} End of Helper Functions */
 }

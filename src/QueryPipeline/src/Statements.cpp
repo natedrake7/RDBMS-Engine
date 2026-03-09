@@ -44,7 +44,7 @@ namespace QueryPipeline::Statements {
     }
 
   Errors::ValidationStatus Statement::Compile(QueryContext& context){
-    auto result = this->CompileBase();
+    auto result = this->CompileBase(context);
 
     if (!result.IsOk())
       return result;
@@ -201,18 +201,21 @@ namespace QueryPipeline::Statements {
         this->expression = nullptr;
     }
 
-  Errors::ValidationStatus JoinStatement::CompileDerived(QueryContext& context){
-    return Errors::ValidationStatus(context.GetAllocator());
-  }
+    Errors::ValidationStatus JoinStatement::CompileDerived(QueryContext& context){
+        return Errors::ValidationStatus(context.GetAllocator());
+    }
 
-  Errors::ValidationStatus JoinStatement::Validate(const QueryContext& context, const Int databaseId){
-    this->databaseId = databaseId;
+    Errors::ValidationStatus JoinStatement::Validate(const QueryContext& context, const Int databaseId){
+        this->databaseId = databaseId;
 
-    if (this->table == nullptr)
-      return {Errors::ValidationError::Error, "No table was specified in the join statement"};
+        if (this->table == nullptr)
+            return Errors::ValidationStatus::Error(
+                Messages::MISSING_TABLE_IN_JOIN,
+                context.GetAllocator()
+            );
 
-    return this->table->Validate(context, this->databaseId);
-  }
+        return this->table->Validate(context, this->databaseId);
+    }
 
   bool JoinStatement::IsRightJoin() const {
     return this->type == JoinType::Right;
@@ -238,474 +241,525 @@ namespace QueryPipeline::Statements {
   //   return context._context.Allocate< LogicalJoin(this->table, this->joinType, this->table2, this->on.expression);
   // }
 
-  StatementValidationScope::StatementValidationScope(
-    const Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary,
-    Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>> &tablesColumnsDictionary,
-    Statement *statement,
-    int *indexPos
-  ) {
-    this->tableAliasesDictionary = &tableAliasesDictionary;
-    this->tablesColumnsDictionary = &tablesColumnsDictionary;
-    this->statement = statement;
-    this->indexPos = indexPos;
-  }
-
-  DecimalType::DecimalType(){
-    this->precision = INVALID_DECIMAL_PRECISION;
-    this->scale = INVALID_DECIMAL_SCALE;
-  }
-
-  DecimalType::DecimalType(const TinyInt precision, const TinyInt scale){
-    this->precision = precision;
-    this->scale = scale;
-  }
-
-  bool DecimalType::Validate() const{
-    if (this->precision == INVALID_DECIMAL_PRECISION
-      || this->scale == INVALID_DECIMAL_SCALE)
-      return false;
-
-    return (
-      this->precision <= MAX_DECIMAL_PRECISION
-      && this->scale <= this->precision
-    );
-  }
-
-  ColumnType::ColumnType(){
-      this->size = 0;
-  }
-
-  ColumnType::ColumnType(const DataTypes::String& name){
-    this->name = name;
-    this->size = 0;
-  }
-
-  ColumnType::ColumnType(const DataTypes::String& name, const Int size){
-    this->name = name;
-    this->size = size;
-  }
-
-  ColumnType::ColumnType(DataTypes::String& name, const Int size){
-      this->name = std::move(name);
-      this->size = size;
-  }
-
-  ColumnType::ColumnType(const DataTypes::String& name, const DecimalType decimal){
-      this->size = 0;
-      this->name = name;
-      this->decimal = decimal;
-  }
-
-  ColumnType::ColumnType(DataTypes::String& name, const DecimalType decimal){
-    this->name = std::move(name);
-    this->decimal = decimal;
-    this->size = 0;
-  }
-
-  Errors::ValidationStatus Identity::Validate() const{
-    if (this->incrementFactor <= 0)
-      return {Errors::ValidationError::Error, "Increment Factor must be greater than zero"};
-
-    return {};
-  }
-
-  bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
-
-  OrderColumn::OrderColumn(){
-    this->expression = nullptr;
-    this->type = OrderType::ASCENDING;
-  }
-
-  OrderColumn::~OrderColumn() = default;
-
-  AlterColumn::AlterColumn(){
-      this->columnId = INVALID_COLUMN_ID;
-      this->index = INVALID_ORDINAL_POS;
-  }
-
-  WhereClause::WhereClause() { this->expression = nullptr; }
-
-  bool WhereClause::IsValid() const{
-    return (this->expression == nullptr)
-      || this->expression->IsLogical()
-      || this->expression->IsBinary();
-  }
-
-  OrderByStatement::~OrderByStatement() = default;
-
-  bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict){
-
-    HashSet<DataTypes::String> selectColumnMap;
-    // for (const auto& selectColumn : selectColumns) {
-    //   selectColumnMap.Add(selectColumn->name.name);
-    // }
-    //
-    // for(const auto& column : this->columns){
-    //   if(!selectColumnMap.Contains(column->name.name)){
-    //     cerr << "Column " << column->name.name << " does not exist on the statement." << endl;
-    //     return false;
-    //   }
-    //
-    //   Headers::ColumnHeader header;
-    //   columnsDict.TryGetValue(column->name.name, header);
-    //
-    //   this->columnIndices.emplace_back(header.ordinalPosition);
-    // }
-
-    return true;
-  }
-
-  DataSource::DataSource(const ::Memory::IAllocator* allocator) {
-    this->databaseId = INVALID_DATABASE_ID;
-    this->tableId = INVALID_TABLE_ID;
-    this->schemaId = INVALID_SCHEMA_ID;
-    this->ordinalPosition = INVALID_ORDINAL_POS;
-    this->schema = DataTypes::String::FromView(DEFAULT_SCHEMA_NAME, allocator);
-    this->server = &Network::Server::Get();
-    this->catalog = &DatabaseEngine::SystemCatalog::Get();
-  }
-
-  DataTypes::String DataSource::GetAlias() const{
-    return this->alias.Empty()
-             ? this->GetFullName()
-             : this->alias;
-  }
-
-  DataTypes::String DataSource::GetFullName() const {
-
-
-    return (this->database.Empty() ? "" : this->database + ".") + this->schema + "." + this->name;
-  }
-
-  Errors::ValidationStatus DataSource::Validate(const QueryContext& context, const Int selectedDatabaseId) {
-    const auto tableHeader = (!this->database.Empty())
-                               ? this->catalog->SelectTable(context.GetAllocator(), this->database.ToView(), this->name.ToView())
-                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name.ToView(), this->schema.ToView());
-
-    if (tableHeader.id == INVALID_TABLE_ID){
-        std::ostringstream os;
-
-      os << "Table " + this->GetFullName() + " does not exist";
-      return {Errors::ValidationError::Error, os.str()};
+    StatementValidationScope::StatementValidationScope(
+        const Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary,
+        Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>> &tablesColumnsDictionary,
+        Statement *statement,
+        int *indexPos
+    ) {
+        this->tableAliasesDictionary = &tableAliasesDictionary;
+        this->tablesColumnsDictionary = &tablesColumnsDictionary;
+        this->statement = statement;
+        this->indexPos = indexPos;
     }
 
-    this->tableId = tableHeader.id;
-    this->ordinalPosition = tableHeader.ordinalPosition;
-    this->databaseId = tableHeader.databaseId;
+    DecimalType::DecimalType(){
+        this->precision = INVALID_DECIMAL_PRECISION;
+        this->scale = INVALID_DECIMAL_SCALE;
+    }
 
-    return {};
+    DecimalType::DecimalType(const TinyInt precision, const TinyInt scale){
+        this->precision = precision;
+        this->scale = scale;
+    }
+
+    bool DecimalType::Validate() const{
+        if (this->precision == INVALID_DECIMAL_PRECISION
+            || this->scale == INVALID_DECIMAL_SCALE
+        ) return false;
+
+        return (
+            this->precision <= MAX_DECIMAL_PRECISION
+            && this->scale <= this->precision
+        );
+    }
+
+    ColumnType::ColumnType(){
+        this->size = 0;
+    }
+
+    ColumnType::ColumnType(const DataTypes::String& name){
+        this->name = name;
+        this->size = 0;
+    }
+
+    ColumnType::ColumnType(const DataTypes::String& name, const Int size){
+        this->name = name;
+        this->size = size;
+    }
+
+    ColumnType::ColumnType(DataTypes::String& name, const Int size){
+        this->name = std::move(name);
+        this->size = size;
+    }
+
+    ColumnType::ColumnType(const DataTypes::String& name, const DecimalType decimal){
+        this->size = 0;
+        this->name = name;
+        this->decimal = decimal;
+    }
+
+    ColumnType::ColumnType(DataTypes::String& name, const DecimalType decimal){
+        this->name = std::move(name);
+        this->decimal = decimal;
+        this->size = 0;
+    }
+
+    Errors::ValidationStatus Identity::Validate(const QueryContext& context) const{
+        if (this->incrementFactor <= 0)
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_INCREMENT_FACTOR,
+                context.GetAllocator()
+            );
+        return Errors::ValidationStatus(context.GetAllocator());
+    }
+
+    bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
+
+    OrderColumn::OrderColumn(){
+        this->expression = nullptr;
+        this->type = OrderType::ASCENDING;
+    }
+
+    OrderColumn::~OrderColumn() = default;
+
+    AlterColumn::AlterColumn(){
+        this->columnId = INVALID_COLUMN_ID;
+        this->index = INVALID_ORDINAL_POS;
+    }
+
+    WhereClause::WhereClause() { this->expression = nullptr; }
+
+    bool WhereClause::IsValid() const{
+        return (this->expression == nullptr)
+            || this->expression->IsLogical()
+            || this->expression->IsBinary();
+    }
+
+    OrderByStatement::~OrderByStatement() = default;
+
+    bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict){
+        HashSet<DataTypes::String> selectColumnMap;
+        // for (const auto& selectColumn : selectColumns) {
+        //   selectColumnMap.Add(selectColumn->name.name);
+        // }
+        //
+        // for(const auto& column : this->columns){
+        //   if(!selectColumnMap.Contains(column->name.name)){
+        //     cerr << "Column " << column->name.name << " does not exist on the statement." << endl;
+        //     return false;
+        //   }
+        //
+        //   Headers::ColumnHeader header;
+        //   columnsDict.TryGetValue(column->name.name, header);
+        //
+        //   this->columnIndices.emplace_back(header.ordinalPosition);
+        // }
+
+        return true;
   }
 
-  Errors::ValidationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
-    const auto tableHeader = (!this->database.Empty())
-                               ? this->catalog->SelectTable(context.GetAllocator(), this->database.ToView(), this->name.ToView())
-                               : this->catalog->SelectTable(context.GetAllocator(), selectedDatabaseId, this->name.ToView(), this->schema.ToView());
-
-    if (tableHeader.id != INVALID_TABLE_ID){
-        std::ostringstream os;
-      os << "Table " + this->GetFullName() + " exists";
-      return {Errors::ValidationError::Error, os.str()};
+    DataSource::DataSource(const ::Memory::IAllocator* allocator) {
+        this->databaseId = INVALID_DATABASE_ID;
+        this->tableId = INVALID_TABLE_ID;
+        this->schemaId = INVALID_SCHEMA_ID;
+        this->ordinalPosition = INVALID_ORDINAL_POS;
+        this->schema = DataTypes::String::FromView(DEFAULT_SCHEMA_NAME, allocator);
+        this->server = &Network::Server::Get();
+        this->catalog = &DatabaseEngine::SystemCatalog::Get();
     }
 
-    this->databaseId = selectedDatabaseId;
-    return {};
-  }
-
-  CreateTableStatement::CreateTableStatement(){
-    this->table = nullptr;
-    this->constraint = nullptr;
-  }
-
-  CreateTableStatement::~CreateTableStatement() = default;
-
-  Errors::ValidationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
-    const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
-    Headers::SchemaHeader schemaHeader;
-
-    this->table->schema.ToLowerInPlace();
-    if (!schemasDict.TryGetValue(this->table->schema, schemaHeader)) {
-        std::ostringstream os;
-      os << "Schema: " << this->table->schema << "does not exist.";
-      return {Errors::ValidationError::Error, os.str()};
+    DataTypes::String DataSource::GetAlias(const QueryContext& context) const{
+        if (this->alias.Empty())
+            return this->GetFullName(context);
+        return this->alias;
     }
 
-    this->table->schemaId = schemaHeader.id;
-    return {};
-  }
+    DataTypes::String DataSource::GetFullName(const QueryContext& context) const {
+        if (this->database.Empty())
+            return DataTypes::String::Concat(
+                context.GetAllocator(),
+                this->schema,
+                Messages::DOT,
+                this->name
+            );
 
-  Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
-    NewColumn*& column,
-    Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
-    bool& primaryKeyFound,
-    column_index_t& index
-  ){
-    UnsignedSmallInt columnSize;
-      std::ostringstream os;
 
-    if (!ColumnTypeSizes.TryGetValue(column->type.name.ToView(), columnSize)) {
-      os << "Column Type: " + column->type.name + " does not exist";
-      return {Errors::ValidationError::Error, os.str()};
+        return DataTypes::String::Concat(
+            context.GetAllocator(),
+            this->database,
+            Messages::DOT,
+            this->schema,
+            this->name
+        );
     }
 
-    if (columnSize != 0)
-      column->type.size = columnSize;
+    Errors::ValidationStatus DataSource::Validate(const QueryContext& context, const Int selectedDatabaseId) {
+        const auto tableHeader = (!this->database.Empty())
+            ? this->catalog->SelectTable(
+                context.GetAllocator(),
+                this->database.ToView(),
+                this->name.ToView()
+            )
+            : this->catalog->SelectTable(
+                context.GetAllocator(),
+                selectedDatabaseId,
+                this->name.ToView(),
+                this->schema.ToView()
+            );
 
-    const auto& dataType = ColumnTypesDictionary.Get(column->type.name.ToView());
+        if (tableHeader.id == INVALID_TABLE_ID){
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_TABLE(context.GetAllocator(), this->GetFullName(context))
+            );
+        }
 
-    if (dataType == DataType::Decimal) {
-      if (!column->type.decimal.Validate()) {
-        os << "Decimal type requires precision and scale to be set correctly";
-        return {Errors::ValidationError::Error, os.str()};
-      }
+        this->tableId = tableHeader.id;
+        this->ordinalPosition = tableHeader.ordinalPosition;
+        this->databaseId = tableHeader.databaseId;
 
-      column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
+        return Errors::ValidationStatus::Ok();
     }
 
-    column->index = index++;
+    Errors::ValidationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
+        const auto tableHeader = (!this->database.Empty())
+            ? this->catalog->SelectTable(
+                context.GetAllocator(),
+                this->database.ToView(),
+                this->name.ToView()
+            )
+            : this->catalog->SelectTable(
+                context.GetAllocator(),
+                selectedDatabaseId,
+                this->name.ToView(),
+                this->schema.ToView()
+            );
 
-    columnNamesToIndexes.Add(column->name.name, column->index);
+        if (tableHeader.id != INVALID_TABLE_ID)
+            return Errors::ValidationStatus::Error(
+            Messages::TABLE_ALREADY_EXISTS(context.GetAllocator(), this->GetFullName(context))
+            );
 
-    if(column->isPrimaryKey && primaryKeyFound){
-      os << "Cannot have multiple primary keys defined. Consider declaring a composite key";
-      return {Errors::ValidationError::Error, os.str()};
+        this->databaseId = selectedDatabaseId;
+        return Errors::ValidationStatus::Ok();
     }
 
-    if(column->HasIdentity()) {
-      auto result = column->identity->Validate();
-
-      if (!result.IsOk())
-        return result;
+    CreateTableStatement::CreateTableStatement(){
+        this->table = nullptr;
+        this->constraint = nullptr;
     }
 
-    if (column->isPrimaryKey) {
-      this->primaryKey.push_back(column->index);
-      primaryKeyFound = true;
+    CreateTableStatement::~CreateTableStatement() = default;
+
+    Errors::ValidationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
+        const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
+        Headers::SchemaHeader schemaHeader;
+
+        this->table->schema.ToLowerInPlace();
+        if (!schemasDict.TryGetValue(this->table->schema, schemaHeader))
+            return Errors::ValidationStatus::Error(
+                Messages::SCHEMA_DOES_NOT_EXIST(context.GetAllocator(), this->table->schema)
+            );
+
+        this->table->schemaId = schemaHeader.id;
+        return Errors::ValidationStatus::Ok();
     }
 
-    return {};
-  }
-
-  Errors::ValidationStatus CreateTableStatement::CompileDerived(QueryContext& context){
-    auto result = this->table->ValidateTableCreate(context, this->databaseId);
-    if (!result.IsOk())
-      return result;
-
-    result = this->CompileSchema(context);
-    if (!result.IsOk())
-      return result;
-
-    column_index_t indexPosition = 0;
-    bool primaryKeyFound = false;
-    Dictionary<DataTypes::String, column_index_t> columnNamesToIndexes;
-
-    for (auto& column: this->columns)
-      this->CompileColumnExpression(
-        column,
-        columnNamesToIndexes,
-        primaryKeyFound,
-        indexPosition
-      );
-
-    if (this->constraint == nullptr)
-      return {};
-
-    if (primaryKeyFound) {
-        std::ostringstream os;
-      os << "Cannot have a primary key and a constraint declared";
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    //primary key will be clear for sure here
-    for (const auto& column: this->constraint->columns)
-      this->primaryKey.push_back(columnNamesToIndexes[column.name]);
-
-    return {};
-  }
-
-  LogicalPlan * CreateTableStatement::ToLogical(QueryContext& context){
-    const auto constraintName = this->constraint == nullptr ? "" : this->constraint->name;
-
-    return context._context.Allocate<LogicalTableCreate>(this->sessionId, this->table, this->columns, this->primaryKey, constraintName);
-  }
-
-  constexpr Security::Permission CreateTableStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
-  }
-
-  SelectStatement::SelectStatement(){
-    this->top = INVALID_TOP;
-    this->distinct = false;
-    this->orderBy = nullptr;
-  }
-
-  SelectStatement::~SelectStatement() = default;
-
-  Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
-    Dictionary<DataTypes::String, column_index_t> dict;
-
-    for (int i = 0;i < this->results.size(); i++) {
-      const auto& resultExpr = this->results[i];
-
-      if (resultExpr->name.empty())
-        continue;
-
-      dict.Add(resultExpr->name, i);
-    }
-
-    return dict;
-  }
-
-  bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
-
-  bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
-
-  bool SelectStatement::HasWhere() const{ return this->where.expression != nullptr; }
-
-  bool SelectStatement::IsConstant() const{ return this->table == nullptr; }
-
-  Errors::ValidationStatus SelectStatement::CompileNoTableStatement(QueryContext& context){
-    for (auto& resultExpr : this->results){
-      auto exprResult = CompileExpression(context, resultExpr);
-
-      if (!exprResult.IsOk())
-        return exprResult;
-    }
-
-    if (this->HasJoins())
-      return {Errors::ValidationError::Error, "Missing FROM statement but joins were given"};
-
-    return {};
-  }
-
-  Errors::ValidationStatus SelectStatement::Compile(QueryContext& context, Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary){
-    //Add Base Table to the dictionaries
-    tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
-    this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
-
-    //Add all the join tables to the dictionaries
-    for (const auto& join: this->joins) {
-      tableAliasesDictionary.Add(join->table->GetAlias(), join->table->tableId);
-      this->tableColumnsDictionary.Add(join->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), join->table->tableId));
-    }
-
-    auto statementValidationScope = StatementValidationScope(
-      tableAliasesDictionary,
-      this->tableColumnsDictionary,
-      this
-    );
-
-    //start resolving aliases
-    for (int i = 0; i < this->results.size(); i++) {
-
-      statementValidationScope.indexPos = &i;
-      auto expressionResult = CompileExpression(context, statementValidationScope, this->results[i]);
-
-      if (!expressionResult.IsOk())
-        return expressionResult;
-    }
-
-    auto result = this->CompileWhereClause(context, statementValidationScope);
-    if (!result.IsOk())
-      return result;
-
-    //validate join expressions
-    statementValidationScope.indexPos = nullptr;
-    for (const auto& join: this->joins) {
-      auto expressionResult = CompileExpression(context, statementValidationScope, join->expression);
-
-      if (!expressionResult.IsOk())
-        return expressionResult;
-    }
-
-    if (this->orderBy == nullptr)
-      return {};
-
-    Dictionary<DataTypes::String, const Expressions::Expression*> postProjectionAliases;
-
-    for (const auto* resultExpr : this->results) {
-      if (resultExpr->name.empty())
-        continue;
-
-      if (postProjectionAliases.Contains(resultExpr->name)) {
-          std::ostringstream os;
-
-        os << resultExpr->name << " already exists on result set";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      postProjectionAliases.Add(resultExpr->name, resultExpr);
-    }
-
-    for (const auto& column: this->orderBy->columns) {
-      auto postProjectionExpr = CompilePostProjectionExpression(column->expression, postProjectionAliases);
-
-      if (!postProjectionExpr.IsOk())
-        return postProjectionExpr;
-    }
-
-    return {};
-  }
-
-  Errors::ValidationStatus SelectStatement::CompileWhereClause(
-    QueryContext &context,
-    StatementValidationScope& statementValidationScope
-  ) {
-    if (!this->HasWhere())
-      return {};
-
-    if (!this->where.IsValid())
-      return {Errors::ValidationError::Error, "Where expression must be either a logical or a binary expression"};
-
-    auto expressionResult = CompileExpression(context, statementValidationScope, this->where.expression);
-    if (!expressionResult.IsOk())
-      return expressionResult;
-
-    if (!ValidateExpressionCoercionTypes(DataType::Bool, this->where.expression))
-      return ClauseCannotBeEvaluatedToBool(this->where.expression->GetReturnType());
-
-    return {};
-  }
-
-  LogicalPlan* SelectStatement::BuildTableScanPlan(
-      const QueryContext& context,
-      DataSource* table,
-      const PredicatePushDownResult& predicatesResult
+    Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
+        const QueryContext& context,
+        NewColumn*& column,
+        Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
+        bool& primaryKeyFound,
+        column_index_t& index
     ){
-    return context._context.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->tableId));
-  }
+        UnsignedSmallInt columnSize;
+        std::ostringstream os;
 
-  LogicalPlan* SelectStatement::BuildJoinsPlan(
-    const QueryContext& context,
-    const JoinOrderAnalyzeResult& joinReorderResult,
-    const PredicatePushDownResult& predicatesResult
-  ) const{
+        column->type.name.ToLowerInPlace();
+        if (!ColumnTypeSizes.TryGetValue(column->type.name.ToView(), columnSize)) {
+            return Errors::ValidationStatus::Error(
+                Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type.name)
+            );
+        }
 
-    const auto leftTableId = this->table->tableId;
-    auto* current = SelectStatement::BuildTableScanPlan(context, this->table, predicatesResult);
+        if (columnSize != 0)
+        column->type.size = columnSize;
 
-    for (const auto& join : joinReorderResult.orderedJoins){
-      auto* right = SelectStatement::BuildTableScanPlan(context, join->table, predicatesResult);
-      current = new LogicalJoin(current, right, join->expression, join->type, leftTableId, join->table->tableId);
+        const auto& dataType = ColumnTypesDictionary.Get(column->type.name.ToView());
+
+        if (dataType == DataType::Decimal) {
+            if (!column->type.decimal.Validate()) {
+                return Errors::ValidationStatus::Error(
+                    Messages::INVALID_DECIMAL_DECLARATION,
+                    context.GetAllocator()
+                );
+            }
+
+            column->type.size = DataTypes::Decimal::Size(column->type.decimal.precision);
+        }
+
+        column->index = index++;
+
+        columnNamesToIndexes.Add(column->name.name, column->index);
+
+        if(column->isPrimaryKey && primaryKeyFound){
+            return Errors::ValidationStatus::Error(
+                Messages::MULTIPLE_PRIMARY_KEYS,
+                context.GetAllocator()
+            );
+        }
+
+        if(column->HasIdentity()) {
+            auto result = column->identity->Validate(context);
+            if (!result.IsOk()) return result;
+        }
+
+        if (column->isPrimaryKey) {
+            this->primaryKey.push_back(column->index);
+            primaryKeyFound = true;
+        }
+
+        return Errors::ValidationStatus::Ok();
     }
 
-    return current;
+    Errors::ValidationStatus CreateTableStatement::CompileDerived(QueryContext& context){
+        auto result = this->table->ValidateTableCreate(context, this->databaseId);
+        if (!result.IsOk()) return result;
+
+        result = this->CompileSchema(context);
+        if (!result.IsOk()) return result;
+
+        column_index_t indexPosition = 0;
+        bool primaryKeyFound = false;
+        Dictionary<DataTypes::String, column_index_t> columnNamesToIndexes;
+
+        for (auto* column: this->columns)
+            this->CompileColumnExpression(
+                context,
+                column,
+                columnNamesToIndexes,
+                primaryKeyFound,
+                indexPosition
+            );
+
+        if (this->constraint == nullptr)return Errors::ValidationStatus::Ok();
+
+        if (primaryKeyFound) {
+            return Errors::ValidationStatus::Error(
+                Messages::PRIMARY_KEY_AND_CONSTRAINT_DECLARED,
+                context.GetAllocator()
+            );
+        }
+
+        //primary key will be clear for sure here
+        for (const auto& column: this->constraint->columns)
+            this->primaryKey.push_back(columnNamesToIndexes[column.name]);
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    LogicalPlan * CreateTableStatement::ToLogical(QueryContext& context){
+        auto constraintName = (this->constraint == nullptr)
+            ? DataTypes::String::Null()
+            : this->constraint->name;
+
+        return context._context.Allocate<LogicalTableCreate>(
+            this->sessionId,
+            this->table,
+            this->columns,
+            this->primaryKey,
+            constraintName
+        );
+    }
+
+    constexpr Security::Permission CreateTableStatement::RequiredPermissions() const{
+        return Constants::DB_OWNER_PERMISSIONS;
+    }
+
+    SelectStatement::SelectStatement(){
+        this->top = INVALID_TOP;
+        this->distinct = false;
+        this->orderBy = nullptr;
+    }
+
+    SelectStatement::~SelectStatement() = default;
+
+    Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
+        Dictionary<DataTypes::String, column_index_t> dict;
+
+        for (int i = 0;i < this->results.size(); i++) {
+            const auto& resultExpr = this->results[i];
+
+            if (resultExpr->name.Empty()) continue;
+            dict.Add(resultExpr->name, i);
+        }
+
+        return dict;
+    }
+
+    bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
+
+    bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
+
+    bool SelectStatement::HasWhere() const{ return this->where.expression != nullptr; }
+
+    bool SelectStatement::IsConstant() const{ return this->table == nullptr; }
+
+    Errors::ValidationStatus SelectStatement::CompileNoTableStatement(QueryContext& context){
+        for (auto& resultExpr : this->results){
+            auto exprResult = CompileExpression(context, resultExpr);
+
+            if (!exprResult.IsOk()) return exprResult;
+        }
+
+        if (this->HasJoins())
+            return Errors::ValidationStatus::Error(
+                Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
+                context.GetAllocator()
+            );
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus SelectStatement::Compile(
+        QueryContext& context,
+        Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary
+    ){
+        //Add Base Table to the dictionaries
+        tableAliasesDictionary.Add(this->table->GetAlias(context), this->table->tableId);
+        this->tableColumnsDictionary.Add(
+            this->table->tableId,
+            this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId)
+        );
+
+        //Add all the join tables to the dictionaries
+        for (const auto& join: this->joins) {
+            tableAliasesDictionary.Add(
+                join->table->GetAlias(context),
+                join->table->tableId
+            );
+
+            this->tableColumnsDictionary.Add(
+                join->table->tableId,
+                this->catalog->SelectColumnsToDictionary(context.GetAllocator(), join->table->tableId)
+            );
+        }
+
+        auto statementValidationScope = StatementValidationScope(
+            tableAliasesDictionary,
+            this->tableColumnsDictionary,
+            this
+        );
+
+        //start resolving aliases
+        for (int i = 0; i < this->results.size(); i++) {
+            statementValidationScope.indexPos = &i;
+            auto expressionResult = CompileExpression(context, statementValidationScope, this->results[i]);
+
+            if (!expressionResult.IsOk()) return expressionResult;
+        }
+
+        auto result = this->CompileWhereClause(context, statementValidationScope);
+        if (!result.IsOk()) return result;
+
+        //validate join expressions
+        statementValidationScope.indexPos = nullptr;
+        for (const auto& join: this->joins) {
+            auto expressionResult = CompileExpression(context, statementValidationScope, join->expression);
+
+            if (!expressionResult.IsOk()) return expressionResult;
+        }
+
+        if (this->orderBy == nullptr)
+            return Errors::ValidationStatus::Ok();
+
+        Dictionary<DataTypes::String, const Expressions::Expression*> postProjectionAliases;
+
+        for (const auto* resultExpr : this->results) {
+            if (resultExpr->name.Empty()) continue;
+
+            if (postProjectionAliases.Contains(resultExpr->name)) {
+                return Errors::ValidationStatus::Error(
+                    Messages::DUPLICATE_RESULT_COLUMN_NAMES,
+                    context.GetAllocator()
+                );
+            }
+
+            postProjectionAliases.Add(resultExpr->name, resultExpr);
+        }
+
+        for (const auto& column: this->orderBy->columns) {
+            auto postProjectionExpr = CompilePostProjectionExpression(column->expression, postProjectionAliases);
+            if (!postProjectionExpr.IsOk()) return postProjectionExpr;
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus SelectStatement::CompileWhereClause(
+        QueryContext &context,
+        StatementValidationScope& statementValidationScope
+    ) {
+        if (!this->HasWhere()) return Errors::ValidationStatus::Ok();
+
+        if (!this->where.IsValid())
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_WHERE_CLAUSE,
+                context.GetAllocator()
+            );
+
+        auto expressionResult = CompileExpression(context, statementValidationScope, this->where.expression);
+        if (!expressionResult.IsOk()) return expressionResult;
+
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, this->where.expression))
+            return ClauseCannotBeEvaluatedToBool(context, this->where.expression->GetReturnType());
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    LogicalPlan* SelectStatement::BuildTableScanPlan(
+        const QueryContext& context,
+        DataSource* table,
+        const PredicatePushDownResult& predicatesResult
+    ){
+        return context._context.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->tableId));
+    }
+
+    LogicalPlan* SelectStatement::BuildJoinsPlan(
+        const QueryContext& context,
+        const JoinOrderAnalyzeResult& joinReorderResult,
+        const PredicatePushDownResult& predicatesResult
+    ) const{
+        const auto leftTableId = this->table->tableId;
+        auto* current = SelectStatement::BuildTableScanPlan(context, this->table, predicatesResult);
+
+        for (const auto& join : joinReorderResult.orderedJoins){
+            auto* right = SelectStatement::BuildTableScanPlan(context, join->table, predicatesResult);
+            current = new LogicalJoin(
+                current,
+                right,
+                join->expression,
+                join->type,
+                leftTableId,
+                join->table->tableId
+            );
+        }
+
+        return current;
   }
 
-    Dictionary<int32_t, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(
+    Dictionary<Int, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(
         const QueryContext& context,
         const std::vector<table_id_t>& joinOrder
     ) const{
-        Dictionary<int32_t, column_index_t> result;
+        Dictionary<Int, column_index_t> result;
         column_index_t columnIndex = 0;
 
         for (const auto& tableId: joinOrder) {
         //TODO cache them at the beginning
             const auto& columns = this->catalog->SelectColumns(context.GetAllocator(), tableId);
-
             for (const auto &column : columns) {
-                if (result.Contains(column.id))
-                    continue;
-
+                if (result.Contains(column.id)) continue;
                 result.Add(column.id, columnIndex + column.ordinalPosition);
             }
 
@@ -715,163 +769,163 @@ namespace QueryPipeline::Statements {
         return result;
     }
 
-  void SelectStatement::AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const {
-    const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(context, order);
-
-    for (const auto& resultExpr : this->results)
-      AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
-
-    if (this->where.expression != nullptr)
-      AssignColumnIndicesToExpression(columnIndicesDictionary, this->where.expression);
-
-    for (const auto* join : this->joins)
-      AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
-  }
-
-  void SelectStatement::BuildOrderByStatement(
-    LogicalPlan*& current,
-    const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
-  ) const{
-    if(this->orderBy == nullptr)
-      return;
-
-    for (const auto& column : this->orderBy->columns)
-      AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
-
-    current = new LogicalOrder(current, this->orderBy->columns);
-  }
-
-  Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
-    if (!this->joins.empty() && this->table == nullptr) {
-        std::ostringstream os;
-      os << "Joins were specified but no calling table was not specified";
-      return {Errors::ValidationError::Error, os.str()};
+    void SelectStatement::AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const {
+        const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(context, order);
+        for (const auto& resultExpr : this->results)
+            AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
+        if (this->where.expression != nullptr)
+            AssignColumnIndicesToExpression(columnIndicesDictionary, this->where.expression);
+        for (const auto* join : this->joins)
+            AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
     }
 
-    //resolve expressions here since no column is to be used
-    if (this->table == nullptr)
-      return this->CompileNoTableStatement(context);
+    void SelectStatement::BuildOrderByStatement(
+        LogicalPlan*& current,
+        const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
+    ) const{
+        if(this->orderBy == nullptr) return;
 
-    auto tableResult = this->table->Validate(context, this->databaseId);
-    if (!tableResult.IsOk())
-      return tableResult;
+        for (const auto& column : this->orderBy->columns)
+            AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
-    Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
-
-    for (const auto& join: this->joins) {
-      auto joinResult = join->Validate(context, this->databaseId);
-      if (!joinResult.IsOk())
-        return joinResult;
+        current = new LogicalOrder(current, this->orderBy->columns);
     }
 
-    return this->Compile(context, aliasesDictionary);
-  }
+    Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
+        if (!this->joins.empty() && this->table == nullptr) {
+            return Errors::ValidationStatus::Error(
+             Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
+             context.GetAllocator()
+            );
+        }
 
-  constexpr Security::Permission SelectStatement::RequiredPermissions() const{
-    return Constants::DB_READER_PERMISSIONS;
-  }
+        //resolve expressions here since no column is to be used
+        if (this->table == nullptr) return this->CompileNoTableStatement(context);
 
-  LogicalPlan * SelectStatement::ToLogical(QueryContext& context){
-    if (this->IsConstant())
-      return context._context.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
+        auto tableResult = this->table->Validate(context, this->databaseId);
+        if (!tableResult.IsOk()) return tableResult;
 
-    const auto joinReorderResult = Optimizer::DetermineJoinOrder(this);
+        Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
 
-    Optimizer optimizer(context);
-    const auto predicatesResult = optimizer.PushDownPredicates(
-      joinReorderResult.order,
-      this->where.expression,
-      joinReorderResult.orderedJoins
-    );
+        for (const auto& join: this->joins) {
+            auto joinResult = join->Validate(context, this->databaseId);
+            if (!joinResult.IsOk()) return joinResult;
+        }
 
-    this->AssignColumnsToIndices(context, joinReorderResult.order);
-    auto* current = this->BuildJoinsPlan(context, joinReorderResult, predicatesResult);
-
-    if (predicatesResult.remainingPredicate != nullptr)
-      current = context._context.Allocate<LogicalFilter>(current, predicatesResult.remainingPredicate);
-
-    const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
-
-    current = context._context.Allocate<LogicalProject>(current, this->results, this->columnHeaders);
-
-    this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
-
-    if (this->distinct)
-      current = context._context.Allocate<LogicalDistinct>(current);
-
-    if (this->HasTopStatement())
-      current = context._context.Allocate<LogicalTop>(current, this->top);
-
-    return current;
-  }
-
-  Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
-    if (this->catalog->DatabaseExists(context.GetAllocator(), this->name.ToView())) {
-        std::ostringstream os;
-      os << "Database " + this->name + " already exists";
-
-      return {Errors::ValidationError::Error, os.str()};
+        return this->Compile(context, aliasesDictionary);
     }
 
-    return {};
-  }
-
-  constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
-    return Constants::ADMIN_PERMISSIONS;
-  }
-
-  LogicalPlan* CreateDbStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
-  }
-
-   Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
-       std::ostringstream os;
-
-     const auto database = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
-
-     if (database.name.empty()) {
-       os << "Cannot drop: " << this->name << ". Database" << this->name << " does not exist";
-       return {Errors::ValidationError::Error, os.str()};
-     }
-
-     if (database.isSystem) {
-       os << "Cannot drop: " << this->name << ". Database" << this->name << " is a system database";
-       return {Errors::ValidationError::Error, os.str()};
-     }
-
-     return {};
-   }
-
-  constexpr Security::Permission DropDbStatement::RequiredPermissions() const{
-    return Constants::ADMIN_PERMISSIONS;
-  }
-
-  LogicalPlan * DropDbStatement::ToLogical(QueryContext& context){
-    return nullptr;
-  }
-
-  Errors::ValidationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
-    const auto dbHeader = this->catalog->SelectDatabase(context.GetAllocator(), this->name);
-
-    if (dbHeader.id == INVALID_DATABASE_ID) {
-        std::ostringstream os;
-
-      os << "Database " + this->name + " does not exist";
-      return {Errors::ValidationError::Error, os.str()};
+    constexpr Security::Permission SelectStatement::RequiredPermissions() const{
+        return Constants::DB_READER_PERMISSIONS;
     }
 
-    this->databaseId = dbHeader.id;
+    LogicalPlan * SelectStatement::ToLogical(QueryContext& context){
+        if (this->IsConstant())
+            return context._context.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
 
-    return {};
-  }
+        const auto joinReorderResult = Optimizer::DetermineJoinOrder(this);
 
-  constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
-    return Constants::GUEST_PERMISSIONS;
-  }
+        Optimizer optimizer(context);
+        const auto predicatesResult = optimizer.PushDownPredicates(
+            joinReorderResult.order,
+            this->where.expression,
+            joinReorderResult.orderedJoins
+        );
 
-  LogicalPlan * UseDatabaseStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
-  }
+        this->AssignColumnsToIndices(context, joinReorderResult.order);
+        auto* current = this->BuildJoinsPlan(context, joinReorderResult, predicatesResult);
+
+        if (predicatesResult.remainingPredicate != nullptr)
+            current = context._context.Allocate<LogicalFilter>(current, predicatesResult.remainingPredicate);
+
+        const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
+
+        current = context._context.Allocate<LogicalProject>(current, this->results, this->columnHeaders);
+
+        this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
+
+        if (this->distinct)
+            current = context._context.Allocate<LogicalDistinct>(current);
+
+        if (this->HasTopStatement())
+            current = context._context.Allocate<LogicalTop>(current, this->top);
+
+        return current;
+    }
+
+    Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
+        if (this->catalog->DatabaseExists(context.GetAllocator(), this->name.ToView())) {
+            return Errors::ValidationStatus::Error(
+                Messages::DATABASE_ALREADY_EXISTS(context.GetAllocator(), this->name)
+            );
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
+        return Constants::ADMIN_PERMISSIONS;
+    }
+
+    LogicalPlan* CreateDbStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
+    }
+
+    Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
+        const auto database = this->catalog->SelectDatabase(context.GetAllocator(), this->name.ToView());
+
+        if (database.name.Empty()) {
+            return Errors::ValidationStatus::Error(
+                Messages::DATABASE_DOES_NOT_EXIST_ON_DROP(
+                    context.GetAllocator(),
+                    this->name.ToView()
+                )
+            );
+        }
+
+        if (database.isSystem) {
+            return Errors::ValidationStatus::Error(
+                Messages::CANNOT_DROP_SYSTEM_DATABASE(
+                    context.GetAllocator(),
+                    this->name.ToView()
+                )
+            );
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    constexpr Security::Permission DropDbStatement::RequiredPermissions() const{
+        return Constants::ADMIN_PERMISSIONS;
+    }
+
+    LogicalPlan * DropDbStatement::ToLogical(QueryContext& context){
+        return nullptr;
+    }
+
+    Errors::ValidationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
+        const auto dbHeader = this->catalog->SelectDatabase(
+            context.GetAllocator(),
+            this->name.ToView()
+        );
+
+        if (dbHeader.id == INVALID_DATABASE_ID) {
+            return Errors::ValidationStatus::Error(
+                Messages::DATABASE_DOES_NOT_EXIST_ON_USE(context.GetAllocator(), this->name.ToView())
+            );
+        }
+
+        this->databaseId = dbHeader.id;
+        return Errors::ValidationStatus::Ok();
+    }
+
+    constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
+        return Constants::GUEST_PERMISSIONS;
+    }
+
+    LogicalPlan * UseDatabaseStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
+    }
 
     InsertStatement::~InsertStatement() = default;
 
@@ -892,11 +946,11 @@ namespace QueryPipeline::Statements {
 
         //Insert the default value
         for (auto& [insertColumns] : this->values) {
-            const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.data());
+            const auto* data = reinterpret_cast<const unsigned char*>(defaultValue.value.Data());
 
             auto value = Value::FromExternalStorage(
                 data,
-                static_cast<Int>(defaultValue.value.size()),
+                defaultValue.value.Size(),
                 static_cast<DataType>(header.dataType),
                 context._context.GetAllocator(),
                 0
@@ -906,266 +960,306 @@ namespace QueryPipeline::Statements {
         }
     }
 
-  void InsertStatement::InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header){
-    this->columns.emplace_back(ColumnName{
-      .name = header.name,
-      .alias = header.name,
-      .tableId = this->table->tableId,
-      .columnId = header.id,
-      .index = static_cast<column_index_t>(header.ordinalPosition),
-      .returnType = static_cast<DataType>(header.dataType),
-    });
+    void InsertStatement::InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header){
+        this->columns.emplace_back(ColumnName{
+            .name = header.name,
+            .alias = header.name,
+            .tableId = this->table->tableId,
+            .columnId = header.id,
+            .index = static_cast<column_index_t>(header.ordinalPosition),
+            .returnType = static_cast<DataType>(header.dataType),
+            }
+        );
 
-    for (auto& [insertColumns] : this->values)
-      insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
-  }
-
-  Errors::ValidationStatus InsertStatement::ValidateReturnType(const Expressions::Expression* expression, const DataTypes::String& columnName) const{
-    const auto valueType = expression->GetReturnType();
-
-    const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
-
-    const auto& columnHeader = columnsDictionary.Get(Functions::String::Lower(columnName));
-
-    const auto columnType = static_cast<DataType>(columnHeader.dataType);
-
-    if (DataTypes::Coercions::IsCoercionAllowed(
-      valueType,
-      columnType
-    )) return {};
-
-    std::ostringstream os;
-
-    if (expression->IsConstant()) {
-      auto* constantExpr = expression->AsConstant();
-
-      if (constantExpr->value.IsNull()) {
-        if (columnHeader.isNullable)
-          return {};
-
-
-        os << "Column " << columnHeader.name << " does not allow NULL. Insert fails.";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value))
-        return {};
+        for (auto& [insertColumns] : this->values)
+            insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
     }
 
-    os << "Cannot update column " << columnHeader.name << " of type "
-      << DataTypeToStringDictionary.Get(columnType)
-      << " with value of type "
-      << DataTypeToStringDictionary.Get(valueType);
+    Errors::ValidationStatus InsertStatement::ValidateReturnType(
+        const QueryContext& context,
+        const Expressions::Expression* expression,
+        const DataTypes::String& columnName
+    ) const{
+        const auto valueType = expression->GetReturnType();
 
-    return {Errors::ValidationError::Error, os.str()};
-  }
+        const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
 
-  Errors::ValidationStatus InsertStatement::ValidateSelectStatement(QueryContext& context)const{
-    if (this->selectStatement == nullptr)
-      return {};
+        const auto columnNameToLower = columnName.ToLower();
+        const auto& columnHeader = columnsDictionary.Get(columnNameToLower);
 
-    if (this->selectStatement->results.size() != this->columns.size())
-      return {Errors::ValidationError::Error, "Invalid number of arguments specified on select statement"};
+        const auto columnType = static_cast<DataType>(columnHeader.dataType);
 
-    this->selectStatement->databaseId = this->databaseId;
+        if (DataTypes::Coercions::IsCoercionAllowed(
+        valueType,
+        columnType
+        )) return Errors::ValidationStatus::Ok();
 
-    auto selectStatus = this->selectStatement->CompileDerived(context);
-    if (!selectStatus.IsOk())
-      return selectStatus;
-
-    for (int i = 0;i < this->selectStatement->results.size();i++) {
-      const auto& resultExpression = this->selectStatement->results[i];
-
-      auto returnTypeStatus = this->ValidateReturnType(resultExpression, this->columns[i].name);
-      if (!returnTypeStatus.IsOk())
-        return returnTypeStatus;
-    }
-
-    return {};
-  }
-
-  bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
-
-  Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context){
-    Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary{
-      {this->table->GetAlias(), this->table->tableId}
-    };
-
-    auto statementValidationScope = StatementValidationScope(
-      tableAliasesDictionary,
-      this->tableColumnsDictionary,
-      this,
-      nullptr
-    );
-
-    for (auto& [insertColumns] : this->values) {
-
-      for (int i = 0;i < insertColumns.size(); i++) {
-        auto& value = insertColumns[i];
-
-        auto expressionStatus = CompileExpression(context, statementValidationScope, value);
-        if (!expressionStatus.IsOk())
-          return expressionStatus;
-
-        auto returnTypeStatus = this->ValidateReturnType(value, this->columns[i].name);
-        if (!returnTypeStatus.IsOk())
-          return returnTypeStatus;
-      }
-    }
-
-    return {};
-  }
-  //TODO validate length of columns to match max record_size from master DB
-  Errors::ValidationStatus InsertStatement::CompileDerived(QueryContext& context){
-    if (this->table == nullptr)
-      return {Errors::ValidationError::Error, "No table was specified"};
-
-    auto tableStatus = this->table->Validate(context, this->databaseId);
-    if (!tableStatus.IsOk())
-      return tableStatus;
-
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
-
-    this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
-
-    const auto identityColumns = this->catalog->SelectIdentityColumnsByTableIdToDictionary(
-        context.GetAllocator(),
-        this->table->tableId
-    );
-
-    //validate insert columns existance
-    HashSet<int32_t> statementColumns;
-      std::ostringstream os;
-    for (auto& column : this->columns) {
-      Headers::ColumnHeader header;
-
-      //check if columns exist on the table
-      if (!columnsDict.TryGetValue(Functions::String::Lower(column.name), header)) {
-        os << "Column " << column.name << " does not exist on table: " << this->table->GetFullName();
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      //check if the specified column is an identity column
-      if (identityColumns.Contains(header.id)) {
-        os << "Cannot specify an identity column for insert";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      column.index = header.ordinalPosition;
-      column.columnId = header.id;
-      statementColumns.Add(header.id);
-
-      this->columnIndices.emplace_back(header.ordinalPosition);
-    }
-
-    for (const auto&[columnName, header]:  columnsDict) {
-        if (header.isSystem
-            || identityColumns.Contains(header.id)
-            || statementColumns.Contains(header.id)
-        ) continue;
-
-      this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
-
-      //Insert the null value
-      if (header.isNullable) {
-        this->InsertNullValuesForMissingColumns(header);
-        continue;
-      }
-
-      const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(context.GetAllocator(), header.id);
-
-      if (defaultValue.columnId == INVALID_COLUMN_ID) {
-        os << "Column " << columnName << " does not allow NULLS. Insert fails";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      this->InsertDefaultValuesForMissingColumns(context, header, defaultValue);
-    }
-
-    return this->HasSelectStatement()
-             ? this->ValidateSelectStatement(context)
-             : this->ResolveAliases(context);
-  }
-
-  constexpr Security::Permission InsertStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
-  }
-
-  LogicalPlan* InsertStatement::ToLogical(QueryContext& context) {
-    auto* logicalSelect = this->HasSelectStatement()
-                            ? this->selectStatement->ToLogical(context)
-                            : nullptr;
-    return context._context.Allocate<LogicalInsert>(this->table, this->values, logicalSelect, this->columnIndices);
-  }
-
-  Errors::ValidationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
-    if (this->catalog->SchemaExists(context.GetAllocator(), this->databaseId, this->name)) {
         std::ostringstream os;
-      os << "Schema " << this->name << " already exists";
 
-      return {Errors::ValidationError::Error, os.str()};
+        if (expression->IsConstant()) {
+            auto* constantExpr = expression->AsConstant();
+
+            if (constantExpr->value.IsNull()) {
+                if (columnHeader.isNullable) return Errors::ValidationStatus::Ok();
+
+
+                return Errors::ValidationStatus::Error(
+            Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
+                        context.GetAllocator(),
+                        columnHeader.name
+                    )
+                );
+            }
+
+            if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value))
+                return Errors::ValidationStatus::Ok();
+        }
+
+        return Errors::ValidationStatus::Error(
+            Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
+                context.GetAllocator(),
+                columnName,
+                DataTypeToStringDictionary.Get(columnType),
+                DataTypeToStringDictionary.Get(valueType)
+            )
+        );
     }
 
-    return {};
-  }
+    Errors::ValidationStatus InsertStatement::ValidateSelectStatement(QueryContext& context)const{
+        if (this->selectStatement == nullptr)
+            return Errors::ValidationStatus::Ok();
 
-  constexpr Security::Permission CreateSchemaStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
-  }
+        if (this->selectStatement->results.size() != this->columns.size())
+            return Errors::ValidationStatus::Error(
+                Messages::INSERT_STATEMENT_INVALID_NUMBER_OF_ARGUMENTS_ON_SUB_SELECT,
+                context.GetAllocator()
+            );
 
-  LogicalPlan * CreateSchemaStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalSchemaCreate>(this->sessionId, this->databaseId, this->name);
-  }
+        this->selectStatement->databaseId = this->databaseId;
 
-  UpdateColumn::UpdateColumn(){
-    this->value = nullptr;
-    this->name = {};
-  }
+        auto selectStatus = this->selectStatement->CompileDerived(context);
+        if (!selectStatus.IsOk()) return selectStatus;
+
+        for (int i = 0;i < this->selectStatement->results.size();i++) {
+            const auto& resultExpression = this->selectStatement->results[i];
+
+            auto returnTypeStatus = this->ValidateReturnType(context, resultExpression, this->columns[i].name);
+            if (!returnTypeStatus.IsOk()) return returnTypeStatus;
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
+
+    Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context){
+        const Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary{
+        {this->table->GetAlias(context), this->table->tableId}
+        };
+
+        auto statementValidationScope = StatementValidationScope(
+            tableAliasesDictionary,
+            this->tableColumnsDictionary,
+            this,
+            nullptr
+        );
+
+        for (auto& [insertColumns] : this->values) {
+            for (int i = 0;i < insertColumns.size(); i++) {
+                auto& value = insertColumns[i];
+
+                auto expressionStatus = CompileExpression(context, statementValidationScope, value);
+                if (!expressionStatus.IsOk()) return expressionStatus;
+
+                auto returnTypeStatus = this->ValidateReturnType(context, value, this->columns[i].name);
+                if (!returnTypeStatus.IsOk()) return returnTypeStatus;
+            }
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+  //TODO validate length of columns to match max record_size from master DB
+    Errors::ValidationStatus InsertStatement::CompileDerived(QueryContext& context){
+        if (this->table == nullptr)
+            return Errors::ValidationStatus::Error(
+                Messages::NO_TABLE_SPECIFIED,
+                context.GetAllocator()
+            );
+
+        auto tableStatus = this->table->Validate(context, this->databaseId);
+        if (!tableStatus.IsOk()) return tableStatus;
+
+        const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
+
+        this->tableColumnsDictionary.Add(this->table->tableId, columnsDict);
+
+        const auto identityColumns =
+            this->catalog->SelectIdentityColumnsByTableIdToDictionary(
+                context.GetAllocator(),
+                this->table->tableId
+            );
+
+        //validate insert columns existance
+        HashSet<Int> statementColumns;
+        std::ostringstream os;
+        for (auto& column : this->columns) {
+            Headers::ColumnHeader header;
+
+            //check if columns exist on the table
+            const auto columnNameToLower = column.name.ToLower();
+            if (!columnsDict.TryGetValue(columnNameToLower, header)) {
+                return Errors::ValidationStatus::Error(
+                    Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                        context.GetAllocator(),
+                        this->table->GetAlias(context),
+                        column.name
+                    )
+                );
+            }
+
+            //check if the specified column is an identity column
+            if (identityColumns.Contains(header.id)) {
+                return Errors::ValidationStatus::Error(
+                    Messages::IDENTITY_COLUMN_ON_INSERT,
+                    context.GetAllocator()
+                );
+            }
+
+            column.index = header.ordinalPosition;
+            column.columnId = header.id;
+            statementColumns.Add(header.id);
+            this->columnIndices.emplace_back(header.ordinalPosition);
+        }
+
+        for (const auto&[columnName, header]:  columnsDict) {
+            if (header.isSystem
+                || identityColumns.Contains(header.id)
+                || statementColumns.Contains(header.id)
+            ) continue;
+
+            this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
+
+            //Insert the null value
+            if (header.isNullable) {
+                this->InsertNullValuesForMissingColumns(header);
+                continue;
+            }
+
+            const auto defaultValue = this->catalog->SelectDefaultValueByColumnId(context.GetAllocator(), header.id);
+
+            if (defaultValue.columnId == INVALID_COLUMN_ID) {
+                return Errors::ValidationStatus::Error(
+                    Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
+                        context.GetAllocator(),
+                        header.name
+                    )
+                );
+            }
+
+            this->InsertDefaultValuesForMissingColumns(context, header, defaultValue);
+        }
+
+        return this->HasSelectStatement()
+            ? this->ValidateSelectStatement(context)
+            : this->ResolveAliases(context);
+    }
+
+    constexpr Security::Permission InsertStatement::RequiredPermissions() const{
+        return Constants::DB_WRITER_PERMISSIONS;
+    }
+
+    LogicalPlan* InsertStatement::ToLogical(QueryContext& context) {
+        auto* logicalSelect = this->HasSelectStatement()
+            ? this->selectStatement->ToLogical(context)
+            : nullptr;
+
+        return context._context.Allocate<LogicalInsert>(
+            this->table,
+            this->values,
+            logicalSelect,
+            this->columnIndices
+        );
+    }
+
+    Errors::ValidationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
+        if (this->catalog->SchemaExists(context.GetAllocator(), this->databaseId, this->name.ToView())) {
+            return Errors::ValidationStatus::Error(
+                Messages::SCHEMA_ALREADY_EXISTS(context.GetAllocator(), this->name)
+            );
+        }
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    constexpr Security::Permission CreateSchemaStatement::RequiredPermissions() const{
+        return Constants::DB_OWNER_PERMISSIONS;
+    }
+
+    LogicalPlan * CreateSchemaStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalSchemaCreate>(
+            this->sessionId,
+            this->databaseId,
+            this->name
+        );
+    }
+
+    UpdateColumn::UpdateColumn()
+        : value(nullptr), name(DataTypes::String::Null()){}
 
   UpdateColumn::~UpdateColumn() = default;
 
-  Errors::ValidationStatus UpdateStatement::ValidateReturnType(const UpdateColumn* update) const{
-      std::ostringstream os;
+    Errors::ValidationStatus UpdateStatement::ValidateReturnType(
+        const QueryContext& context,
+        const UpdateColumn* update
+    ) const{
+        const auto valueType = update->value->GetReturnType();
+        if (
+            DataTypes::Coercions::IsCoercionAllowed(
+            valueType,
+            update->name.returnType
+            )
+        ) return Errors::ValidationStatus::Ok();
 
-    const auto valueType = update->value->GetReturnType();
-    if (DataTypes::Coercions::IsCoercionAllowed(
-        valueType,
-        update->name.returnType)
-    ) return {};
+        if (update->value->IsConstant()) {
+            const auto* constantExpr = update->value->AsConstant();
 
-    if (update->value->IsConstant()) {
-      const auto* constantExpr = update->value->AsConstant();
+            if (constantExpr->value.IsNull()) {
+                const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
 
-      if (constantExpr->value.IsNull()) {
-        const auto& columns = this->tableColumnsDictionary.Get(this->table->tableId);
+                if (columns.Get(update->name.name).isNullable)
+                    return Errors::ValidationStatus::Ok();
 
-        if (columns.Get(update->name.name).isNullable)
-          return {};
+                return Errors::ValidationStatus::Error(
+                    Messages::COLUMN_DOES_NOT_ALLOW_NULLS(context.GetAllocator(), update->name.name)
+                );
+            }
 
-        os << "Column " << update->name.name << " does not allow NULL. Update fails.";
-        return {Errors::ValidationError::Error, os.str()};
-      }
+            if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, constantExpr->value))
+                return Errors::ValidationStatus::Ok();
+        }
 
-      if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, constantExpr->value))
-        return {};
+        return Errors::ValidationStatus::Error(
+            Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
+                context.GetAllocator(),
+                update->name.name,
+                DataTypeToStringDictionary.Get(update->name.returnType),
+                DataTypeToStringDictionary.Get(valueType)
+            )
+        );
     }
 
-    os << "Cannot update column " << update->name.name << " of type "
-      << DataTypeToStringDictionary.Get(update->name.returnType)
-      << " with value of type "
-      << DataTypeToStringDictionary.Get(valueType);
-
-    return {Errors::ValidationError::Error, os.str()};
-  }
-
-    Errors::ValidationStatus UpdateStatement::ResolveAliases(QueryContext& context, Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary){
+    Errors::ValidationStatus UpdateStatement::ResolveAliases(
+        QueryContext& context,
+        Dictionary<DataTypes::String, table_id_t> &tableAliasesDictionary
+    ){
         //Add Base Table to the dictionaries
-        tableAliasesDictionary.Add(this->table->GetAlias(), this->table->tableId);
+        tableAliasesDictionary.Add(this->table->GetAlias(context), this->table->tableId);
         this->tableColumnsDictionary.Add(this->table->tableId, this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId));
 
         auto statementValidationScope = StatementValidationScope(
             tableAliasesDictionary,
-        this->tableColumnsDictionary,
+            this->tableColumnsDictionary,
         this,
         nullptr
         );
@@ -1180,7 +1274,7 @@ namespace QueryPipeline::Statements {
             if (!expressionStatus.IsOk())
                 return expressionStatus;
 
-            auto returnTypeResult = this->ValidateReturnType(update);
+            auto returnTypeResult = this->ValidateReturnType(context, update);
             if (!returnTypeResult.IsOk())
                 return returnTypeResult;
 
@@ -1188,173 +1282,241 @@ namespace QueryPipeline::Statements {
         }
 
         if (this->where.expression == nullptr)
-            return {};
+            return Errors::ValidationStatus::Ok();
 
         if (!this->where.IsValid())
-            return {
-                Errors::ValidationError::Error,
-                "Where expression must be either a logical or a binary expression"
-            };
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_WHERE_CLAUSE,
+                context.GetAllocator()
+            );
 
         return CompileExpression(context, statementValidationScope, this->where.expression);
     }
 
 
-Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
-  if (this->table == nullptr)
-    return {Errors::ValidationError::Error, "Table was not specified"};
+    Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
+        if (this->table == nullptr)
+            return Errors::ValidationStatus::Error(
+                Messages::NO_TABLE_SPECIFIED,
+                context.GetAllocator()
+            );
 
-  auto tableStatus = this->table->Validate(context, this->databaseId);
-  if (!tableStatus.IsOk())
-    return tableStatus;
+        auto tableStatus = this->table->Validate(context, this->databaseId);
+        if (!tableStatus.IsOk()) return tableStatus;
 
-  Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
-  return this->ResolveAliases(context, aliasesDictionary);
-}
-
-  constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
-    return Constants::DB_WRITER_PERMISSIONS;
-  }
-
-  LogicalPlan* UpdateStatement::ToLogical(QueryContext& context){
-    std::vector<Expressions::Expression*> expressions;
-    expressions.reserve(this->updates.size());
-
-    for (const auto& update : this->updates)
-        expressions.push_back(update->value);
-
-    return new QueryPipeline::LogicalUpdate(this->table, expressions, this->where.expression);
-  }
-
-  Errors::ValidationStatus CreateIndexStatement::CompileDerived(QueryContext& context){
-    auto tableStatus = this->table->Validate(context, this->databaseId);
-    if (!tableStatus.IsOk())
-      return tableStatus;
-
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
-
-      std::ostringstream os;
-    for(auto& column: this->columns) {
-      Headers::ColumnHeader header;
-
-      if (columnsDict.TryGetValue(column, header)) {
-        this->columnIndices.push_back(header.ordinalPosition);
-        continue;
-      }
-
-      os << "Column " << column << " does not exist on table: " << this->table->schema << "." << this->table->name;
-      return {Errors::ValidationError::Error, os.str()};
+        Dictionary<DataTypes::String, table_id_t> aliasesDictionary;
+        return this->ResolveAliases(context, aliasesDictionary);
     }
 
-    const auto indexes = this->catalog->SelectIndexes(context.GetAllocator(), this->table->tableId);
-
-    for (const auto& index: indexes) {
-      const auto indexedColumns = this->catalog->SelectIndexColumnsByIndexIdToDictionary(context.GetAllocator(), index.id);
-
-      if (index.name == this->name) {
-        os << "Index with name: " << index.name << " already exists";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      //check if identical index exists (no need for a duplicate).
+    constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
+        return Constants::DB_WRITER_PERMISSIONS;
     }
 
-    return {};
-  }
+    LogicalPlan* UpdateStatement::ToLogical(QueryContext& context){
+        std::vector<Expressions::Expression*> expressions;
+        expressions.reserve(this->updates.size());
 
-  constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
-  }
+        for (const auto& update : this->updates)
+            expressions.push_back(update->value);
 
-  LogicalPlan * CreateIndexStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalIndexCreate>(this->sessionId, this->table, this->name, this->columnIndices);
-  }
-
-  Errors::ValidationStatus AlterTableStatement::CompileAddColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
-      std::ostringstream os;
-
-    auto* newColumn = this->column.newColumn;
-
-    if (headers.Contains(Functions::String::NormalizeString(newColumn->name.name))) {
-      os << "Column " << newColumn->name.name << " already exists on table: "<< this->table->GetFullName();
-      return {Errors::ValidationError::Error, os.str()};
+        return context._context.Allocate<LogicalUpdate>(
+            this->table,
+            expressions,
+            this->where.expression
+        );
     }
 
-    if (!newColumn->isNullable
-      && newColumn->defaultValue.IsNull()) {
-      os << "Cannot insert default Value NULL when NOT NULL is specified";
-      return {Errors::ValidationError::Error, os.str()};
+    Errors::ValidationStatus CreateIndexStatement::CompileDerived(QueryContext& context){
+        auto tableStatus = this->table->Validate(context, this->databaseId);
+        if (!tableStatus.IsOk()) return tableStatus;
+
+        const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
+
+        for(auto& column: this->columns) {
+            Headers::ColumnHeader header;
+            if (columnsDict.TryGetValue(column, header)) {
+                this->columnIndices.push_back(header.ordinalPosition);
+                continue;
+            }
+
+            return Errors::ValidationStatus::Error(
+        Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                    context.GetAllocator(),
+                    column,
+                    this->table->GetAlias(context)
+                )
+            );
+        }
+
+        const auto indexes = this->catalog->SelectIndexes(context.GetAllocator(), this->table->tableId);
+
+        for (const auto& index: indexes) {
+            const auto indexedColumns = this->catalog->SelectIndexColumnsByIndexIdToDictionary(
+                context.GetAllocator(),
+                index.id
+            );
+
+            if (index.name == this->name) {
+                return Errors::ValidationStatus::Error(
+                    Messages::INDEX_EXISTS(
+                        context.GetAllocator(),
+                        this->name
+                    )
+                );
+            }
+            //check if identical index exists (no need for a duplicate).
+        }
+        return Errors::ValidationStatus::Ok();
     }
 
-    newColumn->index = headers.size();
-
-    DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(newColumn->type.name), columnType)) {
-      os << "Invalid Column Type " << newColumn->type.name;
-      return {Errors::ValidationError::Error, os.str()};
+    constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
+        return Constants::DB_OWNER_PERMISSIONS;
     }
 
-    const auto recordSize = ColumnTypeSizes.Get(newColumn->type.name);
-
-    if (recordSize != 0)
-      newColumn->type.size = recordSize;
-
-    if (columnType == DataType::Decimal) {
-      if (!newColumn->type.decimal.Validate()) {
-        os << "Decimal type requires precision and scale to be set correctly";
-        return {Errors::ValidationError::Error, os.str()};
-      }
-
-      newColumn->type.size = DataTypes::Decimal::Size(newColumn->type.decimal.precision);
+    LogicalPlan* CreateIndexStatement::ToLogical(QueryContext& context){
+        return context._context.Allocate<LogicalIndexCreate>(
+            this->sessionId,
+            this->table,
+            this->name,
+            this->columnIndices
+        );
     }
 
-    //TODO Check this
-    // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
+    Errors::ValidationStatus AlterTableStatement::CompileAddColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const{
+        auto* newColumn = this->column.newColumn;
+        const auto columnNameToLower = newColumn->name.name.ToLower();
+        if (headers.Contains(columnNameToLower)) {
+            return Errors::ValidationStatus::Error(
+                Messages::COLUMN_ALREADY_EXISTS_ON_TABLE(
+                        context.GetAllocator(),
+                        this->table->GetAlias(context),
+                        newColumn->name.name
+                )
+            );
+        }
 
-    return {};
-  }
+        if (!newColumn->isNullable
+            && newColumn->defaultValue.IsNull()
+        ) {
+            return Errors::ValidationStatus::Error(
+                Messages::DEFAULT_VALUE_NULL_ON_NOT_NULL_COLUMN,
+                context.GetAllocator()
+            );
+        }
 
-  Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
-    Headers::ColumnHeader header;
-      std::ostringstream os;
+        newColumn->index = headers.size();
 
-    auto* alterColumn = this->column.alterColumn;
+        DataType columnType;
+        const auto columnTypeToLower = newColumn->type.name.ToLower();
+        const auto columnTypeView = columnTypeToLower.ToView();
+        if (!ColumnTypesDictionary.TryGetValue(columnTypeView, columnType)) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_COLUMN_TYPE_SPECIFIED(
+                    context.GetAllocator(),
+                    newColumn->type.name,
+                    columnTypeView
+                )
+            );
+        }
 
-    if (!headers.TryGetValue(Functions::String::NormalizeString(alterColumn->name.name), header)) {
-      os << "Column " << alterColumn->name.name << " does not exist on table: " << this->table->GetFullName();
-      return {Errors::ValidationError::Error, os.str()};
+        const auto recordSize = ColumnTypeSizes.Get(&columnTypeView);
+
+        if (recordSize != 0)
+            newColumn->type.size = recordSize;
+
+        if (columnType == DataType::Decimal) {
+            if (!newColumn->type.decimal.Validate()) {
+                return Errors::ValidationStatus::Error(
+                    Messages::INVALID_DECIMAL_DECLARATION,
+                    context.GetAllocator()
+                );
+            }
+
+            newColumn->type.size = DataTypes::Decimal::Size(newColumn->type.decimal.precision);
+        }
+
+        //TODO Check this
+        // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
+
+        return Errors::ValidationStatus::Ok();
     }
 
-    DataType columnType;
-    if (!ColumnTypesDictionary.TryGetValue(Functions::String::NormalizeString(alterColumn->type.name), columnType)) {
-      os << "Invalid Column Type " << alterColumn->type.name;
-      return {Errors::ValidationError::Error, os.str()};
+    Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const{
+        Headers::ColumnHeader header;
+        std::ostringstream os;
+
+        auto* alterColumn = this->column.alterColumn;
+
+        const auto columnNameToLower = alterColumn->name.name.ToLower();
+        if (!headers.TryGetValue(columnNameToLower, header)) {
+            return Errors::ValidationStatus::Error(
+        Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                    context.GetAllocator(),
+                    this->table->GetAlias(context),
+                    alterColumn->name.name
+                )
+            );
+        }
+
+        const auto columnTypeToLower = alterColumn->type.name.ToLower();
+        const auto columnTypeView = columnTypeToLower.ToView();
+        DataType columnType;
+        if (!ColumnTypesDictionary.TryGetValue(columnTypeView, columnType)) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_COLUMN_TYPE_SPECIFIED(
+                    context.GetAllocator(),
+                    alterColumn->type.name,
+                    columnTypeView
+                )
+            );
+        }
+
+        if (
+            (
+                PipelineConstants::ValidTableStringConversions.Contains(columnType)
+                && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<DataType>(header.dataType))
+            )
+            || (
+                PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
+                && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType))
+            )
+        ){
+            return Errors::ValidationStatus::Error(
+                Messages::CANNOT_ALTER_COLUMN_TO_TYPE(
+                        context.GetAllocator(),
+                        alterColumn->name.name,
+                        DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType)),
+                        alterColumn->type.name.ToView()
+                )
+            );
+        }
+
+        if (header.recordSize > alterColumn->type.size) {
+
+            return Errors::ValidationStatus::Error(
+                Messages::CANNOT_ALTER_COLUMN_TO_NEW_SIZE(
+                    context.GetAllocator(),
+                    alterColumn->name.name,
+                    DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType)),
+                    alterColumn->type.size
+                )
+            );
+        }
+
+        alterColumn->columnId = header.id;
+        return Errors::ValidationStatus::Ok();
     }
 
-    if ((PipelineConstants::ValidTableStringConversions.Contains(columnType)
-        && !PipelineConstants::ValidTableStringConversions.Contains(static_cast<DataType>(header.dataType)))
-      || (PipelineConstants::ValidTableIntegerConversions.Contains(columnType)
-        && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType)))){
-      os << "Cannot alter column " << alterColumn->name.name << " from type: "
-        << DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType))
-        << "to type: " << alterColumn->type.name;
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    if (header.recordSize > alterColumn->type.size) {
-      os << "Cannot alter column " << alterColumn->type.name
-        << " with size " <<  header.recordSize << " to size: " << alterColumn->type.size
-        << std::endl
-        << "Use FORCE if potential data corruption is acceptable";
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    alterColumn->columnId = header.id;
-    return {};
-  }
-
-  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(const QueryContext& context, const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
+  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(
+      const QueryContext& context,
+      const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const{
       std::ostringstream os;
     Headers::ColumnHeader header;
 
@@ -1381,7 +1543,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     dropColumn->index = header.ordinalPosition;
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
@@ -1398,7 +1560,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     renameColumn->columnId = header.id;
     renameColumn->ordinalPosition = header.ordinalPosition;
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus AlterTableStatement::CompileDerived(QueryContext& context){
@@ -1531,7 +1693,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     FoldExpression(context, binaryExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileBinaryExpression(
@@ -1567,7 +1729,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     FoldExpression(context, binaryExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileLogicalExpression(
@@ -1588,29 +1750,29 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       return ClauseCannotBeEvaluatedToBool( logicalExpr->right->GetReturnType());
 
     FoldExpression(context, logicalExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
-  Errors::ValidationStatus CompileLogicalExpression(
-    QueryContext& context,
-    Expressions::LogicalExpression* logicalExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    auto result = CompileExpression(context, statementValidationScope, logicalExpr->left)
-      && CompileExpression(context, statementValidationScope, logicalExpr->right);
+    Errors::ValidationStatus CompileLogicalExpression(
+        QueryContext& context,
+        Expressions::LogicalExpression* logicalExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    ) {
+        auto result =
+            CompileExpression(context, statementValidationScope, logicalExpr->left)
+            && CompileExpression(context, statementValidationScope, logicalExpr->right);
 
-    if (!result.IsOk())
-      return result;
+        if (!result.IsOk())return result;
 
-    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-      return ClauseCannotBeEvaluatedToBool(logicalExpr->left->GetReturnType());
-    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-      return ClauseCannotBeEvaluatedToBool( logicalExpr->right->GetReturnType());
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
+            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->left->GetReturnType());
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+        return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
 
-    FoldExpression(context, logicalExpr, expression);
-    return {};
-  }
+        FoldExpression(context, logicalExpr, expression);
+        return Errors::ValidationStatus::Ok();
+    }
 
   Errors::ValidationStatus CompileFunctionExpression(
     QueryContext &context,
@@ -1630,7 +1792,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       return {Errors::ValidationError::Error, errorMessage};
 
     FoldExpression(context, funcExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileFunctionExpression(
@@ -1653,7 +1815,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       return {Errors::ValidationError::Error, errorMessage};
 
     FoldExpression(context, funcExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileBranchExpression(
@@ -1706,7 +1868,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     FoldExpression(context, branchExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileBranchExpression(
@@ -1748,7 +1910,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     FoldExpression(context, branchExpr, expression);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr){
@@ -1791,7 +1953,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
 
     variableExpr->dataType = type;
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileColumnExpression(
@@ -1830,12 +1992,12 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       return {Errors::ValidationError::Error, os.str()};
     }
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* literalExpr){
     DataTypes::Coercions::DeduceIntegerType(literalExpr->value);
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileColumnWhenTableAliasExists(
@@ -1868,7 +2030,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (column->name.empty())
       column->name = columnHeader.name;
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
@@ -1905,7 +2067,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (column->name.empty())
       column->name = columnHeader.name;
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
@@ -1965,7 +2127,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     SelectStatement* statement
   ){
     if (column->alias != WILDCARD)
-      return {};
+      return Errors::ValidationStatus::Ok();
 
     if (statementValidationScope.indexPos == nullptr)
       return {Errors::ValidationError::Error, "Unexpected error occurred during wildcard validation"};
@@ -1979,7 +2141,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
         *statementValidationScope.indexPos += static_cast<int>(columnsDict.size());
       }
 
-      return {};
+      return Errors::ValidationStatus::Ok();
     }
 
     //else get only from the specified
@@ -1995,7 +2157,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     statement->results.erase(statement->results.begin() + *statementValidationScope.indexPos);
     AssignColumnsFromWildCardExpression(statement->tableColumnsDictionary.Get(tableId), column->tableAlias, statementValidationScope, statement->results);
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   void AssignColumnsFromWildCardExpression(
@@ -2096,7 +2258,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       if (!branch->IsConstant())
         return;
 
-      const auto value = branch->AsConstant()->Evaluate({});
+      const auto value = branch->AsConstant()->Evaluate(Errors::ValidationStatus::Ok());
       if (value.AsBool()) {
         PropagateExpression(expression, castExpr->results[i]);
         FoldExpression(context, expression);
@@ -2112,7 +2274,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
   }
 
   void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
-    auto value = expression->Evaluate({});
+    auto value = expression->Evaluate(Errors::ValidationStatus::Ok());
     expression = context._context.Allocate<Expressions::ConstantExpression>(value);
   }
 
@@ -2219,7 +2381,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
       break;
     }
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompilePostProjectionColumnExpression(
@@ -2235,7 +2397,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     }
 
     column->returnType = expression->GetReturnType();
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompilePostProjectionBinaryExpression(
@@ -2270,7 +2432,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
     if (!expression->ValidateNumberOfArguments(errorMessage))
       return {Errors::ValidationError::Error, errorMessage};
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
   Errors::ValidationStatus CompilePostProjectionBranchExpression(
@@ -2298,7 +2460,7 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
         return result;
     }
 
-    return {};
+    return Errors::ValidationStatus::Ok();
   }
 
     void AssignPostProjectionIndicesToExpression(
@@ -2391,12 +2553,13 @@ Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
         expression->index = columnIndicesDictionary.Get(expression->alias);
     }
 
-    Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const DataType type) {
-        std::ostringstream os;
-        os  << "Expression of type: " << DataTypeToStringDictionary.Get(type)
-            << " cannot be converted to type: Bool";
-
-        return Errors::ValidationStatus(Errors::ValidationError::Error, os.str());
+    Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, const DataType type) {
+      return Errors::ValidationStatus::Error(
+        Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
+            context._context.GetAllocator(),
+            DataTypeToStringDictionary.Get(type)
+        )
+      );
     }
 
     void TryPropagateChildExpression(

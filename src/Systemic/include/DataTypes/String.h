@@ -120,6 +120,7 @@ namespace DataTypes{
             String& operator=(String&& other) noexcept;
 
             static String Empty(const ::Memory::IAllocator* allocator);
+            static String Null();
 
             void SetAllocator(const ::Memory::IAllocator* allocator);
 
