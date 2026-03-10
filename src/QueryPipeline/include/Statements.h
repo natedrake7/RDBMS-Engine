@@ -460,8 +460,14 @@ namespace QueryPipeline::Statements {
         const QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const;
-    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(const QueryContext& context, const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
-    [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const;
+    [[nodiscard]] Errors::ValidationStatus CompileDropColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const;
+    [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const;
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
     LogicalPlan * ToLogical(QueryContext& context) override;

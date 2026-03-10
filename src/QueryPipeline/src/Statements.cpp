@@ -1513,245 +1513,293 @@ namespace QueryPipeline::Statements {
         return Errors::ValidationStatus::Ok();
     }
 
-  Errors::ValidationStatus AlterTableStatement::CompileDropColumn(
-      const QueryContext& context,
-      const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    Errors::ValidationStatus AlterTableStatement::CompileDropColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const{
-      std::ostringstream os;
-    Headers::ColumnHeader header;
+        Headers::ColumnHeader header;
 
-    auto* dropColumn = this->column.dropColumn;
+        auto* dropColumn = this->column.dropColumn;
+        const auto columnNameToLower = dropColumn->name.name.ToLower();
+        const auto columnNameView = columnNameToLower.ToView();
 
-    if (!headers.TryGetValue(Functions::String::NormalizeString(dropColumn->name.name), header)) {
-      os << "Column " << dropColumn->name.name << " does not exist on table: " << this->table->GetFullName();
-      return {Errors::ValidationError::Error, os.str()};
+        if (!headers.TryGetValue(columnNameToLower, header)) {
+            return Errors::ValidationStatus::Error(
+            Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                        context.GetAllocator(),
+                        this->table->GetAlias(context),
+                        dropColumn->name.name
+                )
+            );
+        }
+
+        //validate no index or constraint uses it
+        const auto constraints = this->catalog->SelectConstraints(context.GetAllocator(), this->table->tableId);
+
+        for (const auto& constraint: constraints) {
+            const auto columns = this->catalog->SelectConstraintColumnsByConstraintIdToDictionary(
+                context.GetAllocator(),
+                constraint.constraintId
+            );
+
+            if (columns.Contains(header.id)) {
+                return Errors::ValidationStatus::Error(
+                    Messages::CANNOT_DROP_COLUMN_HAS_CONSTRAINTS(
+                        context.GetAllocator(),
+                        dropColumn->name.name,
+                        constraint.name
+                    )
+                );
+            }
+        }
+
+        dropColumn->index = header.ordinalPosition;
+        return Errors::ValidationStatus::Ok();
     }
 
-    //validate no index or constraint uses it
-    const auto constraints = this->catalog->SelectConstraints(context.GetAllocator(), this->table->tableId);
+    Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+    )const{
+        Headers::ColumnHeader header;
 
-    for (const auto& constraint: constraints) {
-      const auto columns = this->catalog->SelectConstraintColumnsByConstraintIdToDictionary(
-          context.GetAllocator(),
-          constraint.constraintId
+        auto* renameColumn = this->column.renameColumn;
+        const auto columnNameToLower = renameColumn->oldName.name.ToLower();
+
+        if (!headers.TryGetValue(columnNameToLower, header)) {
+            return Errors::ValidationStatus::Error(
+            Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                        context.GetAllocator(),
+                        this->table->GetAlias(context),
+                        renameColumn->oldName.name
+                )
+            );
+        }
+
+        renameColumn->columnId = header.id;
+        renameColumn->ordinalPosition = header.ordinalPosition;
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus AlterTableStatement::CompileDerived(QueryContext& context){
+        if (this->table == nullptr)
+            return Errors::ValidationStatus::Error(
+                Messages::NO_TABLE_SPECIFIED,
+                context.GetAllocator()
+            );
+
+        auto tableStatus = this->table->Validate(context, this->databaseId);
+        if (!tableStatus.IsOk()) return tableStatus;
+
+        const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
+
+        //validate by type
+        switch (this->type) {
+            case AlterTableType::AddColumn:
+                return this->CompileAddColumn(context, columnsDict);
+            case AlterTableType::AlterColumn:
+                return this->CompileAlterColumn(context, columnsDict);
+            case AlterTableType::DropColumn:
+                return this->CompileDropColumn(context, columnsDict);
+            case AlterTableType::RenameColumn:
+                return this->CompileRenameColumn(context, columnsDict);
+            default:
+                return Errors::ValidationStatus::Error(
+                    Messages::UNKNOWN_OPERATION,
+                    context.GetAllocator()
+                );
+        }
+    }
+
+    constexpr Security::Permission AlterTableStatement::RequiredPermissions() const{
+        return Constants::DB_OWNER_PERMISSIONS;
+    }
+
+    LogicalPlan * AlterTableStatement::ToLogical(QueryContext& context){
+        switch (this->type) {
+        case AlterTableType::AddColumn:
+            return context._context.Allocate<LogicalAlterTable>(
+                this->sessionId,
+                this->table,
+                this->type,
+                this->column.newColumn
+            );
+        case AlterTableType::AlterColumn:
+            return context._context.Allocate<LogicalAlterTable>(
+                this->sessionId,
+                this->table,
+                this->type,
+                this->column.alterColumn
+            );
+        case AlterTableType::RenameColumn:
+            return context._context.Allocate<LogicalAlterTable>(
+                this->sessionId,
+                this->table,
+                this->type,
+                this->column.renameColumn
+            );
+        case AlterTableType::DropColumn:
+            return context._context.Allocate<LogicalAlterTable>(
+                this->sessionId,
+                this->table,
+                this->type,
+                this->column.dropColumn
+            );
+        default:
+            return nullptr;
+        }
+    }
+
+    Errors::ValidationStatus CompileExpression(QueryContext& context, Expressions::Expression*& expression){
+        switch (expression->expressionType) {
+            case Expressions::ExpressionType::Binary:
+                return CompileBinaryExpression(context, expression->AsBinary(), expression);
+            case Expressions::ExpressionType::Logical:
+                return CompileLogicalExpression(context, expression->AsLogical(), expression);
+            case Expressions::ExpressionType::Branch:
+                return CompileBranchExpression(context, expression->AsBranch(), expression);
+            case Expressions::ExpressionType::Function:
+                return CompileFunctionExpression(context, expression->AsFunction(), expression);
+            case Expressions::ExpressionType::Column:
+                return CompileColumnExpression(expression->AsColumn());
+            case Expressions::ExpressionType::Variable:
+                return CompileVariableExpression(context, expression->AsVariable());
+            case Expressions::ExpressionType::Constant:
+                return CompileConstantExpression(expression->AsConstant());
+            case Expressions::ExpressionType::Expression:
+            default:
+                break;
+        }
+
+        return Errors::ValidationStatus::Error(
+         Messages::UNKNOWN_OPERATION,
+            context.GetAllocator()
         );
-
-      if (columns.Contains(header.id)) {
-        os << "Cannot drop column: " << header.name << " as it is referenced by constraint: " << constraint.name;
-        return {Errors::ValidationError::Error, os.str()};
-      }
-    }
-
-    dropColumn->index = header.ordinalPosition;
-    return Errors::ValidationStatus::Ok();
   }
 
-  Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers)const{
-    Headers::ColumnHeader header;
+    Errors::ValidationStatus CompileExpression(
+        QueryContext& context,
+        StatementValidationScope& statementValidationScope,
+        Expressions::Expression*& expression
+    ){
+        switch (expression->expressionType) {
+            case Expressions::ExpressionType::Binary:
+                return CompileBinaryExpression(context, expression->AsBinary(), expression, statementValidationScope);
+            case Expressions::ExpressionType::Logical:
+                return CompileLogicalExpression(context, expression->AsLogical(), expression, statementValidationScope);
+            case Expressions::ExpressionType::Branch:
+                return CompileBranchExpression(context, expression->AsBranch(), expression, statementValidationScope);
+            case Expressions::ExpressionType::Function:
+                return CompileFunctionExpression(context, expression->AsFunction(), expression, statementValidationScope);
+            case Expressions::ExpressionType::Column:
+                return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
+            case Expressions::ExpressionType::Variable:
+                return CompileVariableExpression(context, expression->AsVariable());
+            case Expressions::ExpressionType::Constant:
+                return CompileConstantExpression(expression->AsConstant());
+            case Expressions::ExpressionType::Expression:
+            default:
+                break;
+        }
 
-    auto* renameColumn = this->column.renameColumn;
-
-    if (!headers.TryGetValue(Functions::String::NormalizeString(renameColumn->oldName.name), header)) {
-        std::ostringstream os;
-      os << "Column " << renameColumn->oldName.name << " does not exist on table: " << this->table->GetFullName();
-      return {Errors::ValidationError::Error, os.str()};;
+        return Errors::ValidationStatus::Error(
+    Messages::UNKNOWN_OPERATION,
+            context.GetAllocator()
+        );
     }
 
-    renameColumn->columnId = header.id;
-    renameColumn->ordinalPosition = header.ordinalPosition;
+    Errors::ValidationStatus CompileBinaryExpression(
+        QueryContext& context,
+        Expressions::BinaryExpression *binaryExpr,
+        Expressions::Expression *&expression
+    ) {
+        auto result =
+            CompileExpression(context, binaryExpr->left)
+            && CompileExpression(context, binaryExpr->right);
 
-    return Errors::ValidationStatus::Ok();
-  }
+        if (!result.IsOk()) return result;
 
-  Errors::ValidationStatus AlterTableStatement::CompileDerived(QueryContext& context){
-    if (this->table == nullptr)
-      return {Errors::ValidationError::Error, "Table was not specified"};
+        //validate binary expression action
+        if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    binaryExpr->left->GetReturnType(),
+                    binaryExpr->right->GetReturnType()
+                )
+            );
+        }
 
-    auto tableStatus = this->table->Validate(context, this->databaseId);
-    if (!tableStatus.IsOk())
-      return tableStatus;
+        if (!binaryExpr->ValidateOperation()) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_OPERATION_ON_DATATYPES(
+                    context.GetAllocator(),
+                    binaryExpr->left->GetReturnType(),
+                    binaryExpr->right->GetReturnType()
+                )
+            );
+        }
 
-    const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
-
-    //validate by type
-    switch (this->type) {
-    case AlterTableType::AddColumn:
-      return this->CompileAddColumn(columnsDict);
-    case AlterTableType::AlterColumn:
-      return this->CompileAlterColumn(columnsDict);
-    case AlterTableType::DropColumn:
-      return this->CompileDropColumn(context, columnsDict);
-    case AlterTableType::RenameColumn:
-      return this->CompileRenameColumn(columnsDict);
-    default:
-      return {Errors::ValidationError::Error, "Unknown table type"};
-    }
-  }
-
-  constexpr Security::Permission AlterTableStatement::RequiredPermissions() const{
-    return Constants::DB_OWNER_PERMISSIONS;
-  }
-
-  LogicalPlan * AlterTableStatement::ToLogical(QueryContext& context){
-    switch (this->type) {
-    case AlterTableType::AddColumn:
-      return context._context.Allocate<LogicalAlterTable>(this->sessionId, this->table, this->type,this->column.newColumn);
-    case AlterTableType::AlterColumn:
-      return context._context.Allocate<LogicalAlterTable>(this->sessionId, this->table, this->type,this->column.alterColumn);
-    case AlterTableType::RenameColumn:
-      return context._context.Allocate<LogicalAlterTable>(this->sessionId, this->table, this->type,this->column.renameColumn);
-    case AlterTableType::DropColumn:
-      return context._context.Allocate<LogicalAlterTable>(this->sessionId, this->table, this->type,this->column.dropColumn);
-    default:
-      return nullptr;
-    }
-  }
-
-  Errors::ValidationStatus CompileExpression(QueryContext& context, Expressions::Expression*& expression){
-    switch (expression->expressionType) {
-    case Expressions::ExpressionType::Binary:
-      return CompileBinaryExpression(context, expression->AsBinary(), expression);
-    case Expressions::ExpressionType::Logical:
-      return CompileLogicalExpression(context, expression->AsLogical(), expression);
-    case Expressions::ExpressionType::Branch:
-      return CompileBranchExpression(context, expression->AsBranch(), expression);
-    case Expressions::ExpressionType::Function:
-      return CompileFunctionExpression(context, expression->AsFunction(), expression);
-    case Expressions::ExpressionType::Column:
-      return CompileColumnExpression(expression->AsColumn());
-    case Expressions::ExpressionType::Variable:
-      return CompileVariableExpression(context, expression->AsVariable());
-    case Expressions::ExpressionType::Constant:
-      return CompileConstantExpression(expression->AsConstant());
-    case Expressions::ExpressionType::Expression:
-    default:
-      break;
+        FoldExpression(context, binaryExpr, expression);
+        return Errors::ValidationStatus::Ok();
     }
 
-    return {Errors::ValidationError::Error, "Unknown expression"};
-  }
+    Errors::ValidationStatus CompileBinaryExpression(
+        QueryContext& context,
+        Expressions::BinaryExpression* binaryExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    ) {
+        auto result =
+            CompileExpression(context, statementValidationScope, binaryExpr->left)
+            && CompileExpression(context, statementValidationScope, binaryExpr->right);
 
-  Errors::ValidationStatus CompileExpression(
-    QueryContext& context,
-    StatementValidationScope& statementValidationScope,
-    Expressions::Expression*& expression
-  ){
+        if (!result.IsOk()) return result;
 
-    switch (expression->expressionType) {
-    case Expressions::ExpressionType::Binary:
-      return CompileBinaryExpression(context, expression->AsBinary(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Logical:
-      return CompileLogicalExpression(context, expression->AsLogical(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Branch:
-      return CompileBranchExpression(context, expression->AsBranch(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Function:
-      return CompileFunctionExpression(context, expression->AsFunction(), expression, statementValidationScope);
-    case Expressions::ExpressionType::Column:
-      return CompileColumnExpression(expression->AsColumn(), statementValidationScope);
-    case Expressions::ExpressionType::Variable:
-      return CompileVariableExpression(context, expression->AsVariable());
-    case Expressions::ExpressionType::Constant:
-      return CompileConstantExpression(expression->AsConstant());
-    case Expressions::ExpressionType::Expression:
-    default:
-      break;
+        if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    binaryExpr->left->GetReturnType(),
+                    binaryExpr->right->GetReturnType()
+                )
+            );
+        }
+
+        if (!binaryExpr->ValidateOperation()) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_OPERATION_ON_DATATYPES(
+                    context.GetAllocator(),
+                    binaryExpr->left->GetReturnType(),
+                    binaryExpr->right->GetReturnType()
+                )
+            );
+        }
+
+        FoldExpression(context, binaryExpr, expression);
+        return Errors::ValidationStatus::Ok();
     }
 
-    return {Errors::ValidationError::Error, "Unknown expression"};
-  }
+    Errors::ValidationStatus CompileLogicalExpression(
+        QueryContext &context,
+        Expressions::LogicalExpression *logicalExpr,
+        Expressions::Expression *&expression
+    ) {
+        auto result =
+            CompileExpression(context, logicalExpr->left)
+            && CompileExpression(context, logicalExpr->right);
 
-  Errors::ValidationStatus CompileBinaryExpression(
-    QueryContext& context,
-    Expressions::BinaryExpression *binaryExpr,
-    Expressions::Expression *&expression
-  ) {
-    auto result = CompileExpression(context, binaryExpr->left)
-      && CompileExpression(context, binaryExpr->right);
+        if (!result.IsOk()) return result;
 
-    if (!result.IsOk())
-      return result;
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
+            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->left->GetReturnType());
+        if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
 
-    //validate binary expression action
-    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-        std::ostringstream os;
-
-      const auto& leftTypeStr = DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
-      return {Errors::ValidationError::Error, os.str()};
+        FoldExpression(context, logicalExpr, expression);
+        return Errors::ValidationStatus::Ok();
     }
-
-    if (!binaryExpr->ValidateOperation()) {
-        std::ostringstream os;
-      os  << "Invalid operation between datatypes: "
-        << DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType())
-        << " and "
-        << DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    FoldExpression(context, binaryExpr, expression);
-    return Errors::ValidationStatus::Ok();
-  }
-
-  Errors::ValidationStatus CompileBinaryExpression(
-    QueryContext& context,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    auto result = CompileExpression(context, statementValidationScope, binaryExpr->left)
-      && CompileExpression(context, statementValidationScope, binaryExpr->right);
-
-    if (!result.IsOk())
-      return result;
-
-    if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-        std::ostringstream os;
-
-      const auto& leftTypeStr = DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType());
-      const auto& rightTypeStr = DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      os << "Invalid conversion between " << leftTypeStr << "and " << rightTypeStr <<".Use explicit cast";
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    if (!binaryExpr->ValidateOperation()) {
-        std::ostringstream os;
-      os  << "Invalid operation between datatypes: "
-        << DataTypeToStringDictionary.Get(binaryExpr->left->GetReturnType())
-        << " and "
-        << DataTypeToStringDictionary.Get(binaryExpr->right->GetReturnType());
-
-      return {Errors::ValidationError::Error, os.str()};
-    }
-
-    FoldExpression(context, binaryExpr, expression);
-    return Errors::ValidationStatus::Ok();
-  }
-
-  Errors::ValidationStatus CompileLogicalExpression(
-    QueryContext &context,
-    Expressions::LogicalExpression *logicalExpr,
-    Expressions::Expression *&expression
-  ) {
-    //validate type
-    auto result = CompileExpression(context, logicalExpr->left)
-      && CompileExpression(context, logicalExpr->right);
-
-    if (!result.IsOk())
-      return result;
-
-    if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-      return ClauseCannotBeEvaluatedToBool(logicalExpr->left->GetReturnType());
-    if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-      return ClauseCannotBeEvaluatedToBool( logicalExpr->right->GetReturnType());
-
-    FoldExpression(context, logicalExpr, expression);
-    return Errors::ValidationStatus::Ok();
-  }
 
     Errors::ValidationStatus CompileLogicalExpression(
         QueryContext& context,
@@ -1774,85 +1822,81 @@ namespace QueryPipeline::Statements {
         return Errors::ValidationStatus::Ok();
     }
 
-  Errors::ValidationStatus CompileFunctionExpression(
-    QueryContext &context,
-    const Expressions::FunctionExpression *funcExpr,
-    Expressions::Expression *&expression
-  ) {
-    for (auto* childExpr : funcExpr->arguments) {
-      auto childExpressionResult = CompileExpression(context, childExpr);
+    Errors::ValidationStatus CompileFunctionExpression(
+        QueryContext &context,
+        const Expressions::FunctionExpression *funcExpr,
+        Expressions::Expression *&expression
+    ) {
+        for (auto* childExpr : funcExpr->arguments) {
+            auto childExpressionResult = CompileExpression(context, childExpr);
+            if (!childExpressionResult.IsOk()) return childExpressionResult;
+        }
 
-      if (!childExpressionResult.IsOk())
-        return childExpressionResult;
+        //validate functionExpression
+        DataTypes::String errorMessage;
+        if (!funcExpr->ValidateNumberOfArguments(errorMessage))
+            return Errors::ValidationStatus::Error(std::move(errorMessage));
+
+        FoldExpression(context, funcExpr, expression);
+        return Errors::ValidationStatus::Ok();
     }
 
-    //validate functionExpression
-    DataTypes::String errorMessage;
-    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
-      return {Errors::ValidationError::Error, errorMessage};
+    Errors::ValidationStatus CompileFunctionExpression(
+        QueryContext &context,
+        const Expressions::FunctionExpression *funcExpr,
+        Expressions::Expression *&expression,
+        StatementValidationScope& statementValidationScope
+    ) {
+        //validate children expressions and assign return types and ids to column expressions
+        for (auto* childExpr : funcExpr->arguments) {
+            auto childExpressionResult = CompileExpression(context, statementValidationScope, childExpr);
 
-    FoldExpression(context, funcExpr, expression);
-    return Errors::ValidationStatus::Ok();
-  }
+            if (!childExpressionResult.IsOk()) return childExpressionResult;
+        }
 
-  Errors::ValidationStatus CompileFunctionExpression(
-    QueryContext &context,
-    const Expressions::FunctionExpression *funcExpr,
-    Expressions::Expression *&expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    //validate children expressions and assign return types and ids to column expressions
-    for (auto* childExpr : funcExpr->arguments) {
-      auto childExpressionResult = CompileExpression(context, statementValidationScope, childExpr);
+        //validate number of arguments
+        DataTypes::String errorMessage;
+        if (!funcExpr->ValidateNumberOfArguments(errorMessage))
+            return Errors::ValidationStatus::Error(std::move(errorMessage));
 
-      if (!childExpressionResult.IsOk())
-        return childExpressionResult;
+        FoldExpression(context, funcExpr, expression);
+        return Errors::ValidationStatus::Ok();
     }
 
-    //validate number of arguments
-    DataTypes::String errorMessage;
-    if (!funcExpr->ValidateNumberOfArguments(errorMessage))
-      return {Errors::ValidationError::Error, errorMessage};
-
-    FoldExpression(context, funcExpr, expression);
-    return Errors::ValidationStatus::Ok();
-  }
-
-  Errors::ValidationStatus CompileBranchExpression(
-    QueryContext &context,
-    Expressions::BranchExpression *branchExpr,
-    Expressions::Expression *&expression,
-    StatementValidationScope& statementValidationScope
-  ) {
-    if (!branchExpr->ValidateNumberOfArguments())
-      return {Errors::ValidationError::Error, "Invalid number of arguments specified on branching expression"};
+    Errors::ValidationStatus CompileBranchExpression(
+        QueryContext &context,
+        Expressions::BranchExpression *branchExpr,
+        Expressions::Expression *&expression,
+        StatementValidationScope& statementValidationScope
+    ) {
+        if (!branchExpr->ValidateNumberOfArguments())
+            return Errors::ValidationStatus::Error(
+                    Messages::INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION,
+                    context.GetAllocator()
+            );
 
     for (auto& branch : branchExpr->branches) {
-      auto result = CompileExpression(context, statementValidationScope, branch);
-      if (!result.IsOk())
-        return result;
+        auto result = CompileExpression(context, statementValidationScope, branch);
+        if (!result.IsOk()) return result;
 
-      if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
-          std::ostringstream os;
-
-        os  << "Expression of type: "
-          << DataTypeToStringDictionary.Get(branch->GetReturnType())
-          << " cannot be used as a branching condition";
-
-        return {Errors::ValidationError::Error, os.str()};
-      }
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
+                    context.GetAllocator(),
+                    branch->GetReturnType()
+                )
+            );
+        }
     }
 
     for (auto& resultExpr : branchExpr->results) {
-      auto result = CompileExpression(context, statementValidationScope, resultExpr);
-      if (!result.IsOk())
-        return result;
+        auto result = CompileExpression(context, statementValidationScope, resultExpr);
+        if (!result.IsOk()) return result;
     }
 
     if (branchExpr->HasBaseCase()) {
-      auto result = CompileExpression(context, statementValidationScope, branchExpr->baseCase);
-      if (!result.IsOk())
-        return result;
+        auto result = CompileExpression(context, statementValidationScope, branchExpr->baseCase);
+        if (!result.IsOk()) return result;
     }
 
     const auto returnType = branchExpr->GetReturnType();

@@ -197,4 +197,34 @@ namespace QueryPipeline::Messages
     static DataTypes::String INVALID_COLUMN_TYPE_SPECIFIED(const ::Memory::IAllocator* allocator, const DataTypes::String& columnName, const DataTypes::StringView& columnType){
         return DataTypes::String::Concat(allocator, "Invalid column type: ", columnType, " specified for column: ", columnName);
     }
+
+    static DataTypes::String CANNOT_DROP_COLUMN_HAS_CONSTRAINTS(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& columnName,
+        const DataTypes::String& constraintName
+    ){
+        return DataTypes::String::Concat(allocator, "Cannot drop column: ", columnName, " as it is referenced by constraint: ", constraintName);
+    }
+
+    static constexpr DataTypes::StringView UNKNOWN_OPERATION = "Unknown operation";
+
+    static DataTypes::String INVALID_OPERATION_ON_DATATYPES(
+        const ::Memory::IAllocator* allocator,
+        const DataType leftType,
+        const DataType rightType
+    ){
+        return DataTypes::String::Concat(
+            allocator,
+            "Invalid operation on datatypes: ",
+            DataTypeToStringDictionary.Get(leftType),
+            " and ",
+            DataTypeToStringDictionary.Get(rightType)
+        );
+    }
+
+    static constexpr DataTypes::StringView INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION = "Invalid number of arguments specified on branch expression";
+
+    static DataTypes::String INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(const ::Memory::IAllocator* allocator, const DataType type){
+        return DataTypes::String::Concat(allocator, "Invalid expression type: ", DataTypeToStringDictionary.Get(type), " specified for branch expression");
+    }
 }
