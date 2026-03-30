@@ -253,6 +253,8 @@ namespace DatabaseEngine::StorageTypes {
         this->header.ordinalPosition = ordinalPosition;
         this->clusteredIndexedTree = nullptr;
 
+        this->_columns.SetAllocator(&this->_allocator);
+
         for (int i = 0;i < systemHeader.columns.size(); i++){
             auto* column = this->_allocator.Allocate<Column>(systemHeader.columns[i], i,  this);
             this->AddColumn(column);
@@ -261,10 +263,17 @@ namespace DatabaseEngine::StorageTypes {
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
     }
 
+    void Table::Destroy() const{
+          for (const auto* column : this->_columns)
+              column->Destroy();
+
+          this->_allocator.Reset();
+    }
+
     Table::~Table(){
         // auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
         // headerPage.SetTableHeader(this->header.ordinalPosition, this->header);
-        this->_allocator.Reset();
+        // this->_allocator.Reset();
     }
 
     Errors::RuntimeStatus Table::BatchInsert(
@@ -272,7 +281,11 @@ namespace DatabaseEngine::StorageTypes {
         DataStructures::PolymorphicArray<QueryResult> &input
       ) {
         if (input.Empty())
-            return Errors::RuntimeStatus(Errors::RuntimeError::Ok, Messages::NO_ROWS_TO_INSERT);
+            return Errors::RuntimeStatus(
+                Errors::RuntimeError::Ok,
+                Messages::NO_ROWS_TO_INSERT,
+                    executionContext.GetAllocator()
+            );
 
         // std::pmr::vector<InsertPayload> rows(&properties.allocator);
 
@@ -325,7 +338,7 @@ namespace DatabaseEngine::StorageTypes {
 
   Errors::RuntimeStatus Table::InsertRow(
         const ExecutionContext& executionContext,
-        const std::vector<Value> &inputData
+        const DataStructures::Array<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
 
@@ -350,8 +363,7 @@ namespace DatabaseEngine::StorageTypes {
 
         Database::LogCheckPoint(checkPoint);
 
-        status.message = "Rows affected: 1";
-
+        status.message = DataTypes::String("Rows affected: 1", executionContext.GetAllocator());
         return status;
     }
 
@@ -915,7 +927,7 @@ namespace DatabaseEngine::StorageTypes {
     void Table::AddColumn(Column *column) { this->_columns.Push(column); }
 
     Column* Table::AddColumn(
-        const DataTypes::String& columnName,
+        const DataTypes::StringView& columnName,
         DataType type,
         row_size_t recordSize,
         column_index_t index,
@@ -1199,7 +1211,7 @@ namespace DatabaseEngine::StorageTypes {
         if (headers.empty()) return;
 
         for (int i = 0;i < this->_columns.Size(); i++) {
-            auto& column = _columns[i];
+            auto* column = this->_columns[i];
             column->SetColumnId(headers[i].id);
         }
     }
@@ -1297,7 +1309,7 @@ namespace DatabaseEngine::StorageTypes {
 
     void Table::UpdateColumnName(const column_index_t index, const DataTypes::String& name)const{
         auto* column = this->_columns[index];
-        column->SetColumnName(name);
+        column->SetColumnName(name.ToView());
     }
 
     void Table::PopulateColumn(const column_index_t index, const Value &defaultValue){

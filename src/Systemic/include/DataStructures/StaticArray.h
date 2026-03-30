@@ -13,10 +13,13 @@ namespace DataStructures{
 
         public:
             constexpr StaticArray() : _data(N), _size(N) {}
-            explicit constexpr StaticArray(const T* _data, const Int size) : _data(N), _size(size){
+            explicit constexpr StaticArray(const T* _data, const Int size)
+                : _data(size), _size(size){
+
                 if (size > N)
                     throw std::runtime_error("Array size is greater than array capacity");
-                std::memcpy(this->_data, _data, N * sizeof(T));
+
+                std::memcpy(this->_data, _data, size * sizeof(T));
             }
             constexpr StaticArray(std::initializer_list<T> list){
                 static_assert(list.size() <= N, "List size is greater than array size");

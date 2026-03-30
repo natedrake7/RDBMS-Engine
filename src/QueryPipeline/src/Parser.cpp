@@ -94,8 +94,8 @@ namespace QueryPipeline{
 
     Parser::Parser() = default;
 
-    QueryContext::QueryContext(){
-        this->hasMore = false;
+    QueryContext::QueryContext()
+        : status(this->_context.GetAllocator()), hasMore(false){
         this->cursors.SetAllocator(this->_context.GetAllocator());
     }
 
@@ -196,25 +196,26 @@ namespace QueryPipeline{
         }
         catch (const std::exception& e) {
             // Parser::ClearQuery(statements);
-
             std::ostringstream os;
             os << "Parser exception: " << e.what();
 
-            result.status = Errors::Error(true, os.str());
+            auto str = DataTypes::String::Concat(result.GetAllocator(), "Parser exception: ", e.what());
+            result.status = Errors::Error(true, std::move(str));
         }
      }
 
     LogicalPlan* Parser::BuildLogicalPlan(QueryContext& result, Statements::Statement* statement){
         auto validation = statement->Compile(result);
         if (!validation.IsOk()) {
-            result.status = Errors::Error(true, validation.message, result.GetAllocator());
+            result.status = Errors::Error(true, validation.message);
             return nullptr;
         }
 
         auto* logicalPlan = statement->ToLogical(result);
 
         if (logicalPlan == nullptr) {
-            result.status = Errors::Error(true, "Unexpected error occurred during plan build");
+            static constexpr DataTypes::StringView errorMsg = "Unexpected error occurred during plan build";
+            result.status = Errors::Error(true, errorMsg, result.GetAllocator());
             return nullptr;
         }
 
@@ -224,7 +225,8 @@ namespace QueryPipeline{
     PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(QueryContext &result, LogicalPlan *logicalPlan) {
         auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
-            result.status = Errors::Error(true, "Unexpected error occurred during physical plan build");
+            static constexpr DataTypes::StringView errorMsg = "Unexpected error occurred during physical plan build";
+            result.status = Errors::Error(true, errorMsg, result.GetAllocator());
             return nullptr;
         }
 

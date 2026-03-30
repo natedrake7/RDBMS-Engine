@@ -72,8 +72,19 @@ namespace Security {
 
         bool isSystem;
 
-        Role(const Int id, const DataTypes::String& name, const Permission permission, const bool isSystem)
-            : id(id), name(name), permission(permission), isSystem(isSystem) {}
+        Role(
+            const Int id,
+            const DataTypes::String& name,
+            const Permission permission,
+            const bool isSystem
+        ): id(id), name(name), permission(permission), isSystem(isSystem) {}
+
+        Role(
+            const Int id,
+            DataTypes::String& name,
+            const Permission permission,
+            const bool isSystem
+        ): id(id), name(std::move(name)), permission(permission), isSystem(isSystem) {}
 
         Role(const Role& role) {
             this->id = role.id;
@@ -107,13 +118,12 @@ namespace Security {
     };
 
     struct User {
-        Int id;
-
         DataTypes::String name;
         DataTypes::String passwordHash;
-
-        Int roleId;
         const Role* role;
+
+        Int id;
+        Int roleId;
 
         bool isActive;
 
@@ -131,7 +141,20 @@ namespace Security {
             const Int roleId,
             const Role* role,
             const bool isActive
-        ): id(id), name(name), passwordHash(passwordHash), roleId(roleId), role(role), isActive(isActive) {}
+        ):  name(name), passwordHash(passwordHash),
+            role(role), id(id),
+            roleId(roleId), isActive(isActive) {}
+
+        User(
+            const Int id,
+            DataTypes::String& name,
+            DataTypes::String& passwordHash,
+            const Int roleId,
+            const Role* role,
+            const bool isActive
+        ) : name(std::move(name)), passwordHash(std::move(passwordHash)),
+            role(role), id(id),
+            roleId(roleId), isActive(isActive) {}
 
         User(User&& other) noexcept{
             this->id = other.id;

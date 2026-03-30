@@ -27,13 +27,12 @@ namespace Headers {
         bool isDeleted;
         DataTypes::DateTime deletedAt;
 
-        AuditInformation() {
-            this->createdAt = DataTypes::DateTime::Now();
-            this->lastModified = DataTypes::DateTime::Now();
-            this->version = 0;
-            this->isDeleted = false;
-            this->deletedAt = DataTypes::DateTime::Now();
-        }
+        explicit AuditInformation()
+            :   createdAt(DataTypes::DateTime::Now()),
+                lastModified(DataTypes::DateTime::Now()),
+                lastModifiedBy(DataTypes::String::Null()),
+                version(0), isDeleted(false),
+                deletedAt(DataTypes::DateTime::Now()){}
 
         AuditInformation(
             const DataTypes::DateTime& createdAt,
@@ -53,13 +52,14 @@ namespace Headers {
         AuditInformation(
             const Int version,
             const bool isDeleted,
+            const DataTypes::String& lastModifiedBy,
             const DataTypes::DateTime& deletedAt
-        ) : version(version),
+        ) : createdAt(DataTypes::DateTime::Now()),
+            lastModified(DataTypes::DateTime::Now()),
+            lastModifiedBy(lastModifiedBy),
+            version(version),
             isDeleted(isDeleted),
-            deletedAt(deletedAt){
-            this->createdAt = DataTypes::DateTime::Now();
-            this->lastModified = DataTypes::DateTime::Now();
-        }
+            deletedAt(deletedAt){}
     };
 
   struct IndexColumnsHeader{
@@ -370,8 +370,8 @@ namespace Headers {
   };
 
   struct sysColumn {
-    DataTypes::String name;
-    DataTypes::String type;
+    std::string name;
+    std::string type;
     Int id;
     int size = 0;
     int _default = 0;
@@ -380,18 +380,18 @@ namespace Headers {
   };
 
   struct sysTable {
-    DataTypes::String name;
+    std::string name;
     Int id;
     bool hasIdentity;
     std::vector<sysColumn> columns;
-    std::vector<DataTypes::String> primaryKey;
+    std::vector<std::string> primaryKey;
   };
 
     struct Index{
         DataStructures::StaticArray<UnsignedTinyInt, 10> columns;
 
         explicit Index(const UnsignedTinyInt* columns, const Int size)
-            : columns(columns, size) {}
+            : columns(columns, size){}
 
         Index() = default;
     };

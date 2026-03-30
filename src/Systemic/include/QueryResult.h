@@ -1,14 +1,17 @@
 #pragma once
 #include "DataTypes/Value.h"
-
-
 #include <vector>
 
+#include "DataStructures/PolymorphicArray.h"
+
 class QueryResult {
-  std::vector<Value> data;
+  DataStructures::PolymorphicArray<Value> data;
 
 public:
-    QueryResult();
+    //TODO: to be removed later...
+    QueryResult() = default;
+
+    explicit QueryResult(const ::Memory::IAllocator* allocator);
     QueryResult(const QueryResult& other);
     QueryResult(QueryResult&& other) noexcept;
 
@@ -17,8 +20,8 @@ public:
     void AddColumn(const Value& field);
     void AddColumn(const Value& field, column_index_t columnIndex);
     void Print()const;
-    [[nodiscard]] const std::vector<Value>& Data()const;
-    [[nodiscard]] std::vector<Value>& Data();
+    [[nodiscard]] const DataStructures::PolymorphicArray<Value>& Data()const;
+    [[nodiscard]] DataStructures::PolymorphicArray<Value>& Data();
     [[nodiscard]] Value GetColumnAt(Int columnPos)const;
     [[nodiscard]] const Value& GetColumnReferenceAt(Int columnPos)const;
     [[nodiscard]] Int GetSize()const;

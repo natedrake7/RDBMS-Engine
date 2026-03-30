@@ -25,7 +25,7 @@ namespace DatabaseEngine {
         ~TemporaryDatabase();
 
         static bool Exists(const DataTypes::StringView& filename);
-        void ClearTemporaryFiles() const;
+        static void ClearTemporaryFiles(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
 
         [[nodiscard]] Int GetNextOrdinalPosition();
 

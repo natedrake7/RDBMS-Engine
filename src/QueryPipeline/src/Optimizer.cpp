@@ -1,5 +1,7 @@
 #include "../include/Optimizer.h"
 
+#include <algorithm>
+
 #include "CostEstimator.h"
 #include "DatabaseConstants.h"
 #include "Parser.h"

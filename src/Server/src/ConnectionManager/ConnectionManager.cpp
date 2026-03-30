@@ -338,7 +338,11 @@ void ConnectionManager::CloseServerConnection() const
     //invalid request type
   }
 
-void ConnectionManager::AuthorizeClientConnection(const Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const {
+void ConnectionManager::AuthorizeClientConnection(
+    const Int clientSocket,
+    const Network::ConnectionProtocolHeader &header,
+    const vector<char>& buffer
+)const {
     Network::AuthorizeProtocol protocol(header);
 
     protocol.Deserialize(buffer);
@@ -374,7 +378,13 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket,
 
     if (compileResult.status.hasError) {
         DataStructures::PolymorphicArray<QueryResult> results;
-        Network::QueryResponseProtocol response(compileResult.status.hasError, false, compileResult.status.message, {}, results);
+        Network::QueryResponseProtocol response(
+            compileResult.status.hasError,
+            false,
+            compileResult.status.message.ToView(),
+            {},
+            results
+        );
         ConnectionManager::SendToClient(socket, &response);
         return;
     }
@@ -389,7 +399,7 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket,
         Network::QueryResponseProtocol response(
         batchResult.status.IsOk(),
                 hasMore,
-                batchResult.status.message,
+                batchResult.status.message.ToView(),
                 batchResult.displayColumnNames,
              batchResult.results
             );

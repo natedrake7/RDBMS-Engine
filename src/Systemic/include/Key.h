@@ -2,6 +2,7 @@
 #include "DataTypes/Value.h"
 #include <vector>
 #include "../../DatabaseEngine/include/DatabaseConstants.h"
+#include "DataStructures/PolymorphicArray.h"
 
 namespace DataTypes::Indexing {
   struct Key{
@@ -11,10 +12,11 @@ namespace DataTypes::Indexing {
       Greater = 1,
     };
     Value value;
-    std::vector<Key> subKeys;
+    DataStructures::PolymorphicArray<Key> subKeys;
     key_size_t size;
 
-    Key();
+    explicit Key();
+    explicit Key(const ::Memory::IAllocator* allocator);
     Key(
         const void *keyValue,
         key_size_t keySize,
@@ -23,8 +25,8 @@ namespace DataTypes::Indexing {
     );
     explicit Key(const Value& field);
     explicit Key(Value& field);
-    explicit Key(const std::vector<Key>& subKeys);
-    explicit Key(std::vector<Key>& subKeys);
+    explicit Key(const DataStructures::PolymorphicArray<Key>& subKeys);
+    explicit Key(DataStructures::PolymorphicArray<Key>& subKeys);
     explicit Key(const Key*& otherKey);
     Key(const Key &otherKey);
     Key(Key&& otherKey) noexcept;
@@ -53,7 +55,7 @@ namespace DataTypes::Indexing {
     [[nodiscard]] Int AsInt(Int pos = 0)const;
     [[nodiscard]] BigInt AsBigInt(Int pos = 0)const;
 
-    key_size_t CalculateSize()const;
+    [[nodiscard]] key_size_t CalculateSize()const;
 
     void Serialize(object_t*& buffer, page_offset_t& offset) const;
     static Key DeserializeNonComposite(
@@ -69,6 +71,8 @@ namespace DataTypes::Indexing {
         const UnsignedTinyInt& numberOfSubKeys,
         const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes
     );
+
+    DataTypes::String ToString(const Memory::IAllocator* allocator) const;
 
     friend std::ostream& operator<<(std::ostream& os, const Key& key);
   };

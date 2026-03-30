@@ -27,8 +27,8 @@ namespace DatabaseEngine {
 
         std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(const ::Memory::IAllocator* allocator, const DataTypes::StringView& configPath);
         [[nodiscard]] static bool CatalogExists(const DataTypes::StringView& path);
-        void UseCatalogDatabase(const DataTypes::String& dbName);
-        void CreateCatalogDatabase(const DataTypes::String& dbName);
+        void UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
+        void CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
         void StoreSystemTablesToCatalog(
             const ExecutionContext& baseContext,
             const DataTypes::StringView& dbNameView,
@@ -82,13 +82,16 @@ namespace DatabaseEngine {
 
         [[nodiscard]] Database* GetDatabase()const;
 
-        [[nodiscard]]bool Initialize(const DataTypes::StringView& configPath);
+        [[nodiscard]]bool Initialize(
+            const ExecutionContext& baseContext,
+            const DataTypes::StringView& configPath
+        );
         void Shutdown();
 
         [[nodiscard]] std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
 
         [[nodiscard]] DataStructures::PolymorphicArray<Security::Role*> InsertSystemRoles(const ExecutionContext& baseContext)const;
-        [[nodiscard]] Security::User* InsertSystemUsers(
+        [[nodiscard]] Security::User InsertSystemUsers(
             const ExecutionContext& baseContext,
             const DataTypes::String& hashedPassword,
             Int defaultRoleId

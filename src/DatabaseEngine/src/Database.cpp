@@ -85,13 +85,20 @@ namespace DatabaseEngine
         const auto path = DataTypes::String::Concat(tempAllocator, dbName, "/", dbName);
 
         const auto tempFilename = DataTypes::String::Concat(tempAllocator, path, DATA_FILE_EXTENSION);
-        const auto tempSysFilename = DataTypes::String::Concat(tempAllocator, path, SYS_EXTENSION);
+        const auto tempSysFilename = DataTypes::String::Concat(tempAllocator, path, SYS_EXTENSION, DATA_FILE_EXTENSION);
 
         this->filename = DataTypes::String(tempFilename, &this->_allocator);
         this->systemFilename = DataTypes::String(tempSysFilename, &this->_allocator);
         this->name = DataTypes::String(dbName, &this->_allocator);
 
         this->fileExtension = DATA_FILE_EXTENSION;
+        this->systemFilenameView = this->systemFilename.ToView();
+        this->filenameView = this->filename.ToView();
+    }
+
+    void Database::CreateKeys(){
+        this->dataFileKey = Storage::FileKey::Create(this->id, Storage::FileType::Data);
+        this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
     }
 
     void Database::ApplyRecoveryLog(const Logging::LogEntry &logEntry)const{
@@ -126,11 +133,15 @@ namespace DatabaseEngine
         this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
     }
 
-    Database::Database(const DataTypes::String& dbName, const bool& isServerInitialization) {
-        static auto& catalog = SystemCatalog::Get();
-        const Memory::Allocator tempAllocator;
-
-        this->PopulateFilenames(&tempAllocator, dbName);
+    Database::Database(
+        const ::Memory::IAllocator* allocator,
+        const Int databaseId,
+        const DataTypes::String& dbName,
+        const bool& isServerInitialization
+    ) {
+        this->id = databaseId;
+        this->PopulateFilenames(allocator, dbName);
+        this->CreateKeys();
 
         const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
             this->systemFileKey,
@@ -138,11 +149,14 @@ namespace DatabaseEngine
         );
 
         this->header = *headerPage.GetDatabaseHeaderPtr();
+        this->_tables.SetAllocator(&this->_allocator);
 
         if (isServerInitialization) return;
 
+        static auto& catalog = SystemCatalog::Get();
+
         //query get from masterDb
-        const auto masterDbData = catalog.SelectTables(&tempAllocator, this->name.ToView());
+        const auto masterDbData = catalog.SelectTables(allocator, this->name.ToView());
         const auto& headerPageTables = headerPage.GetTableHeaders();
 
         if (headerPageTables.size() != masterDbData.size()) return;
@@ -151,13 +165,20 @@ namespace DatabaseEngine
             this->CreateTable(masterDbData[i], headerPageTables[i]);
     }
 
-    Database::Database(const DataTypes::String& dbName, const std::vector<Headers::sysTable>& tables){
-        const Memory::Allocator tempAllocator;
-        this->PopulateFilenames(&tempAllocator, dbName);
+    Database::Database(
+        const ::Memory::IAllocator* allocator,
+        const Int databaseId,
+        const DataTypes::String& dbName,
+        const std::vector<Headers::sysTable>& tables
+    ){
+        this->id = databaseId;
+        this->PopulateFilenames(allocator, dbName);
+        this->CreateKeys();
 
         const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
 
         this->header = *headerPage.GetDatabaseHeaderPtr();
+        this->_tables.SetAllocator(&this->_allocator);
 
         for (int i = 0; i < tables.size(); i++) {
             HashSet primaryKeysSet(tables[i].primaryKey);
@@ -178,13 +199,16 @@ namespace DatabaseEngine
     Database::~Database(){
         // save db header;
         auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+        this->header.numberOfTables = this->_tables.Size();
         headerPage.SetDatabaseHeader(this->header);
 
         for (const auto* dbTable : this->_tables){
             headerPage.SetTableHeader(dbTable->GetHeader());
+            dbTable->Destroy();
         }
 
         headerPage.WriteTableHeadersToDisk();
+        this->_allocator.Reset();
     }
 
     std::vector<Logging::LogEntry> Database::RecoverLogs(){
@@ -430,7 +454,7 @@ namespace DatabaseEngine
 
         const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
 
-        Storage::StorageManager::Get().CreateFile(dataKey,pathView, DATA_FILE_EXTENSION);
+        Storage::StorageManager::Get().CreateFile(dataKey, pathView, DATA_FILE_EXTENSION);
 
         const auto sysDbName = path.Concat(SYS_EXTENSION);
         const auto sysDbNameView = sysDbName.ToView();
@@ -1019,34 +1043,29 @@ namespace DatabaseEngine
 
     DataTypes::StringView Database::GetFileName() const { return this->filenameView; }
 
-    void Database::GetIdentityColumns()const{
-        const Memory::Allocator allocator;
+    void Database::GetIdentityColumns(const ::Memory::IAllocator* allocator)const{
         for(const auto& table: this->_tables)
-            table->RetrieveIdentityColumnsFromCatalog(&allocator);
+            table->RetrieveIdentityColumnsFromCatalog(allocator);
     }
 
-    void Database::UpdateIdentityManagersIds()const{
-        const Memory::Allocator allocator;
+    void Database::UpdateIdentityManagersIds(const ::Memory::IAllocator* allocator)const{
         for(const auto& table: this->_tables)
-            table->UpdateCatalogIdentityColumns(&allocator);
+            table->UpdateCatalogIdentityColumns(allocator);
     }
 
-    void Database::GetColumnsHeaders() const{
-        const Memory::Allocator allocator;
+    void Database::GetColumnsHeaders(const ::Memory::IAllocator* allocator) const{
         for (const auto& table : this->_tables)
-            table->RetrieveColumnHeadersFromCatalog(&allocator);
+            table->RetrieveColumnHeadersFromCatalog(allocator);
     }
 
-    void Database::GetDefaultValues() const{
-        const Memory::Allocator allocator;
+    void Database::GetDefaultValues(const ::Memory::IAllocator* allocator) const{
         for (const auto& table : this->_tables)
-            table->RetrieveDefaultValuesFromCatalog(&allocator);
+            table->RetrieveDefaultValuesFromCatalog(allocator);
     }
 
-    void Database::GetIndexes() const{
-        const Memory::Allocator allocator;
+    void Database::GetIndexes(const ::Memory::IAllocator* allocator) const{
         for (const auto& table : this->_tables)
-            table->RetrieveIndexesFromCatalog(&allocator);
+            table->RetrieveIndexesFromCatalog(allocator);
     }
 
     void Database::GetTableHeaders() const{

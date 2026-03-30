@@ -7,7 +7,8 @@
 #include "DataTypes/DateTime.h"
 #include "DataTypes/Decimal.h"
 
-QueryResult::QueryResult() = default;
+QueryResult::QueryResult(const ::Memory::IAllocator* allocator)
+    : data(allocator) {}
 
 QueryResult::QueryResult(const QueryResult& other){
   this->data = other.data;
@@ -18,30 +19,30 @@ QueryResult::QueryResult(QueryResult&& other) noexcept{
 }
 
 void QueryResult::AddColumn(Value &field){
-  this->data.push_back(std::move(field));
+  this->data.Push(std::move(field));
 }
 
 void QueryResult::AddColumn(Value&& field){
-    this->data.push_back(std::move(field));
+    this->data.Push(std::move(field));
 }
 
 void QueryResult::AddColumn(const Value& field){
-    this->data.push_back(field);
+    this->data.Push(field);
 }
 
 void QueryResult::AddColumn(const Value& field, const column_index_t columnIndex){
-    this->data.insert(this->data.begin() + columnIndex, field);
+    this->data.Insert(field, columnIndex);
 }
 
 void QueryResult::Print() const{
-  for (int i = 0; i < this->data.size(); ++i) {
+  for (int i = 0; i < this->data.Size(); ++i) {
     const auto& column = this->data[i];
 
     if(column.Data() == nullptr
       || column.Size() == 0)
     {
       std::cout   << "NULL"
-        << ((i == this->data.size() - 1) ? "\n" : " || ");
+        << ((i == this->data.Size() - 1) ? "\n" : " || ");
 
       continue;
     }
@@ -79,25 +80,25 @@ void QueryResult::Print() const{
       break;
     }
 
-    std::cout << ((i == this->data.size() - 1) ? "\n" : " || ");
+    std::cout << ((i == this->data.Size() - 1) ? "\n" : " || ");
   }
 }
 
-const std::vector<Value> & QueryResult::Data()const{ return this->data; }
+const DataStructures::PolymorphicArray<Value>& QueryResult::Data()const{ return this->data; }
 
-std::vector<Value>& QueryResult::Data(){
+DataStructures::PolymorphicArray<Value>& QueryResult::Data(){
     return this->data;
 }
 
 Value QueryResult::GetColumnAt(const Int columnPos) const{
-  return this->data.at(columnPos);
+  return this->data[columnPos];
 }
 
 const Value& QueryResult::GetColumnReferenceAt(const Int columnPos) const{
-    return this->data.at(columnPos);
+    return this->data[columnPos];
 }
 
-int QueryResult::GetSize() const{ return this->data.size(); }
+int QueryResult::GetSize() const{ return this->data.Size(); }
 
 Int QueryResult::GetByteSize() const{
   Int totalSize = 0;
@@ -121,10 +122,10 @@ Int QueryResult::GetPageByteSize() const{
 }
 
 void QueryResult::SetColumnIndex(const Int columnPos, const column_index_t columnIndex){
-  if (columnPos >= this->data.size())
+  if (columnPos >= this->data.Size())
     return;
 
-  this->data.at(columnPos).SetColumnIndex(columnIndex);
+  this->data[columnPos].SetColumnIndex(columnIndex);
 }
 
 int64_t QueryResult::ComputeHash() const{
@@ -152,27 +153,27 @@ void QueryResult::Serialize(std::vector<char>& buffer) const{
 }
 
 void QueryResult::Deserialize(const std::vector<char> &buffer, UnsignedInt& offset, const Int dataSize){
-  this->data.reserve(dataSize);
+  this->data.Reserve(dataSize);
 
   for (int i = 0;i < dataSize; i++) {
     auto value = Value();
 
     value.Deserialize(buffer, offset);
 
-    this->data.push_back(std::move(value));
+    this->data.Push(std::move(value));
   }
 }
 
 void QueryResult::Update(std::vector<Value>& updates){
     for (auto& value : updates){
-        auto& otherValue = this->data.at(value.GetColumnIndex());
+        auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = std::move(value);
     }
 }
 
 void QueryResult::Update(const std::vector<Value>& updates){
     for (const auto& value : updates){
-        auto& otherValue = this->data.at(value.GetColumnIndex());
+        auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = value;
     }
 }
@@ -202,7 +203,7 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
   if (lhs.GetSize() != rhs.GetSize())
     return false;
 
-  for (int i = 0;i < lhs.data.size(); i++) {
+  for (int i = 0;i < lhs.data.Size(); i++) {
     if ((lhs.data[i] == rhs.data[i]).AsBool() == false)
       return false;
   }
@@ -211,14 +212,14 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
 }
 
 ostream& operator<<(std::ostream& os, const QueryResult& result){
-  for (int i = 0; i < result.data.size(); ++i) {
+  for (int i = 0; i < result.data.Size(); ++i) {
     const auto& column = result.data[i];
 
     if(column.Data() == nullptr
       || column.Size() == 0)
     {
       os   << "NULL"
-        << ((i == result.data.size() - 1) ? "\n" : " || ");
+        << ((i == result.data.Size() - 1) ? "\n" : " || ");
       continue;
     }
 
@@ -255,7 +256,7 @@ ostream& operator<<(std::ostream& os, const QueryResult& result){
       break;
     }
 
-    os << ((i == result.data.size() - 1) ? "\n" : " || ");
+    os << ((i == result.data.Size() - 1) ? "\n" : " || ");
   }
 
   return os;

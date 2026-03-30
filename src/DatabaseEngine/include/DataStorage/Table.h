@@ -114,13 +114,13 @@ namespace DatabaseEngine::StorageTypes
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
-                const std::vector<Value> &inputData
+                const DataStructures::Array<Value> &inputData
             ) const;
             InsertPayload CreateUpdatePayload(
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
-                const std::vector<Value> &inputData
+                const DataStructures::Array<Value> &inputData
             ) const;
         /**
         * @name Class Constructors and Destructors
@@ -145,6 +145,7 @@ namespace DatabaseEngine::StorageTypes
                 Database *database,
                 Int ordinalPosition
             );
+            void Destroy()const;
             ~Table();
 
         /** @} End of: Class Constructors and Destructors*/
@@ -160,7 +161,7 @@ namespace DatabaseEngine::StorageTypes
             );
             Errors::RuntimeStatus InsertRow(
                 const ExecutionContext& executionContext,
-                const std::vector<Value> &inputData
+                const DataStructures::Array<Value> &inputData
             );
             Errors::RuntimeStatus InsertRow(
                 const ExecutionContext& executionContext,
@@ -430,7 +431,7 @@ namespace DatabaseEngine::StorageTypes
         */
             void AddColumn(Column *column);
             Column* AddColumn(
-                const DataTypes::String& columnName,
+                const DataTypes::StringView& columnName,
                 DataType type,
                 row_size_t recordSize,
                 column_index_t index,

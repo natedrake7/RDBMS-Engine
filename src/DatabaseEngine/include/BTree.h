@@ -70,7 +70,10 @@ namespace Indexing{
             const DataTypes::Indexing::Key& key
         );
 
-        static Errors::RuntimeStatus CreateDuplicateKeyError(const DataTypes::Indexing::Key& key);
+        static Errors::RuntimeStatus CreateDuplicateKeyError(
+            const DataTypes::Indexing::Key& key,
+            const ::Memory::IAllocator* allocator
+        );
 
         Pages::IndexPageView CreateRootPage(Int& indexPosition, Int pagesToAllocate);
 

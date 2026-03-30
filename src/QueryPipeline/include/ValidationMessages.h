@@ -175,6 +175,13 @@ namespace QueryPipeline::Messages
         return DataTypes::String::Concat(allocator, "Column: ", columnName, " does not exist on table: ", tableName);
     }
 
+    static constexpr DataTypes::String COLUMN_DOES_NOT_EXIST_ON_TABLE(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& columnName
+    ){
+        return DataTypes::String::Concat(allocator, "Column: ", columnName, " does not exist on any table");
+    }
+
     static DataTypes::String COLUMN_ALREADY_EXISTS_ON_TABLE(
         const ::Memory::IAllocator* allocator,
         const DataTypes::String& tableName,
@@ -226,5 +233,62 @@ namespace QueryPipeline::Messages
 
     static DataTypes::String INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(const ::Memory::IAllocator* allocator, const DataType type){
         return DataTypes::String::Concat(allocator, "Invalid expression type: ", DataTypeToStringDictionary.Get(type), " specified for branch expression");
+    }
+
+    static constexpr DataTypes::StringView INVALID_BRANCH_EXPRESSION_RESULT_TYPE = "Branching Expression Result types cannot be coerced to datatype";
+
+    static DataTypes::String INVALID_COLUMN_ALIAS(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& columnName
+    ){
+        return DataTypes::String::Concat(
+            allocator,
+            "No table was specified but column with name: ",
+            columnName,
+            " was specified."
+        );
+    }
+
+    static DataTypes::String INVALID_TABLE_ALIAS(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& tableName
+    ) {
+        return DataTypes::String::Concat(
+            allocator,
+            "Alias: ",
+            tableName,
+            " does not exist in the statement"
+        );
+    }
+
+    static DataTypes::String INVALID_COLUMN_NAME(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& columnAlias
+    ) {
+        return DataTypes::String::Concat(
+            allocator,
+            "Column: ",
+            columnAlias,
+            " does not exist in the statement"
+        );
+    }
+
+    static DataTypes::String AMBIGUOUS_COLUMN_NAME(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& columnAlias
+    ) {
+        return DataTypes::String::Concat(
+            allocator,
+            "Ambiguous column name: ",
+            columnAlias
+        );
+    }
+
+    static constexpr DataTypes::StringView UNEXPECTED_ERROR = "Unexpected Error Occurred. Please contact support.";
+
+    static constexpr DataTypes::StringView WILDCARD_USED_ON_NON_SELECT = "WildCard was used but statement is not of type SELECT";
+
+    static DataTypes::String INVALID_VARIABLE(const ::Memory::IAllocator* allocator, const DataTypes::String& variableName){
+        return DataTypes::String::Concat(allocator, "Variable: ", variableName, " was not declared in this scope.");
     }
 }

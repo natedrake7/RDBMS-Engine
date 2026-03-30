@@ -17,11 +17,10 @@ namespace DatabaseEngine::StorageTypes{
 
         if (!Converter<TinyInt>::TryStoi(val, convertedValue)) {
             std::ostringstream ss;
-
             ss << "Value " << val << " out of range for TinyInt";
 
             status.code = Errors::RuntimeError::Overflow;
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             return -1;
         }
 
@@ -39,7 +38,7 @@ namespace DatabaseEngine::StorageTypes{
             ss << "Value " << val << " out of range for SmallInt";
 
             status.code = Errors::RuntimeError::Overflow;
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             return -1;
         }
 
@@ -57,7 +56,7 @@ namespace DatabaseEngine::StorageTypes{
             ss << "Value " << val << " out of range for Int";
 
             status.code = Errors::RuntimeError::Overflow;
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             return -1;
         }
 
@@ -73,7 +72,7 @@ namespace DatabaseEngine::StorageTypes{
 
             ss << "Value " << val << " out of range for BigInt";
 
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             status.code = Errors::RuntimeError::Overflow;
             return -1;
         }
@@ -94,7 +93,7 @@ namespace DatabaseEngine::StorageTypes{
                 << columnHeader.precision << ","
                 << columnHeader.scale << ")";
 
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             status.code = Errors::RuntimeError::Overflow;
             return -1;
         }
@@ -121,7 +120,7 @@ namespace DatabaseEngine::StorageTypes{
                 << val << " out of range for String("
                 << columnHeader.recordSize << ")";
 
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             status.code = Errors::RuntimeError::Overflow;
             return -1;
         }
@@ -140,7 +139,7 @@ namespace DatabaseEngine::StorageTypes{
             std::ostringstream ss;
             ss << "Value " << val << " out of range for Bool";
 
-            status.message = ss.str();
+            status.message = DataTypes::String(ss.str(), value.GetAllocator());
             status.code = Errors::RuntimeError::Overflow;
             return -1;
         }

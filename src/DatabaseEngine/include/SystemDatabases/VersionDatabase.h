@@ -1,6 +1,5 @@
 #pragma once
 #include "../Database.h"
-#include <string>
 #include "../../Systemic/include/Errors.h"
 
 namespace DatabaseEngine{
@@ -48,7 +47,8 @@ namespace DatabaseEngine{
             const DataTypes::StringView& configPath
         );
 
-        [[nodiscard]] bool VersionDatabaseExists()const;
+        [[nodiscard]] static bool VersionDatabaseExists(const DataTypes::StringView& path);
+        void CreateKeys();
 
         public:
             VersionDatabase(VersionDatabase const&) = delete;

@@ -23,7 +23,7 @@ namespace Network {
   void Server::CreateSystemRoles(const DatabaseEngine::ExecutionContext& baseContext) {
     const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
-    for (const auto& role : roles)
+    for (const auto* role : roles)
       const auto _ = this->roleManager.AddRole(role->name.ToView(), role);
   }
 
@@ -36,13 +36,13 @@ namespace Network {
       return;
     }
 
-    auto* user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
-
-    user->role = defaultRole;
-    const auto _ = this->userManager.AddSystemUser(user);
+    const auto user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
+    const auto _ = this->userManager.AddUser(user.id, user.name, hashedPassword, defaultRole);
+    // user->role = defaultRole;
+    // const auto _ = this->userManager.AddSystemUser(user);
   }
 
-  Server & Server::Get(){
+  Server& Server::Get(){
     static Server instance;
 
     return instance;
@@ -50,6 +50,7 @@ namespace Network {
 
   void Server::Initialize(const DataTypes::StringView& configPath){
     const DatabaseEngine::ExecutionContext _baseContext;
+
     this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
     this->temporaryDatabase->Initialize(_baseContext.GetAllocator(), configPath);
 
@@ -57,22 +58,22 @@ namespace Network {
     this->versionDatabase->Initialize(_baseContext, configPath);
 
     this->systemCatalog = &DatabaseEngine::SystemCatalog::Get();
-    if (this->systemCatalog->Initialize(configPath)){
-      this->CreateSystemRoles();
-      this->CreateSystemUsers();
-      return;
+    if (this->systemCatalog->Initialize(_baseContext, configPath)){
+        this->CreateSystemRoles(_baseContext);
+        this->CreateSystemUsers(_baseContext);
+        return;
     }
 
     const auto lastCheckpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
     DatabaseEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
     const DatabaseEngine::Memory::Allocator allocator;
-    for (auto& role : this->systemCatalog->SelectRoles(&allocator))
-      const auto _ = this->roleManager.AddRole(role.name.ToView(), new Security::Role(std::move(role)));
+    for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
+        const auto _ = this->roleManager.AddRole(role.name.ToView(), &role);
 
     for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
-      const auto* role = this->roleManager.GetRole(user.roleId);
-      const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
+        const auto* role = this->roleManager.GetRole(user.roleId);
+        const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
     }
   }
 
@@ -102,36 +103,40 @@ namespace Network {
         const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
 
         if (currentSession == nullptr || currentSession->user == nullptr)
-        return Errors::RuntimeStatus(Errors::RuntimeError::InvalidSession, Messages::FAILED_TO_GET_USER_SESSION);
+            return Errors::RuntimeStatus(
+                Errors::RuntimeError::InvalidSession,
+                Messages::FAILED_TO_GET_USER_SESSION,
+                context.GetAllocator()
+            );
 
         return this->systemCatalog->UpdateUserById(
             context,
-            currentSession->user->name,
+            currentSession->user->name.ToView(),
             userId,
             roleId
         );
     }
 
   bool Server::UserExists(const DataTypes::String& userName) const{
-    return this->userManager.GetUser(userName) != nullptr;
+    return this->userManager.GetUser(userName.ToView()) != nullptr;
   }
 
   bool Server::CreateUser(
       const DatabaseEngine::ExecutionContext& context,
       const DataTypes::String& userName,
       const DataTypes::String& password,
-      const std::string& roleName
+      const DataTypes::String& roleName
     ){
-    if (this->userManager.GetUser(userName) != nullptr)
+    if (this->userManager.GetUser(userName.ToView()) != nullptr)
       return false;
 
-    const auto* role = this->roleManager.GetRole(roleName);
+    const auto* role = this->roleManager.GetRole(roleName.ToView());
 
     if (role == nullptr)
       return false;
 
-    std::string hashedPassword;
-    if (Security::UserManager::HashPassword(password, hashedPassword) == false) {
+    DataTypes::String hashedPassword(context.GetAllocator());
+    if (Security::UserManager::HashPassword(password.ToView(), hashedPassword) == false) {
       std::cerr << "Failed to hash password for user" << userName << std::endl;
       return false;
     }
@@ -139,8 +144,8 @@ namespace Network {
     const auto result =
       this->systemCatalog->InsertUserToMasterDb(
         context,
-        userName,
-        hashedPassword,
+        userName.ToView(),
+        hashedPassword.ToView(),
         role->id,
         true
       );
@@ -157,23 +162,30 @@ namespace Network {
     return this->userManager.AddUser(result.primaryKey.AsInt(), userName, hashedPassword, role);
   }
 
-  const Security::User * Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{
-    return this->userManager.Authenticate(username, password);
+  const Security::User* Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{
+    return this->userManager.Authenticate(username.ToView(), password.ToView());
+  }
+
+  const Security::User* Server::Authenticate(const std::string& username, const std::string& password) const{
+      const auto usernameView = DataTypes::StringView(username);
+      const auto passwordView = DataTypes::StringView(password);
+
+      return this->userManager.Authenticate(usernameView, passwordView);
   }
 
   bool Server::RoleExists(const DataTypes::String& role) const{
-    return this->roleManager.GetRole(role) != nullptr;
+    return this->roleManager.GetRole(role.ToView()) != nullptr;
   }
 
   const Security::Role * Server::GetRole(const DataTypes::String& roleName)const {
-    return this->roleManager.GetRole(roleName);
+    return this->roleManager.GetRole(roleName.ToView());
   }
 
-  const Network::Session * Server::CreateSession(const Security::User* user){
+  const Session * Server::CreateSession(const Security::User* user){
     return this->sessionManager.CreateSession(user);
   }
 
-  const Network::Session * Server::GetSession(const DataTypes::Guid &key)const{
+  const Session * Server::GetSession(const DataTypes::Guid &key)const{
     return this->sessionManager.GetSession(key);
   }
 
@@ -230,11 +242,14 @@ namespace Network {
 
         MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
 
-        if (this->databases.TryGetValue(databaseId, db))
-            return db;
+        if (this->databases.TryGetValue(databaseId, db)) return db;
 
-        db = DatabaseEngine::AllocateMiscEntity<DatabaseEngine::Database>(dbHeader.name, isServerInitialization);
-
+        db = new DatabaseEngine::Database(
+            context.GetAllocator(),
+            databaseId,
+            dbHeader.name,
+            isServerInitialization
+        );
         this->databases.Add(databaseId, db);
 
         return db;

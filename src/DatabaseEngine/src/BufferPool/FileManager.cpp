@@ -20,14 +20,13 @@
     #define lseek ::lseek
 #endif
 
-
 namespace Storage{
     File::File(const file_descriptor_t fd)
         : fd(fd){}
 
     Int File::Read(void* data, const size_t size, const size_t offSet) const{
-        lseek(this->fd, size, SEEK_SET);
-        const auto result = ::read(this->fd + offSet, data, size);
+        lseek(this->fd, offSet, SEEK_SET);
+        const auto result = ::read(this->fd, data, size);
 
         if (result < 0)
             throw std::runtime_error("File::Read: Failed to read from file");
@@ -36,8 +35,8 @@ namespace Storage{
     }
 
     Int File::Write(const void* data, const size_t size, const size_t offSet) const{
-        lseek(this->fd, size, SEEK_SET);
-        const auto result = ::write(this->fd + offSet, data, size);
+        lseek(this->fd, offSet, SEEK_SET);
+        const auto result = ::write(this->fd, data, size);
 
         if (result != size)
             throw std::runtime_error("File::Write: Failed to write to file");
@@ -47,9 +46,11 @@ namespace Storage{
 
     void File::Flush() const{ ::flush(this->fd); }
 
-    file_descriptor_t FileManager::OpenFile(const FileKey key, const DataTypes::StringView& fileName)
-    {
-        const auto fd = ::open(fileName.Data(), O_RDWR | O_CREAT | O_BINARY, 0644);
+    file_descriptor_t FileManager::OpenFile(const FileKey key, const DataTypes::StringView& fileName){
+        char path[DIRECTORY_SIZE];
+        std::snprintf(path, sizeof(path), "%.*s", fileName.Size(), fileName.Data());
+
+        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
         if (fd < 0)
             throw std::runtime_error("FileManager::Open: File could not be opened");
 
@@ -77,7 +78,11 @@ namespace Storage{
         }
 
         char path[DIRECTORY_SIZE];
-        std::snprintf(path, sizeof(path), "%s%s", fileName.Data(), extension.Data());
+        std::snprintf(
+            path, sizeof(path), "%.*s%.*s",
+            fileName.Size(), fileName.Data(),
+            extension.Size(), extension.Data()
+        );
 
         if (access(path, F_OK) == 0)
             throw std::runtime_error("FileManager::CreateFile: File already exists");
@@ -131,13 +136,20 @@ namespace Storage{
         MultiThreading::WriterGuard lock(&this->tableMutex);
 
         file_descriptor_t fd = 0;
-        if (!this->fileTable.TryGetValue(key, fd))
-            return;
-
+        if (!this->fileTable.TryGetValue(key, fd)) return;
         ::close(fd);
     }
 
     bool FileManager::FileExists(const DataTypes::StringView& fileName){
-        return access(fileName.Data(), F_OK) == 0;
+        char path[DIRECTORY_SIZE];
+        std::snprintf(path, sizeof(path), "%.*s", fileName.Size(), fileName.Data());
+        return access(path, F_OK) == 0;
     }
+
+    void FileManager::RemoveFile(const DataTypes::StringView& fileName){
+        char path[DIRECTORY_SIZE];
+        std::snprintf(path, sizeof(path), "%.*s", fileName.Size(), fileName.Data());
+        std::filesystem::remove_all(path);
+    }
+
 };

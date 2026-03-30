@@ -76,5 +76,6 @@ namespace Storage{
             void CloseFile(FileKey key) const;
 
             [[nodiscard]] static bool FileExists(const DataTypes::StringView& fileName);
+            static void RemoveFile(const DataTypes::StringView& fileName);
     };
 }

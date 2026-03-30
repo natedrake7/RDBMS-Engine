@@ -1,4 +1,5 @@
 #pragma once
+#include "../../DatabaseEngine/include/Memory/PersistentAllocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/Guards/ReadWriteMutex.h"
@@ -13,6 +14,8 @@ namespace Security {
     struct User;
 
     class UserManager {
+        const DatabaseEngine::Memory::PersistentAllocator _allocator;
+
         Dictionary<DataTypes::StringView, User*> users;
         mutable MultiThreading::ReadWriteMutex mutex;
 
@@ -28,8 +31,8 @@ namespace Security {
             const DataTypes::String& passwordHash,
             const Role* role
         );
-        void AddUser(User* user);
-        [[nodiscard]] bool AddSystemUser(User* user);
+        // void AddUser(User* user);
+        // [[nodiscard]] bool AddSystemUser(User* user);
         [[nodiscard]]bool RemoveUser(const DataTypes::StringView& name);
 
         bool GrantRole(const DataTypes::StringView& name, const Role* role, Int& outUserId)const;

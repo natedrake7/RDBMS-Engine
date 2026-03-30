@@ -4,28 +4,19 @@
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../Systemic/include/Security/Security.h"
 
-#include <ranges>
 #include <iostream>
 
 #include <argon2.h>
 
 #include "../../../DatabaseEngine/include/Database.h"
-#include "../../../DatabaseEngine/include/Memory/Allocator.h"
 #include "../../../DatabaseEngine/include/Memory/PersistentAllocator.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
-  UserManager::UserManager() =  default;
-
-  // UserManager::UserManager() {
-  //   if (sodium_init() < 0)
-  //     throw std::runtime_error("Failed to initialize libsodium library.");
-  // }
+    UserManager::UserManager() =  default;
 
     UserManager::~UserManager(){
-        auto& allocator = DatabaseEngine::Memory::PersistentAllocator::Get();
-        for (const auto* user : this->users | std::views::values)
-            allocator.Free(user);
+        this->_allocator.Reset();
     }
 
     User* UserManager::Authenticate(const DataTypes::StringView& name, const DataTypes::StringView& password)const{
@@ -34,7 +25,10 @@ namespace Security {
 
         if (!this->users.TryGetValue(name, user)) return nullptr;
 
-        return (argon2id_verify(user->passwordHash.Data(), password.Data(), password.Size()) == Argon2_ErrorCodes::ARGON2_OK)
+        char hash[128];
+        std::memcpy(hash, user->passwordHash.Data(), user->passwordHash.Size());
+
+        return (argon2id_verify(hash, password.Data(), password.Size()) == Argon2_ErrorCodes::ARGON2_OK)
             ? user
             : nullptr;
     }
@@ -67,9 +61,8 @@ namespace Security {
             sizeof(hash)
         );
 
-        if (result != Argon2_ErrorCodes::ARGON2_OK)return false;
-
-        outHash = DataTypes::String(hash, sizeof(hash), &DatabaseEngine::Memory::PersistentAllocator::Get());
+        if (result != Argon2_ErrorCodes::ARGON2_OK) return false;
+        outHash.Append(hash);
         return true;
     }
 
@@ -86,57 +79,57 @@ namespace Security {
             return false;
         }
 
-        auto* user = DatabaseEngine::Memory::PersistentAllocator::Get().Allocate<User>(
+        auto hash = DataTypes::String(passwordHash, &this->_allocator);
+        auto username = DataTypes::String(name, &this->_allocator);
+
+        auto* user = _allocator.Allocate<User>(
             id,
-            name,
-            passwordHash,
+            std::move(username),
+            std::move(hash),
             role->id,
             role,
             true
         );
 
-        this->users.Add(name.ToView(), user);
-        return true;
-    }
-
-    void UserManager::AddUser(User* user){
-        MultiThreading::WriterGuard guard(&this->mutex);
-        this->users.Add(user->name.ToView(), user);
-    }
-
-    bool UserManager::AddSystemUser(User *user) {
-        MultiThreading::WriterGuard guard(&this->mutex);
         this->users.Add(user->name.ToView(), user);
         return true;
     }
+    //
+    // void UserManager::AddUser(User* user){
+    //     MultiThreading::WriterGuard guard(&this->mutex);
+    //     this->users.Add(user->name.ToView(), user);
+    // }
+
+    // bool UserManager::AddSystemUser(User *user) {
+    //     MultiThreading::WriterGuard guard(&this->mutex);
+    //     this->users.Add(user->name.ToView(), user);
+    //     return true;
+    // }
 
     bool UserManager::RemoveUser(const DataTypes::StringView& name){
+        MultiThreading::WriterGuard guard(&this->mutex);
+
+        if (!this->users.Contains(name)) return false;
+        this->users.Remove(name);
+
+        return true;
+    }
+
+    bool UserManager::GrantRole(
+        const DataTypes::StringView& name,
+        const Role *role,
+        Int& outUserId
+    )const{
         MultiThreading::WriterGuard guard(&this->mutex);
 
         User *user = nullptr;
         if (!this->users.TryGetValue(name, user)) return false;
 
-        this->users.Remove(name);
-        DatabaseEngine::Memory::PersistentAllocator::Get().Free(user);
+        user->roleId = role->id;
+        user->role = role;
+
+        outUserId = user->id;
+
         return true;
     }
-
-  bool UserManager::GrantRole(
-    const DataTypes::StringView& name,
-    const Role *role,
-    Int& outUserId
-  )const{
-    MultiThreading::WriterGuard guard(&this->mutex);
-
-    User *user = nullptr;
-    if (!this->users.TryGetValue(name, user))
-      return false;
-
-    user->roleId = role->id;
-    user->role = role;
-
-    outUserId = user->id;
-
-    return true;
-  }
 }

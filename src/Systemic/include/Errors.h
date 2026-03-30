@@ -166,6 +166,12 @@ namespace Errors {
     bool hasError;
     DataTypes::String message;
 
+    explicit Error()
+    {
+        this->hasError = false;
+        this->message = DataTypes::String::Null();
+    }
+
     explicit Error(const ::Memory::IAllocator* allocator) {
       this->hasError = false;
       this->message = DataTypes::String::Empty(allocator);
@@ -174,6 +180,16 @@ namespace Errors {
     Error(const bool hasError, const DataTypes::String& message){
       this->hasError = hasError;
       this->message = message;
+    }
+
+    Error(const bool hasError, DataTypes::String&& message) noexcept {
+      this->hasError = hasError;
+      this->message = std::move(message);
+    }
+
+    Error(const bool hasError, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator){
+        this->hasError = hasError;
+        this->message = DataTypes::String(message, allocator);
     }
   };
 }

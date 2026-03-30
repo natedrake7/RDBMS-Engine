@@ -3,9 +3,6 @@
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
-#include <string>
-
-
 class Variable;
 
 namespace DatabaseEngine{

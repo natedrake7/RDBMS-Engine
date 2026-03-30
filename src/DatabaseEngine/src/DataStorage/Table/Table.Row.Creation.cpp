@@ -8,7 +8,7 @@ namespace DatabaseEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
-        const std::vector<Value> &inputData
+        const DataStructures::Array<Value> &inputData
     ) const{
         auto rowHeader = RowHeader(allocator, this->_columns.Size());
         rowHeader.version.createdTransactionId = transactionId;
@@ -30,7 +30,7 @@ namespace DatabaseEngine::StorageTypes{
                 continue;
             }
 
-            auto& value = inputData.at(index);
+            auto& value = inputData[index];
             if (value.IsNull()){
                 rowHeader.nullBitMap.Set(columnOrdinal, true);
                 continue;
@@ -68,7 +68,7 @@ namespace DatabaseEngine::StorageTypes{
             }
 
             const auto& index = column->OrdinalPosition() - intermediateComputedColumns;
-            const auto& value = inputData.at(index);
+            const auto& value = inputData[index];
 
             // Skip NULL values (already marked in bitmap)
             if (value.IsNull())
@@ -127,7 +127,7 @@ namespace DatabaseEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
-        const std::vector<Value>& inputData
+        const DataStructures::Array<Value> &inputData
     ) const{
         auto rowHeader = RowHeader(allocator, this->_columns.Size());
         rowHeader.version.createdTransactionId = transactionId;
@@ -141,7 +141,7 @@ namespace DatabaseEngine::StorageTypes{
 
             const auto columnOrdinal = column->OrdinalPosition();
 
-            auto& value = inputData.at(columnOrdinal);
+            auto& value = inputData[columnOrdinal];
             if (value.IsNull()){
                 rowHeader.nullBitMap.Set(columnOrdinal, true);
                 continue;
@@ -165,7 +165,7 @@ namespace DatabaseEngine::StorageTypes{
         auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
         for (const auto& column : this->_columns){
             const auto& index = column->OrdinalPosition();
-            const auto& value = inputData.at(index);
+            const auto& value = inputData[index];
 
             // Skip NULL values (already marked in bitmap)
             if (value.IsNull())

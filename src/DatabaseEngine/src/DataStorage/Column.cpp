@@ -1,15 +1,12 @@
 ﻿#include "../../include/DataStorage/Column.h"
-
-#include "../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../../Server/include/Server.h"
 #include "../../include/DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
 #include "Memory/PersistentAllocator.h"
 
 namespace DatabaseEngine::StorageTypes {
      Column::Column(
-         const DataTypes::String& columnName,
+         const DataTypes::StringView& columnName,
          const DataType type,
          const row_size_t recordSize,
          const column_index_t index,
@@ -29,10 +26,10 @@ namespace DatabaseEngine::StorageTypes {
         const column_index_t ordinalPosition ,
         const Table* table
     ){
-        const auto normalizedType = DataTypes::String::Normalize(header.type);
+        const auto normalizedType = DataTypes::String::Normalize(header.type, &this->_allocator);
         const auto strView = normalizedType.ToView();
 
-        this->SetColumnName(header.name);
+        this->SetColumnName(DataTypes::StringView(header.name));
         this->allowNulls = false;
         this->header.columnType = ColumnTypesDictionary.Get(&strView);
 
@@ -46,7 +43,7 @@ namespace DatabaseEngine::StorageTypes {
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table){
         this->header.id = masterDbHeader.id;
-        this->SetColumnName(masterDbHeader.name);
+        this->SetColumnName(masterDbHeader.name.ToView());
         this->allowNulls = masterDbHeader.isNullable;
         this->header.columnType = static_cast<DataType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;
@@ -55,13 +52,17 @@ namespace DatabaseEngine::StorageTypes {
         this->isOverflowed = false;
     }
 
+    void Column::Destroy() const{
+         this->_allocator.Reset();
+    }
+
     Column::~Column(){
-        this->_allocator.Reset();
+        // this->_allocator.Reset();
     }
 
     const DataTypes::String& Column::GetColumnName() const{ return this->name; }
 
-    void Column::SetColumnName(const DataTypes::String &otherName){ this->name = DataTypes::String::FromView(otherName.ToView(), &this->_allocator);}
+    void Column::SetColumnName(const DataTypes::StringView& otherName){ this->name = DataTypes::String::FromView(otherName, &this->_allocator);}
 
     DataType Column::Type() const { return this->header.columnType; }
 

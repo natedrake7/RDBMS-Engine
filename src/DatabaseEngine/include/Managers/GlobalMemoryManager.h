@@ -20,7 +20,7 @@ namespace DatabaseEngine{
         UnsignedBigInt _executionUsed;
         UnsignedBigInt _miscUsed;
 
-        static constexpr Int DB_RATIO_NUMERATOR = 80;
+        static constexpr Int DB_RATIO_NUMERATOR = 60;
         static constexpr Int DB_RATIO_DENOMINATOR = 100;
 
         static constexpr Int BUFFER_POOL_RATIO_NUMERATOR = 50;

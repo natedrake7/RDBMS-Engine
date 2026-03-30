@@ -6,7 +6,6 @@
 #include "../../include/Converter.h"
 #include "../../include/Functions/StringFunctions.h"
 
-#include <cstring>
 #include <stdexcept>
 
 #include "DataTypes/DateTime.h"
@@ -560,7 +559,6 @@ column_index_t Value::GetColumnIndex() const { return this->columnIndex;}
 DataType Value::GetType() const{ return this->type; }
 
 void Value::SetNull(){
-    std::free(this->data);
     this->data = nullptr;
     this->size = 0;
 }
@@ -1136,9 +1134,4 @@ long double Value::Interpolate() const{
     default:
         throw std::runtime_error("Value::Interpolate() called with unknown type");
     }
-}
-
-void Value::Resize(const Int newSize){
-    this->data = new object_t[newSize];
-    this->size = newSize;
 }

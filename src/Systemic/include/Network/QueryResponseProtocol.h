@@ -13,7 +13,7 @@ namespace Network {
     bool hasError;
     std::string message;
 
-    DataStructures::PolymorphicArray<std::string> columns;
+    DataStructures::PolymorphicArray<DataTypes::String> columns;
     DataStructures::PolymorphicArray<QueryResult> rows;
 
     void SerializeMessage();
@@ -33,8 +33,8 @@ namespace Network {
       explicit QueryResponseProtocol(
         bool hasError,
         bool hasMore,
-        const std::string& message,
-        const DataStructures::PolymorphicArray<std::string>& columns,
+        const DataTypes::StringView& message,
+        const DataStructures::PolymorphicArray<DataTypes::String>& columns,
         DataStructures::PolymorphicArray<QueryResult>& rows
       );
       [[nodiscard]] int GetSize() const override;

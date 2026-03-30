@@ -16,7 +16,7 @@ namespace DatabaseEngine{
 namespace QueryPipeline {
     struct QueryContext;
     struct JoinOrderAnalyzeResult;
-  struct PredicatePushDownResult;
+    struct PredicatePushDownResult;
 }
 
 namespace Network {
@@ -77,6 +77,7 @@ namespace QueryPipeline::Statements {
 
 
         ColumnType();
+        explicit ColumnType(DataTypes::String&& name);
         explicit ColumnType(const DataTypes::String& name);
         ColumnType(const DataTypes::String& name, Int size);
         ColumnType(DataTypes::String& name, Int size);
@@ -172,7 +173,7 @@ namespace QueryPipeline::Statements {
     Int databaseId;
     Int tableId;
     Int schemaId;
-    int16_t ordinalPosition;
+    Int ordinalPosition;
 
     Network::Server* server;
     DatabaseEngine::SystemCatalog* catalog;
@@ -480,120 +481,131 @@ namespace QueryPipeline::Statements {
    * @{
    */
 
-  static Errors::ValidationStatus CompileExpression(
-    QueryContext& context,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileExpression(
+        QueryContext& context,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileExpression(
-    QueryContext& context,
-    StatementValidationScope& statementValidationScope,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileExpression(
+        QueryContext& context,
+        StatementValidationScope& statementValidationScope,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileBinaryExpression(
-    QueryContext& context,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileBinaryExpression(
+        QueryContext& context,
+        Expressions::BinaryExpression* binaryExpr,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileBinaryExpression(
-    QueryContext& context,
-    Expressions::BinaryExpression* binaryExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileBinaryExpression(
+        QueryContext& context,
+        Expressions::BinaryExpression* binaryExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileLogicalExpression(
-    QueryContext& context,
-    Expressions::LogicalExpression* logicalExpr,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileLogicalExpression(
+        QueryContext& context,
+        Expressions::LogicalExpression* logicalExpr,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileLogicalExpression(
-    QueryContext& context,
-    Expressions::LogicalExpression* logicalExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileLogicalExpression(
+        QueryContext& context,
+        Expressions::LogicalExpression* logicalExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileFunctionExpression(
-    QueryContext& context,
-    const Expressions::FunctionExpression* funcExpr,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileFunctionExpression(
+        QueryContext& context,
+        const Expressions::FunctionExpression* funcExpr,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileFunctionExpression(
-    QueryContext& context,
-    const Expressions::FunctionExpression* funcExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileFunctionExpression(
+        QueryContext& context,
+        const Expressions::FunctionExpression* funcExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileBranchExpression(
-    QueryContext& context,
-    Expressions::BranchExpression* branchExpr,
-    Expressions::Expression*& expression,
-    StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileBranchExpression(
+        QueryContext& context,
+        Expressions::BranchExpression* branchExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileBranchExpression(
-    QueryContext& context,
-    Expressions::BranchExpression* branchExpr,
-    Expressions::Expression*& expression
-  );
+    static Errors::ValidationStatus CompileBranchExpression(
+        QueryContext& context,
+        Expressions::BranchExpression* branchExpr,
+        Expressions::Expression*& expression
+    );
 
-  static Errors::ValidationStatus CompileColumnExpression(const Expressions::ColumnExpression *columnExpr);
+    static Errors::ValidationStatus CompileColumnExpression(
+        const QueryContext& context,
+        const Expressions::ColumnExpression *columnExpr
+    );
 
-  static Errors::ValidationStatus CompileColumnExpression(
-    Expressions::ColumnExpression* column,
-    const StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileColumnExpression(
+        const QueryContext& context,
+        Expressions::ColumnExpression* column,
+        const StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileVariableExpression(
-    const QueryContext& context,
-    Expressions::VariableExpression* variableExpr
-  );
+    static Errors::ValidationStatus CompileVariableExpression(
+        const QueryContext& context,
+        Expressions::VariableExpression* variableExpr
+    );
 
-  static Errors::ValidationStatus CompileColumnExpression(
-    ColumnName& column,
-    StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileColumnExpression(
+        const QueryContext& context,
+        ColumnName& column,
+        StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* literalExpr);
+    static Errors::ValidationStatus CompileConstantExpression(
+        Expressions::ConstantExpression* constantExpr
+    );
 
-  static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
-    Expressions::ColumnExpression* column,
-    const StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
+        const QueryContext& context,
+        Expressions::ColumnExpression* column,
+        const StatementValidationScope& statementValidationScope
+    );
 
-  static Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
-    Expressions::ColumnExpression* column,
-    const StatementValidationScope& statementValidationScope
-  );
+    static Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
+        const QueryContext& context,
+        Expressions::ColumnExpression* column,
+        const StatementValidationScope& statementValidationScope
+    );
 
-  static bool ValidateExpressionCoercionTypes(
-    const Expressions::Expression* left,
-    const Expressions::Expression* right
-  );
+    static bool ValidateExpressionCoercionTypes(
+        const Expressions::Expression* left,
+        const Expressions::Expression* right
+    );
 
-  static bool ValidateExpressionCoercionTypes(
-    DataType type,
-    const Expressions::Expression* expression
-  );
+    static bool ValidateExpressionCoercionTypes(
+        DataType type,
+        const Expressions::Expression* expression
+    );
 
-  static Errors::ValidationStatus CompileWildcard(
-    const Expressions::ColumnExpression* column,
-    const StatementValidationScope& statementValidationScope,
-    SelectStatement *statement
-  );
+    static Errors::ValidationStatus CompileWildcard(
+        const QueryContext& context,
+        const Expressions::ColumnExpression* column,
+        const StatementValidationScope& statementValidationScope,
+        SelectStatement *statement
+    );
 
-  static void AssignColumnsFromWildCardExpression(
-    const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
-    const DataTypes::String& tableAlias,
-    const StatementValidationScope& statementValidationScope,
-    std::vector<Expressions::Expression*>& results
-  );
+    static void AssignColumnsFromWildCardExpression(
+        const QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
+        const DataTypes::String& tableAlias,
+        const StatementValidationScope& statementValidationScope,
+        std::vector<Expressions::Expression*>& results
+    );
 
   /** @} End of Expression Compilation Functions */
 
@@ -686,35 +698,41 @@ static void AssignConstantToExpression(const QueryContext& context, Expressions:
    * Functions to resolve aliases used in post projection statements(order by)
    * @{
    */
-  static Errors::ValidationStatus CompilePostProjectionExpression(
-    Expressions::Expression *expression,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionExpression(
+        const QueryContext& context,
+        Expressions::Expression *expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
-  static Errors::ValidationStatus CompilePostProjectionColumnExpression(
-    Expressions::ColumnExpression* column,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionColumnExpression(
+        const QueryContext& context,
+        Expressions::ColumnExpression* column,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
-  static Errors::ValidationStatus CompilePostProjectionBinaryExpression(
-    const Expressions::BinaryExpression* expression,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionBinaryExpression(
+        const QueryContext& context,
+        const Expressions::BinaryExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
-  static Errors::ValidationStatus CompilePostProjectionLogicalExpression(
-    const Expressions::LogicalExpression* expression,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionLogicalExpression(
+        const QueryContext& context,
+        const Expressions::LogicalExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
-  static Errors::ValidationStatus CompilePostProjectionFunctionExpression(
-    const Expressions::FunctionExpression* expression,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionFunctionExpression(
+        const QueryContext& context,
+        const Expressions::FunctionExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
-  static Errors::ValidationStatus CompilePostProjectionBranchExpression(
-    const Expressions::BranchExpression* expression,
-    const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-  );
+    static Errors::ValidationStatus CompilePostProjectionBranchExpression(
+        const QueryContext& context,
+        const Expressions::BranchExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
 
   /** @} End of Post Projection Alias Resolvement Functions */
 

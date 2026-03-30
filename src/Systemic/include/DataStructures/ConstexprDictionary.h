@@ -1,6 +1,9 @@
 ﻿#pragma once
 #include <array>
+
+#include "CaseInsensitiveHashers.h"
 #include "Hashers.h"
+#include "../DataTypes/String.h"
 
 template<typename Key, typename Value>
 struct Pair{
@@ -11,6 +14,17 @@ struct Pair{
     constexpr Pair(const Key& key, const Value& value)
         : key(key), value(value) {}
 };
+
+template<typename T>
+struct IsStringType : std::false_type {};
+
+template<> struct IsStringType<std::string> : std::true_type {};
+template<> struct IsStringType<std::string_view> : std::true_type {};
+template<> struct IsStringType<DataTypes::String> : std::true_type {};
+template<> struct IsStringType<DataTypes::StringView> : std::true_type {};
+
+template<typename T>
+inline constexpr bool IsStringType_v = IsStringType<T>::value;
 
 template<typename Key, typename Value, size_t N, typename Hasher = ConstexprHash<Key>>
 class ConstexprDictionary{
@@ -31,6 +45,12 @@ class ConstexprDictionary{
         }
     }
 
+    [[nodiscard]] static constexpr bool KeyEquals(const Key& lhs, const Key& rhs) noexcept {
+        if constexpr (std::is_same_v<Hasher, CaseInsensitiveHash<Key>> && IsStringType_v<Key>)
+            return DataTypes::String::EqualsIgnoreCase(lhs, rhs);
+        return lhs == rhs;
+    }
+
     public:
         constexpr ConstexprDictionary(std::initializer_list<Pair<Key, Value>> items) {
             for (const auto& item : items)
@@ -42,7 +62,7 @@ class ConstexprDictionary{
             for (size_t i = 0; i < Capacity; ++i) {
                 const size_t slot = (idx + i) % Capacity;
                 if (!this->occupied[slot]) return false;
-                if (this->buckets[slot].key == key) return true;
+                if (ConstexprDictionary::KeyEquals(this->buckets[slot].key, key)) return true;
             }
             return false;
         }
@@ -56,7 +76,7 @@ class ConstexprDictionary{
                 if (!this->occupied[slot])
                     return pair.value;
 
-                if (pair.key == *key)
+                if (ConstexprDictionary::KeyEquals(pair.key, *key))
                     return pair.value;
             }
 
@@ -72,7 +92,7 @@ class ConstexprDictionary{
                 if (!this->occupied[slot])
                     return pair.value;
 
-                if (pair.key == key)
+                if (ConstexprDictionary::KeyEquals(pair.key, key))
                     return pair.value;
             }
 
@@ -94,7 +114,7 @@ class ConstexprDictionary{
                 if (!this->occupied[slot]) return false;
 
                 const auto& pair = this->buckets[slot];
-                if (pair.key == key){
+                if (ConstexprDictionary::KeyEquals(pair.key, key)){
                     value = pair.value;
                     return true;
                 }

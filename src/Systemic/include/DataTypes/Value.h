@@ -1,12 +1,10 @@
 #pragma once
-#include <ostream>
 #include <string>
 #include <tuple>
 #include <vector>
 
 #include "DataTypes.h"
 #include "StringView.h"
-#include "../DataStructures/ConstexprDictionary.h"
 
 namespace Memory{
     class IAllocator;
@@ -17,28 +15,6 @@ namespace DataTypes {
     class DateTime;
     class Guid;
 }
-
-static constexpr ConstexprDictionary<DataType, Int, 9> ColumnTypeRank{
-    Pair(DataType::String, 1),
-    Pair(DataType::UnicodeString, 2),
-    Pair(DataType::Bool, 3),
-    Pair(DataType::TinyInt, 4),
-    Pair(DataType::SmallInt, 5),
-    Pair(DataType::Int, 6),
-    Pair(DataType::BigInt, 7),
-    Pair(DataType::Decimal, 8),
-    Pair(DataType::DateTime, 9),
-};
-
-static constexpr DataTypes::StringView TrueStrings[] = {
-    DataTypes::StringView("true"),
-    DataTypes::StringView("1")
-};
-
-static constexpr DataTypes::StringView FalseStrings[] = {
-    DataTypes::StringView("false"),
-    DataTypes::StringView("0")
-};
 
 class Value {
     object_t* data;
@@ -59,7 +35,6 @@ class Value {
     static Value PerformStringAddition(const Value& lhs, const Value& rhs);
     static Value PerformDecimalAddition(const Value& lhs, const Value& rhs);
 
-
     // static Value PerformTinyIntSubtraction(TinyInt lhs, TinyInt rhs);
     // static Value PerformSmallIntSubtraction(SmallInt lhs, SmallInt rhs);
     // static Value PerformIntSubtraction(Int lhs, Int rhs);
@@ -78,7 +53,6 @@ class Value {
     static void BinaryOperationException(DataType lhs, DataType rhs);
 
     public:
-
         Value(const Value& copyVal);
         Value(Value&& other)noexcept;
         Value& operator=(Value&& other) noexcept;
@@ -189,8 +163,6 @@ class Value {
 
         [[nodiscard]] BigInt Hash()const;
         [[nodiscard]] long double Interpolate()const;
-
-        void Resize(Int newSize);
 };
 
 struct ValueComparator {

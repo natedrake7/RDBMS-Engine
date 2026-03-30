@@ -50,8 +50,7 @@ namespace DatabaseEngine::StorageTypes {
             indexPosition
         );
 
-        if (status.code != Errors::RuntimeError::Ok)
-            return status;
+        if (!status.IsOk()) return status;
 
         //TODO
         // rowId->indexId = indexPosition;
@@ -399,7 +398,7 @@ namespace DatabaseEngine::StorageTypes {
         const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
         const InsertPayload& payload
     ) const{
-        auto key = DataTypes::Indexing::Key();
+        auto key = DataTypes::Indexing::Key(executionContext.GetAllocator());
 
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(

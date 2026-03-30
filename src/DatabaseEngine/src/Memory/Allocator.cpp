@@ -19,9 +19,15 @@ namespace DatabaseEngine::Memory{
     void Allocator::AllocateNewChunk(const UnsignedInt size) const{
         const auto newChunkSize = this->NewChunkCapacity(size);
 
-        while (GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){}
+        if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){
+            throw std::bad_alloc();
+        }
 
         auto* newChunk = static_cast<Chunk*>(std::malloc(sizeof(Chunk) + newChunkSize));
+
+        if (newChunk == nullptr)
+            throw std::bad_alloc();
+
         newChunk->_size = newChunkSize;
         newChunk->_offset = 0;
         newChunk->_next = nullptr;

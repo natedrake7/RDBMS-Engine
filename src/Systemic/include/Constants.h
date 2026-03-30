@@ -3,6 +3,8 @@
 #include <limits>
 #include <string_view>
 
+#include "DataTypes/DateTime.h"
+
 
 constexpr Int ITOS_BUFFER_SIZE = 32;
 constexpr Int DATETIME_TO_STRING_BUFFER_SIZE = 32;
@@ -30,7 +32,7 @@ constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(Int);
 constexpr transaction_id_t FIRST_TRANSACTION_ID = 0;
 constexpr Int DEFAULT_BATCH_SIZE = 10000;
 
-constexpr std::string_view WILDCARD = "*";
+constexpr DataTypes::StringView WILDCARD = "*";
 
 constexpr TinyInt INVALID_DECIMAL_PRECISION = -1;
 constexpr TinyInt INVALID_DECIMAL_SCALE = -1;

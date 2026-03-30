@@ -219,7 +219,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto result = this->catalog->InsertDbToMasterDb(
         context,
-this->dbName.ToView(),
+    this->dbName.ToView(),
     path.ToView(),
     false,
     this->session->user->name.ToView()
@@ -411,7 +411,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     result.results.Reserve(result.rows.Size());
     for (const auto& row: result.rows) {
-      QueryResult resultRow;
+      QueryResult resultRow(context.GetAllocator());
 
       for (const auto& expression : this->resultExpressions) {
         evaluationContext.row = &row;
@@ -571,14 +571,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return lhs.GetColumnIndex() < rhs.GetColumnIndex();
   }
 
-    std::vector<Value> PhysicalInsert::ConvertExpressionsToValues(
+    DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
         const DatabaseEngine::ExecutionContext& context,
         const Int index
     ) const{
         auto& [expressions] = this->fields.at(index);
 
-        std::vector<Value> values;
-        values.reserve(expressions.size());
+        DataStructures::PolymorphicArray<Value> values(context.GetAllocator());
+        values.Reserve(expressions.size());
         for (int i = 0; i < expressions.size(); i++) {
             const Expressions::EvaluationContext evaluationContext(
                 Expressions::EvaluationContext::EvaluationContextType::Constant,
@@ -587,7 +587,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
             auto value = expressions[i]->Evaluate(evaluationContext);
             value.SetColumnIndex(this->columnsIndices.at(index));
-            values.push_back(value);
+            values.Push(std::move(value));
         }
 
         std::ranges::sort(values, SortInsertsAscending);
@@ -623,10 +623,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         auto result = ExecutionResult(context);
 
         for (int i = 0;i < this->fields.size(); i++){
-            auto values = this->ConvertExpressionsToValues(context, i);
+            const auto values = this->ConvertExpressionsToValues(context, i);
 
             result.status = tablePtr->InsertRow(context, values);
-
             if (! result.status.IsOk())
               return result;
         }
@@ -815,8 +814,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
         auto* columnPtr =
             tablePtr->AddColumn(
-                column->name.name,
-            ColumnTypesDictionary.Get(normalizedTableName.ToView()),
+                column->name.name.ToView(),
+                ColumnTypesDictionary.Get(normalizedTableName.ToView()),
                 column->type.size,
                 column->index,
                 column->isNullable

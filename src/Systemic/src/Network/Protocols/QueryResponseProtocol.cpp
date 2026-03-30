@@ -38,13 +38,13 @@ namespace Network {
 QueryResponseProtocol::QueryResponseProtocol(
     const bool hasError,
     const bool hasMore,
-    const std::string& message,
-    const DataStructures::PolymorphicArray<std::string>& columns,
+    const DataTypes::StringView& message,
+    const DataStructures::PolymorphicArray<DataTypes::String>& columns,
     DataStructures::PolymorphicArray<QueryResult>& rows
   ){
     this->hasError = hasError;
     this->hasMore = hasMore;
-    this->message = message;
+    this->message = std::string(message.Data(), message.Size());
     this->header.statusCode = ResponseType::QueryResponse;
     this->rows = std::move(rows);
     this->columns = columns;
@@ -55,7 +55,7 @@ QueryResponseProtocol::QueryResponseProtocol(
   void QueryResponseProtocol::SerializeMessage(){
     const int errorSize = static_cast<int>(this->message.size());
 
-    Vector::AppendToBuffer(this->buffer, &errorSize, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, &errorSize, sizeof(Int));
     Vector::AppendToBuffer(this->buffer, this->message.c_str(), errorSize);
 
     this->AssignBufferSizeToProtocolSize();
@@ -63,16 +63,16 @@ QueryResponseProtocol::QueryResponseProtocol(
 
   void QueryResponseProtocol::SerializeResult(){
     const int numOfTableColumns = static_cast<int>(this->columns.Size());
-    Vector::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(int));
+    Vector::AppendToBuffer(this->buffer, &numOfTableColumns, sizeof(Int));
 
     for (const auto& column: this->columns) {
-      const int columnSize = static_cast<int>(column.size());
-      Vector::AppendToBuffer(this->buffer, &columnSize, sizeof(int));
-      Vector::AppendToBuffer(this->buffer, column.data(), columnSize);
+      const int columnSize = column.Size();
+      Vector::AppendToBuffer(this->buffer, &columnSize, sizeof(Int));
+      Vector::AppendToBuffer(this->buffer, column.Data(), columnSize);
     }
 
-    const int numOfRows = static_cast<int>(this->rows.Size());
-    Vector::AppendToBuffer(this->buffer, &numOfRows, sizeof(int));
+    const int numOfRows = this->rows.Size();
+    Vector::AppendToBuffer(this->buffer, &numOfRows, sizeof(Int));
 
     for (const auto& row: this->rows)
       row.Serialize(this->buffer);
@@ -99,8 +99,8 @@ QueryResponseProtocol::QueryResponseProtocol(
   void QueryResponseProtocol::DeserializeMessage(const std::vector<char> &buffer, uint32_t& offSet){
     int errorSize = 0;
 
-    memcpy(&errorSize, buffer.data() + offSet, sizeof(int));
-    offSet += sizeof(int);
+    memcpy(&errorSize, buffer.data() + offSet, sizeof(Int));
+    offSet += sizeof(Int);
 
     this->message.resize(errorSize);
     memcpy(this->message.data(), buffer.data() + offSet, errorSize);
@@ -109,25 +109,25 @@ QueryResponseProtocol::QueryResponseProtocol(
 
   void QueryResponseProtocol::DeserializeResult(const std::vector<char> &buffer, uint32_t& offSet){
     int numOfColumns = 0;
-    memcpy(&numOfColumns, buffer.data() + offSet, sizeof(int));
-    offSet += sizeof(int);
+    std::memcpy(&numOfColumns, buffer.data() + offSet, sizeof(Int));
+    offSet += sizeof(Int);
 
     this->columns.Clear();
     this->columns.Resize(numOfColumns);
 
     for (int i = 0;i < numOfColumns; i++) {
       int columnSize = 0;
-      memcpy(&columnSize, buffer.data() + offSet, sizeof(int));
-      offSet += sizeof(int);
+      std::memcpy(&columnSize, buffer.data() + offSet, sizeof(Int));
+      offSet += sizeof(Int);
 
-      this->columns[i].resize(columnSize);
-      memcpy(this->columns[i].data(), buffer.data() + offSet, columnSize);
+      this->columns[i].Resize(columnSize);
+      std::memcpy(this->columns[i].Data(), buffer.data() + offSet, columnSize);
       offSet += columnSize;
     }
 
     int numOfRows = 0;
-    memcpy(&numOfRows, buffer.data() + offSet, sizeof(int));
-    offSet += sizeof(int);
+    memcpy(&numOfRows, buffer.data() + offSet, sizeof(Int));
+    offSet += sizeof(Int);
 
     this->rows.Clear();
     this->rows.Reserve(numOfRows);

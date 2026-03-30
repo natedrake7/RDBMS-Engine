@@ -6,7 +6,7 @@ namespace QueryPipeline::PhysicalPlan {
     const DatabaseEngine::ExecutionContext& context,
     const ExecutionResult& leftResult
   ) const{
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::Join,
@@ -61,7 +61,7 @@ namespace QueryPipeline::PhysicalPlan {
   {
     using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     Expressions::EvaluationContext evaluationContext(
       Expressions::EvaluationContext::EvaluationContextType::Join,

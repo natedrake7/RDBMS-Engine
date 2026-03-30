@@ -35,7 +35,7 @@ namespace DatabaseEngine::StorageTypes{
 
     public:
         Column(
-            const DataTypes::String& columnName,
+            const DataTypes::StringView& columnName,
             DataType type,
             row_size_t recordSize,
             column_index_t index,
@@ -53,11 +53,13 @@ namespace DatabaseEngine::StorageTypes{
             const Table *table
         );
 
+        void Destroy()const;
+
         ~Column();
 
         [[nodiscard]] const DataTypes::String& GetColumnName() const;
 
-        void SetColumnName(const DataTypes::String& otherName);
+        void SetColumnName(const DataTypes::StringView& otherName);
 
         [[nodiscard]] DataType Type() const;
 

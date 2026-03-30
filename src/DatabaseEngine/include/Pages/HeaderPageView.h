@@ -11,7 +11,6 @@ namespace Pages{
 
     class HeaderPageView final : public PageView{
         DatabaseEngine::DatabaseHeader* databaseHeaderPtr;
-
         std::vector<DatabaseEngine::StorageTypes::TableHeader> tablesHeaders;
 
         void ReadTableHeadersFromDisk();

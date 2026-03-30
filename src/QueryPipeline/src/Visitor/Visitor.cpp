@@ -63,7 +63,7 @@ namespace QueryPipeline {
     auto* statement = new Statements::CreateDbStatement();
 
     if (context->identifier())
-      statement->name = std::any_cast<std::string>(visit(context->identifier()));
+      statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
 
     return std::any(statement);
   }
@@ -72,7 +72,7 @@ namespace QueryPipeline {
     auto* statement = new Statements::DropDbStatement();
 
     if (context->identifier())
-      statement->name = std::any_cast<std::string>(visit(context->identifier()));
+      statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
 
     return std::any(statement);
   }
@@ -258,34 +258,34 @@ namespace QueryPipeline {
         if (context->decimalType())
             return visit(context->decimalType());
 
-        const auto& text = context->getText();
-        auto columnType = Statements::ColumnType(Functions::String::NormalizeString(text));
+        const auto text = context->getText();
+
+        auto str = DataTypes::String::Normalize(text, this->_compileContext->GetAllocator());
+        auto columnType = Statements::ColumnType(std::move(str));
         return std::any(columnType);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitStringType(SQLParser::StringTypeContext *context){
         const auto& number = context->NUMBER();
 
-        auto typeName = std::string(QueryPipeline::String);
-        auto column = Statements::ColumnType(
-            typeName,
-            number
-                ? Converter<Int>::Stoi(number->getText())
-                : -1
-        );
+        auto typeName = DataTypes::String::FromView(QueryPipeline::String, this->_compileContext->GetAllocator());
+        const auto size = number
+                  ? Converter<Int>::Stoi(number->getText())
+                  : -1;
+
+        auto column = Statements::ColumnType(typeName, size);
         return std::any(column);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitUStringType(SQLParser::UStringTypeContext *context){
         const auto& number = context->NUMBER();
 
-        auto typeName = std::string(QueryPipeline::UnicodeString);
-        auto column = Statements::ColumnType(
-            typeName,
-            number
-                ? Converter<Int>::Stoi(number->getText())
-                : -1
-        );
+        auto typeName = DataTypes::String::FromView(QueryPipeline::UnicodeString, this->_compileContext->GetAllocator());
+        const auto size = number
+            ? Converter<Int>::Stoi(number->getText())
+            : -1;
+
+        auto column = Statements::ColumnType(typeName, size);
         return std::any(column);
     }
 
@@ -361,16 +361,20 @@ namespace QueryPipeline {
 
     antlrcpp::Any SQLVisitorImplementation::visitUseDbStatement(SQLParser::UseDbStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::UseDatabaseStatement>();
-        statement->name = std::any_cast<std::string>(visit(context->identifier()));
+        statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
         return std::any(statement);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitCreateUserStatement(SQLParser::CreateUserStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::CreateUserStatement>();
 
-        statement->username = context->username->getText();
-        statement->password = Functions::String::RemoveQuotesFromString(context->password->getText());
-        statement->role = context->role->getText();
+        const auto* allocator = this->_compileContext->GetAllocator();
+
+        const auto passwordStr = Functions::String::RemoveQuotesFromString(context->password->getText());
+
+        statement->username = DataTypes::String(context->username->getText(), allocator);
+        statement->password = DataTypes::String(passwordStr, allocator);
+        statement->role = DataTypes::String(context->role->getText(), allocator);
 
         return std::any(statement);
     }
@@ -378,19 +382,22 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitGrantRoleStatement(SQLParser::GrantRoleStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::GrantRoleStatement>();
 
-        statement->username = context->username->getText();
-        statement->role = context->role->getText();
+        const auto* allocator = this->_compileContext->GetAllocator();
+
+        statement->username = DataTypes::String(context->username->getText(), allocator);
+        statement->role = DataTypes::String(context->role->getText(), allocator);
 
         return std::any(statement);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
-        auto typeName = std::string(QueryPipeline::Decimal);
+
+        auto typeName = DataTypes::String::FromView(QueryPipeline::Decimal, this->_compileContext->GetAllocator());
         auto columnType = Statements::ColumnType(
             typeName,
             Statements::DecimalType(
-            Converter<int32_t>::Stoi(context->precision->getText()),
-            Converter<int32_t>::Stoi(context->scale->getText())
+            Converter<Int>::Stoi(context->precision->getText()),
+            Converter<Int>::Stoi(context->scale->getText())
             )
         );
 
@@ -401,7 +408,7 @@ namespace QueryPipeline {
         auto* statement = this->_compileContext->Allocate<Statements::PrimaryKeyConstraint>();
 
         if (context->constraintName)
-            statement->name = context->constraintName->getText();
+            statement->name = DataTypes::String(context->constraintName->getText(), this->_compileContext->GetAllocator());
 
         statement->columns = std::move(this->GetColumnsList(context->columnList()));
         return std::any(statement);
@@ -409,7 +416,7 @@ namespace QueryPipeline {
 
     antlrcpp::Any SQLVisitorImplementation::visitCreateSchemaStatement(SQLParser::CreateSchemaStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::CreateSchemaStatement>();
-        statement->name = std::any_cast<std::string>(visit(context->identifier()));
+        statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
         return std::any(statement);
     }
 
@@ -449,21 +456,21 @@ namespace QueryPipeline {
         if (!context->name)
             throw SyntaxError("No table was specified", CreatePositionErrorMessage(context));
 
-        auto* statement = this->_compileContext->Allocate<Statements::DataSource>();
+        auto* statement = this->_compileContext->Allocate<Statements::DataSource>(this->_compileContext->GetAllocator());
 
         if (context->databaseName && context->schemaName) {
-            statement->database = std::any_cast<std::string>(visit(context->databaseName));
-            statement->schema = std::any_cast<std::string>(visit(context->schemaName));
+            statement->database = std::any_cast<DataTypes::String>(visit(context->databaseName));
+            statement->schema = std::any_cast<DataTypes::String>(visit(context->schemaName));
         }
         else if (context->databaseName)
-            statement->schema = std::any_cast<std::string>(visit(context->databaseName));
+            statement->schema = std::any_cast<DataTypes::String>(visit(context->databaseName));
         else if (context->schemaName)
-            statement->schema = std::any_cast<std::string>(visit(context->schemaName));
+            statement->schema = std::any_cast<DataTypes::String>(visit(context->schemaName));
 
-        statement->name = std::any_cast<std::string>(visit(context->name));
+        statement->name = std::any_cast<DataTypes::String>(visit(context->name));
 
         if (context->alias())
-            statement->alias = std::any_cast<std::string>(visit(context->alias()));
+            statement->alias = std::any_cast<DataTypes::String>(visit(context->alias()));
         return std::any(statement);
     }
 
@@ -546,12 +553,13 @@ namespace QueryPipeline {
         statement->isUnique = context->UNIQUE() != nullptr;
         statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
-        statement->name = std::any_cast<std::string>(visit(context->identifier()));
+        statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
 
         const auto colCtx = context->columnList();
-        for (const auto col : colCtx->columnName())
-            statement->columns.push_back(col->getText());
-
+        for (const auto col : colCtx->columnName()){
+            auto str = col->getText();
+            statement->columns.push_back(DataTypes::String(str, this->_compileContext->GetAllocator()));
+        }
         return std::any(statement);
     }
 
@@ -631,7 +639,7 @@ namespace QueryPipeline {
 
         statement->variable.SetValue(Value::Null());
 
-        auto name = std::any_cast<std::string>(visit(context->variableName()));
+        auto name = std::any_cast<DataTypes::String>(visit(context->variableName()));
 
         statement->variable.SetName(name);
 
@@ -672,7 +680,7 @@ namespace QueryPipeline {
 
         statement->variable.SetValue(Value::Null());
 
-        auto name = std::any_cast<std::string>(visit(context->variableName()));
+        auto name = std::any_cast<DataTypes::String>(visit(context->variableName()));
 
         statement->variable.SetName(name);
 

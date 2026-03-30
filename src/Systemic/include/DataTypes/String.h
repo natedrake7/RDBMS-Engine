@@ -125,6 +125,7 @@ namespace DataTypes{
             void SetAllocator(const ::Memory::IAllocator* allocator);
 
             void Reserve(Int size);
+            void Resize(Int size);
 
             ~String();
 
@@ -153,6 +154,7 @@ namespace DataTypes{
             String& operator+=(std::string_view other);
             String& operator+=(const std::string& other);
 
+            [[nodiscard]] char* Data();
             [[nodiscard]] const char* Data()const;
 
             [[nodiscard]] StringView ToView()const;
@@ -195,6 +197,10 @@ namespace DataTypes{
             [[nodiscard]] bool Contains(const StringView& other, StringComparisonType type) const;
             [[nodiscard]] bool Contains(std::string_view other, StringComparisonType type) const;
             [[nodiscard]] bool Contains(const std::string& other, StringComparisonType type) const;
+
+            template<typename TLeft, typename TRight>
+            [[nodiscard]] static bool EqualsIgnoreCase(const TLeft& lhs, const TRight& rhs) noexcept;
+
             [[nodiscard]] bool Empty() const;
 
             [[nodiscard]] String ToLower() const;
@@ -331,7 +337,14 @@ namespace DataTypes{
 
             [[nodiscard]] reverse_iterator rbegin() const;
             [[nodiscard]] reverse_iterator rend() const;
+
+            [[nodiscard]] static constexpr char ToLower(char c) noexcept;
+
     };
+
+    constexpr char String::ToLower(const char c) noexcept{
+        return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
+    }
 
     template <typename...Args>
     String String::Concat(const Memory::IAllocator* allocator, const Args&... args){
@@ -474,6 +487,54 @@ String String::Join(const Memory::IAllocator* allocator, const char delimiter, c
 
     return String(data, totalSize, allocator);
 }
+
+template<typename TLeft, typename TRight>
+bool String::EqualsIgnoreCase(const TLeft& lhs, const TRight& rhs) noexcept {
+    const char* lhsData = nullptr;
+    Int lhsSize = 0;
+    const char* rhsData = nullptr;
+    Int rhsSize = 0;
+
+    // Resolve lhs
+    if constexpr (std::is_same_v<std::decay_t<TLeft>, String>) {
+        lhsData = lhs.Data(); lhsSize = lhs.Size();
+    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, StringView>) {
+        lhsData = lhs.Data(); lhsSize = lhs.Size();
+    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, std::string>) {
+        lhsData = lhs.data(); lhsSize = static_cast<Int>(lhs.size());
+    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, std::string_view>) {
+        lhsData = lhs.data(); lhsSize = static_cast<Int>(lhs.size());
+    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, char*> ||
+                         std::is_same_v<std::decay_t<TLeft>, const char*>) {
+        lhsData = lhs; lhsSize = static_cast<Int>(std::strlen(lhs));
+    }
+
+    // Resolve rhs
+    if constexpr (std::is_same_v<std::decay_t<TRight>, String>) {
+        rhsData = rhs.Data(); rhsSize = rhs.Size();
+    } else if constexpr (std::is_same_v<std::decay_t<TRight>, StringView>) {
+        rhsData = rhs.Data(); rhsSize = rhs.Size();
+    } else if constexpr (std::is_same_v<std::decay_t<TRight>, std::string>) {
+        rhsData = rhs.data(); rhsSize = static_cast<Int>(rhs.size());
+    } else if constexpr (std::is_same_v<std::decay_t<TRight>, std::string_view>) {
+        rhsData = rhs.data(); rhsSize = static_cast<Int>(rhs.size());
+    } else if constexpr (std::is_same_v<std::decay_t<TRight>, char*> ||
+                         std::is_same_v<std::decay_t<TRight>, const char*>) {
+        rhsData = rhs; rhsSize = static_cast<Int>(std::strlen(rhs));
+    }
+
+    if (lhsSize != rhsSize)
+        return false;
+
+    for (Int i = 0; i < lhsSize; ++i) {
+        if (std::tolower(static_cast<unsigned char>(lhsData[i])) !=
+            std::tolower(static_cast<unsigned char>(rhsData[i])))
+            return false;
+    }
+
+    return true;
+}
+
 }
 
 template <>

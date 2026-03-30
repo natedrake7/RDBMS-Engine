@@ -12,6 +12,8 @@
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
 
+#include "../../include/Extensions/StringExtensions.h"
+
 namespace Headers {
     void from_json(const nlohmann::json& j, sysColumn& sysColumn) {
         j.at("name").get_to(sysColumn.name);
@@ -74,15 +76,26 @@ namespace DatabaseEngine {
         return Storage::FileManager::FileExists(path);
     }
 
-    void SystemCatalog::UseCatalogDatabase(const DataTypes::String& dbName) {
-        this->masterDb = new Database(dbName, true);
-        this->masterDb->GetColumnsHeaders();
-        this->masterDb->GetIdentityColumns();
+    void SystemCatalog::UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName) {
+        this->masterDb = new Database(
+            allocator,
+            SYSTEM_CATALOG_ID,
+            dbName,
+            this->sysTables
+        );
+        this->masterDb->GetColumnsHeaders(allocator);
+        this->masterDb->GetIndexes(allocator);
+        this->masterDb->GetIdentityColumns(allocator);
     }
 
-    void SystemCatalog::CreateCatalogDatabase(const DataTypes::String& dbName) {
+    void SystemCatalog::CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName) {
         CreateDatabase(SYSTEM_CATALOG_ID, dbName);
-        this->masterDb = new Database(dbName, true);
+        this->masterDb = new Database(
+            allocator,
+            SYSTEM_CATALOG_ID,
+            dbName,
+            true
+        );
 
         for (int i = 0;i < this->sysTables.size(); i++) {
             const auto& tableHeader = this->sysTables[i];
@@ -95,7 +108,7 @@ namespace DatabaseEngine {
                 const auto& columnHeader = tableHeader.columns[columnIndex];
 
                 block_size_t columnSize = 0;
-                const auto strView = columnHeader.type.ToView();
+                const auto strView = DataTypes::StringView(columnHeader.type);
                 if (!ColumnTypeSizes.TryGetValue(strView, columnSize))
                     throw std::runtime_error("Column type " + std::string(strView.Data(), strView.Size()) + " does not exist");
                 if (columnSize == 0)
@@ -109,7 +122,8 @@ namespace DatabaseEngine {
                     primaryKeyIndexes[counter++] = columnIndex;
                 }
 
-                auto* column = table->AddColumn(columnHeader.name, columnType, columnSize, columnIndex, columnHeader.nullable);
+                const auto nameView = DataTypes::StringView(columnHeader.name);
+                auto* column = table->AddColumn(nameView, columnType, columnSize, columnIndex, columnHeader.nullable);
 
                 if (columnHeader.hasIdentity){
                     column->SetIdentity(
@@ -155,7 +169,7 @@ namespace DatabaseEngine {
 
         const auto schemaId = schemaInsertResult.primaryKey.AsInt(1);
 
-        Dictionary<DataTypes::String, column_index_t> columnNameToIndex;
+        Dictionary<std::string, column_index_t> columnNameToIndex;
 
         int counter=  0;
         for (int i = 0;i < this->sysTables.size(); i++) {
@@ -166,7 +180,7 @@ namespace DatabaseEngine {
                 baseContext,
                 databaseId,
                 schemaId,
-                table.name.ToView(),
+                DataTypes::StringView(table.name),
                 static_cast<SmallInt>(i),
                 true
             );
@@ -175,12 +189,12 @@ namespace DatabaseEngine {
             int columnPos = 0;
             const auto tableId = tableResult.primaryKey.AsInt(1);
 
-            Dictionary<DataTypes::String, Int> columnIdsDict;
+            Dictionary<std::string, Int> columnIdsDict;
 
             for (auto& column: table.columns) {
                 counter++;
 
-                const auto normalizedColumnType = DataTypes::String::Normalize(column.type);
+                const auto normalizedColumnType = DataTypes::String::Normalize(column.type, baseContext.GetAllocator());
                 const auto strView = normalizedColumnType.ToView();
 
                 auto columnSize = ColumnTypeSizes.Get(&strView);
@@ -194,7 +208,7 @@ namespace DatabaseEngine {
                 this->InsertColumnToMasterDb(
                     baseContext,
                     tableId,
-                    column.name.ToView(),
+                    DataTypes::StringView(column.name),
                     type,
                     columnSize,
                     INVALID_DECIMAL_PRECISION,
@@ -281,8 +295,8 @@ namespace DatabaseEngine {
             }
         }
 
-        this->masterDb->GetColumnsHeaders();
-        this->masterDb->UpdateIdentityManagersIds();
+        this->masterDb->GetColumnsHeaders(baseContext.GetAllocator());
+        this->masterDb->UpdateIdentityManagersIds(baseContext.GetAllocator());
     }
 
   Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
@@ -290,10 +304,11 @@ namespace DatabaseEngine {
     const auto& data = materializedRow.Data();
 
     return Headers::DatabaseHeader{
-      .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
-      .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(),
-      .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(),
-      .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)].AsBool(),
+        .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
+        .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(),
+        .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(),
+        .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)].AsBool(),
+        .additionalInfo = Headers::AuditInformation()
     };
   }
 
@@ -429,6 +444,7 @@ namespace DatabaseEngine {
       .additionalInfo = Headers::AuditInformation(
         data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
         data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
+        DataTypes::String::Null(),
         data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].AsDateTime()
@@ -451,6 +467,7 @@ namespace DatabaseEngine {
       Headers::AuditInformation(
         data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
         data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
+        DataTypes::String::Null(),
         data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].AsDateTime()
@@ -500,6 +517,7 @@ namespace DatabaseEngine {
       .additionalInfo = Headers::AuditInformation(
         data[static_cast<column_index_t>(SysConstraintColumns::Version)].AsInt(),
         data[static_cast<column_index_t>(SysConstraintColumns::IsDeleted)].AsBool(),
+        DataTypes::String::Null(),
         data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysConstraintColumns::DeletedAt)].AsDateTime()
@@ -517,6 +535,7 @@ namespace DatabaseEngine {
       .additionalInfo = Headers::AuditInformation(
         data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
         data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
+        DataTypes::String::Null(),
         data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
               ? DataTypes::DateTime()
               : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].AsDateTime()
@@ -613,17 +632,19 @@ namespace DatabaseEngine {
 
   Database* SystemCatalog::GetDatabase() const{ return this->masterDb; }
 
-  bool SystemCatalog::Initialize(const DataTypes::StringView& configPath) {
-    const ExecutionContext _baseContext;
-    const auto [sysDbName, sysDbPath] = this->ReadConfiguration(_baseContext.GetAllocator(), configPath);
+  bool SystemCatalog::Initialize(
+        const ExecutionContext& baseContext,
+        const DataTypes::StringView& configPath
+    ) {
+    const auto [sysDbName, sysDbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
 
-    if (SystemCatalog::CatalogExists(sysDbPath.ToView())){
-        this->UseCatalogDatabase(sysDbName);
+    if (SystemCatalog::CatalogExists(sysDbName.ToView())){
+        this->UseCatalogDatabase(baseContext.GetAllocator(), sysDbName);
         return false;
     }
 
-    this->CreateCatalogDatabase(sysDbName);
-    this->StoreSystemTablesToCatalog(_baseContext, sysDbName.ToView(), sysDbPath.ToView());
+    this->CreateCatalogDatabase(baseContext.GetAllocator(), sysDbName);
+    this->StoreSystemTablesToCatalog(baseContext, sysDbName.ToView(), sysDbPath.ToView());
 
     return true;
  }
@@ -768,7 +789,7 @@ namespace DatabaseEngine {
     return roles;
   }
 
-    Security::User* SystemCatalog::InsertSystemUsers(
+    Security::User SystemCatalog::InsertSystemUsers(
         const ExecutionContext& baseContext,
         const DataTypes::String& hashedPassword,
         const Int defaultRoleId
@@ -782,11 +803,10 @@ namespace DatabaseEngine {
                 true
             );
 
-        const auto str = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), baseContext.GetAllocator());
-
-        return new Security::User(
+        const auto username = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), baseContext.GetAllocator());
+        return Security::User(
             result.primaryKey.AsInt(),
-            str,
+            username,
             hashedPassword,
             defaultRoleId,
             nullptr,
@@ -807,7 +827,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(dbName, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Name)),
         Value(dbPath, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::FilePath)),
         Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsSystem)),
@@ -817,7 +837,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
-    };
+      );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -837,7 +857,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector fields = {
+     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::DatabaseId)),
         Value(schemaName, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Name)),
         Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::CreatedAt)),
@@ -845,8 +865,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::LastModifiedBy)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt)),
-     };
+        Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt))
+     );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -870,7 +890,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::DatabaseId)),
         Value(schemaId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::SchemaId)),
         Value(tableName, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Name)),
@@ -881,8 +901,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::LastModifiedBy)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysTables::DeletedAt)),
-      };
+        Value::Null(static_cast<column_index_t>(SysTables::DeletedAt))
+      );
 
       auto result = table->InsertRow(executionContext, fields);
 
@@ -918,7 +938,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
          ? Value(scale, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Scale))
          : Value::Null(static_cast<column_index_t>(SysColumns::Scale));
 
-      const std::vector fields = {
+      const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::TableId)),
         Value(columnName, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Name)),
         Value(static_cast<TinyInt>(columnType), executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::DataType)),
@@ -933,8 +953,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::LastModifiedBy)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt)),
-      };
+        Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt))
+      );
 
       auto result = table->InsertRow(executionContext, fields);
 
@@ -956,7 +976,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
      StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexes);
      const auto currentDate = DataTypes::DateTime::Now();
 
-     const std::vector fields = {
+     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::TableId)),
         Value(indexName, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Name)),
         Value(isClustered, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsClustered)),
@@ -966,8 +986,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::LastModifiedBy)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt)),
-     };
+        Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt))
+     );
 
       auto result = table->InsertRow(executionContext, fields);
 
@@ -987,15 +1007,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
       Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IndexId)),
       Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::ColumnId)),
       Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
       Value(isIncluded, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
       Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::Version)),
       Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
-      Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt)),
-    };
+      Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1024,7 +1044,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         ? Value(*constraintIndexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IndexId))
         : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
       Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::TableId)),
       Value(constraintName, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Name)),
       Value(static_cast<TinyInt>(constraintType), executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Type)),
@@ -1035,8 +1055,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
       Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Version)),
       Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IsDeleted)),
-      Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt)),
-    };
+      Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1057,14 +1077,14 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(constraintId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
         Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
         Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt)),
-    };
+        Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1089,7 +1109,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::TableId)),
         Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
         Value(seedValue, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
@@ -1099,8 +1119,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         Value(cacheBlock, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt)),
-      };
+        Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt))
+      );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1119,7 +1139,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       auto* table = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
       const auto currentDate = DataTypes::DateTime::Now();
 
-      const std::vector fields = {
+      const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::ColumnId)),
         Value(
             std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
@@ -1128,8 +1148,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         ),
         Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::Version)),
         Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
-        Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt)),
-      };
+        Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt))
+      );
 
       auto result = table->InsertRow(executionContext, fields);
 
@@ -1148,13 +1168,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::TableId)),
         Value(rowCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::RowCount)),
         Value(rowSize, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::AvgRowSize)),
         Value(pageCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::PageCount)),
-        Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt)),
-    };
+        Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1172,13 +1192,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
       Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::ColumnId)),
       Value(distinctCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::DistinctCount)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
       Value::Null(static_cast<column_index_t>(SysColumnStats::MaximumValue)),
       Value(nullCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::NullCount))
-    };
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1197,13 +1217,13 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     ) const {
         const auto* allocator = executionContext.GetAllocator();
 
-        const std::vector fields = {
+        const auto fields = DataStructures::PolymorphicArray<Value>::From(allocator,
             Value(columnId, allocator, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
             Value(std::string(reinterpret_cast<const char*>(min.Data()), min.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
             Value(std::string(reinterpret_cast<const char*>(max.Data()), max.Size()), allocator, static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
             Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
-        };
+            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
+        );
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
@@ -1223,14 +1243,14 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-   const std::vector fields = {
+   const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
      Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::TableId)),
      Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::IndexId)),
      Value(leafPages, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LeafPages)),
      Value(depth, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::Depth)),
      Value(averageFragmentation, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-     Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LastUpdated)),
-   };
+     Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
+   );
 
    auto result = table->InsertRow(executionContext, fields);
 
@@ -1253,7 +1273,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
     const std::string lastModifiedBy = "system";
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
       Value(roleName, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::RoleName)),
       Value(static_cast<Int>(permissions), executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Permissions)),
       Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsSystemRole)),
@@ -1262,8 +1282,8 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
       Value(lastModifiedBy, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::LastModifiedBy)),
       Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Version)),
       Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsDeleted)),
-      Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt)),
-    };
+      Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
     std::cout << "Inserted Role " << roleName << std::endl;
@@ -1283,20 +1303,20 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
     const auto currentDate = DataTypes::DateTime::Now();
 
-    const std::string lastModifiedBy = "system";
+    static constexpr DataTypes::StringView LAST_MODIFIED_BY = "system";
 
-    const std::vector fields = {
+    const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
       Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::UserName)),
       Value(passwordHash, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::PasswordHash)),
       Value(roleId, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
       Value(isActive, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsActive)),
       Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::CreatedAt)),
       Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
-      Value(lastModifiedBy, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy)),
+      Value(LAST_MODIFIED_BY, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy)),
       Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::Version)),
       Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsDeleted)),
-      Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt)),
-    };
+      Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt))
+    );
 
     auto result = table->InsertRow(executionContext, fields);
 
@@ -1391,7 +1411,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
         sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
-        if (selectedDatabases.Empty()) return {};
+        if (selectedDatabases.Empty()) return { .additionalInfo = Headers::AuditInformation() };
 
         return SystemCatalog::ToDatabaseHeader(allocator, selectedDatabases[0]);
     }
@@ -1400,13 +1420,13 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAlloc
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
   DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
 
-  DataTypes::Indexing::Key key;
+  DataTypes::Indexing::Key key(allocator);
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
   sysDatabases->SystemClusteredIndexSeek(allocator, &selectedDatabases, key, nullptr);
 
   if (selectedDatabases.Empty())
-    return {};
+    return {.additionalInfo = Headers::AuditInformation()};
 
   return SystemCatalog::ToDatabaseHeader(allocator, selectedDatabases[0]);
 }
@@ -1415,7 +1435,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 2);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
     sysSchemas->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
@@ -1451,7 +1471,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
     auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
     sysSchemas->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
@@ -1488,7 +1508,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
         sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, nullptr);
@@ -1546,7 +1566,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
     const auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
     sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, &logicalExpr);
@@ -1564,7 +1584,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         DataStructures::PolymorphicArray<Pages::RowReference> selectedConstraints(allocator);
         auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         constraintsTable->SystemClusteredIndexSeek(allocator, &selectedConstraints, key, nullptr);
@@ -1602,14 +1622,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 1);
         auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
         sysColumns->SystemClusteredIndexSeek(allocator, &selectedColumns, key, nullptr);
 
         if (selectedColumns.Empty())
-            return {};
+            return {.additionalInfo = Headers::AuditInformation()};
 
         return SystemCatalog::ToColumnHeader(allocator, selectedColumns.Start());
     }
@@ -1621,7 +1641,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 10);
         auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         sysColumns->SystemClusteredIndexSeek(allocator, &selectedColumns, key, nullptr);
@@ -1663,7 +1683,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &selectedIndexes, key, nullptr);
@@ -1685,12 +1705,12 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator, 1);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &selectedIndexes, key, nullptr);
 
-        if(selectedIndexes.Empty()) return {};
+        if(selectedIndexes.Empty()) return {.additionalInfo = Headers::AuditInformation()};
 
         auto indexColumns = this->SelectIndexColumnsByIndexId(allocator, indexId);
 
@@ -1709,7 +1729,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
@@ -1751,7 +1771,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 10);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
@@ -1792,7 +1812,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 2);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int, allocator));
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
@@ -1833,12 +1853,12 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
         sysValues->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
-        if(rows.Empty()) return {};
+        if(rows.Empty()) return {.additionalInfo = Headers::AuditInformation()};
 
         return SystemCatalog::ToDefaultValuesHeader(allocator, rows[0]);
     }
@@ -1850,7 +1870,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
@@ -1868,7 +1888,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
         sysColumnStats->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
@@ -1890,7 +1910,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
@@ -1909,7 +1929,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         std::vector<Headers::IndexStatistics> result;
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
         DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
@@ -1933,7 +1953,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
             Value(lastValue, allocator, static_cast<column_index_t>(SysIdentityColumns::LastValue))
         };
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
@@ -1957,7 +1977,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
     const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -1988,7 +2008,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -2011,7 +2031,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
    auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-   DataTypes::Indexing::Key key;
+   DataTypes::Indexing::Key key(allocator);
    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
    key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
@@ -2044,7 +2064,7 @@ void SystemCatalog::UpdateTableStatisticsById(
 
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
     key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int, allocator));
 
@@ -2062,7 +2082,7 @@ void SystemCatalog::UpdateTableStatisticsById(
     ) const{
     auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
-    DataTypes::Indexing::Key key;
+    DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
     return table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -2084,7 +2104,7 @@ void SystemCatalog::UpdateTableStatisticsById(
             Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy))
         };
 
-        DataTypes::Indexing::Key key;
+        DataTypes::Indexing::Key key(executionContext.GetAllocator());
         key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int, executionContext.GetAllocator()));
 
         return table->ClusteredIndexSeekUpdate(executionContext, key, updates);

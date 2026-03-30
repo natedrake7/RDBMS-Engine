@@ -4,15 +4,14 @@
 
 #include <SQLVisitor.h>
 
-namespace QueryPipeline
-{
+namespace QueryPipeline{
     class CompileContext;
 }
 
 namespace QueryPipeline {
-  static constexpr std::string_view String = "string";
-  static constexpr std::string_view UnicodeString = "unicodestring";
-  static constexpr std::string_view Decimal = "decimal";
+  static constexpr DataTypes::StringView String = "string";
+  static constexpr DataTypes::StringView UnicodeString = "unicodestring";
+  static constexpr DataTypes::StringView Decimal = "decimal";
 
   class SQLVisitorImplementation final : public SQLVisitor {
       CompileContext* _compileContext;

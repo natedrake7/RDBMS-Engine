@@ -204,7 +204,7 @@ namespace Expressions{
               return context.materializedRow.GetColumnAt(this->index);
             case EvaluationContext::EvaluationContextType::Join: {
               const auto outerRow = context.outerRow->Materialize(context.allocator);
-              const auto outerRowSize = outerRow.Data().size();
+              const auto outerRowSize = outerRow.Data().Size();
 
               return this->index < outerRowSize
                        ? context.outerRow->PartialMaterialize(context.allocator, this->index)

@@ -12,13 +12,14 @@ namespace Network::Sessions {
 
     SessionManager::~SessionManager(){
         for (const auto* session : this->sessions | std::views::values)
-            DatabaseEngine::DeallocateMiscEntity(session);
+            delete session;
     }
 
     const Session * SessionManager::CreateSession(const Security::User* user){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        auto* session = DatabaseEngine::AllocateMiscEntity<Session>(user);
+        auto* session = new Session(user);
+        // auto* session = DatabaseEngine::AllocateMiscEntity<Session>(user);
 
         this->sessions.Add(session->sessionId, session);
 
@@ -47,7 +48,8 @@ namespace Network::Sessions {
 
         if (this->sessions.TryGetValue(id, session)) {
             this->sessions.Remove(id);
-            DatabaseEngine::DeallocateMiscEntity(session);
+            delete session;
+            // DatabaseEngine::DeallocateMiscEntity(session);
             return true;
         }
 

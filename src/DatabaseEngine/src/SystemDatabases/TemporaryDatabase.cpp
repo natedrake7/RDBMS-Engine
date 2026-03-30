@@ -46,8 +46,12 @@ namespace DatabaseEngine {
         return Storage::FileManager::FileExists(filename);
     }
 
-    void TemporaryDatabase::ClearTemporaryFiles() const{
-        // std::filesystem::remove_all(this->name + "/");
+    void TemporaryDatabase::ClearTemporaryFiles(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::String& dbName
+    ){
+        const auto dirPath = DataTypes::String::Concat(allocator, dbName, "/");
+        Storage::FileManager::RemoveFile(dirPath.ToView());
     }
 
     Int TemporaryDatabase::GetNextOrdinalPosition(){
@@ -66,11 +70,16 @@ namespace DatabaseEngine {
         const auto [dbName, dbPath] = this->ReadConfiguration(allocator, configPath);
 
         if (this->Exists(dbName.ToView()))
-            this->ClearTemporaryFiles();
+            this->ClearTemporaryFiles(allocator, dbName);
 
         CreateDatabase(TEMPORARY_DATABASE_ID, dbName);
 
-        this->_db = new Database(dbName, true);
+        this->_db = new Database(
+            allocator,
+            TEMPORARY_DATABASE_ID,
+            dbName,
+            true
+        );
     }
 
     StorageTypes::Table* TemporaryDatabase::CreateTable(){

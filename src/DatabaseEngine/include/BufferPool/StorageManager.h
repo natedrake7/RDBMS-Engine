@@ -23,19 +23,19 @@ namespace DatabaseEngine {
 
 namespace Storage{
     struct PageKey{
-        Int databaseId;
+        FileKey fileKey;
         page_id_t pageId;
 
         bool operator==(const PageKey& other) const{
-            return this->databaseId == other.databaseId
+            return this->fileKey == other.fileKey
                 && this->pageId == other.pageId;
         }
 
-        explicit PageKey(const Int databaseId, const page_id_t pageId)
-            : databaseId(databaseId), pageId(pageId) {}
+        explicit PageKey(const FileKey fileKey, const page_id_t pageId)
+            : fileKey(fileKey), pageId(pageId) {}
 
-        static PageKey Create(const Int databaseId, const page_id_t pageId){
-            return PageKey(databaseId, pageId);
+        static PageKey Create(const FileKey fileKey, const page_id_t pageId){
+            return PageKey(fileKey, pageId);
         }
     };
 }
@@ -43,7 +43,7 @@ namespace Storage{
 template<>
 struct std::hash<Storage::PageKey> {
     std::size_t operator()(const Storage::PageKey& key) const noexcept{
-        return std::hash<page_id_t>()(key.databaseId) ^ std::hash<Int>()(key.pageId);
+        return std::hash<Storage::FileKey>()(key.fileKey) ^ std::hash<Int>()(key.pageId);
     }
 };
 

@@ -19,15 +19,16 @@ namespace DatabaseEngine {
         const ExecutionContext& baseContext,
         const DataTypes::StringView& configPath
     ){
-        const auto [dbName, sysDbName] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
+        const auto [dbName, dbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
         this->PopulateFilenames(baseContext.GetAllocator(), dbName);
 
-        if (!this->VersionDatabaseExists())
+        this->CreateKeys();
+
+        if (!this->VersionDatabaseExists(dbName.ToView()))
             DatabaseEngine::CreateDatabase(VERSION_DATABASE_ID, dbName);
 
         this->lastUsedPageId = INVALID_PAGE_ID;
         const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
-
         this->header = *headerPage.GetDatabaseHeaderPtr();
     }
 
@@ -66,8 +67,13 @@ namespace DatabaseEngine {
         return std::make_tuple(std::move(sysDbName), std::move(sysDbPath));
     }
 
-    bool VersionDatabase::VersionDatabaseExists() const{
-        return Storage::FileManager::FileExists(this->filename.ToView());
+    bool VersionDatabase::VersionDatabaseExists(const DataTypes::StringView& path){
+        return Storage::FileManager::FileExists(path);
+    }
+
+    void VersionDatabase::CreateKeys(){
+        this->dataFileKey = Storage::FileKey(VERSION_DATABASE_ID, Storage::FileType::Data);
+        this->systemFileKey = Storage::FileKey(VERSION_DATABASE_ID, Storage::FileType::System);
     }
 
     void VersionDatabase::PopulateFilenames(

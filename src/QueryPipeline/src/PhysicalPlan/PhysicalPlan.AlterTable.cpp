@@ -18,10 +18,14 @@ namespace QueryPipeline::PhysicalPlan{
     this->column->type.name.ToLowerInPlace();
     const auto columnType = ColumnTypesDictionary.Get(this->column->type.name.ToView());
 
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr){
-        result.status = Errors::RuntimeStatus(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION);
+        result.status = Errors::RuntimeStatus(
+            Errors::RuntimeError::Error,
+            Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+            context.GetAllocator()
+        );
         return result;
     }
 
@@ -61,13 +65,13 @@ namespace QueryPipeline::PhysicalPlan{
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    auto* columnPtr = new DatabaseEngine::StorageTypes::Column(
-        this->column->name.name,
+    auto* columnPtr = tablePtr->AddColumn(
+        this->column->name.name.ToView(),
         columnType,
         this->column->type.size,
         this->column->index,
         this->column->isNullable
-    );
+      );
 
     columnPtr->SetColumnId(columnId);
 
@@ -77,7 +81,7 @@ namespace QueryPipeline::PhysicalPlan{
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
     tablePtr->RetrieveDefaultValuesFromCatalog(context.GetAllocator());
 
-    return ExecutionResult();
+    return ExecutionResult(context);
   }
 
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
@@ -86,12 +90,13 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalDropColumn::~PhysicalDropColumn() = default;
 
   ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionContext& context){
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
         Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+        context.GetAllocator()
       );
 
     //update master db set isDeleted to 1
@@ -111,12 +116,13 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
   ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionContext& context){
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
         Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+        context.GetAllocator()
       );
 
     const auto* db = this->server->UseDatabase(context, this->table->databaseId);
@@ -142,12 +148,13 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 
   ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionContext& context){
-    auto result = ExecutionResult();
+    auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
         Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+        context.GetAllocator()
       );
 
     const std::vector updates = {

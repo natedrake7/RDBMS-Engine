@@ -379,7 +379,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
-    std::vector<Value> ConvertExpressionsToValues(
+    DataStructures::PolymorphicArray<Value> ConvertExpressionsToValues(
       const DatabaseEngine::ExecutionContext& context,
       Int index
     )const;

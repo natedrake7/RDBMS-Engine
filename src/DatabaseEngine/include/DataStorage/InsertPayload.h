@@ -31,6 +31,8 @@ namespace DatabaseEngine::StorageTypes {
 
         template <typename T>
         void CopyToBuffer(T value);
+        inline void CopyToBuffer(const DataTypes::String& src);
+        inline void CopyToBuffer(const char* src, Int srcSize);
         inline void CopyToBuffer(const std::string& src);
         inline void CopyToBuffer(const DataTypes::Decimal& src);
         inline void CopyToBuffer(const DataTypes::DateTime& src);
@@ -92,6 +94,14 @@ namespace DatabaseEngine::StorageTypes {
     template <typename T>
     void InsertPayload::CopyToBuffer(T value){
         this->SetData(&value, sizeof(T));
+    }
+
+    void InsertPayload::CopyToBuffer(const DataTypes::String& src){
+        this->SetData(src.Data(), src.Size());
+    }
+
+    void InsertPayload::CopyToBuffer(const char* src, const Int srcSize){
+        this->SetData(src, srcSize);
     }
 
     void InsertPayload::CopyToBuffer(const std::string &src) {

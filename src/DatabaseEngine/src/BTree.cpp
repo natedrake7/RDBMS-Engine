@@ -107,10 +107,13 @@ namespace Indexing{
         return numberOfKeys;
     }
 
-    Errors::RuntimeStatus BTree::CreateDuplicateKeyError(const DataTypes::Indexing::Key &key) {
-        std::ostringstream os;
-        os << "BTree::CreateDuplicateKeyError: Key " << key << " already exists" << std::endl;
-        return {Errors::RuntimeError::DuplicateKey, os.str()};
+    Errors::RuntimeStatus BTree::CreateDuplicateKeyError(
+        const DataTypes::Indexing::Key &key,
+        const ::Memory::IAllocator* allocator
+    ) {
+        auto str = DataTypes::String::Concat(allocator, "BTree::CreateDuplicateKeyError: Key ", key.ToString(allocator), " already exists");
+
+        return {Errors::RuntimeError::DuplicateKey, str};
     }
 
     Pages::IndexPageView BTree::CreateRootPage(Int& indexPosition, const Int pagesToAllocate) {
@@ -307,7 +310,7 @@ namespace Indexing{
     ){
         indexPosition = BTree::LeafLowerBound(context.GetAllocator(), parent, tuple.key);
         if (indexPosition == -1)
-            return BTree::CreateDuplicateKeyError(tuple.key);
+            return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
 
         parent.InsertTuple(tuple, indexPosition);
 

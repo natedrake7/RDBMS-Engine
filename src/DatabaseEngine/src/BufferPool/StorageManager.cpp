@@ -13,6 +13,7 @@ namespace Storage {
 StorageManager::StorageManager(){
     this->_memoryManager = &DatabaseEngine::BufferPoolMemoryManager::Get();
     this->capacity = this->_memoryManager->FramesCount();
+    this->pageTable.reserve(this->capacity);
     this->clockHand = 0;
 }
 
@@ -103,7 +104,7 @@ Pages::Frame* StorageManager::OpenExtent(
             break;
 
         const page_id_t currentPageId = firstExtentPageId + i;
-        const auto key = PageKey::Create(currentPageId, fileKey.databaseId);
+        const auto key = PageKey::Create(fileKey, currentPageId);
 
         if (this->IsPageCached(key))
             continue;
@@ -152,7 +153,8 @@ Pages::Frame* StorageManager::GetRawPage(
         MultiThreading::ReaderGuard lock(&this->tableMutex);
 
         auto frame = 0;
-        if (this->pageTable.TryGetValue(PageKey::Create(fileKey.databaseId, pageId), frame))
+        const auto key = PageKey::Create(fileKey, pageId);
+        if (this->pageTable.TryGetValue(key, frame))
             return this->_memoryManager->GetFrame(frame);
     }
 
@@ -305,7 +307,7 @@ Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes
     framePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(framePtr->data);
     framePtr->headerPtr->pageId = pageId;
 
-    this->pageTable[PageKey::Create(fileKey.databaseId, pageId)] = frameIndex;
+    this->pageTable[PageKey::Create(fileKey, pageId)] = frameIndex;
     clockHand = (clockHand + 1) % capacity;
 
     return framePtr;

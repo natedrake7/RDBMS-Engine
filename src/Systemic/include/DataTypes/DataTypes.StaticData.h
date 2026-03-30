@@ -3,7 +3,29 @@
 #include "DataTypes.h"
 #include "StringView.h"
 
-static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10> ColumnTypeSizes = std::initializer_list{
+static constexpr ConstexprDictionary<DataType, Int, 9> ColumnTypeRank{
+    Pair(DataType::String, 1),
+    Pair(DataType::UnicodeString, 2),
+    Pair(DataType::Bool, 3),
+    Pair(DataType::TinyInt, 4),
+    Pair(DataType::SmallInt, 5),
+    Pair(DataType::Int, 6),
+    Pair(DataType::BigInt, 7),
+    Pair(DataType::Decimal, 8),
+    Pair(DataType::DateTime, 9),
+};
+
+static constexpr DataTypes::StringView TrueStrings[] = {
+    DataTypes::StringView("true"),
+    DataTypes::StringView("1")
+};
+
+static constexpr DataTypes::StringView FalseStrings[] = {
+    DataTypes::StringView("false"),
+    DataTypes::StringView("0")
+};
+
+static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10, CaseInsensitiveHash<DataTypes::StringView>> ColumnTypeSizes = std::initializer_list{
     Pair(DataTypes::StringView("tinyint"), static_cast<block_size_t>(sizeof(TinyInt))),
     Pair(DataTypes::StringView("smallint"), static_cast<block_size_t>(sizeof(SmallInt))),
     Pair(DataTypes::StringView("int"), static_cast<block_size_t>(sizeof(Int))),
@@ -16,7 +38,7 @@ static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10> Co
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
-static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10> ColumnTypesDictionary{
+static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseInsensitiveHash<DataTypes::StringView>> ColumnTypesDictionary{
     Pair(DataTypes::StringView("tinyint"), DataType::TinyInt),
     Pair(DataTypes::StringView("smallint"), DataType::SmallInt),
     Pair(DataTypes::StringView("int"), DataType::Int),

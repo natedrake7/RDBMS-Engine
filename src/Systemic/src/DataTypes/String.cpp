@@ -4,6 +4,8 @@
 #include <cstring>
 #include <ostream>
 
+#include "../../../Server/include/ConnectionManager.h"
+
 
 namespace DataTypes{
     void String::CalculateCapacity(const Int size){
@@ -219,7 +221,7 @@ namespace DataTypes{
                 break;
             }
 
-        return StringView(str, size - lastIndex);
+        return StringView(str, lastIndex + 1);
     }
 
     String String::Replace(
@@ -237,10 +239,12 @@ namespace DataTypes{
 
         Int count = 0;
         const auto subStrSize = subStr.Size();
-        for (Int i = 0; i < size; i++){
+        for (Int i = 0; i <= size - subStrSize; ){
             if (std::memcmp(str + i, subStr.Data(), subStrSize) == 0){
                 count += 1;
-                i += subStr.Size();
+                i += subStrSize;
+            } else {
+                i++;
             }
         }
 
@@ -253,16 +257,15 @@ namespace DataTypes{
         const auto newSize = size - subStrSize * count + newStr.Size() * count;
         auto* newStrCopy = static_cast<char*>(allocator->AllocateRaw(newSize));
 
-        Int j = 0;
-        for (Int i = 0; i < newSize; i++){
-            if (std::memcmp(str + j, subStr.Data(), subStrSize) == 0){
+        Int i = 0, j = 0;
+        while (j < size && i < newSize){
+            if (j + subStrSize <= size && std::memcmp(str + j, subStr.Data(), subStrSize) == 0){
                 std::memcpy(newStrCopy + i, newStr.Data(), newStr.Size());
-                i += newStr.Size();
-                j += subStr.Size();
-                continue;
+                i += static_cast<Int>(newStr.Size());
+                j += subStrSize;
+            } else {
+                newStrCopy[i++] = str[j++];
             }
-
-            newStrCopy[i] = str[j];
         }
 
         return String(newStrCopy, newSize, allocator);
@@ -276,10 +279,10 @@ namespace DataTypes{
     ){
         if (start < 0 || start >= size)
             throw std::out_of_range("String::SubString: Index out of range.");
-        if (size < 0 || start + size > size)
+        if (end < 0 || end > size || start > end)
             throw std::out_of_range("String::SubString: Size out of range.");
 
-        return StringView(str + start, end);
+        return StringView(str + start, end - start);
     }
 
     String String::Reverse(
@@ -295,6 +298,8 @@ namespace DataTypes{
             newStr[i] = str[size - i - 1];
             newStr[size - i - 1] = str[i];
         }
+        if (size % 2 != 0)
+            newStr[size / 2] = str[size / 2];
         return String(newStr, size, allocator);
     }
 
@@ -305,7 +310,7 @@ namespace DataTypes{
         if (count > size)
             throw std::out_of_range("String::Left: Count out of range.");
 
-        return StringView(str + count, size - count);
+        return StringView(str, count);
     }
 
     StringView String::Right(const char* str, const Int size, const Int count){
@@ -315,7 +320,7 @@ namespace DataTypes{
         if (count > size)
             throw std::out_of_range("String::Right: Count out of range.");
 
-        return StringView(str, size - count);
+        return StringView(str + (size - count), count);
     }
 
     String String::Repeat(
@@ -396,7 +401,7 @@ namespace DataTypes{
         this->_capacity = this->_size;
 
         this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
-        std::strcpy(this->_data, str);
+        std::memcpy(this->_data, str, this->_size);
     }
 
     String::String(const std::string& str, const Memory::IAllocator* allocator){
@@ -404,7 +409,7 @@ namespace DataTypes{
         this->_size = static_cast<Int>(str.size());
         this->_capacity = this->_size;
         this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
-        std::strcpy(this->_data, str.data());
+        std::memcpy(this->_data, str.data(), this->_size);
     }
 
     String::String(char* str, const Int size, const Memory::IAllocator* allocator){
@@ -418,8 +423,11 @@ namespace DataTypes{
 
     String::String(const String& other)
         : _allocator(other._allocator), _data(nullptr), _size(other._size), _capacity(other._capacity){
+        if (other._data == nullptr)
+            return;
+
         this->_data = static_cast<char*>(this->_allocator->AllocateRaw(other._size));
-        std::strcpy(this->_data, other._data);
+        std::memcpy(this->_data, other._data, other._size);
     }
 
     String& String::operator=(const String& other){
@@ -431,8 +439,10 @@ namespace DataTypes{
         this->_size = other._size;
         this->_capacity = other._capacity;
 
-        this->_data = static_cast<char*>(this->_allocator->AllocateRaw(other._size));
-        std::strcpy(this->_data, other._data);
+        if (other._data != nullptr){
+            this->_data = static_cast<char*>(this->_allocator->AllocateRaw(other._size));
+            std::memcpy(this->_data, other._data, other._size);
+        }
 
         return *this;
     }
@@ -484,6 +494,16 @@ namespace DataTypes{
 
         this->_data = newData;
         this->_capacity = newCapacity;
+    }
+
+    void String::Resize(const Int size){
+        if (this->_size == size)
+            return;
+
+        if (size > this->_capacity)
+            this->Reserve(size);
+
+        this->_size = size;
     }
 
     String::~String() = default;
@@ -570,6 +590,10 @@ namespace DataTypes{
 
     String& String::operator+=(const std::string& other){
         return this->Append(other);
+    }
+
+    char* String::Data(){
+        return this->_data;
     }
 
     const char* String::Data() const{

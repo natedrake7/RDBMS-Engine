@@ -17,9 +17,14 @@ namespace DatabaseEngine::Memory{
     void PersistentAllocator::AllocateNewChunk(const UnsignedInt size) const{
         const auto newChunkSize = this->NewChunkCapacity(size);
 
-        while (GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){}
+        if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){
+            throw std::bad_alloc();
+        }
 
         auto* newChunk = static_cast<Chunk*>(std::malloc(sizeof(Chunk) + newChunkSize));
+        if (newChunk == nullptr)
+            throw std::bad_alloc();
+
         newChunk->_size = newChunkSize;
         newChunk->_offset = 0;
         newChunk->_next = nullptr;
@@ -80,6 +85,9 @@ namespace DatabaseEngine::Memory{
     }
 
     void PersistentAllocator::Reset() const{
+        if (this->_head == nullptr)
+            return;
+
         auto* node = this->_head;
         Int totalMemoryFreed = 0;
         while(node != nullptr){
@@ -88,6 +96,9 @@ namespace DatabaseEngine::Memory{
             std::free(node);
             node = next;
         }
+
+        this->_head = nullptr;
+        this->_tail = nullptr;
 
         GlobalMemoryManager::Get().ReleaseExecutionReservation(totalMemoryFreed);
     }

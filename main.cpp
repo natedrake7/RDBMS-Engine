@@ -155,7 +155,8 @@ int main(){
         std::ref(server.GetDatabasesLatch())
     );
 
-    server.Initialize("configuration.json");
+    static constexpr DataTypes::StringView CONFIG_FILE_PATH = "configuration.json";
+    server.Initialize(CONFIG_FILE_PATH);
 
     const auto* user = server.Authenticate("admin", "admin");
 

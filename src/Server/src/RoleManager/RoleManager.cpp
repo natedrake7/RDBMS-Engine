@@ -11,68 +11,75 @@
 #include "../../../Systemic/include/DataTypes/StringView.h"
 
 namespace Security {
-  RoleManager::RoleManager() = default;
+    RoleManager::RoleManager() = default;
 
     RoleManager::~RoleManager(){
-        for (const auto &role: this->roles | std::views::values)
-            delete role;
+        this->_allocator.Reset();
     }
 
-  const Role* RoleManager::GetRole(const Int roleId)const{
-    Role *role = nullptr;
+    const Role* RoleManager::GetRole(const Int roleId)const{
+        Role *role = nullptr;
 
-    MultiThreading::ReaderGuard guard(&this->mutex);
+        MultiThreading::ReaderGuard guard(&this->mutex);
 
-    this->roles.TryGetValue(roleId, role);
+        this->roles.TryGetValue(roleId, role);
 
-    return role;
-  }
-
-  const Role* RoleManager::GetRole(const DataTypes::StringView& name)const{
-    Role* role = nullptr;
-
-    MultiThreading::ReaderGuard guard(&this->mutex);
-
-    auto roleId = -1;
-    this->rolesNames.TryGetValue(name, roleId);
-    this->roles.TryGetValue(roleId, role);
-
-    return role;
-  }
-
-  bool RoleManager::AddRole(const DataTypes::StringView& name, Role* role){
-    MultiThreading::WriterGuard guard(&this->mutex);
-
-    if (this->rolesNames.Contains(name)){
-      std::cerr << "Role" << name.Data() << " already exists." << std::endl;
-      return false;
+        return role;
     }
 
-    this->rolesNames.Add(name, role->id);
-    this->roles.Add(role->id, role);
+    const Role* RoleManager::GetRole(const DataTypes::StringView& name)const{
+        Role* role = nullptr;
 
-    return true;
-  }
+        MultiThreading::ReaderGuard guard(&this->mutex);
 
-  bool RoleManager::RemoveRole(const DataTypes::StringView& name){
-    MultiThreading::WriterGuard guard(&this->mutex);
+        Int roleId = -1;
+        this->rolesNames.TryGetValue(name, roleId);
+        this->roles.TryGetValue(roleId, role);
 
-    Role *role = nullptr;
+        return role;
+    }
 
-    Int roleId = -1;
-    if (!this->rolesNames.TryGetValue(name, roleId))
-      return false;
+    bool RoleManager::AddRole(const DataTypes::StringView& name, const Role* role){
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-    if (!this->roles.TryGetValue(roleId, role)
-      || role->isSystem)
-      return false;
+        if (this->rolesNames.Contains(name)){
+            std::cerr << "Role" << name << " already exists." << std::endl;
+            return false;
+        }
 
-    this->rolesNames.Remove(name);
-    this->roles.Remove(roleId);
-    delete role;
+        //copy the role using the local allocator
+        auto roleName = DataTypes::String(role->name, &this->_allocator);
+        auto* newRole = this->_allocator.Allocate<Role>(
+            role->id,
+            roleName,
+            role->permission,
+            role->isSystem
+        );
 
-    return true;
-  }
+        //the key should be a view to the copied role string to ensure
+        //it remains valid as long as the role exists
+        this->rolesNames.Add(newRole->name.ToView(), role->id);
+        this->roles.Add(role->id, newRole);
 
+        return true;
+    }
 
+    bool RoleManager::RemoveRole(const DataTypes::StringView& name){
+        MultiThreading::WriterGuard guard(&this->mutex);
+
+        Int roleId = -1;
+        if (!this->rolesNames.TryGetValue(name, roleId))
+            return false;
+
+        Role *role = nullptr;
+        if (
+            !this->roles.TryGetValue(roleId, role)
+            || role->isSystem
+        ) return false;
+
+        this->rolesNames.Remove(name);
+        this->roles.Remove(roleId);
+
+        return true;
+    }
 }

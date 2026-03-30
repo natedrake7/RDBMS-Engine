@@ -72,6 +72,7 @@ class Database final{
     Int id;
 
     void PopulateFilenames(const ::Memory::IAllocator* tempAllocator, const DataTypes::String& dbName);
+    void CreateKeys();
 
     void WriteHeaderToFile() const;
 
@@ -95,11 +96,15 @@ class Database final{
 
 public:
     Database(
+        const ::Memory::IAllocator* allocator,
+        Int databaseId,
         const DataTypes::String& dbName,
         const bool& isServerInitialization = false
     );
 
     Database(
+        const ::Memory::IAllocator* allocator,
+        Int databaseId,
         const DataTypes::String& dbName,
         const std::vector<Headers::sysTable>& tables
     );
@@ -239,15 +244,15 @@ public:
       Int nonClusteredIndexId = -1
     );
 
-    void GetIdentityColumns()const;
+    void GetIdentityColumns(const ::Memory::IAllocator* allocator)const;
 
-    void UpdateIdentityManagersIds()const;
+    void UpdateIdentityManagersIds(const ::Memory::IAllocator* allocator)const;
 
-    void GetColumnsHeaders()const;
+    void GetColumnsHeaders(const ::Memory::IAllocator* allocator)const;
 
-    void GetDefaultValues()const;
+    void GetDefaultValues(const ::Memory::IAllocator* allocator)const;
 
-    void GetIndexes() const;
+    void GetIndexes(const ::Memory::IAllocator* allocator) const;
 
     void GetTableHeaders()const;
 

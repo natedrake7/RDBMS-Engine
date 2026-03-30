@@ -1,5 +1,7 @@
 ﻿#include "../include/Pages/PageView.h"
 
+#include <algorithm>
+
 #include "DataStorage/Table.h"
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
@@ -439,7 +441,7 @@ namespace Pages{
         // rowHeader.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
         // rowHeader.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
 
-        auto result = QueryResult();
+        auto result = QueryResult(allocator);
 
         block_size_t sizes[columnsSize];
 
@@ -482,10 +484,6 @@ namespace Pages{
         offSet += bitmapsSize;
         rowPtr->lazyState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-
-        // rowPtr->lazyState->header.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        // rowPtr->lazyState->header.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
-        // rowPtr->lazyState->header.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, numberOfColumns);
 
         rowPtr->lazyState->sizes.resize(numberOfColumns, 0);
 
