@@ -17,6 +17,7 @@
 #include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
 #include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
 #include "src/Systemic/include/Memory/Functions.h"
+#include "UnitTests/include/UnitTests.h"
 
 //TODO
 //Add Decimal (division remains)
@@ -100,15 +101,17 @@
 //maybe use an allocator even for execution nodes etc..
 
 //use string_views on Value AsString to avoid heap allocations //or use char[size] for stack allocation
-
-//TODO next steps, need to avoid string and decimal allocations and use "views" Decimal view and string view.
 //Binary operations should allocate a new value but only then.
 
-//Make MemoryAllocator needs to be abstract on systemic and  implement in database engine.
-//Use misc allocator for all mallocs and free through it
-//make it static and call it on your own
+//TODO fix decimal multiplication and create division for it to be complete
 
 int main(){
+
+    Tests::InitializeTester();
+    Tests::RunTest(&Tests::DecimalTest);
+
+    return 0;
+
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 
     static auto& globalMemoryManager = CoreEngine::GlobalMemoryManager::Get();

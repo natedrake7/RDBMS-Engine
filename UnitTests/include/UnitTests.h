@@ -7,6 +7,7 @@ namespace Tests{
     void InitializeTester();
     void RunTest(TestFunctionPtr functionPtr);
 
+    void DecimalTest();
     void IndexPageUpdate();
     void PageUpdate();
 }

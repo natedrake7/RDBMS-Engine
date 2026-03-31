@@ -27,6 +27,40 @@ namespace Tests{
         }
     }
 
+    void DecimalTest(){
+        constexpr auto lhs = DataTypes::Decimal(100);
+        constexpr auto rhs = DataTypes::Decimal(100);
+        constexpr auto sum = lhs + rhs;
+        std::cout << sum << std::endl;
+
+        constexpr auto strValue = DataTypes::StringView("1000.020");
+        constexpr auto lhs2 = DataTypes::Decimal(100);
+        constexpr auto rhs2 = DataTypes::Decimal(strValue);
+        constexpr auto sum2 = lhs2 + rhs2;
+
+        std::cout << sum2 << std::endl;
+
+        constexpr auto lhs3 = DataTypes::Decimal(strValue);
+        constexpr auto rhs3 = DataTypes::Decimal(100);
+        constexpr auto sum3 = lhs3 + rhs3;
+        std::cout << sum3 << std::endl;
+
+        constexpr auto lhs4 = DataTypes::Decimal(strValue);
+        constexpr auto rhs4 = DataTypes::Decimal(strValue);
+        constexpr auto sum4 = lhs4 + rhs4;
+        std::cout << sum4 << std::endl;
+
+        constexpr auto lhs5 = DataTypes::Decimal(strValue);
+        constexpr auto rhs5 = DataTypes::Decimal(strValue);
+        constexpr auto sum5 = lhs5 - rhs5;
+        std::cout << sum5 << std::endl;
+
+        constexpr auto lhs6 = DataTypes::Decimal(strValue);
+        constexpr auto rhs6 = DataTypes::Decimal(strValue);
+        constexpr auto sum6 = lhs6 * rhs6;
+        std::cout << sum6 << std::endl;
+    }
+
     void IndexPageUpdate(){
         // auto columns = std::vector<DatabaseEngine::StorageTypes::Column*>();
         // columns.push_back(new DatabaseEngine::StorageTypes::Column("ID", DataType::Int, 4, 0, false));

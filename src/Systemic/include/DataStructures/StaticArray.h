@@ -30,7 +30,7 @@ namespace DataStructures{
                 : _data{}, _size(size){
                 if (size > N)
                     throw std::runtime_error("StaticArray: size exceeds capacity");
-                std::memcpy(this->_data, data, size * sizeof(T));
+                std::copy(data, data + size, this->_data);
             }
 
             // Construct from initializer list
@@ -39,7 +39,7 @@ namespace DataStructures{
             {
                 if (static_cast<Int>(list.size()) > N)
                     throw std::runtime_error("StaticArray: initializer list exceeds capacity");
-                std::memcpy(this->_data, list.begin(), list.size() * sizeof(T));
+                std::copy(list.begin(), list.end(), this->_data);
             }
 
             constexpr T& operator[](const Int index){ return this->_data[index]; }
@@ -82,7 +82,7 @@ namespace DataStructures{
 
                 for (Int i = index; i < size; ++i)
                     this->_data[i] = data;
-                
+
                 this->_size += size;
             }
 
@@ -111,7 +111,7 @@ namespace DataStructures{
             constexpr void SetData(const T* data, const Int size){
                 if (size > N)
                     throw std::runtime_error("StaticArray: size exceeds capacity");
-                std::memcpy(this->_data, data, size * sizeof(T));
+                std::copy(data, data + size, this->_data);
                 this->_size = size;
             }
 
@@ -123,13 +123,16 @@ namespace DataStructures{
 
             constexpr bool Empty() const { return this->_size == 0; }
 
+            constexpr T First() const { return this->_data[0]; }
+            constexpr T Last() const { return this->_data[this->_size - 1]; }
+
             using iterator = T*;
             using const_iterator = const T*;
 
-            iterator begin() { return this->_data; }
-            iterator end()   { return this->_data + this->_size; }
+            constexpr iterator begin() { return this->_data; }
+            constexpr iterator end()   { return this->_data + this->_size; }
 
-            const_iterator begin() const { return this->_data; }
-            const_iterator end()   const { return this->_data + this->_size; }
+            constexpr const_iterator begin() const { return this->_data; }
+            constexpr const_iterator end()   const { return this->_data + this->_size; }
     };
 }

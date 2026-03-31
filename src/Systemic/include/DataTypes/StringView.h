@@ -204,7 +204,7 @@ namespace DataTypes{
         [[nodiscard]] bool Contains(const char* other, StringComparisonType type) const;
         [[nodiscard]] bool Contains(std::string_view other, StringComparisonType type) const;
         [[nodiscard]] bool Contains(const std::string& other, StringComparisonType type) const;
-        [[nodiscard]] bool Empty() const;
+        [[nodiscard]] constexpr bool Empty() const { return this->_size == 0; };
 
         // STL compatibility
         using const_iterator = const char*;

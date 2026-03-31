@@ -261,6 +261,4 @@ namespace DataTypes{
                 throw std::invalid_argument("Invalid StringComparisonType.");
         }
     }
-
-    bool StringView::Empty() const{ return this->_size == 0; }
 }
