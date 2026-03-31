@@ -4,13 +4,13 @@
 #include <utility>
 
 #include "ValidationMessages.h"
-#include "../../../DatabaseEngine/include/Database.h"
-#include "../../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../../CoreEngine/include/Database.h"
+#include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../../DatabaseEngine/include/Algorithms/Sort/SortingFunctions.h"
-#include "../../../DatabaseEngine/include/ScanState.h"
-#include "../../../DatabaseEngine/include/DataStorage/Table.h"
+#include "../../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"
+#include "../../../CoreEngine/include/ScanState.h"
+#include "../../../CoreEngine/include/DataStorage/Table.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 #include "Contexts/ExecutionContext.h"
 #include "SystemDatabases/TemporaryDatabase.h"
@@ -21,7 +21,7 @@ namespace QueryPipeline::PhysicalPlan {
   //   this->canFetchMore = false;
   // }
 
-  ExecutionResult::ExecutionResult(const DatabaseEngine::ExecutionContext& context)
+  ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
       : status(context.GetAllocator()){
       this->canFetchMore = false;
       this->results.SetAllocator(context.GetAllocator());
@@ -73,7 +73,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionNode::ExecutionNode() {
-    this->catalog = &DatabaseEngine::SystemCatalog::Get();
+    this->catalog = &CoreEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = nullptr;
     this->temporaryTableId = INVALID_TABLE_ID;
@@ -81,7 +81,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId){
     this->sessionId = currentSessionId;
-    this->catalog = &DatabaseEngine::SystemCatalog::Get();
+    this->catalog = &CoreEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = this->server->GetSession(this->sessionId);
     this->temporaryTableId = INVALID_TABLE_ID;
@@ -92,11 +92,11 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   void ExecutionNode::InsertPostProjectionResultsToTemporaryDatabase(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     ExecutionResult& result,
     DataTypes::RowIdentifier& firstRowId
   ){
-    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
+    static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
     auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
           ? tempDb.CreateTable()
@@ -112,11 +112,11 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult ExecutionNode::StreamFromTemporaryDatabase(
-    const DatabaseEngine::ExecutionContext& context,
-    DatabaseEngine::ScanState& state
+    const CoreEngine::ExecutionContext& context,
+    CoreEngine::ScanState& state
   ) const
   {
-    static auto& tempDb = DatabaseEngine::TemporaryDatabase::Get();
+    static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
@@ -144,7 +144,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
     : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
-  ExecutionResult PhysicalDeclareVariable::Execute(const DatabaseEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalDeclareVariable::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
 
     const Expressions::EvaluationContext evaluationContext(
@@ -174,7 +174,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
    : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
-  ExecutionResult PhysicalCreateUser::Execute(const DatabaseEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalCreateUser::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -191,7 +191,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
     : ExecutionNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
-  ExecutionResult PhysicalGrantRole::Execute(const DatabaseEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalGrantRole::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -211,7 +211,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : ExecutionNode(sessionId), dbName(std::move(name)){}
 
-  ExecutionResult PhysicalCreateDatabase::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalCreateDatabase::Execute(const CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
 
@@ -229,7 +229,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
-    DatabaseEngine::CreateDatabase(databaseId, this->dbName);
+    CoreEngine::CreateDatabase(databaseId, this->dbName);
 
     return ExecutionResult(context);
   }
@@ -237,7 +237,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
     : sessionId(sessionId), databaseId(databaseId){}
 
-  ExecutionResult PhysicalUseDatabase::Execute(const DatabaseEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalUseDatabase::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -261,7 +261,7 @@ namespace QueryPipeline::PhysicalPlan {
 PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
   : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
-  ExecutionResult PhysicalSchemaCreate::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalSchemaCreate::Execute(const CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
           Errors::RuntimeError::Error,
@@ -283,7 +283,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTableScan::~PhysicalTableScan() = default;
 
-  ExecutionResult PhysicalTableScan::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalTableScan::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = this->server->UseDatabase(context, this->table->databaseId);
@@ -317,7 +317,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScan::~PhysicalIndexScan() = default;
 
-  ExecutionResult PhysicalIndexScan::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexScan::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -358,7 +358,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexSeek::~PhysicalIndexSeek() = default;
 
-  ExecutionResult PhysicalIndexSeek::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeek::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
@@ -383,7 +383,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexSeekRange::~PhysicalIndexSeekRange() = default;
 
-  ExecutionResult PhysicalIndexSeekRange::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeekRange::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
@@ -398,7 +398,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  ExecutionResult PhysicalProject::ExecuteStatement(const DatabaseEngine::ExecutionContext& context) const{
+  ExecutionResult PhysicalProject::ExecuteStatement(const CoreEngine::ExecutionContext& context) const{
     auto result = this->child->Execute(context);
 
     for (const auto& expression : this->resultExpressions)
@@ -430,7 +430,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  ExecutionResult PhysicalProject::ExecuteConstantStatement(const DatabaseEngine::ExecutionContext& context)const{
+  ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
     auto result = ExecutionResult(context);
     QueryResult resultRow;
 
@@ -459,7 +459,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalProject::~PhysicalProject() = default;
 
-  ExecutionResult PhysicalProject::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalProject::Execute(const CoreEngine::ExecutionContext& context){
       return (this->child == nullptr)
         ? this->ExecuteConstantStatement(context)
         : this->ExecuteStatement(context);
@@ -474,7 +474,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalFilter::~PhysicalFilter() = default;
 
-  ExecutionResult PhysicalFilter::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalFilter::Execute(const CoreEngine::ExecutionContext& context){
     auto result = child->Execute(context);
 
     if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
@@ -509,7 +509,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTop::~PhysicalTop() = default;
 
-  ExecutionResult PhysicalTop::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalTop::Execute(const CoreEngine::ExecutionContext& context){
     auto result = this->child->Execute(context);
 
     if (this->top > result.results.Size())
@@ -529,7 +529,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalDistinct::~PhysicalDistinct() = default;
 
-  ExecutionResult PhysicalDistinct::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalDistinct::Execute(const CoreEngine::ExecutionContext& context){
     auto result = this->child->Execute(context);
 
     DataStructures::PolymorphicArray<QueryResult> results;
@@ -572,7 +572,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
     DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
-        const DatabaseEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const Int index
     ) const{
         auto& [expressions] = this->fields.at(index);
@@ -594,7 +594,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         return values;
     }
 
-  ExecutionResult PhysicalInsert::InsertFromChild(DatabaseEngine::StorageTypes::Table* tablePtr, const DatabaseEngine::ExecutionContext& context)const{
+  ExecutionResult PhysicalInsert::InsertFromChild(CoreEngine::StorageTypes::Table* tablePtr, const CoreEngine::ExecutionContext& context)const{
     bool canFetchMore = true;
     int rowCount = 0;
 
@@ -617,8 +617,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
     ExecutionResult PhysicalInsert::InsertFromFields(
-      DatabaseEngine::StorageTypes::Table* tablePtr,
-      const DatabaseEngine::ExecutionContext& context
+      CoreEngine::StorageTypes::Table* tablePtr,
+      const CoreEngine::ExecutionContext& context
     ) const{
         auto result = ExecutionResult(context);
 
@@ -646,7 +646,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalInsert::~PhysicalInsert() = default;
 
-    ExecutionResult PhysicalInsert::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalInsert::Execute(const CoreEngine::ExecutionContext& context){
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
@@ -661,12 +661,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalHeapDelete::~PhysicalHeapDelete() = default;
 
-    ExecutionResult PhysicalHeapDelete::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalHeapDelete::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-        const DatabaseEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
         tablePtr->HeapDelete(context, this->expression);
 
@@ -678,7 +678,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScanDelete::~PhysicalIndexScanDelete() = default;
 
-    ExecutionResult PhysicalIndexScanDelete::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexScanDelete::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -695,7 +695,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete() = default;
 
-    ExecutionResult PhysicalIndexSeekDelete::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexSeekDelete::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -715,7 +715,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalHeapUpdate::~PhysicalHeapUpdate() = default;
 
-    ExecutionResult PhysicalHeapUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalHeapUpdate::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -733,7 +733,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate() = default;
 
-    ExecutionResult PhysicalIndexScanUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexScanUpdate::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -751,7 +751,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
 
-  ExecutionResult PhysicalIndexSeekUpdate::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeekUpdate::Execute(const CoreEngine::ExecutionContext& context){
     const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
@@ -776,7 +776,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTableCreate::~PhysicalTableCreate() = default;
 
-  ExecutionResult PhysicalTableCreate::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalTableCreate::Execute(const CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
           Errors::RuntimeError::Error,
@@ -951,7 +951,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalOrderBy::~PhysicalOrderBy() = default;
 
-  ExecutionResult PhysicalOrderBy::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalOrderBy::Execute(const CoreEngine::ExecutionContext& context){
     if (!this->comparator.HasProperties())
         this->comparator.SetExecutionContext(&context);
 
@@ -1000,9 +1000,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
         // Lazy load batch if needed
         if (batches[batchId].Empty()) {
-            auto state = DatabaseEngine::ScanState();
+            auto state = CoreEngine::ScanState();
             state.lastFetchedRowId = top.rowId;
-            state.extentId = DatabaseEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
+            state.extentId = CoreEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
 
             auto batchResult = this->StreamFromTemporaryDatabase(context, state);
             batches[batchId] = std::move(batchResult.results);
@@ -1036,7 +1036,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         std::vector<column_index_t> &columns
     ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-    ExecutionResult PhysicalIndexCreate::Execute(const DatabaseEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexCreate::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db = this->server->UseDatabase(context, this->table->databaseId);

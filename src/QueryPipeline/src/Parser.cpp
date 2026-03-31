@@ -3,7 +3,7 @@
 #include <vector>
 #include "SQLParser.h"
 #include <typeindex>
-#include "../../DatabaseEngine/include/Managers/TransactionManager.h"
+#include "../../CoreEngine/include/Managers/TransactionManager.h"
 #include "../../Server/include/Server.h"
 #include "../include/Cursor.h"
 #include "../include/Visitor.h"
@@ -240,7 +240,7 @@ namespace QueryPipeline{
 
     QueryContext Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
         static const auto& server = Network::Server::Get();
-        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+        static auto& transactionManager = CoreEngine::TransactionManager::Get();
 
         QueryContext queryContext;
         const auto* session = server.GetSession(sessionId);
@@ -270,7 +270,7 @@ namespace QueryPipeline{
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            DatabaseEngine::ExecutionContext executionContext(snapshot, 10000, session->variables);
+            CoreEngine::ExecutionContext executionContext(snapshot, 10000, session->variables);
             queryContext.cursors.Push(server.CreateCursor(sessionId, executionContext, physicalPlan));
         }
 
@@ -278,13 +278,13 @@ namespace QueryPipeline{
     }
 
     void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor) {
-        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+        static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.CommitTransaction(cursor->GetSnapshot());
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 
     void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const Cursor* cursor) {
-        static auto& transactionManager = DatabaseEngine::TransactionManager::Get();
+        static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.RollbackTransaction(cursor->GetExecutionContext());
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }

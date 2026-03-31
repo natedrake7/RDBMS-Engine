@@ -3,7 +3,7 @@
 namespace QueryPipeline {
     Cursor::Cursor(
         const PipelineConstants::cursor_id_t cursorId,
-        DatabaseEngine::ExecutionContext& executionContext,
+        CoreEngine::ExecutionContext& executionContext,
         PhysicalPlan::ExecutionNode *plan
     ) : id(cursorId), executionContext(std::move(executionContext)), canFetchMore(true), plan(plan) {}
 
@@ -17,9 +17,9 @@ namespace QueryPipeline {
 
     bool Cursor::CanFetch() const{ return this->canFetchMore; }
 
-    const DatabaseEngine::ExecutionContext& Cursor::GetExecutionContext()const{ return this->executionContext; }
+    const CoreEngine::ExecutionContext& Cursor::GetExecutionContext()const{ return this->executionContext; }
 
-    const DatabaseEngine::Snapshot& Cursor::GetSnapshot() const{ return this->executionContext.GetSnapshot(); }
+    const CoreEngine::Snapshot& Cursor::GetSnapshot() const{ return this->executionContext.GetSnapshot(); }
 
     PipelineConstants::cursor_id_t Cursor::GetId() const{ return this->id; }
 }

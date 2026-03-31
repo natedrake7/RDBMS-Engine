@@ -1,21 +1,21 @@
 #pragma once
 #include "../../Systemic/include/Errors.h"
-#include "../../DatabaseEngine/include/Database.h"
-#include "../../DatabaseEngine/include/SystemDatabases/VersionDatabase.h"
+#include "../../CoreEngine/include/Database.h"
+#include "../../CoreEngine/include/SystemDatabases/VersionDatabase.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "RoleManager.h"
 #include "SessionManager.h"
 #include "UserManager.h"
 
-namespace DatabaseEngine {
+namespace CoreEngine {
   class TemporaryDatabase;
 }
 
-namespace DatabaseEngine {
+namespace CoreEngine {
   class SystemCatalog;
 }
 
-namespace DatabaseEngine {
+namespace CoreEngine {
   class Database;
 }
 
@@ -25,19 +25,19 @@ namespace Network {
     Security::UserManager userManager;
     Sessions::SessionManager sessionManager;
 
-    Dictionary<Int, DatabaseEngine::Database*> databases;
+    Dictionary<Int, CoreEngine::Database*> databases;
 
     MultiThreading::ReadWriteMutex databasesLatch;
 
-    DatabaseEngine::TemporaryDatabase* temporaryDatabase;
-    DatabaseEngine::SystemCatalog* systemCatalog;
-    DatabaseEngine::VersionDatabase *versionDatabase;
+    CoreEngine::TemporaryDatabase* temporaryDatabase;
+    CoreEngine::SystemCatalog* systemCatalog;
+    CoreEngine::VersionDatabase *versionDatabase;
 
     Server();
     ~Server();
 
-    void CreateSystemRoles(const DatabaseEngine::ExecutionContext& baseContext);
-    void CreateSystemUsers(const DatabaseEngine::ExecutionContext& baseContext);
+    void CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext);
+    void CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext);
 
   public:
     [[nodiscard]] static Server& Get();
@@ -46,20 +46,20 @@ namespace Network {
 
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(
-        const DatabaseEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const DataTypes::Guid& currentSessionId,
         const DataTypes::String& username,
         const Security::Role* role
     )const;
     bool UserExists(const DataTypes::String& userName)const;
     bool CreateUser(
-        const DatabaseEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const DataTypes::String& userName,
         const DataTypes::String& password,
         const DataTypes::String& roleName
     );
     Errors::RuntimeStatus UpdateUserById(
-        const DatabaseEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const DataTypes::Guid& callerSessionId,
         Int userId,
         Int roleId
@@ -79,7 +79,7 @@ namespace Network {
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
-      DatabaseEngine::ExecutionContext& context,
+      CoreEngine::ExecutionContext& context,
       QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
@@ -89,12 +89,12 @@ namespace Network {
     // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
     // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
 
-    [[nodiscard]] DatabaseEngine::Database* UseDatabase(
-        const DatabaseEngine::ExecutionContext& context,
+    [[nodiscard]] CoreEngine::Database* UseDatabase(
+        const CoreEngine::ExecutionContext& context,
         Int databaseId,
         bool isServerInitialization = false
     );
-    const Dictionary<Int, DatabaseEngine::Database*>& GetDatabases()const;
+    const Dictionary<Int, CoreEngine::Database*>& GetDatabases()const;
     MultiThreading::ReadWriteMutex& GetDatabasesLatch();
     
   };

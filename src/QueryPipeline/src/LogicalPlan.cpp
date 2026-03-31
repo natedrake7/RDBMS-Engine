@@ -2,7 +2,7 @@
 #include "Managers/StatisticsManager.h"
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
-#include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 
 #include <utility>
 
@@ -86,7 +86,7 @@ namespace QueryPipeline {
     : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode* LogicalTableScan::ToPhysical(QueryContext& context){
-    auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
+    auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     // If no indexes are available, use heap scan
     if (indexes.empty())
@@ -102,7 +102,7 @@ namespace QueryPipeline {
       return context._context.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
     }
 
-    const auto tableStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
+    const auto tableStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
 
     //no table stats yet, or small table
     if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
@@ -319,7 +319,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     : table(table), expression(expression) {}
 
   PhysicalPlan::ExecutionNode * LogicalDelete::ToPhysical(QueryContext& context){
-    const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
+    const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
     //if no indexes are available heap scan
     if (indexes.empty())
@@ -334,7 +334,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     //   expression->GetColumns(expressionColumns);
 
     for (const auto& index: indexes) {
-      const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
+      const auto indexHeader = CoreEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
 
       if (canIndexSeek) {
         for (const auto& column: index.columns) {
@@ -360,7 +360,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalPlan::ExecutionNode* LogicalUpdate::ToPhysical(QueryContext& context){
-        const auto indexes = DatabaseEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
+        const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._context.GetAllocator(), this->table->tableId);
 
         //if no indexes are available heap scan
         if (indexes.empty())
@@ -375,7 +375,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         //   expression->GetColumns(expressionColumns);
 
         for (const auto& index: indexes) {
-            const auto indexHeader = DatabaseEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
+            const auto indexHeader = CoreEngine::SystemCatalog::Get().SelectIndexById(context._context.GetAllocator(), index.id);
 
             if (canIndexSeek) {
                 for (const auto& column: indexHeader.columns) {

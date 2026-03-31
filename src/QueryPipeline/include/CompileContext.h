@@ -2,11 +2,11 @@
 #include "Statements.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
-#include "../../DatabaseEngine/include/Memory/Allocator.h"
+#include "../../CoreEngine/include/Memory/Allocator.h"
 
 namespace QueryPipeline{
     class CompileContext{
-        DatabaseEngine::Memory::Allocator allocator;
+        CoreEngine::Memory::Allocator allocator;
         DataStructures::PolymorphicArray<Statements::Statement*> statements;
 
         static constexpr Int DEFAULT_COMPILATION_ALLOCATION_SIZE = 1024 * 1024 * 2; //2MB

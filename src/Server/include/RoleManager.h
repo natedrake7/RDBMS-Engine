@@ -1,5 +1,5 @@
 #pragma once
-#include "../../DatabaseEngine/include/Memory/PersistentAllocator.h"
+#include "../../CoreEngine/include/Memory/PersistentAllocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
@@ -13,7 +13,7 @@ namespace Security {
         Dictionary<DataTypes::StringView, Int> rolesNames;
         mutable MultiThreading::ReadWriteMutex mutex;
 
-        const DatabaseEngine::Memory::PersistentAllocator _allocator;
+        const CoreEngine::Memory::PersistentAllocator _allocator;
 
         public:
           RoleManager();

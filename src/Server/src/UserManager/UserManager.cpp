@@ -8,8 +8,8 @@
 
 #include <argon2.h>
 
-#include "../../../DatabaseEngine/include/Database.h"
-#include "../../../DatabaseEngine/include/Memory/PersistentAllocator.h"
+#include "../../../CoreEngine/include/Database.h"
+#include "../../../CoreEngine/include/Memory/PersistentAllocator.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {

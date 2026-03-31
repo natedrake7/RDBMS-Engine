@@ -1,0 +1,131 @@
+#include "../include/Database.h"
+#include <vector>
+#include "../include/DatabaseConstants.h"
+#include "../include/DataStorage/Table.h"
+#include "../include/BufferPool/StorageManager.h"
+#include "Contexts/ExecutionContext.h"
+#include "Guards/ReaderGuard.h"
+
+namespace CoreEngine {
+    DataTypes::Indexing::Key Database::CreateKey(
+        const std::vector<column_index_t>& indexedColumns,
+        const StorageTypes::InsertPayload& payload
+    )
+    {
+        DataTypes::Indexing::Key key;
+        // for (const auto &columnId : indexedColumns){
+        //     auto data = row->GetColumnByIndex(columnId);
+        //     key.InsertKey(DataTypes::Indexing::Key(data));
+        // }
+
+        return key;
+    }
+
+    DataTypes::Indexing::Key Database::CreateKey(
+        const ExecutionContext& context,
+        const std::vector<column_index_t>& indexedColumns,
+        const Pages::RowReference& rowPtr,
+        const Int offSet
+    ){
+
+        DataTypes::Indexing::Key key;
+        for (const auto ordinalPosition : indexedColumns){
+            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition - offSet);
+            key.InsertKey(DataTypes::Indexing::Key(data));
+        }
+
+        return key;
+    }
+
+    DataTypes::Indexing::Key Database::CreateKey(
+        const ExecutionContext& context,
+        const std::vector<column_index_t> &indexedColumns,
+        const Pages::RowReference& rowPtr,
+        const DataTypes::RowIdentifier &rowId
+    ){
+        DataTypes::Indexing::Key key;
+        for (const auto ordinalPosition : indexedColumns){
+            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition);
+            key.InsertKey(DataTypes::Indexing::Key(data));
+        }
+
+        key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier, context.GetAllocator()));
+
+        return key;
+    }
+
+   Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
+        StorageTypes::Table*& table,
+	    const page_id_t indexPageId,
+	    const Int pagesToAllocate,
+	    const Int nonClusteredIndexId
+	){
+        const auto& tableHeader = table->GetHeader();
+
+        const bool isNonClusteredIndex = nonClusteredIndexId != -1;
+
+        const uint8_t indexId = isNonClusteredIndex
+                                ? nonClusteredIndexId
+                                : 0;
+
+        const auto treeType = isNonClusteredIndex
+                                    ? Constants::TreeType::NonClustered
+                                    : Constants::TreeType::Clustered;
+
+        if(indexPageId == INVALID_PAGE_ID)
+            return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
+
+        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
+            this->dataFileKey,
+            this->filenameView,
+            tableHeader.allocationPageId,
+            table
+        );
+
+        std::vector<extent_id_t> allocatedExtents;
+        indexAllocationMapPage.GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(indexPageId));
+
+        for(const auto& extentId: allocatedExtents){
+            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+
+            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + Constants::EXTENT_SIZE; nextIndexPageId++){
+                {
+                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
+                        this->systemFileKey,
+                        this->systemFilenameView,
+                        nextIndexPageId
+                    );
+
+                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
+
+                    if (pageFreeSpacePage.GetPageType(nextIndexPageId) != Constants::PageType::INDEX)
+                        continue;
+
+                    //page is free
+                    if(pageFreeSpacePage.GetPageSizeCategory(nextIndexPageId) == 0)
+                        continue;
+                }
+
+                auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+                    this->dataFileKey,
+                    this->filenameView,
+                    nextIndexPageId,
+                    table
+                );
+
+                // if (!indexPage.IsValid())
+                //     continue;
+
+                bool successfulLock = false;
+                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage.Latch(), successfulLock);
+
+                if(!successfulLock || !indexPage.IsEmpty())
+                    continue;
+
+                return indexPage;
+            }
+        }
+
+        return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
+    }
+}

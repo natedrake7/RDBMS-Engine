@@ -418,14 +418,14 @@ namespace QueryPipeline {
     const Headers::TableStatistics& tableStats,
     const std::vector<JoinConditionInfo>& joinConditions
   ){
-    const auto indexes = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
+    const auto indexes = CoreEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
 
     if (indexes.empty())
       return {};
 
     std::vector<Int> bestMatch;
     for (const auto& index : indexes){
-      const auto columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.indexId);
+      const auto columns = CoreEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.indexId);
 
       std::vector<Int> matches;
       for (const auto& column : columns){
@@ -518,10 +518,10 @@ namespace QueryPipeline {
 
     std::vector<JoinOrderAnalyzeInfo> infoVector;
 
-    const auto baseSourceStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(statement->table->tableId);
+    const auto baseSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(statement->table->tableId);
 
     //optimize by using hasIndex bool on tableStats to avoid lookups
-    const auto baseSourceIndexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
+    const auto baseSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
 
     //base table info
     infoVector.emplace_back(
@@ -544,8 +544,8 @@ namespace QueryPipeline {
         continue;
       }
 
-      const auto joinSourceStats = DatabaseEngine::StatisticsManager::Get().GetTableStatistics(join->table->tableId);
-      const auto joinSourceIndexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(join->table->tableId);
+      const auto joinSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(join->table->tableId);
+      const auto joinSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(join->table->tableId);
 
       infoVector.emplace_back(
         join->table->tableId,
@@ -633,7 +633,7 @@ namespace QueryPipeline {
     Optimizer::SplitConjunctions(expression, conjunctions);
 
     for (auto& index : indexes) {
-      index.columns = DatabaseEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.id);
+      index.columns = CoreEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.id);
 
       auto analyzeResults = Optimizer::AnalyzeTableScan(index, conjunctions);
 
@@ -680,7 +680,7 @@ namespace QueryPipeline {
       if (leftTableId == INVALID_TABLE_ID || rightTableId == INVALID_TABLE_ID)
         return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
 
-      static auto& statisticsManager = DatabaseEngine::StatisticsManager::Get();
+      static auto& statisticsManager = CoreEngine::StatisticsManager::Get();
 
       const auto leftInfo = statisticsManager.GetTableStatistics(leftTableId);
       const auto rightInfo = statisticsManager.GetTableStatistics(rightTableId);

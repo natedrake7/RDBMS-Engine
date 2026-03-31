@@ -58,7 +58,7 @@ set(ANTLR_SRC
     ${GENERATED_DIR}/SQLLexer.cpp
     ${GENERATED_DIR}/SQLBaseVisitor.cpp
     ${GENERATED_DIR}/SQLVisitor.cpp
-        src/DatabaseEngine/include/Pages/Additional/RowReference.h
+        src/CoreEngine/include/Pages/Additional/RowReference.h
 )
 
 # Mark generated sources so CMake knows they will be created by the build process
@@ -115,9 +115,9 @@ target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
 add_dependencies(QueryPipeline GenerateSQLParser)
 
 if(WIN32)
-    target_link_libraries(QueryPipeline PRIVATE DatabaseEngine PRIVATE antlr4_shared)
+    target_link_libraries(QueryPipeline PRIVATE CoreEngine PRIVATE antlr4_shared)
 else()
-    target_link_libraries(QueryPipeline PRIVATE DatabaseEngine PRIVATE antlr4_static)
+    target_link_libraries(QueryPipeline PRIVATE CoreEngine PRIVATE antlr4_static)
 endif()
 
 # Include the generated parser and lexer files
@@ -129,62 +129,62 @@ add_library(PluginApi SHARED
 
 target_include_directories(PluginApi PUBLIC src/Plugins/include)
 
-add_library(DatabaseEngine STATIC
-        src/DatabaseEngine/src/Database.cpp
-        src/DatabaseEngine/src/Database.IndexHandlers.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.Indexes.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.LargeObjects.cpp
-        src/DatabaseEngine/src/DataStorage/Row.cpp
-        src/DatabaseEngine/src/DataStorage/Column.cpp
-        src/DatabaseEngine/src/BufferPool/FileManager.cpp
-        src/DatabaseEngine/src/BufferPool/StorageManager.cpp
-        src/DatabaseEngine/src/BTree.cpp
-        src/DatabaseEngine/src/Algorithms/Sort/SortingFunctions.cpp
-        src/DatabaseEngine/src/Algorithms/AggregateFunctions.cpp
-        src/DatabaseEngine/src/Algorithms/Sort/QuickSort.cpp
-        src/DatabaseEngine/src/Algorithms/Sort/MergeSort.cpp
-        src/DatabaseEngine/src/Managers/IdentityManager.cpp
-        src/DatabaseEngine/src/Managers/LockManager.cpp
-        src/DatabaseEngine/src/Managers/TransactionManager.cpp
-        src/DatabaseEngine/src/Logger/Logger.cpp
-        src/DatabaseEngine/src/Logger/WriteAheadLogger.cpp
-        src/DatabaseEngine/src/Logger/CrashRecoveryLogger.cpp
-        src/DatabaseEngine/src/Logger/Logger.Structures.cpp
-        src/DatabaseEngine/src/Schedulers/GarbageCollector.cpp
-        src/DatabaseEngine/src/SystemDatabases/VersionDatabase.cpp
-        src/DatabaseEngine/src/SystemDatabases/SystemCatalog.cpp
-        src/DatabaseEngine/src/Evaluators/Expression.cpp
-        src/DatabaseEngine/src/Schedulers/StatisticsScheduler.cpp
-        src/DatabaseEngine/src/Managers/StatisticsManager.cpp
-        src/DatabaseEngine/src/SystemDatabases/TemporaryDatabase.cpp
-        src/DatabaseEngine/src/Logger/UndoLogger.cpp
-        src/DatabaseEngine/src/DataStorage/Table/Table.Row.Creation.cpp
-        src/DatabaseEngine/src/DataStorage/InsertPayload.cpp
-        src/DatabaseEngine/src/BufferPool/BufferPoolMemoryManager.cpp
-        src/DatabaseEngine/src/Pages/PageView.cpp
-        src/DatabaseEngine/src/Pages/IndexPageView.cpp
-        src/DatabaseEngine/src/Pages/GlobalAllocationPageView.cpp
-        src/DatabaseEngine/src/Pages/PageFreeSpaceView.cpp
-        src/DatabaseEngine/src/Pages/AllocationPageView.cpp
-        src/DatabaseEngine/src/Pages/HeaderPageView.cpp
-        src/DatabaseEngine/src/Pages/Additional/SlotDirectory.cpp
-        src/DatabaseEngine/src/Pages/Additional/Frame.cpp
-        src/DatabaseEngine/src/Pages/Additional/RowReference.cpp
-        src/DatabaseEngine/src/Pages/Additional/IndexPageStructs.cpp
-        src/DatabaseEngine/src/Pages/LargeObjectView.cpp
-        src/DatabaseEngine/src/Pages/OverflowPageView.cpp
-        src/DatabaseEngine/src/Managers/GlobalMemoryManager.cpp
-        src/DatabaseEngine/src/Contexts/ExecutionContext.cpp
-        src/DatabaseEngine/include/Memory/Allocator.h
-        src/DatabaseEngine/src/Memory/Allocator.cpp
-        src/DatabaseEngine/src/Memory/PersistentAllocator.cpp
-        src/DatabaseEngine/src/Extensions/StringExtensions.cpp
+add_library(CoreEngine STATIC
+        src/CoreEngine/src/Database.cpp
+        src/CoreEngine/src/Database.IndexHandlers.cpp
+        src/CoreEngine/src/DataStorage/Table/Table.cpp
+        src/CoreEngine/src/DataStorage/Table/Table.Indexes.cpp
+        src/CoreEngine/src/DataStorage/Table/Table.LargeObjects.cpp
+        src/CoreEngine/src/DataStorage/Row.cpp
+        src/CoreEngine/src/DataStorage/Column.cpp
+        src/CoreEngine/src/BufferPool/FileManager.cpp
+        src/CoreEngine/src/BufferPool/StorageManager.cpp
+        src/CoreEngine/src/BTree.cpp
+        src/CoreEngine/src/Algorithms/Sort/SortingFunctions.cpp
+        src/CoreEngine/src/Algorithms/AggregateFunctions.cpp
+        src/CoreEngine/src/Algorithms/Sort/QuickSort.cpp
+        src/CoreEngine/src/Algorithms/Sort/MergeSort.cpp
+        src/CoreEngine/src/Managers/IdentityManager.cpp
+        src/CoreEngine/src/Managers/LockManager.cpp
+        src/CoreEngine/src/Managers/TransactionManager.cpp
+        src/CoreEngine/src/Logger/Logger.cpp
+        src/CoreEngine/src/Logger/WriteAheadLogger.cpp
+        src/CoreEngine/src/Logger/CrashRecoveryLogger.cpp
+        src/CoreEngine/src/Logger/Logger.Structures.cpp
+        src/CoreEngine/src/Schedulers/GarbageCollector.cpp
+        src/CoreEngine/src/SystemDatabases/VersionDatabase.cpp
+        src/CoreEngine/src/SystemDatabases/SystemCatalog.cpp
+        src/CoreEngine/src/Evaluators/Expression.cpp
+        src/CoreEngine/src/Schedulers/StatisticsScheduler.cpp
+        src/CoreEngine/src/Managers/StatisticsManager.cpp
+        src/CoreEngine/src/SystemDatabases/TemporaryDatabase.cpp
+        src/CoreEngine/src/Logger/UndoLogger.cpp
+        src/CoreEngine/src/DataStorage/Table/Table.Row.Creation.cpp
+        src/CoreEngine/src/DataStorage/InsertPayload.cpp
+        src/CoreEngine/src/BufferPool/BufferPoolMemoryManager.cpp
+        src/CoreEngine/src/Pages/PageView.cpp
+        src/CoreEngine/src/Pages/IndexPageView.cpp
+        src/CoreEngine/src/Pages/GlobalAllocationPageView.cpp
+        src/CoreEngine/src/Pages/PageFreeSpaceView.cpp
+        src/CoreEngine/src/Pages/AllocationPageView.cpp
+        src/CoreEngine/src/Pages/HeaderPageView.cpp
+        src/CoreEngine/src/Pages/Additional/SlotDirectory.cpp
+        src/CoreEngine/src/Pages/Additional/Frame.cpp
+        src/CoreEngine/src/Pages/Additional/RowReference.cpp
+        src/CoreEngine/src/Pages/Additional/IndexPageStructs.cpp
+        src/CoreEngine/src/Pages/LargeObjectView.cpp
+        src/CoreEngine/src/Pages/OverflowPageView.cpp
+        src/CoreEngine/src/Managers/GlobalMemoryManager.cpp
+        src/CoreEngine/src/Contexts/ExecutionContext.cpp
+        src/CoreEngine/include/Memory/Allocator.h
+        src/CoreEngine/src/Memory/Allocator.cpp
+        src/CoreEngine/src/Memory/PersistentAllocator.cpp
+        src/CoreEngine/src/Extensions/StringExtensions.cpp
 )
 
-target_include_directories(DatabaseEngine PUBLIC src/DatabaseEngine/include)
+target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)
 
-target_link_libraries(DatabaseEngine
+target_link_libraries(CoreEngine
         PRIVATE Systemic
         PRIVATE nlohmann_json::nlohmann_json
         PRIVATE PluginApi

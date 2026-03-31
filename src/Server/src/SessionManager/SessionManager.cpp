@@ -5,7 +5,7 @@
 
 #include <ranges>
 
-#include "../../../DatabaseEngine/include/Managers/GlobalMemoryManager.h"
+#include "../../../CoreEngine/include/Managers/GlobalMemoryManager.h"
 
 namespace Network::Sessions {
     SessionManager::SessionManager() = default;
@@ -83,7 +83,7 @@ namespace Network::Sessions {
 
     QueryPipeline::Cursor* SessionManager::CreateCursor(
         const DataTypes::Guid &id,
-        DatabaseEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
     )const{
         MultiThreading::WriterGuard guard(&this->mutex);

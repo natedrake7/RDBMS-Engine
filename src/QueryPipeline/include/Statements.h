@@ -1,15 +1,15 @@
 #pragma once
 #include <string>
 #include <vector>
-#include "../../DatabaseEngine/include/DatabaseConstants.h"
-#include "../../DatabaseEngine/include/Evaluators/Expression.h"
+#include "../../CoreEngine/include/DatabaseConstants.h"
+#include "../../CoreEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../Systemic/include/DataTypes/Guid.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
 
-namespace DatabaseEngine{
+namespace CoreEngine{
     class SystemCatalog;
 }
 
@@ -176,7 +176,7 @@ namespace QueryPipeline::Statements {
     Int ordinalPosition;
 
     Network::Server* server;
-    DatabaseEngine::SystemCatalog* catalog;
+    CoreEngine::SystemCatalog* catalog;
 
     explicit DataSource(const ::Memory::IAllocator* allocator);
     [[nodiscard]] DataTypes::String GetAlias(const QueryContext& context) const;
@@ -200,7 +200,7 @@ namespace QueryPipeline::Statements {
     Dictionary<Int, Dictionary<DataTypes::String, Headers::ColumnHeader>> tableColumnsDictionary;
     DataTypes::Guid sessionId;
     Network::Server* server;
-    DatabaseEngine::SystemCatalog* catalog;
+    CoreEngine::SystemCatalog* catalog;
     DataSource* table;
     Int databaseId;
 

@@ -1,5 +1,5 @@
 #pragma once
-#include "../../DatabaseEngine/include/DatabaseConstants.h"
+#include "../../CoreEngine/include/DatabaseConstants.h"
 
 class GroupCondition {
     column_index_t columnIndex;

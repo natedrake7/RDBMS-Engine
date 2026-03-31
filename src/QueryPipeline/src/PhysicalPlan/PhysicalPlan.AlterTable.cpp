@@ -1,10 +1,10 @@
 #include "ValidationMessages.h"
-#include "../../../DatabaseEngine/include/SystemDatabases/CatalogSchema.h"
+#include "../../../CoreEngine/include/SystemDatabases/CatalogSchema.h"
 #include "../../include/PhysicalPlan.h"
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
-#include "../../../DatabaseEngine/include/DataStorage/Table.h"
+#include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../../CoreEngine/include/DataStorage/Table.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
 namespace QueryPipeline::PhysicalPlan{
@@ -14,7 +14,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::~PhysicalAddColumn() = default;
 
-  ExecutionResult PhysicalAddColumn::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalAddColumn::Execute(const CoreEngine::ExecutionContext& context){
     this->column->type.name.ToLowerInPlace();
     const auto columnType = ColumnTypesDictionary.Get(this->column->type.name.ToView());
 
@@ -89,7 +89,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalDropColumn::~PhysicalDropColumn() = default;
 
-  ExecutionResult PhysicalDropColumn::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalDropColumn::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -115,7 +115,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
-  ExecutionResult PhysicalRenameColumn::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalRenameColumn::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -130,9 +130,9 @@ namespace QueryPipeline::PhysicalPlan{
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     const std::vector updates = {
-      Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::Name)),
-      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
+      Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::Name)),
+      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy)),
     };
 
     const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
@@ -147,7 +147,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 
-  ExecutionResult PhysicalAlterColumn::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalAlterColumn::Execute(const CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -158,9 +158,9 @@ namespace QueryPipeline::PhysicalPlan{
       );
 
     const std::vector updates = {
-      Value(this->column->type.size, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::RecordSize)),
-      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(DatabaseEngine::SysColumns::LastModifiedBy)),
+      Value(this->column->type.size, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::RecordSize)),
+      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
+      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy)),
     };
 
     const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);

@@ -1,0 +1,134 @@
+#pragma once
+#include "../DatabaseConstants.h"
+#include "../DataStorage/Row.h"
+#include "Logger.Structures.h"
+#include "../../../Systemic/include/DataStructures/HashSet.h"
+#include "../../../Systemic/include/DataStructures/Dictionary.h"
+#include <cstdint>
+#include <mutex>
+
+
+
+namespace CoreEngine::Logging {
+    enum OperationType : UnsignedTinyInt{
+        InvalidOperation = 0,
+        InsertRow = 1,
+        UpdateRow = 2,
+        DeleteRow = 3,
+        CreateTable = 4,
+        AlterTable = 5,
+        DropTable = 6,
+        BatchInsertRow = 7,
+        //etc...
+    };
+
+    static const Dictionary<OperationType, DataTypes::StringView> OperationTypeToString = {
+        { OperationType::InvalidOperation, DataTypes::StringView("Invalid Operation")},
+        { OperationType::InsertRow, DataTypes::StringView("Insert Row")},
+        { OperationType::UpdateRow, DataTypes::StringView("Update Row")},
+        { OperationType::DeleteRow, DataTypes::StringView("Delete Row")},
+        { OperationType::CreateTable, DataTypes::StringView("Create Table")},
+        { OperationType::BatchInsertRow, DataTypes::StringView("Batch Insert Row")}
+    };
+
+    static const HashSet RowAffectedOperationTypes = {
+        OperationType::InsertRow,
+        OperationType::UpdateRow,
+        OperationType::DeleteRow
+    };
+
+  struct CheckPoint {
+    transaction_id_t transactionId;
+    log_sequence_number_t logSequenceNumber;
+    off_t logFileOffset; // Offset in the log file where the checkpoint is written
+    uint32_t checkSum;
+
+    static constexpr uint32_t Size(){
+      return sizeof(transaction_id_t) +
+           sizeof(log_sequence_number_t) +
+           sizeof(off_t) +
+           sizeof(uint32_t);
+    }
+    [[nodiscard]] uint32_t static CalculateCheckSum(const CheckPoint& checkpoint);
+
+    CheckPoint();
+    CheckPoint(const transaction_id_t& transactionId,
+               const log_sequence_number_t& logSequenceNumber,
+               const off_t& logFileOffset);
+  };
+  struct LogEntry  {
+    transaction_id_t transactionId;
+    OperationType operation;
+    table_id_t tableOrdinalPosition; //in master db
+
+    // LoggingStructures::LogEntryBody* body;
+    std::vector<char> body;
+
+    log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
+
+    LogEntry();
+    LogEntry(
+      const transaction_id_t& transactionId,
+      const log_sequence_number_t& logSequenceNumber,
+      const OperationType& operation,
+      const table_id_t& tableOrdinalPosition,
+      std::vector<char>& body
+      // LoggingStructures::LogEntryBody* body
+    );
+
+    // ~LogEntry();
+
+    [[nodiscard]] int GetSize()const;
+    [[nodiscard]] static constexpr int GetStaticDataSize(){
+      return sizeof(transaction_id_t) +
+          sizeof(log_sequence_number_t) +
+          sizeof(OperationType) +
+          sizeof(table_id_t);
+    }
+    void DeserializeHeader(const std::vector<char>& buffer, uint32_t& pos);
+    void Serialize(std::vector<char>* buffer)const;
+    // void AllocateBody();
+
+    [[nodiscard]] bool ValidateIntegrity()const;
+
+    // [[nodiscard]] Pointer<StorageTypes::Row> GetRow()const;
+
+    friend std::ostream& operator<<(std::ostream& stream, const LogEntry& logEntry);
+  };
+
+
+  class Logger {
+    protected:
+      int logFileDescriptor;
+
+      transaction_id_t currentTransactionId;
+      Dictionary<transaction_id_t, log_sequence_number_t> transactionLogSequenceNumbers;
+      std::mutex transactionLogMutex;
+
+      void FlushLogDescriptor()const;
+
+      void SetCurrentTransactionId(const transaction_id_t& transactionId);
+
+  public:
+      explicit Logger(const std::string& logFilePath);
+      virtual ~Logger();
+
+      Logger(const Logger&) = delete;
+      Logger(Logger&&) = delete;
+      Logger& operator=(const Logger&) = delete;
+      Logger& operator=(Logger&&) = delete;
+
+      [[nodiscard]]CheckPoint Log(const LogEntry& logEntry)const;
+
+      [[nodiscard]]LogEntry CreateLogEntry(
+            const transaction_id_t& transactionId,
+            const OperationType& operation,
+            const table_id_t& tableOrdinalPosition,
+            std::vector<char>& body
+      );
+
+     [[nodiscard]] transaction_id_t StartTransaction();
+
+    virtual std::vector<LogEntry>  RecoverLogs(const std::vector<StorageTypes::Table*>& tables);
+  };
+}

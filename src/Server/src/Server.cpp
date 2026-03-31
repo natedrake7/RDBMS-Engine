@@ -1,15 +1,15 @@
 #include "../include/Server.h"
-#include "../../DatabaseEngine/include/Logger/WriteAheadLogger.h"
-#include "../../DatabaseEngine/include/Managers/TransactionManager.h"
-#include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
-#include "../../DatabaseEngine/include/SystemDatabases/TemporaryDatabase.h"
+#include "../../CoreEngine/include/Logger/WriteAheadLogger.h"
+#include "../../CoreEngine/include/Managers/TransactionManager.h"
+#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../CoreEngine/include/SystemDatabases/TemporaryDatabase.h"
 #include "../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <iostream>
 
 #include "ValidationMessages.h"
-#include "../../DatabaseEngine/include/Managers/GlobalMemoryManager.h"
+#include "../../CoreEngine/include/Managers/GlobalMemoryManager.h"
 
 namespace Network {
    Server::Server(){
@@ -20,14 +20,14 @@ namespace Network {
 
   Server::~Server() = default;
 
-  void Server::CreateSystemRoles(const DatabaseEngine::ExecutionContext& baseContext) {
+  void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
     const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
     for (const auto* role : roles)
       const auto _ = this->roleManager.AddRole(role->name.ToView(), role);
   }
 
-  void Server::CreateSystemUsers(const DatabaseEngine::ExecutionContext& baseContext) {
+  void Server::CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext) {
     const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
 
     DataTypes::String hashedPassword(baseContext.GetAllocator());
@@ -49,25 +49,25 @@ namespace Network {
   }
 
   void Server::Initialize(const DataTypes::StringView& configPath){
-    const DatabaseEngine::ExecutionContext _baseContext;
+    const CoreEngine::ExecutionContext _baseContext;
 
-    this->temporaryDatabase = &DatabaseEngine::TemporaryDatabase::Get();
+    this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
     this->temporaryDatabase->Initialize(_baseContext.GetAllocator(), configPath);
 
-    this->versionDatabase = &DatabaseEngine::VersionDatabase::Get();
+    this->versionDatabase = &CoreEngine::VersionDatabase::Get();
     this->versionDatabase->Initialize(_baseContext, configPath);
 
-    this->systemCatalog = &DatabaseEngine::SystemCatalog::Get();
+    this->systemCatalog = &CoreEngine::SystemCatalog::Get();
     if (this->systemCatalog->Initialize(_baseContext, configPath)){
         this->CreateSystemRoles(_baseContext);
         this->CreateSystemUsers(_baseContext);
         return;
     }
 
-    const auto lastCheckpoint = DatabaseEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
-    DatabaseEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
+    const auto lastCheckpoint = CoreEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+    CoreEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
-    const DatabaseEngine::Memory::Allocator allocator;
+    const CoreEngine::Memory::Allocator allocator;
     for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
         const auto _ = this->roleManager.AddRole(role.name.ToView(), &role);
 
@@ -78,7 +78,7 @@ namespace Network {
   }
 
   Errors::RuntimeStatus Server::GrantRole(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     const DataTypes::Guid& currentSessionId,
     const DataTypes::String& username,
     const Security::Role *role
@@ -95,7 +95,7 @@ namespace Network {
   }
 
     Errors::RuntimeStatus Server::UpdateUserById(
-        const DatabaseEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const DataTypes::Guid& callerSessionId,
         const Int userId,
         const Int roleId
@@ -122,7 +122,7 @@ namespace Network {
   }
 
   bool Server::CreateUser(
-      const DatabaseEngine::ExecutionContext& context,
+      const CoreEngine::ExecutionContext& context,
       const DataTypes::String& userName,
       const DataTypes::String& password,
       const DataTypes::String& roleName
@@ -203,7 +203,7 @@ namespace Network {
 
   QueryPipeline::Cursor* Server::CreateCursor(
     const DataTypes::Guid &id,
-    DatabaseEngine::ExecutionContext& context,
+    CoreEngine::ExecutionContext& context,
     QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
   ) const {
     return this->sessionManager.CreateCursor(id, context, physicalPlan);
@@ -214,7 +214,7 @@ namespace Network {
   }
 
   void Server::Shutdown(){
-    const DatabaseEngine::Memory::Allocator allocator;
+    const CoreEngine::Memory::Allocator allocator;
     for (const auto &database: this->databases | std::views::values){
           database->UpdateMasterDatabase(&allocator);
           delete database;
@@ -225,12 +225,12 @@ namespace Network {
     // this->versionDatabase->
   }
 
-    DatabaseEngine::Database* Server::UseDatabase(
-        const DatabaseEngine::ExecutionContext& context,
+    CoreEngine::Database* Server::UseDatabase(
+        const CoreEngine::ExecutionContext& context,
         const Int databaseId,
         const bool isServerInitialization
     ){
-        DatabaseEngine::Database *db = nullptr;
+        CoreEngine::Database *db = nullptr;
 
         if (databaseId == Constants::SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
 
@@ -244,7 +244,7 @@ namespace Network {
 
         if (this->databases.TryGetValue(databaseId, db)) return db;
 
-        db = new DatabaseEngine::Database(
+        db = new CoreEngine::Database(
             context.GetAllocator(),
             databaseId,
             dbHeader.name,
@@ -255,7 +255,7 @@ namespace Network {
         return db;
     }
 
-    const Dictionary<Int, DatabaseEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
+    const Dictionary<Int, CoreEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
 
     MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

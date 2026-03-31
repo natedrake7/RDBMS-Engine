@@ -3,7 +3,7 @@
 
 namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     const ExecutionResult& leftResult
   ) const{
     auto result = ExecutionResult(context);
@@ -47,7 +47,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 
-  ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const CoreEngine::ExecutionContext& context){
     const auto leftResult = this->left->Execute(context);
     auto result = this->ExecuteBatchJoin(context, leftResult);
     result.canFetchMore = leftResult.canFetchMore;
@@ -55,7 +55,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult PhysicalMergeInnerJoin::ExecuteBatchJoin(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     ExecutionResult& leftResult
   ) const
   {
@@ -141,7 +141,7 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult PhysicalMergeInnerJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalMergeInnerJoin::Execute(const CoreEngine::ExecutionContext& context){
     auto leftResult = this->left->Execute(context);
     auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -150,7 +150,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult PhysicalMergeLeftJoin::ExecuteBatchJoin(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     ExecutionResult& leftResult
   ) const{
     // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -244,7 +244,7 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult PhysicalMergeLeftJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalMergeLeftJoin::Execute(const CoreEngine::ExecutionContext& context){
     auto leftResult = this->left->Execute(context);
     auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -253,7 +253,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   ExecutionResult PhysicalMergeFullJoin::ExecuteBatchJoin(
-    const DatabaseEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     ExecutionResult& leftResult
   ) const{
     // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -348,7 +348,7 @@ namespace QueryPipeline::PhysicalPlan {
     delete this->expression;
   }
 
-  ExecutionResult PhysicalMergeFullJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalMergeFullJoin::Execute(const CoreEngine::ExecutionContext& context){
     auto leftResult = this->left->Execute(context);
     auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -367,7 +367,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const CoreEngine::ExecutionContext& context){
       // auto* result = new ExecutionResult();
       //
       // auto* leftResult = this->left->Execute(properties);
@@ -422,7 +422,7 @@ namespace QueryPipeline::PhysicalPlan {
       delete this->right;
   }
 
-  ExecutionResult PhysicalNestedLoopFullJoin::Execute(const DatabaseEngine::ExecutionContext& context){
+  ExecutionResult PhysicalNestedLoopFullJoin::Execute(const CoreEngine::ExecutionContext& context){
       // auto* result = new ExecutionResult();
       //
       // auto* leftResult = this->left->Execute(properties);

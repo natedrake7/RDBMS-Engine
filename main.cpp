@@ -1,5 +1,5 @@
-﻿#include "src/DatabaseEngine/include/Schedulers/GarbageCollector.h"
-#include "src/DatabaseEngine/include/Schedulers/StatisticsScheduler.h"
+﻿#include "src/CoreEngine/include/Schedulers/GarbageCollector.h"
+#include "src/CoreEngine/include/Schedulers/StatisticsScheduler.h"
 #include "src/Plugins/include/Plugin.h"
 #include "src/QueryPipeline/include/Parser.h"
 #include "src/Server/include/Server.h"
@@ -14,8 +14,8 @@
 #include <string>
 #include <vector>
 
-#include "src/DatabaseEngine/include/BufferPool/BufferPoolMemoryManager.h"
-#include "src/DatabaseEngine/include/Managers/GlobalMemoryManager.h"
+#include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
+#include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
 #include "src/Systemic/include/Memory/Functions.h"
 
 //TODO
@@ -111,12 +111,12 @@
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 
-    static auto& globalMemoryManager = DatabaseEngine::GlobalMemoryManager::Get();
+    static auto& globalMemoryManager = CoreEngine::GlobalMemoryManager::Get();
     globalMemoryManager.Initialize(memoryInfo);
 
     globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
 
-    static auto& bufferPoolMemoryManager = DatabaseEngine::BufferPoolMemoryManager::Get();
+    static auto& bufferPoolMemoryManager = CoreEngine::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // return 0;
@@ -146,10 +146,10 @@ int main(){
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    std::thread garbageCollectorThread(DatabaseEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
-        DatabaseEngine::StatisticsScheduler::Start,
+        CoreEngine::StatisticsScheduler::Start,
         std::ref(serverRunning),
         std::ref(server.GetDatabases()),
         std::ref(server.GetDatabasesLatch())
@@ -231,7 +231,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             continue;
         }
 
-        DatabaseEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
+        CoreEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
         QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
     }
 

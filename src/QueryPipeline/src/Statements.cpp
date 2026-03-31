@@ -1,11 +1,11 @@
 #include "../include/Statements.h"
 
-#include "../../DatabaseEngine/include/Database.h"
+#include "../../CoreEngine/include/Database.h"
 #include "../../Systemic/include/Coercions.h"
 #include "../../Systemic/include/Functions/StringFunctions.h"
 #include "../../Server/include/Server.h"
 #include "../include/LogicalPlan.h"
-#include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
+#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 #include <ranges>
 #include <ValidationMessages.h>
 
@@ -18,7 +18,7 @@ namespace QueryPipeline::Statements {
         this->databaseId = INVALID_DATABASE_ID;
         this->table = nullptr;
         this->server = &Network::Server::Get();
-        this->catalog = &DatabaseEngine::SystemCatalog::Get();
+        this->catalog = &CoreEngine::SystemCatalog::Get();
     }
 
     Errors::ValidationStatus Statement::CompileBase(const QueryContext& context)const{
@@ -368,7 +368,7 @@ namespace QueryPipeline::Statements {
         this->ordinalPosition = INVALID_ORDINAL_POS;
         this->schema = DataTypes::String::FromView(Constants::DEFAULT_SCHEMA_NAME, allocator);
         this->server = &Network::Server::Get();
-        this->catalog = &DatabaseEngine::SystemCatalog::Get();
+        this->catalog = &CoreEngine::SystemCatalog::Get();
     }
 
     DataTypes::String DataSource::GetAlias(const QueryContext& context) const{

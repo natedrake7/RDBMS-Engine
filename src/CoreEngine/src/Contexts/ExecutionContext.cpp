@@ -1,0 +1,81 @@
+﻿#include "../../include/Contexts/ExecutionContext.h"
+
+#include "Coercions.h"
+
+namespace CoreEngine{
+    ExecutionContext::ExecutionContext(
+        const Snapshot& snapshot,
+        const Int batchSize,
+        const Dictionary<DataTypes::String, Variable>& variables,
+        const Int initialAllocatorSize
+    )   : snapshot(snapshot),
+          allocator(initialAllocatorSize),
+          batchSize(batchSize){
+        this->variables = &variables;
+    }
+
+    ExecutionContext::ExecutionContext()
+    : variables(nullptr), batchSize(0){}
+
+    ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept
+        : snapshot(std::move(other.snapshot)),
+          allocator(std::move(other.allocator)),
+          variables(other.variables),
+          batchSize(other.batchSize)
+    {
+        other.variables = nullptr;
+    }
+
+
+    ExecutionContext& ExecutionContext::operator=(ExecutionContext&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->snapshot  = std::move(other.snapshot);
+        this->batchSize = other.batchSize;
+        this->variables = other.variables;
+        this->allocator = std::move(other.allocator);
+
+        other.variables = nullptr;
+
+        return *this;
+    }
+
+    ExecutionContext::~ExecutionContext() = default;
+
+    void ExecutionContext::SetBatchSize(const Int size){
+        this->batchSize = size;
+    }
+
+    const ::Memory::IAllocator* ExecutionContext::GetAllocator() const{
+        return &this->allocator;
+    }
+
+    const Dictionary<DataTypes::String, Variable>* ExecutionContext::GetVariables() const{
+        return this->variables;
+    }
+
+    Int ExecutionContext::GetBatchSize() const{
+        return this->batchSize;
+    }
+
+    transaction_id_t ExecutionContext::GetCurrentTransactionId() const{
+        return this->snapshot.transactionId;
+    }
+
+    const Snapshot& ExecutionContext::GetSnapshot() const{
+        return this->snapshot;
+    }
+
+    void ExecutionContext::ResetAllocator() const{
+        this->allocator.Reset();
+    }
+
+    void* ExecutionContext::Allocate(const Int size) const{
+        return this->allocator.AllocateRaw(size);
+    }
+
+    ExecutionContext ExecutionContext::BaseContext(){
+        return ExecutionContext();
+    }
+}

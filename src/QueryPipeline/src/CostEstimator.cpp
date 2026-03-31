@@ -223,7 +223,7 @@ namespace QueryPipeline{
         const Headers::TableStatistics& tableStats,
         const Headers::ColumnStatistics& columnStats
     ){
-        static const auto& catalog = DatabaseEngine::SystemCatalog::Get();
+        static const auto& catalog = CoreEngine::SystemCatalog::Get();
         const auto histograms = catalog.SelectColumnHistogramsByColumnId(
             context->_context.GetAllocator(),
             tableStats.tableId,
@@ -380,7 +380,7 @@ namespace QueryPipeline{
         }
 
         //get indexStats and account for the depth of the tree in the cost
-        const auto indexStats = DatabaseEngine::StatisticsManager::Get().GetIndexStatistics(candidate.header->id);
+        const auto indexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(candidate.header->id);
 
         //TODO fix make sure index stats are available and cached by better key
         const Headers::IndexStatistics* indexStatistic = nullptr;
@@ -399,7 +399,7 @@ namespace QueryPipeline{
 
         double combinedSelectivity = 1.0;
         for (const auto& info : candidate.analyzeInfo){
-            const auto& columnStats = DatabaseEngine::StatisticsManager::Get().GetColumnStatistics(tableStats.tableId, info.columnId);
+            const auto& columnStats = CoreEngine::StatisticsManager::Get().GetColumnStatistics(tableStats.tableId, info.columnId);
 
             const auto selectivity = CostEstimator::EstimateSelectivity(context, info.range, columnStats, tableStats);
 
