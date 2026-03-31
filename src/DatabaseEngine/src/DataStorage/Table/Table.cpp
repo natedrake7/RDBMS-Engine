@@ -98,7 +98,7 @@ namespace DatabaseEngine::StorageTypes {
         const auto& indexedColumns = this->nonClusteredIndexes[indexPos].columns;
 
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+          const page_id_t extentFirstPageId = DatabaseEngine::Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
 
           const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(
               this->database->GetSystemFileKey(),
@@ -110,9 +110,9 @@ namespace DatabaseEngine::StorageTypes {
                                       ? extentFirstPageId
                                       : extentFirstPageId + 1;
 
-          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++)
+          for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++)
           {
-            if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
+            if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
             auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
@@ -541,7 +541,7 @@ namespace DatabaseEngine::StorageTypes {
 
         state.canFetchMore = false;
         for (const auto& extentId : tableExtentIds){
-          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+          const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
 
           const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, systemFilename, extentFirstPageId);
 
@@ -551,8 +551,8 @@ namespace DatabaseEngine::StorageTypes {
 
           MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage.Latch());
 
-          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-            if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
+          for (page_id_t extentPageId = state.GetPageId(extentStartingPageId); extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+            if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
             auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
@@ -623,7 +623,7 @@ namespace DatabaseEngine::StorageTypes {
         Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
 
         for (const auto &extentId : tableExtentIds){
-            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
 
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, systemFilename, extentFirstPageId);
 
@@ -631,8 +631,8 @@ namespace DatabaseEngine::StorageTypes {
                    ? extentFirstPageId
                    : extentFirstPageId + 1;
 
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
                 auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
@@ -693,14 +693,14 @@ namespace DatabaseEngine::StorageTypes {
                                                 ? extentFirstPageId
                                                 : extentFirstPageId + 1;
 
-          for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+          for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + Constants::EXTENT_SIZE; pageId++)
           {
 
               auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, systemFilename, pageId);
 
               MultiThreading::ReaderGuard pfsLatch(&pageFreeSpacePage.Latch());
 
-              if (pageFreeSpacePage.GetPageType(pageId) != PageType::DATA)
+              if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
                   break;
 
               const auto pageSizeCategory = pageFreeSpacePage.GetPageSizeCategory(pageId);
@@ -758,7 +758,7 @@ namespace DatabaseEngine::StorageTypes {
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
-            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
 
             const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, systemFilename, extentFirstPageId);
 
@@ -771,8 +771,8 @@ namespace DatabaseEngine::StorageTypes {
                 executionContext
             );
 
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
                 auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
@@ -824,7 +824,7 @@ namespace DatabaseEngine::StorageTypes {
 
         for (const auto& extentId : tableExtentIds){
 
-            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * EXTENT_SIZE);
+            const page_id_t extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
 
             const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, systemFilename, extentFirstPageId);
 
@@ -836,8 +836,8 @@ namespace DatabaseEngine::StorageTypes {
                 Expressions::EvaluationContext::EvaluationContextType::SingleRow,
                 executionContext
             );
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA)
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                   break;
 
                 auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
@@ -940,10 +940,10 @@ namespace DatabaseEngine::StorageTypes {
 
     table_id_t Table::GetTableId() const { return this->header.tableId; }
 
-    TableType Table::GetType() const{
+    Constants::TableType Table::GetType() const{
         return !this->clusteredIndexHeader.columns.Empty()
-                    ? TableType::CLUSTERED
-                    : TableType::HEAP;
+                    ? Constants::TableType::CLUSTERED
+                    : Constants::TableType::HEAP;
     }
 
     bool Table::IsClustered() const{
@@ -986,7 +986,7 @@ namespace DatabaseEngine::StorageTypes {
 
         if(columnSize <= largestVariableLengthColumnSize
             || column->isColumnOverflowed()
-            || columnSize >= LARGE_DATA_OBJECT_SIZE
+            || columnSize >= Constants::LARGE_DATA_OBJECT_SIZE
             || clusteredColumns.Contains(column->OrdinalPosition()))
           continue;
 
@@ -1289,7 +1289,7 @@ namespace DatabaseEngine::StorageTypes {
             indexColumnsIndices.emplace_back(columnsDict.Get(indexedColumn.columnId)->OrdinalPosition());
 
             if (index.isClustered) {
-                this->clusteredIndexHeader.columns.SetData(indexColumnsIndices);
+                this->clusteredIndexHeader.columns.SetData(indexColumnsIndices.data(), indexColumnsIndices.size());
                 continue;
             }
 
@@ -1316,7 +1316,7 @@ namespace DatabaseEngine::StorageTypes {
         if (this->header.allocationPageId == INVALID_PAGE_ID)
             return;
 
-        if (this->GetType() == TableType::CLUSTERED) {
+        if (this->GetType() == Constants::TableType::CLUSTERED) {
             this->PopulateColumnByClusteredIndex(index, defaultValue);
             return;
         }
@@ -1351,11 +1351,11 @@ namespace DatabaseEngine::StorageTypes {
                                             ? extentFirstPageId
                                             : extentFirstPageId + 1;
 
-      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + EXTENT_SIZE; pageId++)
+      for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + Constants::EXTENT_SIZE; pageId++)
       {
           auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemKey, systemFilename, pageId);
 
-          if (pageFreeSpacePage.GetPageType(pageId) != PageType::DATA)
+          if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
             break;
 
           auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, pageId, this);
@@ -1456,7 +1456,7 @@ namespace DatabaseEngine::StorageTypes {
     if (this->header.allocationPageId == INVALID_PAGE_ID)
       return;
 
-    if (this->GetType() == TableType::CLUSTERED) {
+    if (this->GetType() == Constants::TableType::CLUSTERED) {
       this->RemoveColumnByClusteredIndex(index);
       return;
     }

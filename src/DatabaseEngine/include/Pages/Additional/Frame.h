@@ -33,8 +33,8 @@ namespace Pages{
         Storage::FileKey fileKey;
         std::atomic<int> pinCount;
 
-        std::atomic<PagePriority> priority;
-        PageType type;
+        std::atomic<Constants::PagePriority> priority;
+        Constants::PageType type;
         bool hasSecondChance;
         bool isDirty;
 

@@ -112,7 +112,7 @@ namespace QueryPipeline::Statements {
 
   struct OrderColumn {
     Expressions::Expression* expression;
-    OrderType type;
+    Constants::OrderType type;
 
     OrderColumn();
     ~OrderColumn();
@@ -444,7 +444,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct AlterTableStatement final : Statement {
-    AlterTableType type;
+      Constants::AlterTableType type;
 
     union {
       NewColumn* newColumn;

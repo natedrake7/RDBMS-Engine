@@ -312,8 +312,8 @@ namespace QueryPipeline {
 
         //TODO add to a static stringview
         orderColumn->type = Functions::String::NormalizeString(orderStr) == "desc"
-            ? OrderType::DESCENDING
-            : OrderType::ASCENDING;
+            ? Constants::OrderType::DESCENDING
+            : Constants::OrderType::ASCENDING;
 
         return std::any(orderColumn);
     }
@@ -572,25 +572,25 @@ namespace QueryPipeline {
 
         if (action->alterTableAddColumn()) {
             statement->column.newColumn = std::any_cast<Statements::NewColumn*>(visit(action->alterTableAddColumn()));
-            statement->type = AlterTableType::AddColumn;
+            statement->type = Constants::AlterTableType::AddColumn;
             return std::any(statement);
         }
 
         if (action->alterTableModifyColumn()) {
             statement->column.alterColumn = std::any_cast<Statements::AlterColumn*>(visit(action->alterTableModifyColumn()));
-            statement->type = AlterTableType::AlterColumn;
+            statement->type = Constants::AlterTableType::AlterColumn;
             return std::any(statement);
         }
 
         if (action->alterTableDropColumn()) {
             statement->column.dropColumn = std::any_cast<Statements::DropColumn*>(visit(action->alterTableDropColumn()));
-            statement->type = AlterTableType::DropColumn;
+            statement->type = Constants::AlterTableType::DropColumn;
             return std::any(statement);
         }
 
         if (action->alterTableRenameColumn()) {
             statement->column.renameColumn = std::any_cast<Statements::RenameColumn*>(visit(action->alterTableRenameColumn()));
-            statement->type = AlterTableType::RenameColumn;
+            statement->type = Constants::AlterTableType::RenameColumn;
             return std::any(statement);
         }
 
@@ -743,7 +743,7 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitFunctionCall(SQLParser::FunctionCallContext *context){
         const auto name = std::any_cast<std::string>(visit(context->functionName()));
 
-        FunctionType type;
+        Constants::FunctionType type;
         if (!Expressions::FunctionTypeDictionary.TryGetValue(Functions::String::NormalizeString(name), type))
             throw SyntaxError("Failed to parse function name: " + name, CreatePositionErrorMessage(context));
 

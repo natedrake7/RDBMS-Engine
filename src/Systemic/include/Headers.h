@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "../../DatabaseEngine/include/Pages/IndexPageView.h"
 #include "DataStructures/StaticArray.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/Value.h"

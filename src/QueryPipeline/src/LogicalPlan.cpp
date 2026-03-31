@@ -429,7 +429,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     LogicalAlterTable::LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::NewColumn *column
     ): LogicalPlan(sessionId), table(table), type(type) {
         this->column = {
@@ -440,7 +440,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     LogicalAlterTable::LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::AlterColumn *column
     ): LogicalPlan(sessionId), table(table), type(type) {
         this->column = {
@@ -451,7 +451,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     LogicalAlterTable::LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::RenameColumn *column
     ): LogicalPlan(sessionId), table(table), type(type) {
         this->column = {
@@ -462,7 +462,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     LogicalAlterTable::LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::DropColumn *column
     ): LogicalPlan(sessionId), table(table), type(type) {
         this->column = {
@@ -472,13 +472,13 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
     PhysicalPlan::ExecutionNode * LogicalAlterTable::ToPhysical(QueryContext& context){
       switch (this->type) {
-      case AlterTableType::AddColumn:
+      case Constants::AlterTableType::AddColumn:
         return context._context.Allocate<PhysicalPlan::PhysicalAddColumn>(this->sessionId, this->table, this->column.addColumn);
-      case AlterTableType::AlterColumn:
+      case Constants::AlterTableType::AlterColumn:
         return context._context.Allocate<PhysicalPlan::PhysicalAlterColumn>(this->sessionId, this->table, this->column.alterColumn);
-      case AlterTableType::RenameColumn:
+      case Constants::AlterTableType::RenameColumn:
         return context._context.Allocate<PhysicalPlan::PhysicalRenameColumn>(this->sessionId, this->table, this->column.renameColumn);
-      case AlterTableType::DropColumn:
+      case Constants::AlterTableType::DropColumn:
         return context._context.Allocate<PhysicalPlan::PhysicalDropColumn>(this->sessionId, this->table, this->column.dropColumn);
       default:
         return nullptr;

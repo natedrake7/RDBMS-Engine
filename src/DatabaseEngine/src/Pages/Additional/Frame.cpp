@@ -6,11 +6,11 @@ namespace Pages{
         this->table = nullptr;
         this->isDirty = false;
         this->pinCount = 0;
-        this->priority = PagePriority::LOW;
+        this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
         this->headerPtr = nullptr;
-        this->type = PageType::DATA;
+        this->type = Constants::PageType::DATA;
         this->additionalHeader.indexHeaderPtr = nullptr;
         this->additionalHeader.allocationHeaderPtr = nullptr;
     }
@@ -20,11 +20,11 @@ namespace Pages{
         this->table = table;
         this->isDirty = false;
         this->pinCount = 0;
-        this->priority = PagePriority::LOW;
+        this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
         this->headerPtr = reinterpret_cast<PageHeader*>(data);
-        this->type = PageType::DATA;
+        this->type = Constants::PageType::DATA;
         this->additionalHeader.indexHeaderPtr = nullptr;
         this->additionalHeader.allocationHeaderPtr = nullptr;
     }

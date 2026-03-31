@@ -68,7 +68,7 @@ namespace Pages{
     IndexPageView::IndexPageView() : PageView() {}
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
-        this->initialOffset = PAGE_HEADER_SIZE + INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
+        this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     IndexPageView::IndexPageView(IndexPageView&& other) noexcept{
@@ -89,7 +89,7 @@ namespace Pages{
         return *this;
     }
 
-    void IndexPageView::SetTreeType(const TreeType treeType) const{
+    void IndexPageView::SetTreeType(const Constants::TreeType treeType) const{
         this->framePtr->additionalHeader.indexHeaderPtr->SetTreeType(treeType);
     }
 

@@ -25,7 +25,7 @@ namespace DatabaseEngine {
         this->CreateKeys();
 
         if (!this->VersionDatabaseExists(dbName.ToView()))
-            DatabaseEngine::CreateDatabase(VERSION_DATABASE_ID, dbName);
+            DatabaseEngine::CreateDatabase(Constants::VERSION_DATABASE_ID, dbName);
 
         this->lastUsedPageId = INVALID_PAGE_ID;
         const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
@@ -72,8 +72,8 @@ namespace DatabaseEngine {
     }
 
     void VersionDatabase::CreateKeys(){
-        this->dataFileKey = Storage::FileKey(VERSION_DATABASE_ID, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey(VERSION_DATABASE_ID, Storage::FileType::System);
+        this->dataFileKey = Storage::FileKey(Constants::VERSION_DATABASE_ID, Storage::FileType::Data);
+        this->systemFileKey = Storage::FileKey(Constants::VERSION_DATABASE_ID, Storage::FileType::System);
     }
 
     void VersionDatabase::PopulateFilenames(
@@ -81,8 +81,8 @@ namespace DatabaseEngine {
         const DataTypes::String& dbName
     ){
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
-        this->filename = DataTypes::String::Concat(&this->_allocator, path, DATA_FILE_EXTENSION);
-        this->systemFilename = DataTypes::String::Concat(&this->_allocator, path, SYS_EXTENSION, DATA_FILE_EXTENSION);
+        this->filename = DataTypes::String::Concat(&this->_allocator, path, Constants::DATA_FILE_EXTENSION);
+        this->systemFilename = DataTypes::String::Concat(&this->_allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
 
         this->filenameView = this->filename.ToView();
         this->systemFilenameView = this->systemFilename.ToView();
@@ -188,7 +188,7 @@ namespace DatabaseEngine {
             this->lastUsedPageId = newPageId;
         }
 
-        for (page_id_t pageId = newPageId; pageId < newPageId + EXTENT_SIZE; pageId++){
+        for (page_id_t pageId = newPageId; pageId < newPageId + Constants::EXTENT_SIZE; pageId++){
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                 this->systemFileKey,
                 this->systemFilenameView,
@@ -230,7 +230,7 @@ namespace DatabaseEngine {
         for (const auto &extentId : gamPage.GetAllocatedExtents()){
             const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){
+            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
                 {
                     const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
                     const auto pageFreeSpace = Storage::StorageManager::Get().GetPageFreeSpacePage(
@@ -324,10 +324,10 @@ namespace DatabaseEngine {
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto &extentId : extents){
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * EXTENT_SIZE);
+            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * Constants::EXTENT_SIZE);
 
             bool isExtentEmpty = true;
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + EXTENT_SIZE; pageId++){
+            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
                 auto pfsPage = Database::GetAssociatedPfsPage(
                     this->systemFileKey,
                     this->systemFilenameView,

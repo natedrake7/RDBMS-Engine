@@ -194,7 +194,7 @@ namespace Indexing{
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
-        if (this->type == TreeType::Clustered) {
+        if (this->type == Constants::TreeType::Clustered) {
             newChild.DistributeFromPage(&child, this->degree, this->degree);
             BTree::AssignLeavesConnections(child, newChild);
             return;
@@ -386,10 +386,10 @@ namespace Indexing{
 
     Int BTree::CalculateTreeDegree(
         const DatabaseEngine::StorageTypes::Table* otherTable,
-        const TreeType treeType,
+        const Constants::TreeType treeType,
         const Int nonClusteredId
     )const{
-        if(treeType == TreeType::Clustered){
+        if(treeType == Constants::TreeType::Clustered){
           auto rowSize = otherTable->GetMaximumRowSize();
           Int calculatedDegree = static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2));
 
@@ -912,8 +912,12 @@ namespace Indexing{
         pageFreeSpacePage.SetPageMetaData(&node);
     }
 
-    BTree::BTree(DatabaseEngine::StorageTypes::Table *table, const page_id_t indexPageId, const TreeType treeType, const Int nonClusteredIndexId)
-    {
+    BTree::BTree(
+        DatabaseEngine::StorageTypes::Table *table,
+        const page_id_t indexPageId,
+        const Constants::TreeType treeType,
+        const Int nonClusteredIndexId
+    ){
         //handle degree here correctly based on indexed columns
         this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
         this->degree = BTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
@@ -924,15 +928,14 @@ namespace Indexing{
         this->table = table;
     }
 
-    BTree::BTree()
-    {
+    BTree::BTree(){
         this->degree = 0;
         this->keySize = 0;
         this->nonClusteredIndexId = -1;
         this->rootPageId = INVALID_PAGE_INDEX_ID;
         this->table = nullptr;
         this->database = nullptr;
-        this->type = TreeType::NonClustered;
+        this->type = Constants::TreeType::NonClustered;
     }
 
     BTree::~BTree() = default;
@@ -1951,7 +1954,7 @@ namespace Indexing{
 
     Int BTree::GetBranchingFactor() const { return this->degree; }
 
-    void BTree::SetTreeType(const TreeType treeType) { this->type = treeType; }
+    void BTree::SetTreeType(const Constants::TreeType treeType) { this->type = treeType; }
 
     page_id_t BTree::GetFirstIndexPageId() const { return this->rootPageId; }
 
@@ -2031,7 +2034,7 @@ namespace Indexing{
         const DatabaseEngine::Memory::Allocator allocator;
         auto currentNode = this->SearchLeftMostLeafNode(&allocator, indexStatistics.depth);
 
-        if (this->type == TreeType::Clustered){
+        if (this->type == Constants::TreeType::Clustered){
             this->CalculateClusteredStatistics(
                 &allocator,
                 currentNode,

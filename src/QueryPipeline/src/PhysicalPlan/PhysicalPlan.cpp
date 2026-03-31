@@ -215,7 +215,7 @@ namespace QueryPipeline::PhysicalPlan {
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
 
-    const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, DATA_FILE_EXTENSION);
+    const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
 
     const auto result = this->catalog->InsertDbToMasterDb(
         context,
@@ -227,7 +227,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto databaseId = result.primaryKey.AsInt();
 
-    const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, DEFAULT_SCHEMA_NAME);
+    const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
     DatabaseEngine::CreateDatabase(databaseId, this->dbName);
 
@@ -851,8 +851,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       }
 
       //insert identity columns
-      if (column->identity == nullptr)
-        continue;
+      if (column->identity == nullptr) continue;
 
       const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
           context,
@@ -862,25 +861,24 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
           column->identity->incrementFactor,
           column->identity->seed,
           true,
-          column->identity->cacheBlock
-          );
+          static_cast<Int>(column->identity->cacheBlock)
+        );
     }
 
-    const bool isConstraintEmpty = this->constraintName.Empty();
-
-    std::vector<Int> primaryKeyColumnIds;
-
+    DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(context.GetAllocator(), this->primaryKey.columns.Size());
     for (const auto& column: this->primaryKey.columns) {
-      if (isConstraintEmpty)
-        this->constraintName += this->constraintName.Empty()
-          ? "PK_" + this->columns[column]->name.name
-          : "_" + this->columns[column]->name.name;
+      if (this->constraintName.Empty()){
+          this->constraintName.SetAllocator(context.GetAllocator());
 
-      primaryKeyColumnIds.push_back(columnIdsDict.Get(column));
+          const auto& columnName = this->columns[column]->name.name;
+          this->constraintName = DataTypes::String::Concat(context.GetAllocator(), "PK_", columnName, "_", columnName);
+
+      }
+      primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
     }
 
-    constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
-    if (primaryKeyColumnIds.empty()) {
+    static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
+    if (primaryKeyColumnIdsArray.Empty()) {
         tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
         tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
         return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
@@ -909,11 +907,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     const auto constraintId = constraintResult.primaryKey.AsInt(1);
 
-    for(int i = 0;i < primaryKeyColumnIds.size(); i++){
+    for(int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
       auto _ = this->catalog->InsertIndexColumnToMasterDb(
         context,
         indexResult.primaryKey.AsInt(),
-        primaryKeyColumnIds[i],
+        primaryKeyColumnIdsArray[i],
         this->primaryKey.columns[i],
         true
       );
@@ -922,7 +920,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       _ = this->catalog->InsertConstraintColumnToMasterDb(
           context,
           constraintId,
-          primaryKeyColumnIds[i],
+          primaryKeyColumnIdsArray[i],
       this->primaryKey.columns[i]
         );
     }

@@ -76,7 +76,7 @@ namespace DatabaseEngine::StorageTypes {
 
     const ColumnHeader& Column::GetColumnHeader() const { return this->header; }
 
-    bool Column::isColumnLOB() const { return this->header.recordSize >= LARGE_DATA_OBJECT_SIZE; }
+    bool Column::isColumnLOB() const { return this->header.recordSize >= Constants::LARGE_DATA_OBJECT_SIZE; }
 
     bool Column::isColumnOverflowed() const{ return this->isOverflowed; }
 

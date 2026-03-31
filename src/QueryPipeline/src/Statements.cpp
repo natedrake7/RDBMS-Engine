@@ -6,7 +6,6 @@
 #include "../../Server/include/Server.h"
 #include "../include/LogicalPlan.h"
 #include "../../DatabaseEngine/include/SystemDatabases/SystemCatalog.h"
-#include <iostream>
 #include <ranges>
 #include <ValidationMessages.h>
 
@@ -321,7 +320,7 @@ namespace QueryPipeline::Statements {
 
     OrderColumn::OrderColumn(){
         this->expression = nullptr;
-        this->type = OrderType::ASCENDING;
+        this->type = Constants::OrderType::ASCENDING;
     }
 
     OrderColumn::~OrderColumn() = default;
@@ -367,7 +366,7 @@ namespace QueryPipeline::Statements {
         this->tableId = INVALID_TABLE_ID;
         this->schemaId = INVALID_SCHEMA_ID;
         this->ordinalPosition = INVALID_ORDINAL_POS;
-        this->schema = DataTypes::String::FromView(DEFAULT_SCHEMA_NAME, allocator);
+        this->schema = DataTypes::String::FromView(Constants::DEFAULT_SCHEMA_NAME, allocator);
         this->server = &Network::Server::Get();
         this->catalog = &DatabaseEngine::SystemCatalog::Get();
     }
@@ -1603,13 +1602,13 @@ namespace QueryPipeline::Statements {
 
         //validate by type
         switch (this->type) {
-            case AlterTableType::AddColumn:
+            case Constants::AlterTableType::AddColumn:
                 return this->CompileAddColumn(context, columnsDict);
-            case AlterTableType::AlterColumn:
+            case Constants::AlterTableType::AlterColumn:
                 return this->CompileAlterColumn(context, columnsDict);
-            case AlterTableType::DropColumn:
+            case Constants::AlterTableType::DropColumn:
                 return this->CompileDropColumn(context, columnsDict);
-            case AlterTableType::RenameColumn:
+            case Constants::AlterTableType::RenameColumn:
                 return this->CompileRenameColumn(context, columnsDict);
             default:
                 return Errors::ValidationStatus::Error(
@@ -1625,28 +1624,28 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan * AlterTableStatement::ToLogical(QueryContext& context){
         switch (this->type) {
-        case AlterTableType::AddColumn:
+        case Constants::AlterTableType::AddColumn:
             return context._context.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.newColumn
             );
-        case AlterTableType::AlterColumn:
+        case Constants::AlterTableType::AlterColumn:
             return context._context.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.alterColumn
             );
-        case AlterTableType::RenameColumn:
+        case Constants::AlterTableType::RenameColumn:
             return context._context.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.renameColumn
             );
-        case AlterTableType::DropColumn:
+        case Constants::AlterTableType::DropColumn:
             return context._context.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <cstring>
+#include <stdexcept>
 #include <initializer_list>
 
 #include "../DataTypes/DataTypes.h"
@@ -12,49 +12,124 @@ namespace DataStructures{
         static_assert(N > 0);
 
         public:
-            constexpr StaticArray() : _data(N), _size(N) {}
-            explicit constexpr StaticArray(const T* _data, const Int size)
-                : _data(size), _size(size){
+            // Empty array — N slots allocated on stack, 0 logically used
+            constexpr StaticArray() : _data{}, _size(0) {}
 
+            // Fill `size` elements with `value`
+            explicit constexpr StaticArray(const Int size, const T& value = T())
+                : _data{}, _size(size)
+            {
                 if (size > N)
-                    throw std::runtime_error("Array size is greater than array capacity");
-
-                std::memcpy(this->_data, _data, size * sizeof(T));
+                    throw std::runtime_error("StaticArray: size exceeds capacity");
+                for (Int i = 0; i < size; i++)
+                    _data[i] = value;
             }
-            constexpr StaticArray(std::initializer_list<T> list){
-                static_assert(list.size() <= N, "List size is greater than array size");
+
+            // Construct from raw pointer
+            explicit constexpr StaticArray(const T* data, const Int size)
+                : _data{}, _size(size){
+                if (size > N)
+                    throw std::runtime_error("StaticArray: size exceeds capacity");
+                std::memcpy(this->_data, data, size * sizeof(T));
+            }
+
+            // Construct from initializer list
+            constexpr StaticArray(std::initializer_list<T> list)
+                : _data{}, _size(static_cast<Int>(list.size()))
+            {
+                if (static_cast<Int>(list.size()) > N)
+                    throw std::runtime_error("StaticArray: initializer list exceeds capacity");
                 std::memcpy(this->_data, list.begin(), list.size() * sizeof(T));
-                this->_size = list.size();
             }
 
             constexpr T& operator[](const Int index){ return this->_data[index]; }
-            [[nodiscard]] constexpr Int Size() const{ return this->_size; }
+            constexpr const T& operator[](const Int index) const { return this->_data[index]; }
 
-            constexpr const T* Data() const{ return this->_data; }
+            [[nodiscard]] constexpr Int Size() const { return this->_size; }
+            [[nodiscard]] static constexpr Int Capacity() { return N; }
+
+            constexpr const T* Data() const { return this->_data; }
+            constexpr T* Data() { return this->_data; }
+
+            // Push a single element — used by Decimal byte-by-byte construction
+            constexpr void Push(const T& value){
+                if (this->_size >= N)
+                    throw std::runtime_error("StaticArray: Push exceeds capacity");
+                this->_data[this->_size++] = value;
+            }
+
+            constexpr void Insert(const Int index, const T& value){
+                if (index >= this->_size)
+                    throw std::runtime_error("StaticArray Insert: Index is out of range.");
+
+                if (this->_size >= N)
+                    throw std::runtime_error("StaticArray Insert: Array is full.");
+
+                for (Int i = this->_size - 1; i >= index; --i)
+                    this->_data[i + 1] = this->_data[i];
+                this->_data[index] = value;
+                ++this->_size;
+            }
+
+            constexpr void Insert(const Int index, const Int size, const T& data){
+                if (index >= this->_size)
+                    throw std::runtime_error("StaticArray Insert: Index is out of range.");
+                if (this->_size + size > N)
+                    throw std::runtime_error("StaticArray Insert: Array is full.");
+
+                for (Int i = this->_size - 1; i >= index; --i)
+                    this->_data[i + size] = this->_data[i];
+
+                for (Int i = index; i < size; ++i)
+                    this->_data[i] = data;
+                
+                this->_size += size;
+            }
+
+            constexpr void Remove(const Int index){
+                if (index >= this->_size)
+                    throw std::runtime_error("StaticArray Remove: Index is out of range.");
+                for (Int i = index; i < this->_size - 1; ++i)
+                    this->_data[i] = this->_data[i + 1];
+                --this->_size;
+            }
+
+            constexpr void Remove(const Int start, const Int end){
+                if (start >= this->_size || end >= this->_size)
+                    throw std::runtime_error("StaticArray Remove: Index is out of range.");
+                for (Int i = start; i < end; ++i)
+                    this->_data[i] = this->_data[i + (end - start)];
+                this->_size -= (end - start);
+            }
+
+            constexpr void Pop(){
+                if (this->_size == 0)
+                    throw std::runtime_error("StaticArray Pop: Array is empty.");
+                --this->_size;
+            }
 
             constexpr void SetData(const T* data, const Int size){
+                if (size > N)
+                    throw std::runtime_error("StaticArray: size exceeds capacity");
                 std::memcpy(this->_data, data, size * sizeof(T));
                 this->_size = size;
             }
 
-            void SetData(const std::vector<T>& data){
-                const auto size = data.size();
-
+            constexpr void SetSize(const Int size){
                 if (size > N)
-                    throw std::runtime_error("Array size is greater than array capacity");
-                std::memcpy(this->_data, data.data(), size * sizeof(T));
+                    throw std::runtime_error("StaticArray: size exceeds capacity");
                 this->_size = size;
             }
 
-            constexpr bool Empty() const{ return this->_size == 0; }
+            constexpr bool Empty() const { return this->_size == 0; }
 
             using iterator = T*;
             using const_iterator = const T*;
 
             iterator begin() { return this->_data; }
-            iterator end() { return this->_data + this->_size; }
+            iterator end()   { return this->_data + this->_size; }
 
             const_iterator begin() const { return this->_data; }
-            const_iterator end() const { return this->_data + this->_size; }
+            const_iterator end()   const { return this->_data + this->_size; }
     };
 }

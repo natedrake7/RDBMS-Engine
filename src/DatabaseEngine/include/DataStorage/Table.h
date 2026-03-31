@@ -204,7 +204,7 @@ namespace DatabaseEngine::StorageTypes
             [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
             [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
             [[nodiscard]] table_id_t GetTableId() const;
-            [[nodiscard]] TableType GetType() const;
+            [[nodiscard]] Constants::TableType GetType() const;
             [[nodiscard]] bool IsClustered()const;
 
         /** @} End of: Metadata Accessor Functions*/

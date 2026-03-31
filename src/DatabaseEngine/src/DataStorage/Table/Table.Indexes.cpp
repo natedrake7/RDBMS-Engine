@@ -12,12 +12,12 @@
 namespace DatabaseEngine::StorageTypes {
     void Table::GetClusteredIndexFromDisk() const{
         // auto root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
-        this->clusteredIndexedTree->SetTreeType(TreeType::Clustered);
+        this->clusteredIndexedTree->SetTreeType(Constants::TreeType::Clustered);
     }
 
     void Table::GetNonClusteredIndexFromDisk(const Int indexId) const{
         // auto root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
-        this->nonClusteredIndexedTrees[indexId]->SetTreeType(TreeType::NonClustered);
+        this->nonClusteredIndexedTrees[indexId]->SetTreeType(Constants::TreeType::NonClustered);
     }
 
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
@@ -99,7 +99,7 @@ namespace DatabaseEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const Int indexPos, const Int pagesToAllocate){
-        if (this->GetType() == TableType::CLUSTERED) {
+        if (this->GetType() == Constants::TableType::CLUSTERED) {
             this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos, pagesToAllocate);
             return {};
         }
@@ -351,7 +351,7 @@ namespace DatabaseEngine::StorageTypes {
         this->clusteredIndexedTree = this->_allocator.Allocate<Indexing::BTree>(
             this,
             this->header.clusteredIndexPageId,
-            TreeType::Clustered
+            Constants::TreeType::Clustered
         );
 
         if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
@@ -378,7 +378,7 @@ namespace DatabaseEngine::StorageTypes {
               nonClusteredTree = this->_allocator.Allocate<Indexing::BTree>(
                   this,
                   indexPageId,
-                  TreeType::NonClustered,
+                  Constants::TreeType::NonClustered,
                   nonClusteredIndexId
               );
 

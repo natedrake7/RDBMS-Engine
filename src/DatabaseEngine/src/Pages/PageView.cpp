@@ -11,7 +11,7 @@ namespace Pages{
     PageHeader::PageHeader(){
         this->pageId = INVALID_PAGE_ID;
         this->size = 0;
-        this->bytesLeft = static_cast<page_size_t>(PAGE_SIZE - PAGE_HEADER_SIZE);
+        this->bytesLeft = static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
     }
 
     PageHeader::~PageHeader() = default;
@@ -25,15 +25,15 @@ namespace Pages{
     }
 
     page_offset_t PageView::NewInsertOffset() const{
-        return PAGE_SIZE - this->framePtr->headerPtr->bytesLeft - this->framePtr->headerPtr->size * SlotDirectory::Size;
+        return Constants::PAGE_SIZE - this->framePtr->headerPtr->bytesLeft - this->framePtr->headerPtr->size * SlotDirectory::Size;
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){
-        return PAGE_SIZE - (indexPosition + 1) * SlotDirectory::Size;
+        return Constants::PAGE_SIZE - (indexPosition + 1) * SlotDirectory::Size;
     }
 
     Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-        return PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::Size;
+        return Constants::PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::Size;
     }
 
     void PageView::UpdateSlotDirectory(
@@ -68,9 +68,9 @@ namespace Pages{
     }
 
     Int PageView::RawDataSize() const{
-        return this->framePtr->type == PageType::INDEX
-                   ? INDEX_PAGE_DEFAULT_SIZE
-                   : PAGE_SIZE_WITHOUT_HEADER;
+        return this->framePtr->type == Constants::PageType::INDEX
+                   ? Constants::INDEX_PAGE_DEFAULT_SIZE
+                   : Constants::PAGE_SIZE_WITHOUT_HEADER;
     }
 
     void PageView::InsertFirstRow(const DatabaseEngine::StorageTypes::InsertPayload& payload) const{
@@ -211,18 +211,18 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->framePtr->type == PageType::INDEX;
+        return this->framePtr->type == Constants::PageType::INDEX;
     }
 
     PageView::PageView(){
         this->framePtr = nullptr;
-        this->initialOffset = PAGE_HEADER_SIZE;
+        this->initialOffset = Constants::PAGE_HEADER_SIZE;
     }
 
     PageView::PageView(Frame* framePtr){
         this->framePtr = framePtr;
         this->framePtr->pinCount.fetch_add(1, std::memory_order_relaxed);
-        this->initialOffset = PAGE_HEADER_SIZE;
+        this->initialOffset = Constants::PAGE_HEADER_SIZE;
     }
 
     PageView& PageView::operator=(PageView&& other) noexcept{
@@ -536,7 +536,7 @@ namespace Pages{
         return this->framePtr != nullptr;
     }
 
-    PageType PageView::GetPageType() const{
+    Constants::PageType PageView::GetPageType() const{
         return this->framePtr->type;
     }
 

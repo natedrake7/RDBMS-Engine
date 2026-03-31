@@ -232,7 +232,7 @@ namespace Network {
     ){
         DatabaseEngine::Database *db = nullptr;
 
-        if (databaseId == SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
+        if (databaseId == Constants::SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
 
         MultiThreading::ReaderGuard lock(&this->databasesLatch);
 

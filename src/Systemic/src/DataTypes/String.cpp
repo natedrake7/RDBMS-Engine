@@ -1275,4 +1275,37 @@ namespace DataTypes{
     String::reverse_iterator String::rend() const{
         return reverse_iterator(this->_data);
     }
+
+    char String::First() const{
+        if (this->_size == 0)
+            throw std::out_of_range("String is empty.");
+        return this->_data[0];
+    }
+
+    char String::Last() const{
+        if (this->_size == 0)
+            throw std::out_of_range("String is empty.");
+        return this->_data[this->_size - 1];
+    }
+
+    void String::Insert(const Int index, const char c){
+        if (index < 0 || index > this->_size)
+            throw std::out_of_range("Index out of range.");
+
+        if (!this->CanFit(this->_size + 1))
+            this->CalculateCapacity(this->_size + 1);
+
+        auto* buf = static_cast<char*>(this->_allocator->AllocateRaw(this->_capacity));
+        std::memcpy(buf, this->_data, index * sizeof(char));
+        buf[index] = c;
+        std::memcpy(buf + index + 1, this->_data + index, (this->_size - index) * sizeof(char));
+        this->_data = buf;
+        this->_size++;
+    }
+
+    void String::Pop(){
+        if (this->_size == 0)
+            throw std::out_of_range("String is empty.");
+        this->_size--;
+    }
 }

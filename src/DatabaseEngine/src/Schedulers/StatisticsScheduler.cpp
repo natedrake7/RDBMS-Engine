@@ -8,7 +8,6 @@
 #include "SystemDatabases/SystemCatalog.h"
 
 #include <cmath>
-#include <cstdint>
 #include <iostream>
 
 #include "DataStorage/Table.h"
@@ -260,7 +259,7 @@ namespace DatabaseEngine {
 
         const Memory::Allocator allocator;
         for (const auto& extentId : extents) {
-            const page_id_t extentFirstPageId = extentId * EXTENT_SIZE;
+            const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
 
             const auto pageFreeSpacePage = DatabaseEngine::Database::GetAssociatedPfsPage(
                 systemKey,
@@ -275,9 +274,9 @@ namespace DatabaseEngine {
             bool successfulPfsLock = false;
             auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
 
-            for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + EXTENT_SIZE; extentPageId++){
+            for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
                 if (successfulPfsLock
-                    && pageFreeSpacePage.GetPageType(extentPageId) != PageType::DATA
+                    && pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA
                 ) break;
 
                 auto page = Storage::StorageManager::Get().GetPage(
@@ -294,7 +293,7 @@ namespace DatabaseEngine {
 
                 const auto pageSize = page.PageSize();
                 const auto fallBackPageType = page.GetPageType();
-                if (pageSize == 0 || (fallBackPageType != PageType::INDEX && fallBackPageType != PageType::DATA))
+                if (pageSize == 0 || (fallBackPageType != Constants::PageType::INDEX && fallBackPageType != Constants::PageType::DATA))
                     continue;
 
                 averageRowsPerPage += pageSize;

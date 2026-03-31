@@ -41,7 +41,7 @@ namespace Indexing{
 
         Int nonClusteredIndexId;
         page_id_t rootPageId;
-        TreeType type;
+        Constants::TreeType type;
 
         static void AssignLeavesConnections(
             const Pages::IndexPageView& child,
@@ -138,7 +138,7 @@ namespace Indexing{
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator, TinyInt& depth) const;
 
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
-        [[nodiscard]] Int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, TreeType treeType, Int nonClusteredId)const;
+        [[nodiscard]] Int CalculateTreeDegree(const DatabaseEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
 
         [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, Int pagesToAllocate);
 
@@ -196,7 +196,7 @@ namespace Indexing{
         explicit BTree(
             DatabaseEngine::StorageTypes::Table *table,
             page_id_t indexPageId,
-            TreeType treeType,
+            Constants::TreeType treeType,
             Int nonClusteredIndexId = -1
         );
         BTree();
@@ -349,7 +349,7 @@ namespace Indexing{
 
         [[nodiscard]] Int GetBranchingFactor() const;
 
-        void SetTreeType(TreeType treeType);
+        void SetTreeType(Constants::TreeType treeType);
 
         [[nodiscard]] page_id_t GetFirstIndexPageId() const;
 

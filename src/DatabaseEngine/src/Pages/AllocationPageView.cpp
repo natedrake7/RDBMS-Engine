@@ -31,12 +31,12 @@ namespace Pages{
 
     AllocationPageView::AllocationPageView() : PageView() {
         this->lastAllocatedExtentId = 0;
-        this->initialOffset = PAGE_HEADER_SIZE + ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
+        this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     AllocationPageView::AllocationPageView(Frame* framePtr) : PageView(framePtr) {
         this->lastAllocatedExtentId = 0;
-        this->initialOffset = PAGE_HEADER_SIZE + ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
+        this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     AllocationPageView::AllocationPageView(AllocationPageView&& other) noexcept{
@@ -66,7 +66,7 @@ namespace Pages{
         for (const auto& extentId : extentIds){
             const extent_id_t bitMapId = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
-            if (bitMapId >= EXTENT_BIT_MAP_SIZE)
+            if (bitMapId >= Constants::EXTENT_BIT_MAP_SIZE)
                 return extentId;
 
             this->SetBit(bitMapId);
@@ -95,7 +95,7 @@ namespace Pages{
         const page_id_t globalAllocationMapPageId = DatabaseEngine::Database::GetGamAssociatedPage(this->framePtr->headerPtr->pageId);
         const page_id_t offSet = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
-        if(startingExtentIndex >= EXTENT_BIT_MAP_SIZE)
+        if(startingExtentIndex >= Constants::EXTENT_BIT_MAP_SIZE)
             return;
 
         MultiThreading::ReaderGuard lock(&this->framePtr->latch);
@@ -114,6 +114,6 @@ namespace Pages{
     }
 
     page_id_t AllocationPageView::CalculatePageIdOffsetByGamPageId(const page_id_t globalAllocationMapPageId) {
-        return (globalAllocationMapPageId - 2) * GAM_PAGE_SIZE;
+        return (globalAllocationMapPageId - 2) * Constants::GAM_PAGE_SIZE;
     }
 }

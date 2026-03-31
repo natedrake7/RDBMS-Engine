@@ -1,78 +1,94 @@
 ﻿#pragma once
-#include <array>
 
-#include "../../../DatabaseEngine/include/DatabaseConstants.h"
 #include <string>
 #include <vector>
-#include <limits>
 
 #include "String.h"
-
-using namespace Constants;
+#include "../DataStructures/StaticArray.h"
 
 static constexpr Int DECIMAL_ARRAY_SIZE = 20;
+static constexpr Int DECIMAL_TEMPORARY_BUFFER_SIZE = 2 * DECIMAL_ARRAY_SIZE;
+static constexpr Int DECIMAL_MULTIPLICATION_BUFFER_SIZE = 4 * DECIMAL_ARRAY_SIZE;
+
+static constexpr Int DECIMAL_ZERO = 0x00;
+static constexpr Int DECIMAL_HEADER_INDEX = 0;
+static constexpr Int DECIMAL_DIGITS_START_INDEX = 1;
 
 namespace DataTypes {
     class StringView;
 
     class Decimal final {
-        std::array<byte_t, DECIMAL_ARRAY_SIZE> _data;
-        Int _size;
+        DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE> _data;
+
+        using DataBuffer = DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE>;
+        using TempBuffer = DataStructures::StaticArray<Int, DECIMAL_TEMPORARY_BUFFER_SIZE>;
+        using MultiplicationBuffer = DataStructures::StaticArray<Int, DECIMAL_MULTIPLICATION_BUFFER_SIZE>;
+
+        enum class ComparisonResult : TinyInt{
+            Less = -1,
+            Equal = 0,
+            Greater = 1,
+        };
 
     protected:
         template <typename T>
         void InitializeFromInteger(T value);
 
-        static std::vector<Int> Unpack(const std::vector<byte_t>& bytes);
-        static std::vector<Int> MultiplyDigits(const std::vector<Int>& leftDigits, const std::vector<Int>& rightDigits);
-        static std::array<byte_t, DECIMAL_ARRAY_SIZE> Pack(
-            const std::array<byte_t, 2 * DECIMAL_ARRAY_SIZE> &digits,
+        static TempBuffer Unpack(const DataBuffer& bytes);
+        static MultiplicationBuffer MultiplyDigits(
+            const TempBuffer& leftDigits,
+            const TempBuffer& rightDigits
+        );
+        static DataBuffer Pack(
+            const TempBuffer& digits,
             bool isPositive,
             fraction_index_t fractionIndex
         );
 
-        static fraction_index_t GetFractionIndex(const std::string& value);
+        static DataBuffer Pack(
+            const MultiplicationBuffer& digits,
+            bool isPositive,
+            fraction_index_t fractionIndex
+        );
+
+        // static fraction_index_t GetFractionIndex(const StringView& value);
 
         static fraction_index_t DetermineResultFractionIndex(
             fraction_index_t leftFractionIndex,
             fraction_index_t rightFractionIndex
         );
-        static int CompareDecimalsWithoutSign(
-            const std::vector<byte_t>& leftData,
-            const std::vector<byte_t>& rightData
+        static ComparisonResult CompareDecimalsWithoutSign(
+            const DataBuffer& leftData,
+            const DataBuffer& rightData
         );
 
         static Decimal Add(
-            const std::vector<byte_t>& left,
-            const std::vector<byte_t>& right,
+            const DataBuffer& left,
+            const DataBuffer& right,
             fraction_index_t fractionIndex,
             bool isPositive
         );
 
         static void PadFractionalParts(
-            std::vector<byte_t>& left,
-            std::vector<byte_t>& right,
-            fraction_index_t& leftFractionIndex,
-            fraction_index_t& rightFractionIndex
+            DataBuffer& left, DataBuffer& right,
+            fraction_index_t leftFractionIndex,
+            fraction_index_t rightFractionIndex
         );
 
         static void PadNonFractionalParts(
-            std::vector<byte_t>& left,
-            std::vector<byte_t>& right,
+            DataBuffer& left, DataBuffer& right,
             fraction_index_t& leftFractionIndex,
             fraction_index_t& rightFractionIndex
         );
 
         static Decimal Subtract(
-            const std::vector<byte_t>& left,
-            const std::vector<byte_t>& right,
+            const DataBuffer& left, const DataBuffer& right,
             fraction_index_t fractionIndex,
             bool isPositive
         );
 
         static Decimal Multiply(
-            const std::vector<byte_t>& left,
-            const std::vector<byte_t>& right,
+            const DataBuffer& left, const DataBuffer& right,
             fraction_index_t& fractionIndex,
             bool isPositive
         );
@@ -85,29 +101,29 @@ namespace DataTypes {
         );
 
         static void TrimLeadingZeros(
-            std::vector<Int>& digits,
+            MultiplicationBuffer& digits,
             fraction_index_t& fractionIndex
         );
 
         static void TrimTrailingZeros(
-            std::vector<Int>& digits,
+            MultiplicationBuffer& digits,
             fraction_index_t fractionIndex
         );
 
         static void PadDecimalParts(
-            std::vector<Int>& digits,
+            MultiplicationBuffer& digits,
             fraction_index_t& fractionIndex
         );
 
         [[nodiscard]] static byte_t CreateSignAndFractionByte(bool isPositive, fraction_index_t fractionIndex) ;
 
-        [[nodiscard]] static bool IsGreaterMagnitude(const std::vector<byte_t>& left, const std::vector<byte_t>& right);
+        [[nodiscard]] static bool IsGreaterMagnitude(const DataBuffer& left, const DataBuffer& right);
 
     public:
         Decimal();
         explicit Decimal(const StringView& value);
         explicit Decimal(const byte_t* data, Int dataSize);
-        explicit Decimal(const std::vector<byte_t>& value);
+        // explicit Decimal(const std::vector<byte_t>& value);
         explicit Decimal(bool value);
         explicit Decimal(TinyInt value);
         explicit Decimal(SmallInt value);
@@ -124,7 +140,7 @@ namespace DataTypes {
 
         [[nodiscard]] Int GetRawDataSize() const;
 
-        [[nodiscard]] const std::vector<byte_t>& GetData() const;
+        [[nodiscard]] const DataBuffer& Data() const;
 
         [[nodiscard]] static Int Size(Int precision);
         [[nodiscard]] double ToDouble() const;

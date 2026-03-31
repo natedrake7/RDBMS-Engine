@@ -214,7 +214,7 @@ public:
     Pages::IndexPageView CreateIndexPage(
       table_id_t tableOrdinalPosition,
       Int pageCount,
-      TreeType treeType,
+      Constants::TreeType treeType,
       page_id_t treeId = 0
     );
 

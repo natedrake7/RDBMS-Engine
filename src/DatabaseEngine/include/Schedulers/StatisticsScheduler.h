@@ -23,9 +23,10 @@ namespace MultiThreading {
 }
 
 namespace DatabaseEngine {
-  class StatisticsManager;
-  class SystemCatalog;
-  class Database;
+    class ExecutionContext;
+    class StatisticsManager;
+    class SystemCatalog;
+    class Database;
 
   namespace StorageTypes {
     class Table;

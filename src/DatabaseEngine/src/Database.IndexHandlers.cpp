@@ -69,8 +69,8 @@ namespace DatabaseEngine {
                                 : 0;
 
         const auto treeType = isNonClusteredIndex
-                                    ? TreeType::NonClustered
-                                    : TreeType::Clustered;
+                                    ? Constants::TreeType::NonClustered
+                                    : Constants::TreeType::Clustered;
 
         if(indexPageId == INVALID_PAGE_ID)
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
@@ -88,7 +88,7 @@ namespace DatabaseEngine {
         for(const auto& extentId: allocatedExtents){
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
-            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + EXTENT_SIZE; nextIndexPageId++){
+            for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + Constants::EXTENT_SIZE; nextIndexPageId++){
                 {
                     const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                         this->systemFileKey,
@@ -98,7 +98,7 @@ namespace DatabaseEngine {
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
 
-                    if (pageFreeSpacePage.GetPageType(nextIndexPageId) != PageType::INDEX)
+                    if (pageFreeSpacePage.GetPageType(nextIndexPageId) != Constants::PageType::INDEX)
                         continue;
 
                     //page is free

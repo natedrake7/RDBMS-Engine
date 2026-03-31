@@ -334,9 +334,8 @@ namespace DataTypes{
             case DataType::Decimal:
                 return 0;
             case DataType::String:
-                return Converter<Int>::Stoi(value.AsString());
             case DataType::UnicodeString:
-                return Converter<Int>::Stoi(value.AsUnicodeString());
+                return Converter<Int>::Stoi(value.AsStringView());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
             default:
@@ -360,9 +359,8 @@ namespace DataTypes{
             case DataType::Decimal:
                 return 0;
             case DataType::String:
-                return Converter<BigInt>::Stoi(value.AsString());
             case DataType::UnicodeString:
-                return Converter<BigInt>::Stoi(value.AsUnicodeString());
+                return Converter<BigInt>::Stoi(value.AsStringView());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
             default:

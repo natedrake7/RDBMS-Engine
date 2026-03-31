@@ -36,7 +36,7 @@ namespace DatabaseEngine::StorageTypes{
                 continue;
             }
 
-            if (value.Size() >= LARGE_OBJECT_THRESHOLD_SIZE)
+            if (value.Size() >= Constants::LARGE_OBJECT_THRESHOLD_SIZE)
                 rowHeader.largeObjectBitMap.Set(columnOrdinal, true);
 
             nonNullColumnCount++;
@@ -147,7 +147,7 @@ namespace DatabaseEngine::StorageTypes{
                 continue;
             }
 
-            if (value.Size() >= LARGE_OBJECT_THRESHOLD_SIZE)
+            if (value.Size() >= Constants::LARGE_OBJECT_THRESHOLD_SIZE)
                 rowHeader.largeObjectBitMap.Set(columnOrdinal, true);
 
             nonNullColumnCount++;

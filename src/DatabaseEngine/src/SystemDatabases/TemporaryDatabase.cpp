@@ -72,11 +72,11 @@ namespace DatabaseEngine {
         if (this->Exists(dbName.ToView()))
             this->ClearTemporaryFiles(allocator, dbName);
 
-        CreateDatabase(TEMPORARY_DATABASE_ID, dbName);
+        CreateDatabase(Constants::TEMPORARY_DATABASE_ID, dbName);
 
         this->_db = new Database(
             allocator,
-            TEMPORARY_DATABASE_ID,
+            Constants::TEMPORARY_DATABASE_ID,
             dbName,
             true
         );

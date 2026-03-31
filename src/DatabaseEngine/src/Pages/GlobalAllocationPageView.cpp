@@ -54,7 +54,7 @@ namespace Pages{
     int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents){
         int allocatedExtents = 0;
 
-        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < EXTENT_BIT_MAP_SIZE; extentId++){
+        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
             if (allocatedExtents == numberOfExtents)
                 break;
 
@@ -79,20 +79,20 @@ namespace Pages{
     }
 
     bool GlobalAllocationPageView::IsFull() const{
-        return this->GetBit(EXTENT_BIT_MAP_SIZE - 1);
+        return this->GetBit(Constants::EXTENT_BIT_MAP_SIZE - 1);
     }
 
     std::vector<extent_id_t> GlobalAllocationPageView::GetAllocatedExtents(const extent_id_t startingIndex) const{
         std::vector<extent_id_t> allocatedExtents;
 
-        if(startingIndex >= EXTENT_BIT_MAP_SIZE)
+        if(startingIndex >= Constants::EXTENT_BIT_MAP_SIZE)
             return allocatedExtents;
 
         MultiThreading::ReaderGuard lock(&this->framePtr->latch);
 
-        allocatedExtents.reserve(EXTENT_BIT_MAP_SIZE - startingIndex);
+        allocatedExtents.reserve(Constants::EXTENT_BIT_MAP_SIZE - startingIndex);
 
-        for (extent_id_t id = startingIndex; id < EXTENT_BIT_MAP_SIZE; id++){
+        for (extent_id_t id = startingIndex; id < Constants::EXTENT_BIT_MAP_SIZE; id++){
             if (!this->GetBit(id))
                 continue;
 

@@ -5,7 +5,7 @@
 
 namespace Pages{
     void HeaderPageView::ReadTableHeadersFromDisk(){
-        page_offset_t offSet = sizeof(DatabaseEngine::DatabaseHeader) + PAGE_HEADER_SIZE;
+        page_offset_t offSet = sizeof(DatabaseEngine::DatabaseHeader) + Constants::PAGE_HEADER_SIZE;
 
         this->tablesHeaders.reserve(this->databaseHeaderPtr->numberOfTables);
 
@@ -42,7 +42,7 @@ namespace Pages{
 
     HeaderPageView::HeaderPageView(Frame* framePtr) : PageView(framePtr){
         this->databaseHeaderPtr = reinterpret_cast<DatabaseEngine::DatabaseHeader*>(
-            framePtr->data + PAGE_HEADER_SIZE
+            framePtr->data + Constants::PAGE_HEADER_SIZE
         );
 
         this->ReadTableHeadersFromDisk();
@@ -95,7 +95,7 @@ namespace Pages{
     }
 
     void HeaderPageView::WriteTableHeadersToDisk() const{
-        page_offset_t offSet = sizeof(DatabaseEngine::DatabaseHeader) + PAGE_HEADER_SIZE;
+        page_offset_t offSet = sizeof(DatabaseEngine::DatabaseHeader) + Constants::PAGE_HEADER_SIZE;
 
         for (const auto& tableHeader : this->tablesHeaders){
             std::memcpy(this->framePtr->data + offSet, &tableHeader.tableId, sizeof(table_id_t));

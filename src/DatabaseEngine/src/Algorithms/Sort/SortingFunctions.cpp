@@ -101,7 +101,7 @@ bool SortingFunctions::CompareRows(
         if(result == 0)
             continue;
 
-        return (condition->type == OrderType::DESCENDING)
+        return (condition->type == Constants::OrderType::DESCENDING)
                         ? (result < 0)
                         : (result > 0);
     }
@@ -174,21 +174,21 @@ std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
         {
             switch (condition.GetAggregateFunction())
             {
-                case NONE:
-                case COUNT:
+                case Constants::NONE:
+                case Constants::COUNT:
                 default:
                     aggregateResults.count = AggregateFunctions::Count(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
                     break;
-                case SUM:
+                case Constants::SUM:
                     aggregateResults.sum = AggregateFunctions::Sum(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
                     break;
-                case MIN:
+                case Constants::MIN:
                     aggregateResults.min = AggregateFunctions::Min(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
                     break;
-                case MAX:
+                case Constants::MAX:
                     aggregateResults.max = AggregateFunctions::Max(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
                     break;
-                case AVERAGE:
+                case Constants::AVERAGE:
                     aggregateResults.average = AggregateFunctions::Average(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
                     break;
             }
@@ -237,15 +237,15 @@ long double SortingFunctions::ApplyAggregateFunctionToGroup(const std::vector<Pa
 {
     switch (condition.GetAggregateFunction())
     {
-        case NONE:
-        case COUNT:
+        case Constants::NONE:
+        case Constants::COUNT:
         default:
             return static_cast<long double>(AggregateFunctions::Count(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue()));
-        case SUM:
+        case Constants::SUM:
             return AggregateFunctions::Sum(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
-        case MIN:
+        case Constants::MIN:
             return AggregateFunctions::Min(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
-        case MAX:
+        case Constants::MAX:
             return AggregateFunctions::Max(rowGroup, condition.GetColumnIndex(), condition.GetConstantValue());
     }
 }

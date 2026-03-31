@@ -338,6 +338,13 @@ namespace DataTypes{
             [[nodiscard]] reverse_iterator rbegin() const;
             [[nodiscard]] reverse_iterator rend() const;
 
+            [[nodiscard]] char First()const;
+            [[nodiscard]] char Last()const;
+
+            void Insert(Int index, char c);
+            void Pop();
+
+            //Constant Evaluation Functions
             [[nodiscard]] static constexpr char ToLower(char c) noexcept;
 
     };

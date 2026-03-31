@@ -27,9 +27,9 @@ namespace Pages{
         return PackedByte::ExtractBits<bool>(*byte, 0, ALLOCATION_MASK);
     }
 
-    PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
+    Constants::PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
         const auto byte = this->framePtr->data + this->initialOffset + pageId;
-        return PackedByte::ExtractBits<PageType>(*byte, TYPE_SHIFT, TYPE_MASK);
+        return PackedByte::ExtractBits<Constants::PageType>(*byte, TYPE_SHIFT, TYPE_MASK);
     }
 
     byte_t PageFreeSpaceView::GetPageSizeCategory(const page_id_t pageId) const{
@@ -64,7 +64,7 @@ namespace Pages{
         PackedByte::SetBits(*byte, pageAllocationStatus, 0, ALLOCATION_MASK);
     }
 
-    void PageFreeSpaceView::SetPageType(const page_id_t pageId, PageType pageType) const{
+    void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
         const auto byte = this->framePtr->data + this->initialOffset + pageId;
         PackedByte::SetBits(*byte, static_cast<byte_t>(pageType), TYPE_SHIFT, TYPE_MASK);
     }

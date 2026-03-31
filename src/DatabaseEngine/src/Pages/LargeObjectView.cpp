@@ -6,13 +6,13 @@ namespace Pages{
     LargeObjectView::LargeObjectView() : PageView(){
         this->objectSizePtr = nullptr;
         this->nextPageIdPtr = nullptr;
-        this->initialOffset = LARGE_OBJECT_METADATA_SIZE;
+        this->initialOffset = Constants::LARGE_OBJECT_METADATA_SIZE;
     }
 
     LargeObjectView::LargeObjectView(Frame* framePtr) : PageView(framePtr){
-        this->objectSizePtr = reinterpret_cast<page_size_t*>(this->framePtr->data + PAGE_HEADER_SIZE);
-        this->nextPageIdPtr = reinterpret_cast<page_id_t*>(this->framePtr->data + PAGE_HEADER_SIZE + sizeof(page_size_t));
-        this->initialOffset = LARGE_OBJECT_METADATA_SIZE;
+        this->objectSizePtr = reinterpret_cast<page_size_t*>(this->framePtr->data + Constants::PAGE_HEADER_SIZE);
+        this->nextPageIdPtr = reinterpret_cast<page_id_t*>(this->framePtr->data + Constants::PAGE_HEADER_SIZE + sizeof(page_size_t));
+        this->initialOffset = Constants::LARGE_OBJECT_METADATA_SIZE;
     }
 
     LargeObjectView::LargeObjectView(LargeObjectView&& other) noexcept{
@@ -61,6 +61,6 @@ namespace Pages{
     }
 
     void LargeObjectView::SetData(const object_t* object, const page_size_t size) const{
-        std::memcpy(this->framePtr->data + LARGE_OBJECT_METADATA_SIZE, object, size);
+        std::memcpy(this->framePtr->data + Constants::LARGE_OBJECT_METADATA_SIZE, object, size);
     }
 }

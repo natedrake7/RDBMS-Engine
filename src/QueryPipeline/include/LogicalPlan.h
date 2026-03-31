@@ -256,28 +256,28 @@ namespace QueryPipeline {
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource* table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::NewColumn* column
       );
 
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource* table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::AlterColumn* column
       );
 
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource* table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::RenameColumn* column
       );
 
       explicit LogicalAlterTable(
         const DataTypes::Guid& sessionId,
         Statements::DataSource* table,
-        const AlterTableType& type,
+        const Constants::AlterTableType& type,
         Statements::DropColumn* column
       );
 
