@@ -3,7 +3,7 @@
 #include "DataTypes.h"
 #include "StringView.h"
 
-static constexpr ConstexprDictionary<DataType, Int, 9> ColumnTypeRank{
+static constexpr ConstexprDictionary ColumnTypeRank{
     Pair(DataType::String, 1),
     Pair(DataType::UnicodeString, 2),
     Pair(DataType::Bool, 3),
@@ -51,7 +51,7 @@ static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseIn
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
-static constexpr ConstexprDictionary<DataType, DataTypes::StringView, 11> DataTypeToStringDictionary{
+static constexpr ConstexprDictionary DataTypeToStringDictionary{
     Pair(DataType::TinyInt, DataTypes::StringView("TinyInt")),
     Pair(DataType::SmallInt, DataTypes::StringView("SmallInt")),
     Pair(DataType::Int, DataTypes::StringView("Int")),

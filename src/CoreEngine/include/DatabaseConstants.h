@@ -182,7 +182,11 @@ namespace Constants{
         // Null Checking Functions
         // -----------------------
         Coalesce = 150,
-        NullIf = 121
+        NullIf = 151,
+
+
+        //Sentinel (Plugins Lookup)
+        Plugin = 200,
     };
 
     static constexpr auto ADMIN_NAME = DataTypes::StringView("admin");

@@ -52,9 +52,9 @@ namespace External {
     return true;
   }
 
-  void Plugin::Execute(const std::string &name) {
+  void Plugin::Execute(const DataTypes::StringView& name) {
     FunctionDescriptor descriptor;
-    if (!registry.TryGetValue(name, descriptor)) {
+    if (!Plugin::registry.TryGetValue(name, descriptor)) {
       std::cerr << "[Plugin] Function not found: " << name << std::endl;
       return;
     }
@@ -73,17 +73,24 @@ namespace External {
     std::cout << "[Plugin Log]: " << message << std::endl;
   }
 
-  int Plugin::RegisterScalar(const char *name, const udf_func_t fn, const int min_args, const int max_args, const char *help) {
+  int Plugin::RegisterScalar(
+      const char *name,
+      const udf_func_t fn,
+      const int min_args,
+      const int max_args,
+      const char *help
+    ) {
       const auto strName = std::string(name);
+      const auto nameView = DataTypes::StringView(strName);
 
-      auto functionDesc = FunctionDescriptor{
+      FunctionDescriptor functionDesc{
           .fn = fn,
           .min_args = min_args,
           .max_args = max_args,
           .help = std::string(help)
       };
 
-      registry.Add(strName, std::move(functionDesc));
+      Plugin::registry.Add(nameView, std::move(functionDesc));
 
       std::cout << "[Engine] Registered scalar function: " << strName << std::endl;
       return 0;

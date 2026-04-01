@@ -98,11 +98,6 @@ namespace DataTypes{
         this->_size = size;
     }
 
-    StringView::StringView(StringView&& other) noexcept
-        : _data(other._data), _size(other._size){
-        other._data = nullptr;
-    }
-
     StringView::StringView(const std::string& other)
         : _data(other.data()), _size(static_cast<Int>(other.size())){}
 

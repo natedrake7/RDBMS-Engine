@@ -34,6 +34,7 @@ namespace Tests{
         std::cout << sum << std::endl;
 
         constexpr auto strValue = DataTypes::StringView("1000.020");
+        constexpr auto strValue2 = DataTypes::StringView("-1000.020");
         constexpr auto lhs2 = DataTypes::Decimal(100);
         constexpr auto rhs2 = DataTypes::Decimal(strValue);
         constexpr auto sum2 = lhs2 + rhs2;
@@ -57,8 +58,15 @@ namespace Tests{
 
         constexpr auto lhs6 = DataTypes::Decimal(strValue);
         constexpr auto rhs6 = DataTypes::Decimal(strValue);
-        constexpr auto sum6 = lhs6 * rhs6;
+        const auto sum6 = lhs6 * rhs6;
         std::cout << sum6 << std::endl;
+
+        constexpr auto lhs7 = DataTypes::Decimal(strValue);
+        constexpr auto rhs7 = DataTypes::Decimal(strValue2);
+        constexpr auto sum7 = lhs7 - rhs7;
+
+        constexpr auto strSum7 = sum7.ToBufferString();
+        std::cout << sum7 << std::endl;
     }
 
     void IndexPageUpdate(){

@@ -689,14 +689,13 @@ constexpr void Decimal::PadFractionalParts(
     const fraction_index_t leftFractionIndex,
     const fraction_index_t rightFractionIndex
 ){
-    const int leftFracDigits = left.Size() * 2 - leftFractionIndex;
-    const int rightFracDigits = right.Size() * 2 - rightFractionIndex;
-    const int maxFracDigits = std::max(leftFracDigits, rightFracDigits);
+    const auto leftFracDigits = left.Size() * 2 - leftFractionIndex;
+    const auto rightFracDigits = right.Size() * 2 - rightFractionIndex;
+    const auto maxFracDigits = std::max(leftFracDigits, rightFracDigits);
 
     if (leftFracDigits < maxFracDigits) {
         const auto digitsToAdd = maxFracDigits - leftFracDigits;
         const auto bytesToAdd = (digitsToAdd + 1) / 2;
-
         for (auto i = 0; i < bytesToAdd; i++)
             left.Push(DECIMAL_ZERO);
     }
@@ -704,7 +703,6 @@ constexpr void Decimal::PadFractionalParts(
     if (rightFracDigits < maxFracDigits) {
         const auto digitsToAdd = maxFracDigits - rightFracDigits;
         const auto bytesToAdd = (digitsToAdd + 1) / 2;
-
         for (auto i = 0; i < bytesToAdd; i++)
             right.Push(DECIMAL_ZERO);
     }

@@ -3,6 +3,7 @@
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "../../../Systemic/include/DataStructures/Dictionary.h"
 class Variable;
 
 namespace CoreEngine{
@@ -180,10 +181,10 @@ namespace Expressions{
         bool PerformAdditionalValidations(DataTypes::String& errorMessage)const;
 
     public:
-        std::vector<Expression*> arguments;
+        DataStructures::PolymorphicArray<Expression*> arguments;
         Constants::FunctionType functionType;
 
-        FunctionExpression(Constants::FunctionType functionType, std::vector<Expression*>& arguments);
+        FunctionExpression(Constants::FunctionType functionType, DataStructures::PolymorphicArray<Expression*>& arguments);
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
 
         //String Function
@@ -212,13 +213,15 @@ namespace Expressions{
 
         //Null Checking Functions
         [[nodiscard]] static Value NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
-        [[nodiscard]] static bool ValidateNullIf(const std::vector<Expression*>& arguments, DataTypes::String& errorMessage);
+        [[nodiscard]] static bool ValidateNullIf(const DataStructures::PolymorphicArray<Expression*>& arguments, DataTypes::String& errorMessage);
 
         [[nodiscard]] static Value Coalesce(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
-        [[nodiscard]] static bool ValidateCoalesce(const std::vector<Expression*>& arguments, DataTypes::String& errorMessage);
+        [[nodiscard]] static bool ValidateCoalesce(const DataStructures::PolymorphicArray<Expression*>& arguments, DataTypes::String& errorMessage);
 
         [[nodiscard]] bool ValidateNumberOfArguments(DataTypes::String& errorMessage)const;
         [[nodiscard]] DataType GetReturnType() const override;
+
+        [[nodiscard]] bool IsPlugin()const;
     };
 
     class LogicalExpression final : public Expression{

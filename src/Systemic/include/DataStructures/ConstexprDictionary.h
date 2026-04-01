@@ -57,6 +57,12 @@ class ConstexprDictionary{
                 this->Insert(item);
         }
 
+        template<typename... Pairs>
+        requires (std::is_same_v<std::remove_cvref_t<Pairs>, Pair<Key, Value>> && ...)
+        explicit constexpr ConstexprDictionary(Pairs&&... pairs) {
+                (this->Insert(std::forward<Pairs>(pairs)), ...);
+        }
+
         [[nodiscard]] constexpr bool Contains(const Key& key) const noexcept {
             const size_t idx = Hasher::Hash(key) % Capacity;
             for (size_t i = 0; i < Capacity; ++i) {
@@ -122,3 +128,12 @@ class ConstexprDictionary{
             return false;
         }
 };
+
+template<typename Key, typename Value, typename... Rest>
+ConstexprDictionary(Pair<Key, Value>, Rest...)
+    -> ConstexprDictionary<Key, Value, 1 + sizeof...(Rest)>;
+
+template<typename Hasher, typename Key, typename Value, typename... Rest>
+constexpr auto MakeDictionary(Pair<Key, Value> first, Rest... rest) {
+    return ConstexprDictionary<Key, Value, 1 + sizeof...(Rest), Hasher>{ first, rest... };
+}

@@ -7,6 +7,7 @@
 #include "../../include/DataStorage/Row.h"
 #include <sstream>
 
+#include "Plugin.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "DataTypes/DateTime.h"
@@ -16,47 +17,46 @@
 #include "DataTypes/DataTypes.StaticData.h"
 
 namespace Expressions{
-     static Dictionary<Constants::FunctionType, std::function<Value(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& args)>> FunctionDictionary{
-            //Date Functions
+    using FunctionPtr   = Value(*)(const EvaluationContext&, const DataStructures::PolymorphicArray<Value>&);
+    using ValidationPtr = bool(*)(const DataStructures::PolymorphicArray<Expression*>&, DataTypes::String&);
 
-          { Constants::FunctionType::GetDate,    &FunctionExpression::GetDate },
-          { Constants::FunctionType::DateAdd,    &FunctionExpression::GetDate },
-          { Constants::FunctionType::DateDiff,   &FunctionExpression::GetDate },
-          { Constants::FunctionType::DatePart,   &FunctionExpression::GetDate },
-          { Constants::FunctionType::Year,       &FunctionExpression::GetDate },
-          { Constants::FunctionType::Month,      &FunctionExpression::GetDate },
-          { Constants::FunctionType::Day,        &FunctionExpression::GetDate },
-
-            //Guid Functions
-
-          { Constants::FunctionType::NewGuid,    &FunctionExpression::NewGuid },
-
-            //String Functions
-
-          { Constants::FunctionType::Concat,     &FunctionExpression::Concat },
-          { Constants::FunctionType::Length,     &FunctionExpression::Length },
-          { Constants::FunctionType::AsciiValue, &FunctionExpression::AsciiValue },
-          { Constants::FunctionType::Char,       &FunctionExpression::Char },
-          { Constants::FunctionType::CharIndex,  &FunctionExpression::CharIndex },
-          { Constants::FunctionType::Lower,      &FunctionExpression::Lower },
-          { Constants::FunctionType::Upper,      &FunctionExpression::Upper },
-          { Constants::FunctionType::Trim,       &FunctionExpression::Trim },
-          { Constants::FunctionType::TrimLeft,   &FunctionExpression::TrimLeft },
-          { Constants::FunctionType::TrimRight,  &FunctionExpression::TrimRight },
-          { Constants::FunctionType::Replace,    &FunctionExpression::Replace },
-          { Constants::FunctionType::Substr,     &FunctionExpression::Substr },
-          { Constants::FunctionType::Left,       &FunctionExpression::Left },
-          { Constants::FunctionType::Right,      &FunctionExpression::Right },
-          { Constants::FunctionType::Reverse,    &FunctionExpression::Reverse },
-          { Constants::FunctionType::Space,      &FunctionExpression::Space },
-
-          { Constants::FunctionType::NullIf,     &FunctionExpression::NullIf },
-          { Constants::FunctionType::Coalesce,   &FunctionExpression::Coalesce },
+    static constexpr ConstexprDictionary FunctionDictionary{
+        // Date Functions
+        Pair(Constants::FunctionType::GetDate,    &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::DateAdd,    &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::DateDiff,   &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::DatePart,   &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::Year,       &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::Month,      &FunctionExpression::GetDate),
+        Pair(Constants::FunctionType::Day,        &FunctionExpression::GetDate),
+        // Guid
+        Pair(Constants::FunctionType::NewGuid,    &FunctionExpression::NewGuid),
+        // String
+        Pair(Constants::FunctionType::Concat,     &FunctionExpression::Concat),
+        Pair(Constants::FunctionType::Length,     &FunctionExpression::Length),
+        Pair(Constants::FunctionType::AsciiValue, &FunctionExpression::AsciiValue),
+        Pair(Constants::FunctionType::Char,       &FunctionExpression::Char),
+        Pair(Constants::FunctionType::CharIndex,  &FunctionExpression::CharIndex),
+        Pair(Constants::FunctionType::Lower,      &FunctionExpression::Lower),
+        Pair(Constants::FunctionType::Upper,      &FunctionExpression::Upper),
+        Pair(Constants::FunctionType::Trim,       &FunctionExpression::Trim),
+        Pair(Constants::FunctionType::TrimLeft,   &FunctionExpression::TrimLeft),
+        Pair(Constants::FunctionType::TrimRight,  &FunctionExpression::TrimRight),
+        Pair(Constants::FunctionType::Replace,    &FunctionExpression::Replace),
+        Pair(Constants::FunctionType::Substr,     &FunctionExpression::Substr),
+        Pair(Constants::FunctionType::Left,       &FunctionExpression::Left),
+        Pair(Constants::FunctionType::Right,      &FunctionExpression::Right),
+        Pair(Constants::FunctionType::Reverse,    &FunctionExpression::Reverse),
+        Pair(Constants::FunctionType::Space,      &FunctionExpression::Space),
+        // Null Handling
+        Pair(Constants::FunctionType::NullIf,     &FunctionExpression::NullIf),
+        Pair(Constants::FunctionType::Coalesce,   &FunctionExpression::Coalesce),
     };
 
-    static Dictionary<Constants::FunctionType, std::function<bool(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage)>> FunctionAdditionalValidationsDictionary{
-          {Constants::FunctionType::NullIf,     &FunctionExpression::ValidateNullIf},
-          {Constants::FunctionType::Coalesce,   &FunctionExpression::ValidateCoalesce},
+    // 2 entries → N=2
+    static constexpr ConstexprDictionary FunctionAdditionalValidationsDictionary{
+        Pair(Constants::FunctionType::NullIf,   &FunctionExpression::ValidateNullIf),
+        Pair(Constants::FunctionType::Coalesce, &FunctionExpression::ValidateCoalesce),
     };
 
     EvaluationContext::EvaluationContext(){
@@ -432,9 +432,9 @@ namespace Expressions{
     }
 
     bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const{
-        const auto& expectedType = info.expectedTypes.front();
+        const auto& expectedType = info.expectedTypes.First();
 
-        for (int i = 0;i < this->arguments.size(); i++)
+        for (int i = 0;i < this->arguments.Size(); i++)
           if (!FunctionExpression::ValidateReturnType(info, errorMessage, expectedType, this->arguments[i]->GetReturnType(), i))
             return false;
 
@@ -442,7 +442,7 @@ namespace Expressions{
     }
 
     bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, DataTypes::String& errorMessage) const{
-        for (int i = 0;i < this->arguments.size(); i++)
+        for (int i = 0;i < this->arguments.Size(); i++)
           if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
             return false;
 
@@ -501,18 +501,29 @@ namespace Expressions{
         return FunctionAdditionalValidationsDictionary.Get(this->functionType)(this->arguments, errorMessage);
     }
 
-    FunctionExpression::FunctionExpression(const Constants::FunctionType functionType, std::vector<Expression*>& arguments) {
+    FunctionExpression::FunctionExpression(
+        const Constants::FunctionType functionType,
+        DataStructures::PolymorphicArray<Expression*>& arguments
+    ) {
         this->functionType = functionType;
         this->arguments = std::move(arguments);
         this->expressionType = ExpressionType::Function;
     }
 
     Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
-        DataStructures::PolymorphicArray<Value> evaluatedArguments(context.allocator, this->arguments.size());
+        DataStructures::PolymorphicArray<Value> evaluatedArguments(context.allocator, this->arguments.Size());
         for (const auto& arg : this->arguments)
-          evaluatedArguments.Push(std::move(arg->Evaluate(context)));
+            evaluatedArguments.Push(std::move(arg->Evaluate(context)));
 
+        // if (!this->IsPlugin())
         return FunctionDictionary.Get(this->functionType)(context, evaluatedArguments);
+
+        // External::registry.Get(this->name.ToView())(context, evaluatedArguments);
+        // else {
+        //     const auto& plugin = PluginDictionary.Get(this->functionType);
+        //     return plugin->Evaluate(context, evaluatedArguments);
+        // }
+
     }
 
     Value FunctionExpression::Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -634,7 +645,10 @@ namespace Expressions{
                  : firstArg;
     }
 
-    bool FunctionExpression::ValidateNullIf(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage) {
+    bool FunctionExpression::ValidateNullIf(
+        const DataStructures::PolymorphicArray<Expression*>& arguments,
+        DataTypes::String& errorMessage
+    ) {
         const auto& firstArgumentType = arguments[0]->GetReturnType();
         const auto& secondArgumentType = arguments[1]->GetReturnType();
 
@@ -665,7 +679,7 @@ namespace Expressions{
         return arguments[0];
     }
 
-    bool FunctionExpression::ValidateCoalesce(const std::vector<Expressions::Expression*>& arguments, DataTypes::String& errorMessage){
+    bool FunctionExpression::ValidateCoalesce(const DataStructures::PolymorphicArray<Expression*>& arguments, DataTypes::String& errorMessage){
         auto promotedType = DataType::String;
 
         std::vector<DataType> argTypes;
@@ -688,8 +702,7 @@ namespace Expressions{
 
     bool FunctionExpression::ValidateNumberOfArguments(DataTypes::String& errorMessage)const {
         const auto& info = FunctionInfoDictionary.Get(this->functionType);
-
-        const auto argSize = this->arguments.size();
+        const auto argSize = this->arguments.Size();
         if (argSize < info.minArgs || (argSize > info.maxArgs && info.maxArgs != UNLIMITED_ARGS)) {
             errorMessage = errorMessage.ConcatInPlace(
                 "Function: ",
@@ -719,6 +732,10 @@ namespace Expressions{
 
     DataType FunctionExpression::GetReturnType() const{
         return FunctionInfoDictionary.Get(this->functionType).returnType;
+    }
+
+    bool FunctionExpression::IsPlugin() const{
+        return this->functionType == Constants::FunctionType::Plugin;
     }
 
     LogicalExpression::LogicalExpression(

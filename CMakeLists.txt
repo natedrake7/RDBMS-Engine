@@ -129,6 +129,10 @@ add_library(PluginApi SHARED
 
 target_include_directories(PluginApi PUBLIC src/Plugins/include)
 
+target_link_libraries(PluginApi
+        PRIVATE Systemic
+)
+
 add_library(CoreEngine STATIC
         src/CoreEngine/src/Database.cpp
         src/CoreEngine/src/Database.IndexHandlers.cpp

@@ -40,7 +40,10 @@ namespace DataTypes{
             this->_size = other._size;
         }
 
-        StringView(StringView&& other) noexcept;
+        constexpr StringView(StringView&& other) noexcept
+            : _data(other._data), _size(other._size){
+                other._data = nullptr;
+        }
 
         constexpr StringView()
             : _data(nullptr), _size(0){}

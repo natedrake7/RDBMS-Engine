@@ -94,10 +94,10 @@ namespace DataStructures{
                 --this->_size;
             }
 
-            constexpr void Remove(const Int start, const Int end){
+            constexpr void  Remove(const Int start, const Int end){
                 if (start >= this->_size || end >= this->_size)
                     throw std::runtime_error("StaticArray Remove: Index is out of range.");
-                for (Int i = start; i < end; ++i)
+                for (Int i = start; i < this->_size - 1; ++i)
                     this->_data[i] = this->_data[i + (end - start)];
                 this->_size -= (end - start);
             }
