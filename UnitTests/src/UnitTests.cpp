@@ -58,7 +58,7 @@ namespace Tests{
 
         constexpr auto lhs6 = DataTypes::Decimal(strValue);
         constexpr auto rhs6 = DataTypes::Decimal(strValue);
-        const auto sum6 = lhs6 * rhs6;
+        constexpr auto sum6 = lhs6 * rhs6;
         std::cout << sum6 << std::endl;
 
         constexpr auto lhs7 = DataTypes::Decimal(strValue);
@@ -66,7 +66,7 @@ namespace Tests{
         constexpr auto sum7 = lhs7 - rhs7;
 
         constexpr auto strSum7 = sum7.ToBufferString();
-        std::cout << sum7 << std::endl;
+        std::cout << strSum7.Data() << std::endl;
     }
 
     void IndexPageUpdate(){

@@ -107,10 +107,15 @@
 
 int main(){
 
-    Tests::InitializeTester();
-    Tests::RunTest(&Tests::DecimalTest);
-
-    return 0;
+    // Tests::InitializeTester();
+    // Tests::RunTest(&Tests::DecimalTest);
+    //
+    // return 0;
+    // External::Plugin plugin;
+    // plugin.Load("plugins/PluginLibrary.dll");
+    // External::Plugin::Execute("AddNumbers");
+    //
+    // return 0;
 
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 
@@ -122,26 +127,8 @@ int main(){
     static auto& bufferPoolMemoryManager = CoreEngine::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
-    // return 0;
-    // Tests::InitializeTester();
-    // Tests::RunTest(&Tests::IndexPageUpdate);
-    //
-    // return 0;
-    //Get table stats
-    //SELECT TOP(1) TS.table_id AS ID, T.name AS Name, TS.row_count AS RowCount, TS.avg_record_size AS RowSize FROM masterDb.dbo.sys_table_stats AS TS INNER JOIN masterDb.dbo.sys_tables AS T ON T.table_id = TS.table_id AS TS ORDER BY ID DESC
-
-    // Tests::InitializeTester();
-    // Tests::RunTest(&Tests::IndexPageUpdate);
-
-    // return 0;
-    // RegisterSignalHandlers();
     static auto& server = Network::Server::Get();
 
-    // External::Plugin plugin;
-    // plugin.Load("plugins/PluginLibrary.dll");
-    // External::Plugin::Execute("AddNumbers");
-    //
-    // return 0;
 
     serverRunning.store(true);
 
@@ -186,8 +173,6 @@ int main(){
     }
 
     globalMemoryManager.Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
-    // const auto& databases = server.GetCatalog();
-
     serverRunning.store(false, std::memory_order_relaxed);
 
     connectionThread.join();

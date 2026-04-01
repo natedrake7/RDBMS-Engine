@@ -42,6 +42,10 @@ namespace DataTypes {
             const AdditionDigitsBuffer& leftDigits,
             const AdditionDigitsBuffer& rightDigits
         );
+        static constexpr MultiplicationDigitsBuffer DivideDigits(
+            const AdditionDigitsBuffer& leftDigits,
+            const AdditionDigitsBuffer& rightDigits
+        );
         static constexpr DataBuffer Pack(
             const AdditionDigitsBuffer& digits,
             bool isPositive,
@@ -95,8 +99,8 @@ namespace DataTypes {
         );
 
         static constexpr Decimal Divide(
-            const std::vector<byte_t>& left,
-            const std::vector<byte_t>& right,
+            const DataBuffer& left,
+            const DataBuffer& right,
             fraction_index_t& fractionIndex,
             bool isPositive
         );
@@ -177,7 +181,7 @@ constexpr void Decimal::InitializeFromInteger(const T value){
     static_assert(std::is_integral_v<T>, "Decimal::InitializeFromInteger: T must be an integer");
 
     const auto isPositive = value >= 0;
-    auto absValue = Functions::Math::Abs(static_cast<BigInt>(value));
+    auto absValue = Functions::Math::Abs<Int>(static_cast<BigInt>(value));
 
     AdditionDigitsBuffer digits;
     if (absValue == 0) digits.Push(DECIMAL_ZERO);
@@ -206,7 +210,7 @@ constexpr Decimal::Decimal(const bool value){
     //boolean is always positive
     constexpr auto isPositive = true;
 
-    //fraction index is always at a fixed position
+    //the fraction index is always at a fixed position
     static constexpr fraction_index_t BOOLEAN_FRACTION_INDEX = 2;
 
     const auto signAndFractionPoint = Decimal::CreateSignAndFractionByte(isPositive, BOOLEAN_FRACTION_INDEX);
@@ -320,7 +324,11 @@ constexpr Decimal::DataBuffer Decimal::Pack(const AdditionDigitsBuffer& digits, 
     return result;
 }
 
-constexpr Decimal::DataBuffer Decimal::Pack(const MultiplicationDigitsBuffer& digits, const bool isPositive, const fraction_index_t fractionIndex){
+constexpr Decimal::DataBuffer Decimal::Pack(
+    const MultiplicationDigitsBuffer& digits,
+    const bool isPositive,
+    const fraction_index_t fractionIndex
+){
     DataBuffer result;
     result.Push(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
 
@@ -350,11 +358,11 @@ constexpr Decimal operator+(const Decimal &left, const Decimal &right){
     Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
     Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
 
-    //both same sign, add them and use sign afterwards
+    //both same sign, add them and use the sign afterward
     if (leftSign == rightSign)
         return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
 
-    //else they have different signs
+    //else they have different signs,
     //so subtract them
     return (Decimal::IsGreaterMagnitude(leftCopy, rightCopy))
                ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
@@ -406,9 +414,23 @@ constexpr Decimal operator*(const Decimal &left, const Decimal &right){
 }
 
 constexpr Decimal operator/(const Decimal& left, const Decimal& right){
-    return Decimal();
-    // Decimal left1(left);
-    // return left1 /= right;
+    auto leftFractionIndex = left.GetFractionIndex();
+    auto rightFractionIndex = right.GetFractionIndex();
+
+    auto leftCopy = left.Data();
+    auto rightCopy = right.Data();
+
+    Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+    Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
+
+    fraction_index_t fractionIndex = leftFractionIndex + rightFractionIndex;
+
+    return Decimal::Divide(
+        leftCopy,
+        rightCopy,
+        fractionIndex,
+        left.IsPositive() == right.IsPositive()
+    );
 }
 
 constexpr Int Decimal::Size(const Int precision){
@@ -596,7 +618,40 @@ constexpr Decimal::AdditionDigitsBuffer Decimal::Unpack(const DataBuffer& bytes)
     return digits;
 }
 
-constexpr Decimal::MultiplicationDigitsBuffer Decimal::MultiplyDigits(const AdditionDigitsBuffer& leftDigits, const AdditionDigitsBuffer& rightDigits){
+constexpr Decimal::MultiplicationDigitsBuffer Decimal::MultiplyDigits(
+    const AdditionDigitsBuffer& leftDigits,
+    const AdditionDigitsBuffer& rightDigits
+){
+    MultiplicationDigitsBuffer result;
+    result.SetSize(leftDigits.Size() + rightDigits.Size());
+
+    for (Int i = leftDigits.Size() - 1; i >= 0; --i) {
+        const Int ld = leftDigits[i];
+        if (ld == 0) continue;                      // skip zero BCD digit – no contribution
+
+        for (Int j = rightDigits.Size() - 1; j >= 0; --j) {
+            const Int rd = rightDigits[j];
+            if (rd == 0) continue;                  // skip zero BCD digit – no contribution
+
+            result[i + j + 1] += ld * rd;
+        }
+    }
+
+    for (Int k = result.Size() - 1; k > 0; k--) {
+        const Int val = result[k];
+        if (val >= 10) {
+            result[k - 1] += val / 10;
+            result[k]      = val % 10;
+        }
+    }
+
+    return result;
+}
+
+constexpr Decimal::MultiplicationDigitsBuffer Decimal::DivideDigits(
+    const AdditionDigitsBuffer& leftDigits,
+    const AdditionDigitsBuffer& rightDigits
+){
     MultiplicationDigitsBuffer result;
     result.SetSize(leftDigits.Size() + rightDigits.Size());
 
@@ -788,12 +843,22 @@ constexpr Decimal Decimal::Multiply(
 }
 
 constexpr Decimal Decimal::Divide(
-    const std::vector<byte_t> &left,
-    const std::vector<byte_t> &right,
+    const DataBuffer& left,
+    const DataBuffer& right,
     fraction_index_t &fractionIndex,
     const bool isPositive
 ){
-    return Decimal();
+    const auto leftDigits  = Decimal::Unpack(left);
+    const auto rightDigits = Decimal::Unpack(right);
+
+    auto productDigits = Decimal::DivideDigits(leftDigits, rightDigits);
+
+    Decimal::TrimLeadingZeros(productDigits, fractionIndex);
+    Decimal::TrimTrailingZeros(productDigits, fractionIndex);
+    Decimal::PadDecimalParts(productDigits, fractionIndex);
+
+    const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
+    return Decimal(packed.Data(), packed.Size());
 }
 
 constexpr std::ostream & operator<<(std::ostream &os, const Decimal &decimal){

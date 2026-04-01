@@ -2,7 +2,10 @@
 #include "../DataTypes/DataTypes.h"
 
 namespace Functions::Math{
-    static constexpr BigInt Abs(const BigInt value){
-        return value > 0 ? value : -value;
+    template <typename Type>
+    static constexpr Type Abs(const BigInt value){
+        return value > 0
+            ? static_cast<Type>(value)
+            : static_cast<Type>(-value);
     }
 }
