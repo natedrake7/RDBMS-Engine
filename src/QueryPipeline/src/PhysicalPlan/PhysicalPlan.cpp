@@ -932,6 +932,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     );
 
 
+    tablePtr->RetrieveIndexesFromCatalog(context.GetAllocator());
     tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
     tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
 

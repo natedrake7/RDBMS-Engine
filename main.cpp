@@ -107,6 +107,7 @@
 //INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25
 //CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT )
 
+//check why insert fails after shutdown.
 int main(){
 
     // Tests::InitializeTester();
