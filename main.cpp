@@ -104,6 +104,8 @@
 //Binary operations should allocate a new value but only then.
 
 //TODO fix decimal multiplication and create division for it to be complete
+//INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25
+//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT )
 
 int main(){
 

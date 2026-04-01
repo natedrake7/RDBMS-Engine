@@ -432,7 +432,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
     auto result = ExecutionResult(context);
-    QueryResult resultRow;
+    QueryResult resultRow(context.GetAllocator());
 
     const Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::Constant,
@@ -930,6 +930,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       tableId,
       indexId
     );
+
 
     tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
     tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
