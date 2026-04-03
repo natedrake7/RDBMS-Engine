@@ -23,7 +23,7 @@ namespace Pages{
 
             [[nodiscard]] CoreEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
-            const std::vector<CoreEngine::StorageTypes::TableHeader>& GetTableHeaders() const;
+            [[nodiscard]] const std::vector<CoreEngine::StorageTypes::TableHeader>& GetTableHeaders()const;
             [[nodiscard]] const CoreEngine::StorageTypes::TableHeader& GetTableHeader(Int indexPosition) const;
 
             void SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const;

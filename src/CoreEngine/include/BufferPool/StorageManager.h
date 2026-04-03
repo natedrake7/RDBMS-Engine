@@ -31,6 +31,7 @@ namespace Storage{
                 && this->pageId == other.pageId;
         }
 
+        PageKey() = default;
         explicit PageKey(const FileKey fileKey, const page_id_t pageId)
             : fileKey(fileKey), pageId(pageId) {}
 
@@ -66,7 +67,7 @@ namespace Storage {
         explicit StorageManager();
 
         // static DataTypes::String CreateKey(const DataTypes::StringView& filename, page_id_t pageId);
-        Pages::Frame* EvictPage();
+        void EvictPage();
         void RemovePageWithoutKeyDeletion(const Pages::Frame* framePtr);
         Pages::Frame* OpenExtent(
             FileKey fileKey,
@@ -85,6 +86,7 @@ namespace Storage {
             page_id_t pageId,
             const CoreEngine::StorageTypes::Table *table
         );
+        void RemovePage(Pages::Frame* framePtr);
 
     public:
         static StorageManager& Get();

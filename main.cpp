@@ -104,8 +104,15 @@
 //Binary operations should allocate a new value but only then.
 
 //TODO fix decimal multiplication and create division for it to be complete
+//CREATE DATABASE MoviesDB
+//USE MoviesDB
+//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT)
 //INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25
-//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT )
+//INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25 FROM dbo.Actors
+
+
+//fix stats manager
+//figure out why at around 10 000 inserts, it fails
 
 //check why insert fails after shutdown.
 int main(){

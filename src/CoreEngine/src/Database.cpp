@@ -197,8 +197,10 @@ namespace CoreEngine{
 
     Database::~Database(){
         // save db header;
-        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
-        this->header.numberOfTables = this->_tables.Size();
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
+                this->systemFileKey,
+                this->systemFilenameView
+        );
         headerPage.SetDatabaseHeader(this->header);
 
         for (const auto* dbTable : this->_tables){
@@ -301,6 +303,8 @@ namespace CoreEngine{
     ){
         auto* table = this->_allocator.Allocate<StorageTypes::Table>(tableId, ordinalPosition, this);
         this->_tables.Push(table);
+        this->header.numberOfTables++;
+        this->header.lastTableId = tableId;
         return table;
     }
 
@@ -1095,25 +1099,6 @@ namespace CoreEngine{
         this->lastTableId = 0;
         this->lastPageFreeSpacePageId = lastPageFreeSpacePageId;
         this->lastGamPageId = lastGamPageId;
-    }
-
-    DatabaseHeader::DatabaseHeader(const DatabaseHeader &dbHeader){
-        this->numberOfTables = dbHeader.numberOfTables;
-        this->lastTableId = dbHeader.lastTableId;
-        this->lastPageFreeSpacePageId = dbHeader.lastPageFreeSpacePageId;
-        this->lastGamPageId = dbHeader.lastGamPageId;
-    }
-
-    DatabaseHeader &DatabaseHeader::operator=(const DatabaseHeader &dbHeader){
-        if (&dbHeader == this)
-            return *this;
-
-        this->numberOfTables = dbHeader.numberOfTables;
-        this->lastTableId = dbHeader.lastTableId;
-        this->lastGamPageId = dbHeader.lastGamPageId;
-        this->lastPageFreeSpacePageId = dbHeader.lastPageFreeSpacePageId;
-
-        return *this;
     }
 }
 

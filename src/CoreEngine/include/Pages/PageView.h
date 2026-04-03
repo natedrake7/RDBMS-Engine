@@ -78,11 +78,21 @@ namespace Pages{
         [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
 
-        void Defragment() const;
+        void Defragment(const ::Memory::IAllocator* allocator) const;
         void Resize(Int size) const;
 
-        void DistributeFromPage(const PageView* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant) const;
-        void DistributeFromBeginningOfPage(const PageView* donorPage, Int numberOfSlotsToMove, Int donorResizeVariant) const;
+        void DistributeFromPage(
+            const ::Memory::IAllocator* allocator,
+            const PageView* donorPage,
+            Int numberOfSlotsToMove,
+            Int donorResizeVariant
+        ) const;
+        void DistributeFromBeginningOfPage(
+            const ::Memory::IAllocator* allocator,
+            const PageView* donorPage,
+            Int numberOfSlotsToMove,
+            Int donorResizeVariant
+        ) const;
 
         void DistributeSingleSlotFromPage(PageView* donorPage, Int donorIndexPosition, Int donorResizeVariant);
 
@@ -91,6 +101,7 @@ namespace Pages{
 
         [[nodiscard]]
         bool UpdateRow(
+            const ::Memory::IAllocator* allocator,
             const CoreEngine::StorageTypes::InsertPayload& payload,
             const RowReference& rowPtr
         ) const;

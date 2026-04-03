@@ -26,7 +26,7 @@ namespace CoreEngine {
 
     auto writerLock = MultiThreading::WriterGuard::Promote(&this->tableStatisticsLatch, lock);
 
-    this->tableStatisticsCache.ForceAdd(tableId, catalogStats);
+    //this->tableStatisticsCache.ForceAdd(tableId, catalogStats);
 
     return catalogStats;
   }
@@ -51,7 +51,7 @@ namespace CoreEngine {
 
     auto writerLock = MultiThreading::WriterGuard::Promote(&this->columnStatisticsLatch, lock);
 
-    this->columnStatisticsCache.ForceAdd(columnId, catalogStats);
+    //this->columnStatisticsCache.ForceAdd(columnId, catalogStats);
 
     return catalogStats;
   }
@@ -71,7 +71,7 @@ namespace CoreEngine {
 
     auto writerLock = MultiThreading::WriterGuard::Promote(&this->indexStatisticsLatch, lock);
 
-    this->indexStatisticsCache.ForceAdd(tableId, catalogStats);
+    //// this->indexStatisticsCache.ForceAdd(tableId, catalogStats);
 
     return catalogStats;
   }
@@ -83,19 +83,19 @@ namespace CoreEngine {
   ) {
     {
       MultiThreading::WriterGuard lock(&this->tableStatisticsLatch);
-      this->tableStatisticsCache.ForceAdd(tableStatistics.tableId, tableStatistics);
+      //this->tableStatisticsCache.ForceAdd(tableStatistics.tableId, tableStatistics);
     }
 
     {
       MultiThreading::WriterGuard lock(&this->columnStatisticsLatch);
-      for (const auto& colStats : columnStatistics)
-        this->columnStatisticsCache.ForceAdd(colStats.columnId, colStats);
+      // for (const auto& colStats : columnStatistics)
+        //this->columnStatisticsCache.ForceAdd(colStats.columnId, colStats);
     }
 
     {
       MultiThreading::WriterGuard lock(&this->indexStatisticsLatch);
-      if (!indexStatistics.empty())
-        this->indexStatisticsCache.ForceAdd(tableStatistics.tableId, indexStatistics);
+      // if (!indexStatistics.empty())
+        //this->indexStatisticsCache.ForceAdd(tableStatistics.tableId, indexStatistics);
     }
 }
 

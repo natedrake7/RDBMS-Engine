@@ -784,9 +784,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
           context.GetAllocator()
     );
 
+    const auto* allocator = context.GetAllocator();
+
     auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
-    const auto& tables = this->catalog->SelectTables(context.GetAllocator(), this->table->databaseId);
+    const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
 
     const auto index = static_cast<SmallInt>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
 
@@ -837,9 +839,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
           );
 
       const auto columnId = columnResult.primaryKey.AsInt(1);
+      columnPtr->SetColumnId(columnId);
 
       const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
-
       columnIdsDict.Add(column->index, columnId);
 
       if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
@@ -865,23 +867,23 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         );
     }
 
-    DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(context.GetAllocator(), this->primaryKey.columns.Size());
+    DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
     for (const auto& column: this->primaryKey.columns) {
       if (this->constraintName.Empty()){
-          this->constraintName.SetAllocator(context.GetAllocator());
+          this->constraintName.SetAllocator(allocator);
 
           const auto& columnName = this->columns[column]->name.name;
-          this->constraintName = DataTypes::String::Concat(context.GetAllocator(), "PK_", columnName, "_", columnName);
-
+          this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
       }
+
       primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
     }
 
     static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
     if (primaryKeyColumnIdsArray.Empty()) {
-        tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
-        tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
-        return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
+        tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+        tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+        return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
     }
 
     const auto indexResult = this->catalog->InsertIndexToMasterDb(
@@ -931,10 +933,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       indexId
     );
 
-
-    tablePtr->RetrieveIndexesFromCatalog(context.GetAllocator());
-    tablePtr->RetrieveColumnHeadersFromCatalog(context.GetAllocator());
-    tablePtr->RetrieveIdentityColumnsFromCatalog(context.GetAllocator());
+    tablePtr->RetrieveIndexesFromCatalog(allocator);
+    tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+    tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
 
     return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
   }

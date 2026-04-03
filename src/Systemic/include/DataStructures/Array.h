@@ -91,6 +91,9 @@ namespace DataStructures{
         [[nodiscard]] Int Capacity() const { return this->_capacity; }
         [[nodiscard]] bool Empty() const { return this->_size == 0; }
 
+        [[nodiscard]] T* Data() { return this->_data; }
+        [[nodiscard]] const T* Data() const { return this->_data; }
+
         //STL Compatibility
         using iterator = T*;
         using const_iterator = const T*;

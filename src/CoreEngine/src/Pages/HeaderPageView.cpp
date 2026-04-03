@@ -84,7 +84,7 @@ namespace Pages{
     }
 
     void HeaderPageView::SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const{
-        *this->databaseHeaderPtr = header;
+        std::memcpy(this->databaseHeaderPtr, &header, sizeof(CoreEngine::DatabaseHeader));
     }
 
     void HeaderPageView::SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header){

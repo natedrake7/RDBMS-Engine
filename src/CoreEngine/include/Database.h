@@ -43,8 +43,6 @@ namespace CoreEngine {
             page_id_t lastPageFreeSpacePageId,
             page_id_t lastGamPageId
         );
-        DatabaseHeader(const DatabaseHeader &dbHeader);
-        DatabaseHeader &operator=(const DatabaseHeader &dbHeader);
     };
 
 class Database final{

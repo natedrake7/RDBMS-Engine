@@ -29,7 +29,10 @@ namespace Storage{
         const auto result = ::read(this->fd, data, size);
 
         if (result < 0)
+        {
+            perror("File::Read: Failed to read from file");
             throw std::runtime_error("File::Read: Failed to read from file");
+        }
 
         return result;
     }
@@ -105,7 +108,7 @@ namespace Storage{
 #endif
         }
 
-        const auto fd = ::open(path, O_WRONLY | O_CREAT | O_BINARY, 0644);
+        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
         if (fd < 0)
             throw std::runtime_error("FileManager::CreateFile: Database File could not be created");
 
@@ -132,12 +135,13 @@ namespace Storage{
         return File(this->OpenFile(key, fileName));
     }
 
-    void FileManager::CloseFile(const FileKey key) const{
+    void FileManager::CloseFile(const FileKey key){
         MultiThreading::WriterGuard lock(&this->tableMutex);
 
         file_descriptor_t fd = 0;
         if (!this->fileTable.TryGetValue(key, fd)) return;
         ::close(fd);
+        this->fileTable.Remove(key);
     }
 
     bool FileManager::FileExists(const DataTypes::StringView& fileName){

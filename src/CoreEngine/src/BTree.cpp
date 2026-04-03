@@ -188,27 +188,17 @@ namespace Indexing{
         const Pages::IndexPageView &newChild,
         const Int index
     )const {
+        const auto* allocator = context.GetAllocator();
         // Move the middle key from the child to the parent
-        const auto childKey = child.GetKeyByIndex(context.GetAllocator(), this->degree);
+        const auto childKey = child.GetKeyByIndex(allocator, this->degree);
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
 
         // Assign the second half of the child's keys to the new child
         if (this->type == Constants::TreeType::Clustered) {
-            newChild.DistributeFromPage(&child, this->degree, this->degree);
+            newChild.DistributeFromPage(allocator, &child, this->degree, this->degree);
             BTree::AssignLeavesConnections(child, newChild);
             return;
         }
-
-        // for (Int i = this->degree; i < child.GetPageSize(); i++){
-        //     auto rowId = child.GetLeafTuple(i).row;
-        //     newChild.InsertTuple(LeafNodeTuple{child.GetKeyByIndex(context.GetAllocator(), i), rowId});
-        // }
-        // auto* childRows = child.NonClusteredDataNoLock();
-        //
-        // auto* newChildRows = newChild.NonClusteredDataNoLock();
-        //
-        // newChildRows->assign(childRows->begin() + this->degree, childRows->end());
-        // childRows->resize(this->degree);
 
         BTree::AssignLeavesConnections(child, newChild);
     }
@@ -221,13 +211,14 @@ namespace Indexing{
         const Pages::IndexPageView &newChild,
         const Int index
     ) const {
-        const auto childKey = child.GetKeyByIndex(context.GetAllocator(), this->degree - 1);
+        const auto* allocator = context.GetAllocator();
+        const auto childKey = child.GetKeyByIndex(allocator, this->degree - 1);
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
 
-        const auto middleChild = child.GetChild(context.GetAllocator(), this->degree);
-        newChild.InsertFirstChild(middleChild);
+        // const auto middleChild = child.GetChild(context.GetAllocator(), this->degree);
+        // newChild.InsertFirstChild(middleChild);
 
-        newChild.DistributeFromPage(&child, this->degree, this->degree - 1);
+        newChild.DistributeFromPage(allocator, &child, this->degree, this->degree - 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -310,6 +301,11 @@ namespace Indexing{
         indexPosition = BTree::LeafLowerBound(context.GetAllocator(), parent, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
+
+        if (indexPosition > 50)
+        {
+            int val = 0;
+        }
 
         parent.InsertTuple(tuple, indexPosition);
 
@@ -945,6 +941,10 @@ namespace Indexing{
         const Int pagesToAllocate,
         Int &indexPosition
     ){
+        if (pagesToAllocate == 56)
+        {
+            int val = 0;
+        }
         //base case scenario
         if (this->IsEmpty()) {
             const auto root =  this->CreateRootPage(indexPosition, pagesToAllocate);

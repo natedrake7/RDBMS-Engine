@@ -292,10 +292,8 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<InsertPayload> rows(executionContext.GetAllocator(), input.Size());
         // rows.reserve(input.size());
 
-        Int pagesNeeded = 0;
-
+        Int rowSize = 0;
         std::vector<char> buffer;
-
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
@@ -308,7 +306,7 @@ namespace CoreEngine::StorageTypes {
           if (!status.IsOk())
             return status;
 
-            pagesNeeded += static_cast<Int>(payload.Size());
+            rowSize += static_cast<Int>(payload.Size());
             rows.Push(std::move(payload));
         }
 
@@ -323,7 +321,11 @@ namespace CoreEngine::StorageTypes {
         // else
         //   pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
 
-        pagesNeeded = static_cast<Int>(std::ceil(pagesNeeded / rows.Size()));
+        const float pageSize = this->IsClustered()
+                ? static_cast<float>(Constants::INDEX_PAGE_DEFAULT_SIZE)
+                : static_cast<float>(Constants::PAGE_SIZE_WITHOUT_HEADER);
+
+        auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
@@ -1085,13 +1087,15 @@ namespace CoreEngine::StorageTypes {
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
+        const auto* allocator = executionContext.GetAllocator();
+
+        auto materializedRow = rowPtr.Materialize(allocator);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
         auto newPayload = this->CreateUpdatePayload(
             status,
-            executionContext.GetAllocator(),
+            allocator,
             executionContext.GetCurrentTransactionId(),
             materializedRow.Data()
         );
@@ -1099,7 +1103,7 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        if (page->UpdateRow(newPayload, rowPtr))
+        if (page->UpdateRow(allocator, newPayload, rowPtr))
             return status;
 
           //only for heap tables
@@ -1123,7 +1127,8 @@ namespace CoreEngine::StorageTypes {
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
         this->InsertToVersionDatabase(rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
+        const auto* allocator = executionContext.GetAllocator();
+        auto materializedRow = rowPtr.Materialize(allocator);
 
         const Expressions::EvaluationContext evaluationContext(&rowPtr, executionContext);
         for (const auto* updateExpr : updates) {
@@ -1136,7 +1141,7 @@ namespace CoreEngine::StorageTypes {
         //update function here (all columns will be present on the materialized row now)
         auto newPayload = this->CreateUpdatePayload(
             status,
-            executionContext.GetAllocator(),
+            allocator,
             executionContext.GetCurrentTransactionId(),
             materializedRow.Data()
         );
@@ -1144,7 +1149,7 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        if (page->UpdateRow(newPayload, rowPtr))
+        if (page->UpdateRow(allocator, newPayload, rowPtr))
             return status;
 
         //only for heap tables
@@ -1188,7 +1193,7 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        const auto _ = page->UpdateRow(newPayload, rowPtr);
+        const auto _ = page->UpdateRow(allocator, newPayload, rowPtr);
         return status;
     }
 
@@ -1284,16 +1289,16 @@ namespace CoreEngine::StorageTypes {
         for (const auto& index: indexes) {
             const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(allocator, index.id);
 
-            std::vector<column_index_t> indexColumnsIndices;
+            DataStructures::PolymorphicArray<column_index_t> indexColumnsIndices(allocator, static_cast<Int>(indexedColumns.size()));
             for (const auto& indexedColumn : indexedColumns)
-            indexColumnsIndices.emplace_back(columnsDict.Get(indexedColumn.columnId)->OrdinalPosition());
+                indexColumnsIndices.Push(columnsDict.Get(indexedColumn.columnId)->OrdinalPosition());
 
             if (index.isClustered) {
-                this->clusteredIndexHeader.columns.SetData(indexColumnsIndices.data(), indexColumnsIndices.size());
+                this->clusteredIndexHeader.columns.SetData(indexColumnsIndices.Data(), indexColumnsIndices.Size());
                 continue;
             }
 
-            Headers::Index tableIndex(indexColumnsIndices.data(), indexColumnsIndices.size());
+            Headers::Index tableIndex(indexColumnsIndices.Data(), indexColumnsIndices.Size());
             this->nonClusteredIndexes.Push(tableIndex);
         }
     }
@@ -1376,14 +1381,15 @@ namespace CoreEngine::StorageTypes {
         const column_index_t index,
         const Value &defaultValue
     ) const{
-        auto materializedRow = rowPtr.Materialize(executionContext.GetAllocator());
+        const auto* allocator = executionContext.GetAllocator();
 
+        auto materializedRow = rowPtr.Materialize(allocator);
         materializedRow.AddColumn(defaultValue, index);
 
         Errors::RuntimeStatus status;
-        const auto payload = this->CreateInsertPayload(status, executionContext.GetAllocator(), 0, materializedRow.Data());
+        const auto payload = this->CreateInsertPayload(status, allocator, 0, materializedRow.Data());
 
-        page->UpdateRow(payload, rowPtr);
+        page->UpdateRow(allocator, payload, rowPtr);
 
         // this->InsertLargeObjectToPage(row);
 

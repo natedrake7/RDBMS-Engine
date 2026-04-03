@@ -73,7 +73,7 @@ namespace Storage{
                 const DataTypes::StringView& extension
             );
             [[nodiscard]] File GetFile(FileKey key, const DataTypes::StringView& fileName);
-            void CloseFile(FileKey key) const;
+            void CloseFile(FileKey key);
 
             [[nodiscard]] static bool FileExists(const DataTypes::StringView& fileName);
             static void RemoveFile(const DataTypes::StringView& fileName);

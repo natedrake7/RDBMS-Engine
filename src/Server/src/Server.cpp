@@ -230,7 +230,7 @@ namespace Network {
         const Int databaseId,
         const bool isServerInitialization
     ){
-        CoreEngine::Database *db = nullptr;
+        CoreEngine::Database* db = nullptr;
 
         if (databaseId == Constants::SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
 

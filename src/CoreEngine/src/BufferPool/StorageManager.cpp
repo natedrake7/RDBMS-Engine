@@ -41,10 +41,12 @@ void StorageManager::CreateFile(
   this->fileManager.CreateFile(key, filename, extension);
 }
 
-Pages::Frame* StorageManager::EvictPage() {
+void StorageManager::EvictPage() {
     MultiThreading::WriterGuard lock(&this->clockMutex_);
 
-    while (true) {
+    bool evicted = false;
+    PageKey frameKey;
+    while (!evicted) {
         auto* page = this->_memoryManager->GetFrame(this->clockHand);
 
         if (page == nullptr || page->pinCount.load() > 0 || page->priority.load() >= Constants::PagePriority::HIGH) {
@@ -62,7 +64,15 @@ Pages::Frame* StorageManager::EvictPage() {
         }
 
         this->clockHand = (this->clockHand + 1) % this->capacity;
-        return this->_memoryManager->GetFrame(this->clockHand);
+        const auto* frame = this->_memoryManager->GetFrame(this->clockHand);
+        this->RemovePageWithoutKeyDeletion(frame);
+        evicted = true;
+        frameKey = PageKey::Create(frame->fileKey, frame->headerPtr->pageId);
+    }
+
+    {
+        MultiThreading::WriterGuard tableLock(&this->tableMutex);
+        this->pageTable.Remove(frameKey);
     }
 }
 
@@ -86,12 +96,11 @@ Pages::Frame* StorageManager::OpenExtent(
 ){
 
     // read page from disk, call this->fileManager
-    auto file = this->fileManager.GetFile(fileKey, filename);
-
+    const auto file = this->fileManager.GetFile(fileKey, filename);
     const auto firstExtentPageId = CoreEngine::Database::CalculateExtentFirstPageId(extentId);
 
-    std::vector<char> buffer(Constants::EXTENT_BYTE_SIZE, 0);
-    const auto bytesRead = file.Read(buffer.data(), Constants::EXTENT_BYTE_SIZE, firstExtentPageId * Constants::PAGE_SIZE);
+    char buffer[Constants::EXTENT_BYTE_SIZE];
+    const auto bytesRead = file.Read(buffer, Constants::EXTENT_BYTE_SIZE, firstExtentPageId * Constants::PAGE_SIZE);
 
     // take into account the metadata page all the others
     page_offset_t offSet = 0;
@@ -106,20 +115,17 @@ Pages::Frame* StorageManager::OpenExtent(
         const page_id_t currentPageId = firstExtentPageId + i;
         const auto key = PageKey::Create(fileKey, currentPageId);
 
-        if (this->IsPageCached(key))
-            continue;
+        if (this->IsPageCached(key)) continue;
 
-        if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES) {
-            auto* victim = this->EvictPage();
-            // this->RemovePage(victim);
-        }
+        if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES)
+            this->EvictPage();
 
         {
             MultiThreading::WriterGuard tableLock(&this->tableMutex);
             const auto frame = this->clockHand % this->capacity;
 
             const auto pageDataOffset = frame * Constants::PAGE_SIZE;
-            auto* pageDataPtr = this->_memoryManager->CopyToMemory(buffer.data(), pageDataOffset, offSet);
+            auto* pageDataPtr = this->_memoryManager->CopyToMemory(buffer, pageDataOffset, offSet);
             auto* newFramePtr = this->_memoryManager->GetFrame(frame);
 
             newFramePtr->data = pageDataPtr;
@@ -133,12 +139,19 @@ Pages::Frame* StorageManager::OpenExtent(
             newFramePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(pageDataPtr);
 
             if (currentPageId == pageId)
-                framePtr = this->_memoryManager->GetFrame(frame);
+                framePtr = newFramePtr;
 
             this->pageTable[key] = frame;
             this->clockHand = (this->clockHand + 1) % this->capacity;
         }
     }
+
+    if (framePtr == nullptr)
+    {
+        std::cout << "Page not found in extent" << std::endl;
+        return nullptr;
+    }
+
 
     return framePtr;
 }
@@ -159,9 +172,15 @@ Pages::Frame* StorageManager::GetRawPage(
     }
 
     const auto extentId = CoreEngine::Database::CalculateExtentId(pageId);
-
     //cache miss
-    return this->OpenExtent(fileKey, pageId, extentId, filename, table);
+    auto* framePtr = this->OpenExtent(fileKey, pageId, extentId, filename, table);
+
+    if (framePtr == nullptr)
+    {
+        int val = 0;
+    }
+
+    return framePtr;
 }
 
 Pages::PageView StorageManager::CreatePage(
@@ -288,9 +307,8 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
 Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes::StringView& filename, const page_id_t pageId, const CoreEngine::StorageTypes::Table *table){
     MultiThreading::WriterGuard lock(&this->tableMutex);
 
-    if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES) {
-        auto* victim = this->EvictPage();
-    }
+    if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES)
+        this->EvictPage();
 
     const size_t frameIndex = this->clockHand % this->capacity;
 
