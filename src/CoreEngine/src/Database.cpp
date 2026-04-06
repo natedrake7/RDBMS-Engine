@@ -25,14 +25,12 @@ namespace CoreEngine{
         metaDataPage.SetDatabaseHeader(this->header);
     }
 
-    bool Database::IsSystemPage(const page_id_t pageId) { return pageId == 0 || pageId == 1 || pageId == 2 || pageId % Constants::PAGE_FREE_SPACE_SIZE == 1 || pageId % Constants::GAM_NUMBER_OF_PAGES == 2; }
-
     page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
-        const auto numOfGamPages = (pageId / Constants::GAM_NUMBER_OF_PAGES);
+        const page_id_t numGAMPagesBefore = pageId / Constants::GAM_NUMBER_OF_PAGES;
+        const page_id_t pfsIndex = pageId / Constants::PAGE_FREE_SPACE_SIZE;
+        constexpr page_id_t firstPfsPageId = 1;
 
-        const auto numOfPfsPages = (pageId / Constants::PAGE_FREE_SPACE_SIZE) + 1;
-
-        return numOfPfsPages > 1 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
+        return firstPfsPageId + pfsIndex + numGAMPagesBefore;
     }
 
     page_id_t Database::GetGamAssociatedPage(const page_id_t pageId) {

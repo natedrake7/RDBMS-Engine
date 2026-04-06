@@ -84,8 +84,8 @@ namespace Pages{
         void DistributeFromPage(
             const ::Memory::IAllocator* allocator,
             const PageView* donorPage,
-            Int numberOfSlotsToMove,
-            Int donorResizeVariant
+            Int slotToMoveFrom,
+            Int donorNewSize
         ) const;
         void DistributeFromBeginningOfPage(
             const ::Memory::IAllocator* allocator,

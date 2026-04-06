@@ -84,6 +84,9 @@ namespace Pages{
                 DataStructures::Array<RowReference>* buffer,
                 Int indexPosition
             ) const;
-
+            void RemoveKeyFromChild(
+                const ::Memory::IAllocator* allocator,
+                Int indexPosition
+            ) const;
     };
 }

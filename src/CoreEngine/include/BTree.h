@@ -43,6 +43,8 @@ namespace Indexing{
         page_id_t rootPageId;
         Constants::TreeType type;
 
+        [[nodiscard]] bool ShouldSplit(const Pages::IndexPageView& node)const;
+
         static void AssignLeavesConnections(
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild
@@ -94,21 +96,20 @@ namespace Indexing{
             Int pagesToAllocate
         );
 
-        void SplitLeafNoLock(
+        static void SplitLeafNoLock(
             const CoreEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
             Int index
-        )const;
-
-        void SplitInternalNodeNoLock(
+        );
+        static void SplitInternalNodeNoLock(
             const CoreEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
             Int index
-        )const;
+        );
 
         void SplitChildNoLock(
             const CoreEngine::ExecutionContext& context,

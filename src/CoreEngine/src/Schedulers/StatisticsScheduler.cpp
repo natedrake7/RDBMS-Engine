@@ -433,7 +433,7 @@ namespace CoreEngine {
 
         while (isServerRunning) {
             std::this_thread::sleep_for(10000ms);
-            scheduler.UpdateStatistics();
+            // scheduler.UpdateStatistics();
         }
     }
 

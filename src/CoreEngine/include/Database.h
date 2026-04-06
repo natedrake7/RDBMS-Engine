@@ -74,8 +74,6 @@ class Database final{
 
     void WriteHeaderToFile() const;
 
-    static bool IsSystemPage(page_id_t pageId);
-
     std::vector<extent_id_t> AllocateNewExtents(
       Int pagesToAllocate,
       table_id_t tableId,

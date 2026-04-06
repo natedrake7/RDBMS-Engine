@@ -10,6 +10,8 @@ namespace Pages{
 
         static constexpr int TYPE_SHIFT = 3;  // shift left 3 to reach bits 3–6
 
+        inline page_offset_t GetOffset(page_id_t pageId) const;
+
         public:
             explicit PageFreeSpaceView(Frame* frame);
 

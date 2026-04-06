@@ -114,6 +114,8 @@
 //fix stats manager
 //figure out why at around 10 000 inserts, it fails
 
+//IMPORTANT: fix internal node splits, they are wrong
+
 //check why insert fails after shutdown.
 int main(){
 

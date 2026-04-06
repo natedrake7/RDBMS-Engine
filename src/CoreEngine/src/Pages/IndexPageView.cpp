@@ -376,4 +376,16 @@ namespace Pages{
         const auto versionHeader = this->PeekVersionHeader(allocator, indexPosition, outKeySize);
         buffer->Push(RowReference(this->framePtr, allocator, indexPosition, outKeySize));
     }
+
+    void IndexPageView::RemoveKeyFromChild(const Memory::IAllocator* allocator, const Int indexPosition) const{
+        auto slot = this->GetSlotDirectory(indexPosition);
+        auto offset = slot.GetOffset();
+        if (indexPosition == 0)
+            return;
+
+        const auto key = this->GetKeyByOffset(allocator, offset);
+        slot.SetOffset(offset);
+        slot.SetSize(slot.GetSize() - key.size);
+        this->UpdateSlotDirectory(slot, indexPosition);
+    }
 }

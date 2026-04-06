@@ -165,21 +165,26 @@ Pages::Frame* StorageManager::GetRawPage(
     {
         MultiThreading::ReaderGuard lock(&this->tableMutex);
 
+        if (pageId == 8176)
+        {
+            int val = 0;
+        }
+
         auto frame = 0;
         const auto key = PageKey::Create(fileKey, pageId);
         if (this->pageTable.TryGetValue(key, frame))
+        {
+            if (frame == 8693)
+                int val = 0;
+            else if (frame == 8692)
+                int val = 0;
             return this->_memoryManager->GetFrame(frame);
+        }
     }
 
     const auto extentId = CoreEngine::Database::CalculateExtentId(pageId);
     //cache miss
     auto* framePtr = this->OpenExtent(fileKey, pageId, extentId, filename, table);
-
-    if (framePtr == nullptr)
-    {
-        int val = 0;
-    }
-
     return framePtr;
 }
 

@@ -1,8 +1,14 @@
 ﻿#include "../../include/Pages/PageFreeSpaceView.h"
 
+#include <cmath>
+
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
+    page_offset_t PageFreeSpaceView::GetOffset(const page_id_t pageId) const{
+        return this->initialOffset + pageId % Constants::PAGE_FREE_SPACE_SIZE;
+    }
+
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame){}
 
     PageFreeSpaceView::PageFreeSpaceView(PageFreeSpaceView&& other) noexcept{
@@ -39,6 +45,10 @@ namespace Pages{
 
     void PageFreeSpaceView::SetPageMetaData(const PageView* page) const{
         const auto* header = page->GetHeader();
+        const auto offSet = this->GetOffset(header->pageId);
+
+        if (offSet > Constants::PAGE_SIZE)
+            throw std::out_of_range("PageId exceeds the maximum number of pages that can be tracked by a single PageFreeSpaceView");
 
         this->SetPageAllocated(header->pageId);
         this->SetPageType(header->pageId, page->GetPageType());
@@ -53,19 +63,18 @@ namespace Pages{
     }
 
     void PageFreeSpaceView::SetPageAllocated(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
+        const auto byte = this->framePtr->data + this->initialOffset + this->GetOffset(pageId);
         PackedByte::SetBit(*byte, 0, true);
     }
 
     void PageFreeSpaceView::SetPageAllocationStatus(const page_id_t pageId, const page_size_t bytesLeft) const{
         const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / Constants::PAGE_SIZE);
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
-
+        const auto byte = this->framePtr->data + this->GetOffset(pageId);
         PackedByte::SetBits(*byte, pageAllocationStatus, 0, ALLOCATION_MASK);
     }
 
     void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
+        const auto byte = this->framePtr->data + this->GetOffset(pageId);
         PackedByte::SetBits(*byte, static_cast<byte_t>(pageType), TYPE_SHIFT, TYPE_MASK);
     }
 }

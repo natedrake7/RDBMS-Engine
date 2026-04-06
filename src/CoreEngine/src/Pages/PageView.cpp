@@ -199,7 +199,7 @@ namespace Pages{
         }
 
         const auto usedBytes = offset + (header->size * SlotDirectory::Size);
-        header->bytesLeft = this->RawDataSize() - usedBytes;
+        header->bytesLeft = Constants::PAGE_SIZE - usedBytes;
         this->framePtr->isDirty = true;
     }
 
@@ -216,14 +216,14 @@ namespace Pages{
     void PageView::DistributeFromPage(
         const ::Memory::IAllocator* allocator,
         const PageView* donorPage,
-        const Int numberOfSlotsToMove,
-        const Int donorResizeVariant
+        const Int slotToMoveFrom,
+        const Int donorNewSize
     ) const{
         const auto* leftData = donorPage->GetData();
         const page_offset_t startOffset = this->NewInsertOffset();
-        page_offset_t offset = this->NewInsertOffset();
+        page_offset_t offset = startOffset;
 
-        for (Int index = numberOfSlotsToMove; index < donorPage->PageSize(); index++){
+        for (Int index = slotToMoveFrom; index < donorPage->PageSize(); index++){
             const auto leftSlot = donorPage->GetSlotDirectory(index);
             std::memcpy(this->framePtr->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
 
@@ -237,7 +237,7 @@ namespace Pages{
         this->framePtr->headerPtr->bytesLeft -= this->framePtr->headerPtr->size * SlotDirectory::Size + (offset - startOffset);;
         this->framePtr->isDirty = true;
 
-        donorPage->Resize(donorResizeVariant);
+        donorPage->Resize(donorNewSize);
         donorPage->Defragment(allocator);
     }
 

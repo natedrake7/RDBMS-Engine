@@ -14,6 +14,10 @@
 #include "Memory/Allocator.h"
 
 namespace Indexing{
+    bool BTree::ShouldSplit(const Pages::IndexPageView& node) const{
+        return node.Keys() >= 2 * this->degree - 1;
+    }
+
     void BTree::AssignLeavesConnections(
         const Pages::IndexPageView& child,
         const Pages::IndexPageView& newChild
@@ -187,19 +191,18 @@ namespace Indexing{
         const Pages::IndexPageView &child,
         const Pages::IndexPageView &newChild,
         const Int index
-    )const {
+    ) {
+
         const auto* allocator = context.GetAllocator();
-        // Move the middle key from the child to the parent
-        const auto childKey = child.GetKeyByIndex(allocator, this->degree);
+        const auto mid = child.Keys() / 2;
+
+        // move right half
+        //mid = 14, keys = 29 -> donor new size = 15
+        newChild.DistributeFromPage(allocator, &child, mid, mid);
+
+        // promote first key of new child
+        const auto childKey = newChild.GetKeyByIndex(allocator, 0);
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
-
-        // Assign the second half of the child's keys to the new child
-        if (this->type == Constants::TreeType::Clustered) {
-            newChild.DistributeFromPage(allocator, &child, this->degree, this->degree);
-            BTree::AssignLeavesConnections(child, newChild);
-            return;
-        }
-
         BTree::AssignLeavesConnections(child, newChild);
     }
 
@@ -210,15 +213,19 @@ namespace Indexing{
         const Pages::IndexPageView &child,
         const Pages::IndexPageView &newChild,
         const Int index
-    ) const {
+    ){
         const auto* allocator = context.GetAllocator();
-        const auto childKey = child.GetKeyByIndex(allocator, this->degree - 1);
+
+        const auto mid = child.Keys() / 2;
+
+        //promote middle child key to parent
+        const auto childKey = child.GetKeyByIndex(allocator, mid);
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
+        child.RemoveKeyFromChild(allocator, mid);
 
-        // const auto middleChild = child.GetChild(context.GetAllocator(), this->degree);
-        // newChild.InsertFirstChild(middleChild);
-
-        newChild.DistributeFromPage(allocator, &child, this->degree, this->degree - 1);
+        //get middle child and insert it as first child(no key is moved)
+        //size = 29, mid = 14 -> moveIndex = 15 so no row is duplicated
+        newChild.DistributeFromPage(allocator, &child, mid, mid);
     }
 
     void BTree::SplitChildNoLock(
@@ -251,7 +258,7 @@ namespace Indexing{
             const Int pagesToAllocate,
             Int& indexPosition
     ){
-        Pages::IndexPageView IntermediateNode;
+        Pages::IndexPageView intermediateNode;
         {
             MultiThreading::ReaderGuard parentLock(&parent.Latch());
 
@@ -266,10 +273,15 @@ namespace Indexing{
 
             MultiThreading::ReaderGuard childLock(&child.Latch());
 
-            if (child.Keys() == 2 * this->degree - 1){
+            if (this->ShouldSplit(child)){
                 // if (!this->TryRedistributeLeaf(parent, parentLock, child, childLock, childIndex)) {
                 // Redistribution failed, must split
-                    this->SplitChild(context, parent, parentLock, childIndex, child, childLock, pagesToAllocate);
+                    this->SplitChild(
+                        context, parent,
+                        parentLock, childIndex,
+                        child, childLock,
+                        pagesToAllocate
+                    );
 
                     //split child will break the lock and we need to reacquire it
                     MultiThreading::ReaderGuard newParentLock(&parent.Latch());
@@ -279,17 +291,16 @@ namespace Indexing{
                         childIndex++;
 
                     childId = parent.GetChild(context.GetAllocator(), childIndex);
-
-                    IntermediateNode = this->GetNode(childId);
+                    intermediateNode = this->GetNode(childId);
                 // }
                 // else
                 //     IntermediateNode = std::move(parent);
             }
             else
-                IntermediateNode = std::move(child);
+                intermediateNode = std::move(child);
         }  // All locks released here
 
-        return this->InsertToNonFullNode(context, IntermediateNode, tuple, pagesToAllocate, indexPosition);
+        return this->InsertToNonFullNode(context, intermediateNode, tuple, pagesToAllocate, indexPosition);
     }
 
     Errors::RuntimeStatus BTree::InsertToNode(
@@ -302,13 +313,7 @@ namespace Indexing{
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
 
-        if (indexPosition > 50)
-        {
-            int val = 0;
-        }
-
         parent.InsertTuple(tuple, indexPosition);
-
         return {};
     }
 
