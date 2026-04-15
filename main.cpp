@@ -91,18 +91,10 @@
 //TODO implement parallel query execution and distributed databases
 
 //verify temp db flow implementation.
-//verify page implementation
-
-//CHECK CACHE BLOCK 0
 //Implement full Forward Ptr Functionality
 
 //add peek header functionality on page rows to delay materialization
 //TODO make join usable again
-//maybe use an allocator even for execution nodes etc..
-
-//use string_views on Value AsString to avoid heap allocations //or use char[size] for stack allocation
-//Binary operations should allocate a new value but only then.
-
 //TODO fix decimal multiplication and create division for it to be complete
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
@@ -111,8 +103,9 @@
 //INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25 FROM dbo.Actors
 
 //TODO fix optimizer with query predicate pushdown functionality
-
 //fix stats manager
+
+//TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 int main(){
 
     // Tests::InitializeTester();
