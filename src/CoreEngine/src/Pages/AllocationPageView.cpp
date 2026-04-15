@@ -30,18 +30,15 @@ namespace Pages{
     }
 
     AllocationPageView::AllocationPageView() : PageView() {
-        this->lastAllocatedExtentId = 0;
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     AllocationPageView::AllocationPageView(Frame* framePtr) : PageView(framePtr) {
-        this->lastAllocatedExtentId = 0;
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     AllocationPageView::AllocationPageView(AllocationPageView&& other) noexcept{
         this->framePtr = other.framePtr;
-        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
         this->initialOffset = other.initialOffset;
 
         other.framePtr = nullptr;
@@ -52,7 +49,6 @@ namespace Pages{
             return *this;
 
         this->framePtr = other.framePtr;
-        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
         this->initialOffset = other.initialOffset;
 
         other.framePtr = nullptr;
@@ -62,15 +58,15 @@ namespace Pages{
     extent_id_t AllocationPageView::SetExtentsAllocated(
         const std::vector<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
-    ){
-        for (const auto& extentId : extentIds){
+    ) const{
+        for (const auto extentId : extentIds){
             const extent_id_t bitMapId = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
             if (bitMapId >= Constants::EXTENT_BIT_MAP_SIZE)
                 return extentId;
 
             this->SetBit(bitMapId);
-            this->lastAllocatedExtentId = bitMapId;
+            this->framePtr->additionalHeader.allocationHeaderPtr->lastAllocatedExtentId = extentId;
             this->framePtr->isDirty = true;
         }
 
@@ -91,7 +87,6 @@ namespace Pages{
         const extent_id_t startingExtentIndex
     ) const{
         allocatedExtents->clear();
-
         const page_id_t globalAllocationMapPageId = CoreEngine::Database::GetGamAssociatedPage(this->framePtr->headerPtr->pageId);
         const page_id_t offSet = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
@@ -99,7 +94,7 @@ namespace Pages{
             return;
 
         MultiThreading::ReaderGuard lock(&this->framePtr->latch);
-        for (extent_id_t id = startingExtentIndex; id < this->lastAllocatedExtentId; id++){
+        for (extent_id_t id = startingExtentIndex - offSet; id < this->framePtr->additionalHeader.allocationHeaderPtr->lastAllocatedExtentId; id++){
             if (this->GetBit(id))
                 allocatedExtents->push_back(offSet + id);
         }

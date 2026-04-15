@@ -1,12 +1,15 @@
 ﻿#include "../../include/Pages/PageFreeSpaceView.h"
 
-#include <cmath>
-
+#include <cassert>
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
     page_offset_t PageFreeSpaceView::GetOffset(const page_id_t pageId) const{
         return this->initialOffset + pageId % Constants::PAGE_FREE_SPACE_SIZE;
+    }
+
+    byte_t* PageFreeSpaceView::GetByte(const page_id_t pageId) const{
+        return this->framePtr->data + this->GetOffset(pageId);
     }
 
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame){}
@@ -29,52 +32,44 @@ namespace Pages{
     }
 
     bool PageFreeSpaceView::IsPageAllocated(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
-        return PackedByte::ExtractBits<bool>(*byte, 0, ALLOCATION_MASK);
+        return PackedByte::ExtractBits<bool>(*this->GetByte(pageId), ALLOCATION_SHIFT, ALLOCATION_SINGLE_BIT_MASK);
     }
 
     Constants::PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
-        return PackedByte::ExtractBits<Constants::PageType>(*byte, TYPE_SHIFT, TYPE_MASK);
+        return PackedByte::ExtractBits<Constants::PageType>(*this->GetByte(pageId), TYPE_SHIFT, TYPE_MASK >> TYPE_SHIFT);
     }
 
     byte_t PageFreeSpaceView::GetPageSizeCategory(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
-        return PackedByte::ExtractBits<byte_t>(*byte, 0, SIZE_MASK);
+        return PackedByte::ExtractBits<byte_t>(*this->GetByte(pageId), SIZE_SHIFT, SIZE_MASK);
     }
 
     void PageFreeSpaceView::SetPageMetaData(const PageView* page) const{
         const auto* header = page->GetHeader();
-        const auto offSet = this->GetOffset(header->pageId);
-
-        if (offSet > Constants::PAGE_SIZE)
-            throw std::out_of_range("PageId exceeds the maximum number of pages that can be tracked by a single PageFreeSpaceView");
-
         this->SetPageAllocated(header->pageId);
         this->SetPageType(header->pageId, page->GetPageType());
         this->SetPageAllocationStatus(header->pageId, header->bytesLeft);
+
+        const auto type = this->GetPageType(header->pageId);
+        const auto pageType = page->GetPageType();
+        assert(pageType == type);
 
         this->framePtr->isDirty = true;
     }
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + pageId;
-        PackedByte::SetBit(*byte, 0, false);
+        PackedByte::SetBit(*this->GetByte(pageId), ALLOCATION_SHIFT, false);
     }
 
     void PageFreeSpaceView::SetPageAllocated(const page_id_t pageId) const{
-        const auto byte = this->framePtr->data + this->initialOffset + this->GetOffset(pageId);
-        PackedByte::SetBit(*byte, 0, true);
+        PackedByte::SetBit(*this->GetByte(pageId), ALLOCATION_SHIFT, true);
     }
 
     void PageFreeSpaceView::SetPageAllocationStatus(const page_id_t pageId, const page_size_t bytesLeft) const{
         const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / Constants::PAGE_SIZE);
-        const auto byte = this->framePtr->data + this->GetOffset(pageId);
-        PackedByte::SetBits(*byte, pageAllocationStatus, 0, ALLOCATION_MASK);
+        PackedByte::SetBits(*this->GetByte(pageId), pageAllocationStatus, SIZE_SHIFT, SIZE_MASK);
     }
 
     void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
-        const auto byte = this->framePtr->data + this->GetOffset(pageId);
-        PackedByte::SetBits(*byte, static_cast<byte_t>(pageType), TYPE_SHIFT, TYPE_MASK);
+        PackedByte::SetBits(*this->GetByte(pageId), static_cast<byte_t>(pageType), TYPE_SHIFT, TYPE_MASK >> TYPE_SHIFT);
     }
 }

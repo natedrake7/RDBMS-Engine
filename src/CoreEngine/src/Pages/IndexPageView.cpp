@@ -103,7 +103,8 @@ namespace Pages{
     }
 
     bool IndexPageView::IsEmpty() const{
-        return this->framePtr->additionalHeader.indexHeaderPtr->IsEmpty();
+        return this->framePtr->headerPtr->size == 0;
+        // return this->framePtr->additionalHeader.indexHeaderPtr->IsEmpty();
     }
 
     bool IndexPageView::IsLeaf() const{
@@ -160,7 +161,11 @@ namespace Pages{
         this->framePtr->headerPtr->bytesLeft -= (newSlot.GetSize() + SlotDirectory::Size);
     }
 
-    void IndexPageView::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key, const Int indexPosition) const{
+    void IndexPageView::InsertChild(
+        const page_id_t child,
+        const DataTypes::Indexing::Key* key,
+        const Int indexPosition
+    ) const{
         if (this->IndexOutOfBounds(indexPosition)){
             this->InsertChild(child, key);
             return;
@@ -332,15 +337,35 @@ namespace Pages{
         const ::Memory::IAllocator* allocator,
         const Int indexPosition
     ) const{
+            const auto slot = this->GetSlotDirectory(indexPosition);
+            auto offset = slot.GetOffset();
+
+            if (indexPosition != 0)
+                const auto key =  this->GetKeyByOffset(allocator, offset);
+
+            page_id_t pageId = 0;
+            std::memcpy(&pageId, this->framePtr->data + offset, sizeof(page_id_t));
+            return pageId;
+    }
+
+    InternalNodeTuple IndexPageView::GetInternalNodeTuple(
+        const ::Memory::IAllocator* allocator,
+        const Int indexPosition
+    ) const{
+        InternalNodeTuple tuple;
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         auto offset = slot.GetOffset();
-        if (indexPosition != 0)
+        if (indexPosition != 0){
             auto key = this->GetKeyByOffset(allocator, offset);
+            tuple.SetKey(key);
+        }
 
         page_id_t pageId = 0;
         std::memcpy(&pageId, this->framePtr->data + offset, sizeof(page_id_t));
-        return pageId;
+        tuple.SetPageId(pageId);
+
+        return tuple;
     }
 
     void IndexPageView::AppendRowToBuffer(
@@ -387,5 +412,39 @@ namespace Pages{
         slot.SetOffset(offset);
         slot.SetSize(slot.GetSize() - key.size);
         this->UpdateSlotDirectory(slot, indexPosition);
+    }
+
+    void IndexPageView::Log(
+        const ::Memory::IAllocator* allocator,
+        std::ostream& os
+    ) const{
+        if (this->IsLeaf()){
+            os << "Rows: ";
+            for (int i = 0;i < this->framePtr->headerPtr->size; i++){
+                const auto tuple = this->PeekLeafTuple(allocator, i);
+                os << tuple.row.Materialize(allocator) << " ";
+            }
+            os << std::endl;
+            os << "Keys: ";
+            for (int i = 0;i < this->framePtr->headerPtr->size; i++){
+                const auto tuple = this->PeekLeafTuple(allocator, i);
+                os << tuple.key.ToString(allocator) << " ";
+            }
+            os << std::endl;
+            return;
+        }
+
+        os << "Children: ";
+        for (int i = 0;i < this->framePtr->headerPtr->size; i++){
+            const auto tuple = this->GetInternalNodeTuple(allocator, i);
+            os << tuple.pageId << " ";
+        }
+        os << std::endl;
+        os << "Keys: ";
+        for (int i = 0;i < this->framePtr->headerPtr->size; i++){
+            const auto tuple = this->GetInternalNodeTuple(allocator, i);
+            os  << tuple.key.ToString(allocator) << " ";
+        }
+        os << std::endl;
     }
 }

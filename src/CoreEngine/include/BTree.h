@@ -141,7 +141,7 @@ namespace Indexing{
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const CoreEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
 
-        [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, Int pagesToAllocate);
+        [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, page_id_t splitChildPageId, Int pagesToAllocate);
 
         void HandleUnderflow(const Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();

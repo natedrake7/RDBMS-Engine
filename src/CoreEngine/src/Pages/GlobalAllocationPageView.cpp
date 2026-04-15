@@ -28,14 +28,10 @@ namespace Pages{
         this->framePtr->data[byteIndex] = static_cast<char>(byte);
     }
 
-    GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {
-        this->lastAllocatedExtentId = 0;
-    }
+    GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {}
 
     GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{
         this->framePtr = other.framePtr;
-        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
-
         other.framePtr = nullptr;
     }
 
@@ -44,24 +40,22 @@ namespace Pages{
             return *this;
 
         this->framePtr = other.framePtr;
-        this->lastAllocatedExtentId = other.lastAllocatedExtentId;
         this->initialOffset = other.initialOffset;
 
         other.framePtr = nullptr;
         return *this;
     }
 
-    int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents){
+    int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents) const{
         int allocatedExtents = 0;
 
-        for (extent_id_t extentId = this->lastAllocatedExtentId; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
+        for (extent_id_t extentId = 0; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
             if (allocatedExtents == numberOfExtents)
                 break;
 
             if (this->GetBit(extentId))
                 continue;
 
-            this->lastAllocatedExtentId = extentId;
             this->SetBit(extentId);
             this->framePtr->isDirty = true;
 

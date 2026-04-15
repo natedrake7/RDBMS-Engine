@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "../include/Database.h"
 #include <vector>
 #include "../include/DatabaseConstants.h"
@@ -56,7 +58,8 @@ namespace CoreEngine {
 
    Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
         StorageTypes::Table*& table,
-	    const page_id_t indexPageId,
+	    const page_id_t parentPageId,
+	    const page_id_t splitChildPageId,
 	    const Int pagesToAllocate,
 	    const Int nonClusteredIndexId
 	){
@@ -72,7 +75,7 @@ namespace CoreEngine {
                                     ? Constants::TreeType::NonClustered
                                     : Constants::TreeType::Clustered;
 
-        if(indexPageId == INVALID_PAGE_ID)
+        if(parentPageId == INVALID_PAGE_ID)
             return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
@@ -83,12 +86,17 @@ namespace CoreEngine {
         );
 
         std::vector<extent_id_t> allocatedExtents;
-        indexAllocationMapPage.GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(indexPageId));
+        indexAllocationMapPage.GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(parentPageId));
 
         for(const auto& extentId: allocatedExtents){
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + Constants::EXTENT_SIZE; nextIndexPageId++){
+                if (
+                    nextIndexPageId == parentPageId
+                    || nextIndexPageId == splitChildPageId
+                ) continue;
+
                 {
                     const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                         this->systemFileKey,
@@ -98,12 +106,14 @@ namespace CoreEngine {
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
 
-                    if (pageFreeSpacePage.GetPageType(nextIndexPageId) != Constants::PageType::INDEX)
-                        continue;
+                    if (!pageFreeSpacePage.IsPageAllocated(nextIndexPageId)) continue;
+
+                    const auto pageType = pageFreeSpacePage.GetPageType(nextIndexPageId);
+                    if (pageType == Constants::PageType::IAM) continue;
+                    if (pageType != Constants::PageType::INDEX) break;
 
                     //page is free
-                    if(pageFreeSpacePage.GetPageSizeCategory(nextIndexPageId) == 0)
-                        continue;
+                    if(pageFreeSpacePage.GetPageSizeCategory(nextIndexPageId) < 6) continue;
                 }
 
                 auto indexPage = Storage::StorageManager::Get().GetIndexPage(
@@ -113,13 +123,8 @@ namespace CoreEngine {
                     table
                 );
 
-                // if (!indexPage.IsValid())
-                //     continue;
-
-                bool successfulLock = false;
-                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage.Latch(), successfulLock);
-
-                if(!successfulLock || !indexPage.IsEmpty())
+                auto readerGuard = MultiThreading::ReaderGuard(&indexPage.Latch());
+                if(!indexPage.IsEmpty())
                     continue;
 
                 return indexPage;

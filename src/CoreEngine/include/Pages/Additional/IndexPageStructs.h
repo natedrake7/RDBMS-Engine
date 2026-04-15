@@ -74,6 +74,8 @@ namespace Pages{
 		DataTypes::Indexing::Key key;
 		page_id_t pageId;
 
+	    InternalNodeTuple();
+
 		InternalNodeTuple& operator=(InternalNodeTuple&& other) noexcept;
 		InternalNodeTuple(InternalNodeTuple&& other) noexcept;
 
@@ -81,5 +83,8 @@ namespace Pages{
 		InternalNodeTuple(const InternalNodeTuple& other);
 
 		InternalNodeTuple(DataTypes::Indexing::Key& key, page_id_t pageId);
+
+	    void SetKey(DataTypes::Indexing::Key& otherKey);
+	    void SetPageId(page_id_t otherPageId);
 	};
 }

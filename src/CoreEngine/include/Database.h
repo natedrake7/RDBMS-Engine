@@ -234,10 +234,11 @@ public:
     );
 
     [[nodiscard]] Pages::IndexPageView FindOrAllocateNextIndexPage(
-      StorageTypes::Table*& table,
-      page_id_t indexPageId,
-      Int pagesToAllocate,
-      Int nonClusteredIndexId = -1
+        StorageTypes::Table*& table,
+        page_id_t parentPageId,
+        page_id_t splitChildPageId,
+        Int pagesToAllocate,
+        Int nonClusteredIndexId = -1
     );
 
     void GetIdentityColumns(const ::Memory::IAllocator* allocator)const;

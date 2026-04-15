@@ -6,11 +6,13 @@
 
 namespace DataTypes::Indexing {
   struct Key{
+
     enum class ComparisonResult : TinyInt {
       Less = -1,
       Equal = 0,
       Greater = 1,
     };
+
     Value value;
     DataStructures::PolymorphicArray<Key> subKeys;
     key_size_t size;

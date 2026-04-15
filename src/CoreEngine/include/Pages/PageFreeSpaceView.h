@@ -4,13 +4,18 @@
 namespace Pages{
     class PageFreeSpaceView final : public PageView{
 
-        static constexpr byte_t ALLOCATION_MASK = 0x80;  // bit 7
-        static constexpr byte_t TYPE_MASK      = 0x78;  // bits 3–6 (0111 1000)
-        static constexpr byte_t SIZE_MASK      = 0x07;  // bits 0–2 (0000 0111)
+        static constexpr byte_t ALLOCATION_MASK  = 0x80;  // bit 7        (1000 0000)
+        static constexpr byte_t TYPE_MASK        = 0x78;  // bits 3-6     (0111 1000)
+        static constexpr byte_t SIZE_MASK        = 0x07;  // bits 0-2     (0000 0111)
 
-        static constexpr int TYPE_SHIFT = 3;  // shift left 3 to reach bits 3–6
+        static constexpr Int ALLOCATION_SHIFT    = 7;
+        static constexpr Int TYPE_SHIFT          = 3;
+        static constexpr Int SIZE_SHIFT          = 0;
 
-        inline page_offset_t GetOffset(page_id_t pageId) const;
+        static constexpr byte_t ALLOCATION_SINGLE_BIT_MASK = 0x01;  // used after shifting for IsPageAllocated
+
+        [[nodiscard]] inline page_offset_t GetOffset(page_id_t pageId) const;
+        [[nodiscard]] inline byte_t* GetByte(page_id_t pageId) const;
 
         public:
             explicit PageFreeSpaceView(Frame* frame);

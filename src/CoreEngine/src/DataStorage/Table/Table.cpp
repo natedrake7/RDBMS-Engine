@@ -226,6 +226,9 @@ namespace CoreEngine::StorageTypes {
         this->database = database;
         this->clusteredIndexedTree = nullptr;
 
+        this->_columns.SetAllocator(&this->_allocator);
+        this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
+
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
       }
 
@@ -234,6 +237,9 @@ namespace CoreEngine::StorageTypes {
         this->header = tableHeader;
         this->database = database;
         this->clusteredIndexedTree = nullptr;
+
+        this->_columns.SetAllocator(&this->_allocator);
+        this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
 
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
       }
@@ -254,6 +260,7 @@ namespace CoreEngine::StorageTypes {
         this->clusteredIndexedTree = nullptr;
 
         this->_columns.SetAllocator(&this->_allocator);
+        this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
 
         for (int i = 0;i < systemHeader.columns.size(); i++){
             auto* column = this->_allocator.Allocate<Column>(systemHeader.columns[i], i,  this);

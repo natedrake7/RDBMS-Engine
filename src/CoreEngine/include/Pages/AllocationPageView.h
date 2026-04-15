@@ -3,7 +3,7 @@
 
 namespace Pages{
     struct IndexAllocationPageAdditionalHeader {
-        extent_id_t startingExtentId;
+        extent_id_t lastAllocatedExtentId;
         page_id_t nextPageId;
 
         IndexAllocationPageAdditionalHeader();
@@ -12,9 +12,7 @@ namespace Pages{
     };
 
     class AllocationPageView final : public PageView{
-        extent_id_t lastAllocatedExtentId;
-
-        [[nodiscard]] size_t GetByteIndex(const extent_id_t extentId) const noexcept;
+        [[nodiscard]] size_t GetByteIndex(extent_id_t extentId) const noexcept;
         [[nodiscard]] inline bool GetBit(std::size_t bitIndex) const noexcept;
         inline void SetBit(std::size_t bitIndex) const noexcept;
         inline void ClearBit(std::size_t bitIndex) const noexcept;
@@ -28,7 +26,7 @@ namespace Pages{
             extent_id_t SetExtentsAllocated(
                 const std::vector<extent_id_t>& extentIds,
                 page_id_t globalAllocationMapPageId
-            );
+            ) const;
             void SetDeallocatedExtent(extent_id_t extentId) const;
             void GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents) const;
             void GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;

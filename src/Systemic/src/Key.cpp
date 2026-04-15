@@ -343,6 +343,9 @@ namespace DataTypes::Indexing{
             str.Append(")");
         }
 
+        if (this->value.IsNull())
+            return str;
+
         str.Append(this->value.AsString());
         return str;
     }

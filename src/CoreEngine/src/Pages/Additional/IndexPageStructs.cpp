@@ -102,6 +102,9 @@ namespace Pages{
         this->row = std::move(row);
     }
 
+    InternalNodeTuple::InternalNodeTuple()
+        : pageId(INVALID_PAGE_ID){}
+
     InternalNodeTuple& InternalNodeTuple::operator=(InternalNodeTuple&& other) noexcept{
         if (this == &other)
             return *this;
@@ -135,5 +138,13 @@ namespace Pages{
     InternalNodeTuple::InternalNodeTuple(DataTypes::Indexing::Key& key, const page_id_t pageId){
         this->key = std::move(key);
         this->pageId = pageId;
+    }
+
+    void InternalNodeTuple::SetKey(DataTypes::Indexing::Key& otherKey){
+        this->key = std::move(otherKey);
+    }
+
+    void InternalNodeTuple::SetPageId(const page_id_t otherPageId){
+        this->pageId = otherPageId;
     }
 }

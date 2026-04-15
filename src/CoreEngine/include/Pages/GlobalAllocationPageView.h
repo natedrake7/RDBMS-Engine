@@ -3,8 +3,6 @@
 
 namespace Pages{
     class GlobalAllocationPageView final : public PageView{
-        extent_id_t lastAllocatedExtentId;
-
         [[nodiscard]] size_t GetBitIndex(extent_id_t extentId) const noexcept;
         [[nodiscard]] inline bool GetBit(std::size_t bitIndex) const noexcept;
         inline void SetBit(std::size_t bitIndex) const noexcept;
@@ -16,7 +14,7 @@ namespace Pages{
             GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept;
             GlobalAllocationPageView& operator=(GlobalAllocationPageView&& other) noexcept;
 
-            int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, Int numberOfExtents);
+            int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, Int numberOfExtents) const;
             void DeallocateExtent(extent_id_t extentId) const;
             // void WriteToDisk(std::fstream *filePtr) override;
             // void ReadFromDisk(

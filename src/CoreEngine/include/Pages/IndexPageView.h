@@ -72,7 +72,10 @@ namespace Pages{
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition
             ) const;
-
+            InternalNodeTuple GetInternalNodeTuple(
+                const ::Memory::IAllocator* allocator,
+                Int indexPosition
+            ) const;
             void AppendRowToBuffer(
                 const ::Memory::IAllocator* allocator,
                 DataStructures::Array<RowReference>* buffer,
@@ -88,5 +91,10 @@ namespace Pages{
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition
             ) const;
+
+            void Log(
+                const ::Memory::IAllocator* allocator,
+                std::ostream& os
+            )const;
     };
 }

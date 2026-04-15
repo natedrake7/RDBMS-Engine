@@ -114,7 +114,7 @@
 //fix stats manager
 //figure out why at around 10 000 inserts, it fails
 
-//IMPORTANT: fix internal node splits, they are wrong
+//IMPORTANT: fix internal node splits, they are wrong check if root is split and handle edge case
 
 //check why insert fails after shutdown.
 int main(){
@@ -148,7 +148,7 @@ int main(){
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    // std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
         CoreEngine::StatisticsScheduler::Start,
@@ -160,7 +160,10 @@ int main(){
     static constexpr DataTypes::StringView CONFIG_FILE_PATH = "configuration.json";
     server.Initialize(CONFIG_FILE_PATH);
 
-    const auto* user = server.Authenticate("admin", "admin");
+    const std::string DEBUG_USERNAME = "admin";
+    const std::string DEBUG_PASSWORD = "admin";
+
+    const auto* user = server.Authenticate(DEBUG_USERNAME, DEBUG_PASSWORD);
 
     if (user == nullptr) {
         server.Shutdown();
@@ -189,7 +192,7 @@ int main(){
 
     connectionThread.join();
     statisticsThread.join();
-    garbageCollectorThread.join();
+    // garbageCollectorThread.join();
 
     server.Shutdown();
     return 0;

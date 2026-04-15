@@ -1,5 +1,6 @@
 ﻿#include "../include/BTree.h"
 #include <algorithm>
+#include <cassert>
 #include <iostream>
 #include "../include/DataStorage/Column.h"
 #include "../include/DataStorage/Table.h"
@@ -15,7 +16,7 @@
 
 namespace Indexing{
     bool BTree::ShouldSplit(const Pages::IndexPageView& node) const{
-        return node.Keys() >= 2 * this->degree - 1;
+        return node.Keys() == 2 * this->degree - 1;
     }
 
     void BTree::AssignLeavesConnections(
@@ -81,12 +82,15 @@ namespace Indexing{
         for (Int i = 0; i < numberOfKeys; i++) {
             const auto tupleKey = page.GetKeyByIndex(allocator, i + 1);
 
-            if (tupleKey == key){
-                std::cout << "Found duplicate key: " << key << " and: " << tupleKey << " at position " << i << " in page " << page.PageId() << std::endl;
-                return -1;
-            }
+            // if (tupleKey == key){
+            //     std::cout
+            //         << "Found duplicate key: "
+            //         << key << " and: " << tupleKey << " at position "
+            //         << i << " in page " << page.PageId() << std::endl;
+            //     return -1;
+            // }
 
-            if (tupleKey > key)
+            if (tupleKey >= key)
                 return i;
         }
 
@@ -115,13 +119,12 @@ namespace Indexing{
         const ::Memory::IAllocator* allocator
     ) {
         auto str = DataTypes::String::Concat(allocator, "BTree::CreateDuplicateKeyError: Key ", key.ToString(allocator), " already exists");
-
-        return {Errors::RuntimeError::DuplicateKey, str};
+        return Errors::RuntimeStatus(Errors::RuntimeError::DuplicateKey, std::move(str));
     }
 
     Pages::IndexPageView BTree::CreateRootPage(Int& indexPosition, const Int pagesToAllocate) {
         //maybe root page is removed and need to be reopened
-        auto root = this->AllocateNewPage(INVALID_PAGE_ID, pagesToAllocate);
+        auto root = this->AllocateNewPage(INVALID_PAGE_ID, INVALID_PAGE_ID, pagesToAllocate);
 
         {
             MultiThreading::WriterGuard lock(&root.Latch());
@@ -144,7 +147,7 @@ namespace Indexing{
         const Int pagesToAllocate
     ){
         {
-            auto newRoot = this->AllocateNewPage(this->rootPageId, pagesToAllocate);
+            auto newRoot = this->AllocateNewPage(this->rootPageId, INVALID_PAGE_ID, pagesToAllocate);
 
             MultiThreading::WriterGuard newRootLock(&newRoot.Latch());
 
@@ -191,10 +194,9 @@ namespace Indexing{
         const Pages::IndexPageView &child,
         const Pages::IndexPageView &newChild,
         const Int index
-    ) {
-
+    ){
         const auto* allocator = context.GetAllocator();
-        const auto mid = child.Keys() / 2;
+        const auto mid = child.PageSize() / 2;
 
         // move right half
         //mid = 14, keys = 29 -> donor new size = 15
@@ -215,17 +217,19 @@ namespace Indexing{
         const Int index
     ){
         const auto* allocator = context.GetAllocator();
-
         const auto mid = child.Keys() / 2;
-
-        //promote middle child key to parent
-        const auto childKey = child.GetKeyByIndex(allocator, mid);
-        parent.InsertChild(newChild.PageId(), &childKey, index + 1);
-        child.RemoveKeyFromChild(allocator, mid);
 
         //get middle child and insert it as first child(no key is moved)
         //size = 29, mid = 14 -> moveIndex = 15 so no row is duplicated
-        newChild.DistributeFromPage(allocator, &child, mid, mid);
+        // 1. promote
+        const auto promotedKey = child.GetKeyByIndex(allocator, mid);
+        // 2. fix first child of right node
+        const auto firstChild = child.GetChild(allocator, mid);
+        newChild.InsertFirstChild(firstChild);
+        // 3. move remaining
+        newChild.DistributeFromPage(allocator, &child, mid + 1, mid);
+        // 5. insert into parent
+        parent.InsertChild(newChild.PageId(), &promotedKey, index + 1);
     }
 
     void BTree::SplitChildNoLock(
@@ -235,7 +239,7 @@ namespace Indexing{
         const Pages::IndexPageView &child,
         const Int pagesToAllocate
     ) {
-        const auto newChild = this->AllocateNewPage(parent.PageId(), pagesToAllocate);
+        const auto newChild = this->AllocateNewPage(parent.PageId(), child.PageId(), pagesToAllocate);
 
         MultiThreading::WriterGuard newChildLock(&newChild.Latch());
 
@@ -244,11 +248,11 @@ namespace Indexing{
         newChild.SetTreeType(this->type);
 
         if (child.IsLeaf()){
-            this->SplitLeafNoLock(context, parent, child, newChild, index);
+            Indexing::BTree::SplitLeafNoLock(context, parent, child, newChild, index);
             return;
         }
 
-        this->SplitInternalNodeNoLock(context, parent, child, newChild, index);
+        Indexing::BTree::SplitInternalNodeNoLock(context, parent, child, newChild, index);
     }
 
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
@@ -415,10 +419,11 @@ namespace Indexing{
         return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
-    Pages::IndexPageView BTree::AllocateNewPage(const page_id_t parentPageId, const Int pagesToAllocate){
+    Pages::IndexPageView BTree::AllocateNewPage(const page_id_t parentPageId, const page_id_t splitChildPageId, const Int pagesToAllocate){
         return this->database->FindOrAllocateNextIndexPage(
             this->table,
             parentPageId,
+            splitChildPageId,
             pagesToAllocate,
             this->nonClusteredIndexId
         );
