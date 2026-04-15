@@ -831,8 +831,8 @@ namespace QueryPipeline::Statements {
 
         const auto joinReorderResult = Optimizer::DetermineJoinOrder(this);
 
-        Optimizer optimizer(context);
-        const auto predicatesResult = optimizer.PushDownPredicates(
+        const Optimizer optimizer(context);
+        auto predicatesResult = optimizer.PushDownPredicates(
             joinReorderResult.order,
             this->where.expression,
             joinReorderResult.orderedJoins
@@ -1822,7 +1822,7 @@ namespace QueryPipeline::Statements {
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
             return ClauseCannotBeEvaluatedToBool(context, logicalExpr->left->GetReturnType());
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-        return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
 
         FoldExpression(context, logicalExpr, expression);
         return Errors::ValidationStatus::Ok();

@@ -79,8 +79,7 @@ namespace QueryPipeline {
   }
 
   void Optimizer::SplitConjunctions(Expressions::Expression* expression, std::vector<Expressions::Expression*>& conjunctions){
-    if (expression == nullptr)
-      return;
+    if (expression == nullptr) return;
 
     if (!expression->IsLogical()){
       conjunctions.push_back(expression);
@@ -93,12 +92,12 @@ namespace QueryPipeline {
       SplitConjunctions(logicalExpr->right, conjunctions);
 
       //should delete logical expression?
-      logicalExpr->left = nullptr;
-      logicalExpr->right = nullptr;
-      // delete logicalExpr;
+      // logicalExpr->left = nullptr;
+      // logicalExpr->right = nullptr;
       return;
     }
 
+    //or expression
     conjunctions.push_back(expression);
   }
 
@@ -150,26 +149,28 @@ namespace QueryPipeline {
     );
   }
 
-  void Optimizer::ProcessPredicate(
-    Expressions::Expression* baseExpression,
-    Expressions::Expression*& remainingPredicate,
-    Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary
-  ){
-    std::vector<Expressions::Expression*> expressions;
-    Optimizer::SplitConjunctions(baseExpression, expressions);
+    void Optimizer::ProcessPredicate(
+        Expressions::Expression* baseExpression,
+        Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
+        Expressions::Expression*& remainingPredicate
+    ) const{
+        std::vector<Expressions::Expression*> expressions;
+        Optimizer::SplitConjunctions(baseExpression, expressions);
 
-    for (auto*& condition : expressions){
-      const auto involvedTables = Optimizer::GetInvolvedTables(condition);
+        for (auto* expression : expressions){
+            const auto involvedTables = Optimizer::GetInvolvedTables(expression);
 
-      if (involvedTables.size() == 1){
-        auto& existingCondition = tablePredicatesDictionary[involvedTables[0]];
-        Optimizer::CombineExpressionsWithAnd(existingCondition, condition);
-        continue;
-      }
+            if (involvedTables.size() == 1){
+                Expressions::Expression* existing = nullptr;
+                tablePredicatesDictionary.TryGetValue(involvedTables[0], existing);
+                Optimizer::CombineExpressionsWithAnd(existing, expression);
+                tablePredicatesDictionary[involvedTables[0]] = existing;
+                continue;
+            }
 
-      Optimizer::CombineExpressionsWithAnd(remainingPredicate, condition);
+            Optimizer::CombineExpressionsWithAnd(remainingPredicate, expression);
+        }
     }
-  }
 
   void Optimizer::AnalyzeTableScan(
     Expressions::Expression* baseExpression,
@@ -596,25 +597,23 @@ namespace QueryPipeline {
 
   PredicatePushDownResult Optimizer::PushDownPredicates(
     const std::vector<table_id_t>& tables,
-    Expressions::Expression* expression,
+    Expressions::Expression* whereClause,
     const std::vector<Statements::JoinStatement*>& joins
-  ){
+  ) const{
     PredicatePushDownResult result;
 
-    if (expression == nullptr && joins.empty())
-      return result;
+    if (whereClause == nullptr && joins.empty()) return result;
 
     result.tablePredicatesDictionary = Dictionary<table_id_t, Expressions::Expression*>::FromVector(tables, nullptr);
+    Optimizer::ProcessPredicate(whereClause, result.tablePredicatesDictionary, result.remainingPredicate);
 
-    Optimizer::ProcessPredicate(expression, result.remainingPredicate, result.tablePredicatesDictionary);
     for (const auto& join : joins) {
       // Cannot push down predicates for FULL OUTER JOIN as it would break semantics
       // (unmatched rows from both sides must be preserved with NULLs)
-      if (join->IsFullOuterJoin())
-        continue;
+      if (join->IsFullOuterJoin()) continue;
 
       Expressions::Expression* joinRemainingPredicate = nullptr;
-      Optimizer::ProcessPredicate(join->expression, joinRemainingPredicate, result.tablePredicatesDictionary);
+      Optimizer::ProcessPredicate(join->expression, result.tablePredicatesDictionary, joinRemainingPredicate);
       join->expression = joinRemainingPredicate;
     }
 

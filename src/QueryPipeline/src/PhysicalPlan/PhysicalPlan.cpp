@@ -475,11 +475,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalFilter::~PhysicalFilter() = default;
 
   ExecutionResult PhysicalFilter::Execute(const CoreEngine::ExecutionContext& context){
-    auto result = child->Execute(context);
+    auto result = this->child->Execute(context);
 
-    if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
-      || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
-      return result;
+    // if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
+    //   || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
+    //   return result;
 
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,

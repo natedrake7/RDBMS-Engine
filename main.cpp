@@ -110,13 +110,9 @@
 //INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25
 //INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25 FROM dbo.Actors
 
+//TODO fix optimizer with query predicate pushdown functionality
 
 //fix stats manager
-//figure out why at around 10 000 inserts, it fails
-
-//IMPORTANT: fix internal node splits, they are wrong check if root is split and handle edge case
-
-//check why insert fails after shutdown.
 int main(){
 
     // Tests::InitializeTester();
@@ -140,7 +136,6 @@ int main(){
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     static auto& server = Network::Server::Get();
-
 
     serverRunning.store(true);
 

@@ -227,9 +227,9 @@ namespace QueryPipeline {
 
       void ProcessPredicate(
         Expressions::Expression* baseExpression,
-        Expressions::Expression*& remainingPredicate,
-        Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary
-      );
+        Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
+        Expressions::Expression*& remainingPredicate
+      ) const;
 
       static void AnalyzeTableScan(
         Expressions::Expression* baseExpression,
@@ -306,9 +306,9 @@ namespace QueryPipeline {
         [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
         [[nodiscard]] PredicatePushDownResult PushDownPredicates(
             const std::vector<table_id_t>& tables,
-            Expressions::Expression* expression,
+            Expressions::Expression* whereClause,
             const std::vector<Statements::JoinStatement*>& joins
-        );
+        ) const;
         [[nodiscard]] Range PerformIndexAnalysis(
             std::vector<Headers::IndexHeader>& indexes,
             Expressions::Expression* expression,
