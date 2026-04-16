@@ -1,9 +1,8 @@
 #include "../../include/Schedulers/GarbageCollector.h"
 #include <bits/this_thread_sleep.h>
 
-#include "../../../Server/include/Server.h"
 #include "../../include/Managers/TransactionManager.h"
-#include "Memory/Allocator.h"
+#include "../../include/SystemDatabases/VersionDatabase.h"
 
 namespace CoreEngine {
     using namespace std::chrono_literals;
@@ -17,9 +16,11 @@ namespace CoreEngine {
         while (isServerRunning) {
             std::this_thread::sleep_for(20000ms);
 
-            const Memory::Allocator allocator;
+            if (!versionDatabase.HasPendingVersions())
+                continue;
+
             const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
-            lastScannedExtentId = versionDatabase.CleanupVersionedData(&allocator, oldestTransactionId, lastScannedExtentId);
+            lastScannedExtentId = versionDatabase.CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
         }
     }
 }

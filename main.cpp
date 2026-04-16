@@ -31,7 +31,6 @@
 //allow ctes and tempporary tables.
 //create base Logger class and derive it for more specific Logging.
 //WAL create logs for each method and verify validity, create recovery mechanism in Database Object
-//tempdb
 //transactions(usage of tempDb maybe).
 //change select columns to return only non deleted and order by version DESC
 //validation add default values and identity cannot be together (negates the point of the other)
@@ -59,11 +58,6 @@
 //Lock masterdb to now allow select nor updates and access it through views only
 //queryResponseProtocol returns an std:vector<QueryResult> which is internally std::vector<Value> so serialize that and delete ResponseRow (easy)
 
-//SECURITY COMMANDS
-//CREATE USER alice WITH PASSWORD 'secret';
-//GRANT db_writer TO alice;
-
-//create tempDB to store row versions and invoke it at each call
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 //TODO add priority in pages to store system pages indefinetely and decrease second chance count
 //TODO add page wrapper to handle page pin counts and locks releases etcE
@@ -136,7 +130,7 @@ int main(){
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 
-    // std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
+    std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
     std::thread statisticsThread(
         CoreEngine::StatisticsScheduler::Start,

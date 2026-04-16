@@ -4,10 +4,11 @@
 
 namespace CoreEngine{
     class VersionDatabase {
-    DatabaseHeader header;
         MultiThreading::ReadWriteMutex lastUsedPageMutex;
         MultiThreading::ReadWriteMutex gamPageMutex;
         MultiThreading::ReadWriteMutex pfsPageMutex;
+
+        Memory::PersistentAllocator _allocator;
 
         DataTypes::String filename;
         DataTypes::String systemFilename;
@@ -16,12 +17,16 @@ namespace CoreEngine{
         DataTypes::StringView filenameView;
         DataTypes::StringView systemFilenameView;
 
+        DatabaseHeader header;
+
         Storage::FileKey dataFileKey;
         Storage::FileKey systemFileKey;
 
-        Memory::PersistentAllocator _allocator;
-
         page_id_t lastUsedPageId;
+
+        std::atomic<Int> numberOfPendingVersions;
+
+        static constexpr Int PENDING_VERSIONS_THRESHOLD = 1000;
 
         void PopulateFilenames(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
         void WriteHeaderToFile()const;
@@ -77,9 +82,9 @@ namespace CoreEngine{
             [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
 
             [[nodiscard]] extent_id_t CleanupVersionedData(
-                const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
                 extent_id_t startingExtentId = 0
             )const;
+            [[nodiscard]] bool HasPendingVersions()const;
     };
 }

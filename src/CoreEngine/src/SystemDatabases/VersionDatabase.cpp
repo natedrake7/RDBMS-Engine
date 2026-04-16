@@ -285,7 +285,8 @@ namespace CoreEngine {
         rowPointer.pageId = page.PageId();
         rowPointer.offset = indexPosition;
 
-        return {};
+        this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
+        return status;
     }
 
     Pages::RowReference VersionDatabase::RetrieveRowReference(
@@ -317,10 +318,10 @@ namespace CoreEngine {
     }
 
     extent_id_t VersionDatabase::CleanupVersionedData(
-        const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
         const extent_id_t startingExtentId
     )const {
+        static auto& storageManager = Storage::StorageManager::Get();
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto &extentId : extents){
@@ -341,7 +342,7 @@ namespace CoreEngine {
                         continue;
                 }
 
-                auto page = Storage::StorageManager::Get().GetPage(
+                auto page = storageManager.GetPage(
                     this->dataFileKey,
                     this->filenameView,
                     pageId,
@@ -351,11 +352,12 @@ namespace CoreEngine {
                 MultiThreading::WriterGuard pageLatch(&page.Latch());
 
                 for (int i = 0; i < page.PageSize(); i++) {
-                    const auto rowPtr = page.PeekRow(allocator, i, 0);
-                    rowPtr.lazyState->header = page.PeekRowHeader(i, 0);
+                    auto rowHeader = page.PeekRowHeader(i, 0);
 
-                    if (transactionId == FIRST_TRANSACTION_ID
-                        || rowPtr.lazyState->header.version.createdTransactionId <= transactionId) {
+                    if (
+                        transactionId == FIRST_TRANSACTION_ID
+                        || rowHeader.version.createdTransactionId <= transactionId
+                    ) {
                         page.Delete(i);
                         i--;
                     }
@@ -372,7 +374,7 @@ namespace CoreEngine {
             }
 
             if (isExtentEmpty) {
-                auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
+                auto gamPage = storageManager.GetGlobalAllocationMapPage(
                     this->systemFileKey,
                     this->systemFilenameView,
                     this->header.lastGamPageId
@@ -385,5 +387,9 @@ namespace CoreEngine {
         }
 
         return extents.empty() ? 0 : extents.back() + 1;
+    }
+
+    bool VersionDatabase::HasPendingVersions() const{
+        return this->numberOfPendingVersions.load(std::memory_order_relaxed) > VersionDatabase::PENDING_VERSIONS_THRESHOLD;
     }
 }
