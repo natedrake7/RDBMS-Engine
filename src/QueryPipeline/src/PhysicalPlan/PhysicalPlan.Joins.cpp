@@ -130,8 +130,8 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionNode* left,
     ExecutionNode* right,
     Expressions::Expression* expression,
-    std::vector<column_index_t>& leftKeyColumns,
-    std::vector<column_index_t>& rightKeyColumns
+    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
   ) : left(left), right(right), expression(expression),
       leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
 
@@ -233,8 +233,8 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionNode* left,
     ExecutionNode* right,
     Expressions::Expression* expression,
-    std::vector<column_index_t>& leftKeyColumns,
-    std::vector<column_index_t>& rightKeyColumns
+    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
     ): left(left), right(right), expression(expression),
         leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
 
@@ -337,8 +337,8 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionNode* left,
     ExecutionNode* right,
     Expressions::Expression* expression,
-    std::vector<column_index_t>& leftKeyColumns,
-    std::vector<column_index_t>& rightKeyColumns
+    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
   ): left(left), right(right), expression(expression),
       leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
 
@@ -428,8 +428,8 @@ namespace QueryPipeline::PhysicalPlan {
       // auto* leftResult = this->left->Execute(properties);
       // auto* rightResult = this->right->Execute(properties);
       //
-      // std::vector leftMatched(leftResult->rows.size(), false);
-      // std::vector rightMatched(rightResult->rows.size(), false);
+      // DataStructures::PolymorphicArray leftMatched(leftResult->rows.size(), false);
+      // DataStructures::PolymorphicArray rightMatched(rightResult->rows.size(), false);
       //
       // Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
       //

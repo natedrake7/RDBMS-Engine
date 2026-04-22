@@ -48,7 +48,7 @@ namespace CoreEngine::StorageTypes
         column_number_t numberOfColumns;
 
         page_id_t clusteredIndexPageId;
-        std::vector<page_id_t> nonClusteredIndexPageIds;
+        DataStructures::PolymorphicArray<page_id_t> nonClusteredIndexPageIds;
 
         TableHeader();
         ~TableHeader();
@@ -70,7 +70,7 @@ namespace CoreEngine::StorageTypes
         Indexing::BTree* clusteredIndexedTree;
 
         protected:
-            static bool VectorContainsIndex(const std::vector<column_index_t>& vector, column_index_t index, int& indexPosition);
+            static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
 
         /**
         * @name Index and Pages protected Functions
@@ -131,10 +131,10 @@ namespace CoreEngine::StorageTypes
             // Table(
             //   table_id_t tableId,
             //   Int ordinalPosition,
-            //   const std::vector<Column *> &columns,
+            //   const DataStructures::PolymorphicArray<Column *> &columns,
             //   Database *database,
             //   const Headers::Index* clusteredIndex = nullptr,
-            //   const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
+            //   const DataStructures::PolymorphicArray<Headers::Index> *nonClusteredIndexes = nullptr
             // );
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
@@ -202,7 +202,7 @@ namespace CoreEngine::StorageTypes
             void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
-            [[nodiscard]] std::vector<DataType> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
+            [[nodiscard]] DataStructures::StaticArray<DataType, 10> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
             [[nodiscard]] table_id_t GetTableId() const;
             [[nodiscard]] Constants::TableType GetType() const;
             [[nodiscard]] bool IsClustered()const;
@@ -278,60 +278,60 @@ namespace CoreEngine::StorageTypes
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const std::vector<Value> &updates
+                const DataStructures::Array<Value> &updates
             );
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const std::vector<Expressions::Expression*> &updates
+                const DataStructures::Array<Expressions::Expression*> &updates
             );
             void ClusteredIndexScanUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const std::vector<Value> &updates
+                const DataStructures::Array<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const std::vector<Expressions::Expression*> &updates
+                const DataStructures::Array<Expressions::Expression*> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
-                const std::vector<Value> &updates
+                const DataStructures::Array<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionContext& executionContext,
                 const DataTypes::Indexing::Key& key,
-                const std::vector<Value> &updates
+                const DataStructures::Array<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus SystemClusteredIndexSeekUpdate(
                 const ::Memory::IAllocator* allocator,
                 const DataTypes::Indexing::Key& key,
-                const std::vector<Value> &updates
+                const DataStructures::Array<Value> &updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionContext& executionContext,
-                const std::vector<Value>& updates
+                const DataStructures::Array<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionContext& executionContext,
-                const std::vector<Expressions::Expression*>& updates
+                const DataStructures::Array<Expressions::Expression*>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus SystemUpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ::Memory::IAllocator* allocator,
-                const std::vector<Value>& updates
+                const DataStructures::Array<Value>& updates
             ) const;
         /** @} End of: Update Functions*/
 
@@ -370,7 +370,7 @@ namespace CoreEngine::StorageTypes
         * Functions that manage indexes and pages
         * @{
         */
-            Int CreateNonClusteredIndex(const std::vector<column_index_t>& columnIndices);
+            Int CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices);
             void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
             page_id_t GetIndexAllocationMapPageId()const;
 

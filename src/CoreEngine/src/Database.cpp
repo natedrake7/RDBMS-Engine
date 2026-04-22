@@ -231,15 +231,15 @@ namespace CoreEngine{
     }
 
     Logging::CheckPoint Database::LogRowInsert(
+        const ExecutionContext& context,
         const StorageTypes::InsertPayload& payload,
         const transaction_id_t transactionId,
         const table_id_t tableOrdinal
     ) {
         static auto& logger = Logging::WriteAheadLogger::Get();
 
-        std::vector<char> buffer;
-        buffer.resize(payload.Size());
-        std::memcpy(buffer.data(), payload.Data(), payload.Size());
+        DataStructures::PolymorphicArray<char> buffer(context.GetAllocator(), payload.Size());
+        std::memcpy(buffer.Data(), payload.Data(), payload.Size());
 
         const auto logEntry = logger.CreateLogEntry(
             transactionId,
@@ -252,7 +252,7 @@ namespace CoreEngine{
     }
 
     Logging::CheckPoint Database::LogRowBatchInsert(
-        std::vector<char>& buffer,
+        DataStructures::PolymorphicArray<char>& buffer,
         const transaction_id_t transactionId,
         const table_id_t tableOrdinal
     ){

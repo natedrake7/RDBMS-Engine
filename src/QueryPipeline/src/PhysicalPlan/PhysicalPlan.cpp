@@ -87,7 +87,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
-  void ExecutionNode::InsertToTemporaryDatabase(const std::vector<Pages::RowReference>& rows){
+  void ExecutionNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows){
 
   }
 
@@ -430,163 +430,163 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-  ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
-    auto result = ExecutionResult(context);
-    QueryResult resultRow(context.GetAllocator());
+    ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
+        auto result = ExecutionResult(context);
+        QueryResult resultRow(context.GetAllocator());
 
-    const Expressions::EvaluationContext evaluationContext(
-        Expressions::EvaluationContext::EvaluationContextType::Constant,
-        context
-    );
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::Constant,
+            context
+        );
 
-    for (const auto& expression : this->resultExpressions) {
-      result.displayColumnNames.Push(expression->name);
+        for (const auto& expression : this->resultExpressions) {
+            result.displayColumnNames.Push(expression->name);
 
-      auto field = expression->Evaluate(evaluationContext);
-      resultRow.AddColumn(field);
+            auto field = expression->Evaluate(evaluationContext);
+            resultRow.AddColumn(field);
+        }
+
+        result.results.Push(std::move(resultRow));
+
+        return result;
     }
 
-    result.results.Push(std::move(resultRow));
+    PhysicalProject:: PhysicalProject(
+        ExecutionNode *child,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders)
+        : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
 
-    return result;
-  }
+    PhysicalProject::~PhysicalProject() = default;
 
-  PhysicalProject:: PhysicalProject(
-    ExecutionNode *child,
-    std::vector<Expressions::Expression*>& resultExpressions,
-    std::vector<Headers::ColumnHeader>& columnHeaders)
-    : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
+    ExecutionResult PhysicalProject::Execute(const CoreEngine::ExecutionContext& context){
+        return (this->child == nullptr)
+            ? this->ExecuteConstantStatement(context)
+            : this->ExecuteStatement(context);
+    }
 
-  PhysicalProject::~PhysicalProject() = default;
+    void PhysicalProject::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
 
-  ExecutionResult PhysicalProject::Execute(const CoreEngine::ExecutionContext& context){
-      return (this->child == nullptr)
-        ? this->ExecuteConstantStatement(context)
-        : this->ExecuteStatement(context);
-  }
-
-  void PhysicalProject::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->child->UpdateScanState(rowId);
-  }
-
-  PhysicalFilter::PhysicalFilter(ExecutionNode *child, Expressions::Expression* filter)
+    PhysicalFilter::PhysicalFilter(ExecutionNode *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
 
-  PhysicalFilter::~PhysicalFilter() = default;
+    PhysicalFilter::~PhysicalFilter() = default;
 
-  ExecutionResult PhysicalFilter::Execute(const CoreEngine::ExecutionContext& context){
-    auto result = this->child->Execute(context);
+    ExecutionResult PhysicalFilter::Execute(const CoreEngine::ExecutionContext& context){
+        auto result = this->child->Execute(context);
 
-    // if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
-    //   || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
-    //   return result;
+        // if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
+        //   || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr)
+        //   return result;
 
-    Expressions::EvaluationContext evaluationContext(
+        Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-        context
-    );
+            context
+        );
 
-    DataStructures::PolymorphicArray<Pages::RowReference> filteredRows(context.GetAllocator(), result.rows.Size() / 2);
-    for (auto& row : result.rows) {
-      evaluationContext.row = &row;
+        DataStructures::PolymorphicArray<Pages::RowReference> filteredRows(context.GetAllocator(), result.rows.Size() / 2);
+        for (auto& row : result.rows) {
+            evaluationContext.row = &row;
 
-      if (!this->filter->Evaluate(evaluationContext).AsBool())
-        continue;
+            if (!this->filter->Evaluate(evaluationContext).AsBool())
+                continue;
 
-      filteredRows.Push(std::move(row));
-    }
-
-    result.rows = std::move(filteredRows);
-    return result;
-  }
-
-  void PhysicalFilter::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->child->UpdateScanState(rowId);
-  }
-
-  PhysicalTop::PhysicalTop(ExecutionNode* child, const BigInt top)
-    : top(top), child(child){}
-
-  PhysicalTop::~PhysicalTop() = default;
-
-  ExecutionResult PhysicalTop::Execute(const CoreEngine::ExecutionContext& context){
-    auto result = this->child->Execute(context);
-
-    if (this->top > result.results.Size())
-      return result;
-
-    result.results.RemoveFrom(this->top);
-
-    return result;
-  }
-
-  void PhysicalTop::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->child->UpdateScanState(rowId);
-  }
-
-  PhysicalDistinct::PhysicalDistinct(ExecutionNode *child)
-    : child(child){}
-
-  PhysicalDistinct::~PhysicalDistinct() = default;
-
-  ExecutionResult PhysicalDistinct::Execute(const CoreEngine::ExecutionContext& context){
-    auto result = this->child->Execute(context);
-
-    DataStructures::PolymorphicArray<QueryResult> results;
-
-    HashSet<int64_t> computedHashes;
-
-    for (auto& row : result.results) {
-      const auto hash = row.ComputeHash();
-
-      //if no collision occurs
-      if (!computedHashes.Contains(hash)) {
-        results.Push(std::move(row));
-        computedHashes.Add(hash);
-        continue;
-      }
-
-      bool isDuplicate = false;
-      for (const auto& distinctRow : results) {
-        if (distinctRow == row) {
-          isDuplicate = true;
-          break;
+            filteredRows.Push(std::move(row));
         }
-      }
 
-      if (!isDuplicate)
-        results.Push(std::move(row));
+        result.rows = std::move(filteredRows);
+        return result;
     }
 
-    result.results = std::move(results);
+    void PhysicalFilter::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
 
-    return result;
-  }
+    PhysicalTop::PhysicalTop(ExecutionNode* child, const BigInt top)
+        : top(top), child(child){}
 
-  void PhysicalDistinct::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->child->UpdateScanState(rowId);
-  }
+    PhysicalTop::~PhysicalTop() = default;
 
-  bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){
-    return lhs.GetColumnIndex() < rhs.GetColumnIndex();
-  }
+    ExecutionResult PhysicalTop::Execute(const CoreEngine::ExecutionContext& context){
+        auto result = this->child->Execute(context);
+
+        if (this->top > result.results.Size())
+            return result;
+
+        result.results.RemoveFrom(this->top);
+        result.canFetchMore = false;
+        return result;
+    }
+
+    void PhysicalTop::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
+
+    PhysicalDistinct::PhysicalDistinct(ExecutionNode *child)
+        : child(child){}
+
+    PhysicalDistinct::~PhysicalDistinct() = default;
+
+    ExecutionResult PhysicalDistinct::Execute(const CoreEngine::ExecutionContext& context){
+        auto result = this->child->Execute(context);
+
+        DataStructures::PolymorphicArray<QueryResult> results;
+
+        HashSet<int64_t> computedHashes;
+
+        for (auto& row : result.results) {
+            const auto hash = row.ComputeHash();
+
+            //if no collision occurs
+            if (!computedHashes.Contains(hash)) {
+                results.Push(std::move(row));
+                computedHashes.Add(hash);
+                continue;
+            }
+
+            bool isDuplicate = false;
+            for (const auto& distinctRow : results) {
+                if (distinctRow == row) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+
+            if (!isDuplicate)
+                results.Push(std::move(row));
+        }
+
+        result.results = std::move(results);
+
+        return result;
+    }
+
+    void PhysicalDistinct::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
+
+    bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){
+        return lhs.GetColumnIndex() < rhs.GetColumnIndex();
+    }
 
     DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
         const CoreEngine::ExecutionContext& context,
         const Int index
     ) const{
-        auto& [expressions] = this->fields.at(index);
+        auto& [expressions] = this->fields[index];
 
         DataStructures::PolymorphicArray<Value> values(context.GetAllocator());
-        values.Reserve(expressions.size());
-        for (int i = 0; i < expressions.size(); i++) {
+        values.Reserve(expressions.Size());
+        for (int i = 0; i < expressions.Size(); i++) {
             const Expressions::EvaluationContext evaluationContext(
                 Expressions::EvaluationContext::EvaluationContextType::Constant,
                 context
             );
 
             auto value = expressions[i]->Evaluate(evaluationContext);
-            value.SetColumnIndex(this->columnsIndices.at(index));
+            value.SetColumnIndex(this->columnsIndices[index]);
             values.Push(std::move(value));
         }
 
@@ -622,7 +622,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ) const{
         auto result = ExecutionResult(context);
 
-        for (int i = 0;i < this->fields.size(); i++){
+        for (int i = 0;i < this->fields.Size(); i++){
             const auto values = this->ConvertExpressionsToValues(context, i);
 
             result.status = tablePtr->InsertRow(context, values);
@@ -632,16 +632,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
         result.status = Errors::RuntimeStatus(
             Errors::RuntimeError::Ok,
-            Messages::INSERT_ROWS_FROM_FIELDS(static_cast<Int>(this->fields.size()), context.GetAllocator())
+            Messages::INSERT_ROWS_FROM_FIELDS(static_cast<Int>(this->fields.Size()), context.GetAllocator())
         );
         return result;
     }
 
     PhysicalInsert::PhysicalInsert(
         Statements::DataSource* table,
-        std::vector<Statements::Inserts> &fields,
+        DataStructures::PolymorphicArray<Statements::Inserts> &fields,
         ExecutionNode* child,
-        std::vector<column_index_t>& columnsIndices
+        DataStructures::PolymorphicArray<column_index_t>& columnsIndices
     ): table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
     PhysicalInsert::~PhysicalInsert() = default;
@@ -710,7 +710,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     PhysicalHeapUpdate::PhysicalHeapUpdate(
         Statements::DataSource *table,
         Expressions::Expression *expression,
-        std::vector<Expressions::Expression*>& updates
+        DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ) : table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalHeapUpdate::~PhysicalHeapUpdate() = default;
@@ -728,7 +728,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(
       Statements::DataSource *table,
       Expressions::Expression *expression,
-      std::vector<Expressions::Expression*>& updates
+      DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate() = default;
@@ -746,7 +746,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(
       Statements::DataSource *table,
       Expressions::Expression *expression,
-      std::vector<Expressions::Expression*>& updates
+      DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
@@ -768,7 +768,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   PhysicalTableCreate::PhysicalTableCreate(
       const DataTypes::Guid& sessionId,
       Statements::DataSource*  table,
-      std::vector<Statements::NewColumn*> &columns,
+      DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
       const Headers::Index& primaryKey,
       DataTypes::String& constraintName
     ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)),
@@ -946,7 +946,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalOrderBy::PhysicalOrderBy(
       ExecutionNode *child,
-      std::vector<Statements::OrderColumn*>& expressions
+      DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
   )   : child(child)
    , expressions(std::move(expressions))
    , comparator(&this->expressions, nullptr)
@@ -1036,7 +1036,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
         DataTypes::String& constraintName,
-        std::vector<column_index_t> &columns
+        DataStructures::PolymorphicArray<column_index_t> &columns
     ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
     ExecutionResult PhysicalIndexCreate::Execute(const CoreEngine::ExecutionContext& context){

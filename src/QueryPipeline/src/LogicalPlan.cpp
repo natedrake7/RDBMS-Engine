@@ -62,8 +62,8 @@ namespace QueryPipeline {
 
   LogicalProject::LogicalProject(
     LogicalPlan *child,
-    std::vector<Expressions::Expression*> &resultExpressions,
-    std::vector<Headers::ColumnHeader>& columnsHeaders)
+    DataStructures::PolymorphicArray<Expressions::Expression*> &resultExpressions,
+    DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders)
     : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
 
   LogicalProject::~LogicalProject(){
@@ -260,7 +260,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     return context._context.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter);
   }
 
-  LogicalOrder::LogicalOrder(LogicalPlan *child, std::vector<Statements::OrderColumn*>& expressions)
+  LogicalOrder::LogicalOrder(LogicalPlan *child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions)
     : child(child), expressions(std::move(expressions)) {}
 
   PhysicalPlan::ExecutionNode* LogicalOrder::ToPhysical(QueryContext& context){
@@ -291,9 +291,9 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
   LogicalInsert::LogicalInsert(
     Statements::DataSource* table,
-    std::vector<Statements::Inserts> &fields,
+    DataStructures::PolymorphicArray<Statements::Inserts> &fields,
     LogicalPlan* child,
-    std::vector<column_index_t>& columnIndices
+    DataStructures::PolymorphicArray<column_index_t>& columnIndices
   ) : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnIndices)) {}
 
   LogicalInsert::~LogicalInsert(){
@@ -355,7 +355,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
 
     LogicalUpdate::LogicalUpdate(
         Statements::DataSource *table,
-        std::vector<Expressions::Expression*>& updates,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& updates,
         Expressions::Expression *expression
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
@@ -398,14 +398,14 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
     LogicalTableCreate::LogicalTableCreate(
         const DataTypes::Guid& sessionId,
         Statements::DataSource*  table,
-        std::vector<Statements::NewColumn*>& columns,
-        std::vector<column_index_t> primaryKey,
+        DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
+        DataStructures::PolymorphicArray<column_index_t> primaryKey,
         DataTypes::String& constraintName
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
     PhysicalPlan::PhysicalTableCreate * LogicalTableCreate::ToPhysical(QueryContext& context){
-        Headers::Index index(this->primaryKey.data(), this->primaryKey.size());
+        Headers::Index index(this->primaryKey.Data(), this->primaryKey.Size());
         return context._context.Allocate<PhysicalPlan::PhysicalTableCreate>(
             this->sessionId,
             this->table,
@@ -419,7 +419,7 @@ LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter
         const DataTypes::Guid& sessionId,
         Statements::DataSource *table,
         DataTypes::String& constraintName,
-        std::vector<column_index_t> &columns
+        DataStructures::PolymorphicArray<column_index_t> &columns
     ): LogicalPlan(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
     PhysicalPlan::ExecutionNode * LogicalIndexCreate::ToPhysical(QueryContext& context){

@@ -134,7 +134,7 @@ namespace Indexing{
         );
 
         [[nodiscard]] Pages::IndexPageView SearchKey(const ::Memory::IAllocator* allocator, const DataTypes::Indexing::Key& key) const;
-        [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, std::vector<Pages::IndexPageView>& ancestors) const;
+        [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::Array<Pages::IndexPageView>& ancestors) const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator, TinyInt& depth) const;
 
@@ -143,7 +143,7 @@ namespace Indexing{
 
         [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, page_id_t splitChildPageId, Int pagesToAllocate);
 
-        void HandleUnderflow(const Pages::IndexPageView& node, std::vector<Pages::IndexPageView>& ancestors, Int& parentIndex);
+        void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::Array<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
 
         bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
@@ -178,7 +178,7 @@ namespace Indexing{
             Pages::IndexPageView& rightNode,
             Pages::IndexPageView& parent,
             Int parentKeyIndex,
-            std::vector<Pages::IndexPageView>& ancestors,
+            DataStructures::Array<Pages::IndexPageView>& ancestors,
             Int& parentIndex
         );
 
@@ -187,7 +187,7 @@ namespace Indexing{
             Pages::IndexPageView& currentNode,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
@@ -213,7 +213,7 @@ namespace Indexing{
         void IndexSeekRange(
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            std::vector<DataTypes::Indexing::QueryData>& result
+            DataStructures::Array<DataTypes::Indexing::QueryData>& result
         )const;
 
         void IndexSeekRange(
@@ -255,7 +255,7 @@ namespace Indexing{
             const Expressions::Expression* expression
         )const;
 
-        void IndexScan(std::vector<DataTypes::Indexing::QueryData>& result)const;
+        void IndexScan(DataStructures::Array<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
@@ -289,36 +289,36 @@ namespace Indexing{
             DataStructures::Array<Pages::RowReference>* result
         )const;
         void IndexScan(
-            std::vector<DataTypes::RowIdentifier>* result,
+            DataStructures::Array<DataTypes::RowIdentifier>* result,
             CoreEngine::IndexState& state,
             Int rowsToSelect
         )const;
 
-        void IndexScan(std::vector<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
+        void IndexScan(DataStructures::Array<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
-            const std::vector<Value> &updates
+            const DataStructures::Array<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
-           const std::vector<Expressions::Expression*>& updates
+           const DataStructures::Array<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
-            const std::vector<Expressions::Expression*>& updates
+            const DataStructures::Array<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            const std::vector<Value>& updates
+            const DataStructures::Array<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
@@ -326,20 +326,20 @@ namespace Indexing{
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const std::vector<Value>& updates
+            const DataStructures::Array<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const std::vector<Value>& updates
+            const DataStructures::Array<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SystemIndexSeekUpdate(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            const std::vector<Value>& updates
+            const DataStructures::Array<Value>& updates
         )const;
 
         void SearchKey(const DataTypes::Indexing::Key& key, DataTypes::Indexing::QueryData& result) const;
@@ -365,7 +365,7 @@ namespace Indexing{
         void CalculateIndexStatistics(
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
     };

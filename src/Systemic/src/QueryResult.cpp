@@ -164,14 +164,14 @@ void QueryResult::Deserialize(const std::vector<char> &buffer, UnsignedInt& offs
   }
 }
 
-void QueryResult::Update(std::vector<Value>& updates){
+void QueryResult::Update(DataStructures::Array<Value>& updates){
     for (auto& value : updates){
         auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = std::move(value);
     }
 }
 
-void QueryResult::Update(const std::vector<Value>& updates){
+void QueryResult::Update(const DataStructures::Array<Value>& updates){
     for (const auto& value : updates){
         auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = value;

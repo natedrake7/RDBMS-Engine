@@ -43,5 +43,12 @@ class HashSet : public std::unordered_set<T>
             return std::vector<T>(this->begin(), this->end());
         }
 
+        DataStructures::PolymorphicArray<T> ToPolymorphicArray(const ::Memory::IAllocator* allocator) const{
+            DataStructures::PolymorphicArray<T> array(allocator, this->size());
+            for(const auto& element : *this)
+                array.Push(element);
+            return array;
+        }
+
         [[nodiscard]] size_t Size()const { return this->size(); }
 };

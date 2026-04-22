@@ -48,8 +48,8 @@ namespace CoreEngine::StorageTypes {
         return *this;
       }
 
-      bool Table::VectorContainsIndex(const std::vector<column_index_t>& vector, const column_index_t index, int& indexPosition){
-        for(int i = 0;i < vector.size(); i++)
+      bool Table::VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, const column_index_t index, int& indexPosition){
+        for(int i = 0;i < vector.Size(); i++)
           if(vector[i] == index)
           {
             indexPosition = i;
@@ -92,7 +92,7 @@ namespace CoreEngine::StorageTypes {
             this
         );
 
-        std::vector<extent_id_t> tableExtentIds;
+        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         const auto& indexedColumns = this->nonClusteredIndexes[indexPos].columns;
@@ -122,7 +122,7 @@ namespace CoreEngine::StorageTypes {
 
             // const auto rows = page.DataRowsNoLock(this);
             //
-            // std::vector<extent_id_t> allocatedExtents;
+            // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
             // extent_id_t startingExtentIndex = 0;
             //
             // for (int i = 0; i < rows.size(); i++) {
@@ -148,7 +148,7 @@ namespace CoreEngine::StorageTypes {
         //
         // const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.allocationPageId, this);
         //
-        // std::vector<extent_id_t> allocatedExtents;
+        // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
         // tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
         //
         // for (const auto& extentId: allocatedExtents) {
@@ -195,10 +195,10 @@ namespace CoreEngine::StorageTypes {
 //     Table::Table(
 //         const table_id_t tableId,
 //         const Int ordinalPosition,
-//         const std::vector<Column*> &columns,
+//         const DataStructures::PolymorphicArray<Column*> &columns,
 //         Database *database,
 //         const Headers::Index* clusteredIndex,
-//         const std::vector<Headers::Index> *nonClusteredIndexes
+//         const DataStructures::PolymorphicArray<Headers::Index> *nonClusteredIndexes
 //       ){
 // //        this->schema = schema;
 //         // this->_columns = columns;
@@ -300,7 +300,7 @@ namespace CoreEngine::StorageTypes {
         // rows.reserve(input.size());
 
         Int rowSize = 0;
-        std::vector<char> buffer;
+        DataStructures::PolymorphicArray<char> buffer;
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
@@ -379,7 +379,7 @@ namespace CoreEngine::StorageTypes {
     // Errors::RuntimeStatus Table::InsertRow(
     //   const ExecutionProperties& properties,
     //   const vector<Expressions::Expression *> &inputData,
-    //   const std::vector<column_index_t> &columnIndices
+    //   const DataStructures::PolymorphicArray<column_index_t> &columnIndices
     // ){
     //     Logging::CheckPoint checkPoint;
     //
@@ -545,7 +545,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, filename, this->header.allocationPageId, this);
 
-        std::vector<extent_id_t> tableExtentIds;
+        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         tableMapPage.GetAllocatedExtents(&tableExtentIds, state.extentId);
 
         state.canFetchMore = false;
@@ -625,10 +625,10 @@ namespace CoreEngine::StorageTypes {
                 this
             );
 
-        std::vector<extent_id_t> tableExtentIds;
+        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
-        std::vector<Row*> rowsToBeInserted;
+        DataStructures::PolymorphicArray<Row*> rowsToBeInserted;
         Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
 
         for (const auto &extentId : tableExtentIds){
@@ -689,7 +689,7 @@ namespace CoreEngine::StorageTypes {
 
       const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, filename, this->header.allocationPageId, this);
 
-      std::vector<extent_id_t> tableExtentIds;
+      DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
       tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
       const auto rowCategory = Database::GetObjectSizeToCategory(payload.Size());
@@ -746,7 +746,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapUpdate(
         const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
-        const std::vector<Value> &updates
+        const DataStructures::Array<Value> &updates
     ){
         if(this->header.allocationPageId == INVALID_PAGE_ID) return {};
 
@@ -763,7 +763,7 @@ namespace CoreEngine::StorageTypes {
             this
         );
 
-        std::vector<extent_id_t> tableExtentIds;
+        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
@@ -810,7 +810,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapUpdate(
         const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
-        const std::vector<Expressions::Expression*> &updates
+        const DataStructures::Array<Expressions::Expression*> &updates
     ){
         if(this->header.allocationPageId == INVALID_PAGE_ID)
             return {};
@@ -828,7 +828,7 @@ namespace CoreEngine::StorageTypes {
             this
         );
 
-        std::vector<extent_id_t> tableExtentIds;
+        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
@@ -872,7 +872,7 @@ namespace CoreEngine::StorageTypes {
     void Table::ClusteredIndexScanUpdate(
       const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
-      const std::vector<Value> &updates
+      const DataStructures::Array<Value> &updates
     ){
       const auto* tree = this->GetClusteredIndexedTree();
       tree->IndexScanUpdate(executionContext, expression, updates);
@@ -881,7 +881,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
-      const std::vector<Expressions::Expression*>& updates
+      const DataStructures::Array<Expressions::Expression*>& updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -895,7 +895,7 @@ namespace CoreEngine::StorageTypes {
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
-        const std::vector<Value> &updates
+        const DataStructures::Array<Value> &updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -907,7 +907,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
         const ExecutionContext& executionContext,
         const DataTypes::Indexing::Key &key,
-        const std::vector<Value> &updates
+        const DataStructures::Array<Value> &updates
     ) {
         const auto* tree = this->GetClusteredIndexedTree();
         return tree->IndexSeekUpdate(executionContext, key, updates);
@@ -916,7 +916,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::SystemClusteredIndexSeekUpdate(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        const std::vector<Value>& updates
+        const DataStructures::Array<Value>& updates
     ){
           const auto* tree = this->GetClusteredIndexedTree();
           return tree->SystemIndexSeekUpdate(allocator, key, updates);
@@ -1012,18 +1012,15 @@ namespace CoreEngine::StorageTypes {
       return maximumRowSize;
     }
 
-    std::vector<DataType> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
-          std::vector<DataType> columnDatatypes;
+    DataStructures::StaticArray<DataType, 10> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
+          DataStructures::StaticArray<DataType, 10> columnDatatypes;
 
           if(treeId == 0){
             for(const auto& columnIndex: this->clusteredIndexHeader.columns)
-                columnDatatypes.emplace_back(this->_columns[columnIndex]->Type());
+                columnDatatypes.Push(this->_columns[columnIndex]->Type());
 
             return columnDatatypes;
           }
-
-//          for(const auto& columnIndex: this->header.nonClusteredColumnIndexes[treeId - 1])
-//              columns.emplace_back(this->columns[columnIndex]->GetColumnType());
 
           return columnDatatypes;
       }
@@ -1083,7 +1080,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionContext& executionContext,
-        const std::vector<Value>& updates
+        const DataStructures::Array<Value>& updates
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -1128,7 +1125,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionContext& executionContext,
-        const std::vector<Expressions::Expression*>& updates
+        const DataStructures::Array<Expressions::Expression*>& updates
     ){
 
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
@@ -1175,7 +1172,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ::Memory::IAllocator* allocator,
-        const std::vector<Value>& updates
+        const DataStructures::Array<Value>& updates
     ) const{
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -1353,7 +1350,7 @@ namespace CoreEngine::StorageTypes {
 
     const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, filename, this->header.allocationPageId, this);
 
-    std::vector<extent_id_t> allocatedExtents;
+    DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
     tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
 
     for (const auto& extentId: allocatedExtents) {
@@ -1437,7 +1434,7 @@ namespace CoreEngine::StorageTypes {
         const auto& server = SystemCatalog::Get();
 
         //schema adjustments in master db change this as well
-        std::vector<Value> updates = {
+        DataStructures::PolymorphicArray<Value> updates = {
             // Value(true, static_cast<column_index_t>(SysColumns::IsDeleted)),
             // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
             // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::DeletedAt)),
@@ -1453,7 +1450,7 @@ namespace CoreEngine::StorageTypes {
 
             column->SetOrdinalPosition(i);
 
-            std::vector<Value> update = {
+            DataStructures::PolymorphicArray<Value> update = {
                 // Value(i, static_cast<column_index_t>(DatabaseEngine::SysColumns::OrdinalPosition))
             };
 

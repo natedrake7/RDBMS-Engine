@@ -90,7 +90,7 @@ namespace CoreEngine {
             const auto cacheStats = this->statsManager->GetTableStatistics(table->GetTableId());
 
             auto currentTime = DataTypes::DateTime::Now();
-            currentTime.AddMinutes(-1); // Update stats if older than 10 minutes test for production grade this should be dynamic
+            currentTime.AddMinutes(-1); // Update stats if older than 10-minutes test for production grade this should be dynamic
 
             if (currentTime <= cacheStats.lastModified
                 && cacheStats.tableId != INVALID_TABLE_ID
@@ -222,7 +222,7 @@ namespace CoreEngine {
         }
 
         //TODO
-        //get non clustered trees
+        //get non-clustered trees
 
         return false;
     }
@@ -432,9 +432,17 @@ namespace CoreEngine {
         std::cout << "Statistics Scheduler started." << std::endl;
 
         while (isServerRunning) {
-            std::this_thread::sleep_for(10000ms);
+            std::unique_lock lock(StatisticsScheduler::_mutex);
+            StatisticsScheduler::_cv.wait_for(lock, 20000ms, [&]{ return !isServerRunning.load(); });
+
+            if (!isServerRunning)
+                break;
             // scheduler.UpdateStatistics();
         }
+    }
+
+    void StatisticsScheduler::Stop(){
+        StatisticsScheduler::_cv.notify_all();
     }
 
     void StatisticsScheduler::UpdateColumnStatistics(
@@ -463,5 +471,13 @@ namespace CoreEngine {
             sortedValues.Add(value, 1);
         else
             sortedValues.Update(value, frequency + 1);
+    }
+
+    std::mutex& StatisticsScheduler::Mutex(){
+        return StatisticsScheduler::_mutex;
+    }
+
+    std::condition_variable& StatisticsScheduler::ConditionVariable(){
+        return StatisticsScheduler::_cv;
     }
 }

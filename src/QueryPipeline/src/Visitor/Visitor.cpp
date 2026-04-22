@@ -10,10 +10,10 @@
 
 namespace QueryPipeline {
   antlrcpp::Any SQLVisitorImplementation::visitSqlStatement(SQLParser::SqlStatementContext *context)  {
-    std::vector<std::any> statements;
+    DataStructures::PolymorphicArray<std::any> statements(this->_compileContext->GetAllocator());
 
     for (const auto& statement: context->statement())
-      statements.push_back(this->visit(statement));
+      statements.Push(this->visit(statement));
 
     return statements;
   }
@@ -88,14 +88,14 @@ namespace QueryPipeline {
 
         statement->distinct = context->distinct() != nullptr;
 
-        statement->results = std::any_cast<std::vector<Expressions::Expression*>>(visitResultList(context->resultList()));
+        statement->results = std::any_cast<DataStructures::PolymorphicArray<Expressions::Expression*>>(visitResultList(context->resultList()));
 
         statement->table = (context->datasource() != nullptr)
             ? std::any_cast<Statements::DataSource*>(visit(context->datasource()))
             : nullptr;
 
         for (auto* join : context->joinStatement())
-            statement->joins.push_back(std::any_cast<Statements::JoinStatement*>(visit(join)));
+            statement->joins.Push(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
         if (context->whereClause() != nullptr)
             statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
@@ -232,7 +232,7 @@ namespace QueryPipeline {
         statement->columns = std::move(this->GetColumnsList(context->columnList()));
 
         if (context->valuesStatement())
-            statement->values = std::any_cast<std::vector<Statements::Inserts>>(visit(context->valuesStatement()));
+            statement->values = std::any_cast<DataStructures::PolymorphicArray<Statements::Inserts>>(visit(context->valuesStatement()));
 
         if (context->selectStatement())
             statement->selectStatement = std::any_cast<Statements::SelectStatement*>(visit(context->selectStatement()));
@@ -246,14 +246,14 @@ namespace QueryPipeline {
         return std::any(statement);
     }
 
-  antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
-    std::vector<Value> values;
-    
-    for (const auto& literalValue : context->literalValue())
-       values.emplace_back(std::any_cast<Value>(visit(literalValue)));
+    antlrcpp::Any SQLVisitorImplementation::visitLiteralValueList(SQLParser::LiteralValueListContext *context){
+        DataStructures::PolymorphicArray<Value> values(this->_compileContext->GetAllocator());
 
-    return values;
-  }
+        for (const auto& literalValue : context->literalValue())
+            values.Push(std::any_cast<Value>(visit(literalValue)));
+
+        return values;
+    }
 
 
     antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
@@ -494,19 +494,19 @@ namespace QueryPipeline {
         return std::any(castValue);
     }
 
-    std::vector<Statements::ColumnName> SQLVisitorImplementation::GetColumnsList(SQLParser::ColumnListContext *context){
-        std::vector<Statements::ColumnName> columns;
+    DataStructures::PolymorphicArray<Statements::ColumnName> SQLVisitorImplementation::GetColumnsList(SQLParser::ColumnListContext *context){
+        DataStructures::PolymorphicArray<Statements::ColumnName> columns(this->_compileContext->GetAllocator());
         for (const auto& columnName : context->columnName())
-            columns.push_back(std::move(std::any_cast<Statements::ColumnName>(visit(columnName))));
+            columns.Push(std::move(std::any_cast<Statements::ColumnName>(visit(columnName))));
 
         return columns;
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitColumnList(SQLParser::ColumnListContext *context){
-        std::vector<std::string> columns;
+        DataStructures::PolymorphicArray<std::string> columns(this->_compileContext->GetAllocator());
 
         for (const auto &columnName : context->columnName())
-            columns.push_back(columnName->getText());
+            columns.Push(columnName->getText());
 
         return std::any(columns); // Return vector of column names
     }
@@ -522,10 +522,10 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitUpdateColumnsList(SQLParser::UpdateColumnsListContext *context){
-        std::vector<Statements::UpdateColumn*> columns;
+        DataStructures::PolymorphicArray<Statements::UpdateColumn*> columns(this->_compileContext->GetAllocator());
 
         for(const auto& updateColumn : context->updateColumn())
-            columns.push_back(std::any_cast<Statements::UpdateColumn*>(visit(updateColumn)));
+            columns.Push(std::any_cast<Statements::UpdateColumn*>(visit(updateColumn)));
 
         return std::any(columns);
     }
@@ -534,7 +534,7 @@ namespace QueryPipeline {
         auto* statement = this->_compileContext->Allocate<Statements::UpdateStatement>();
 
         statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
-        statement->updates = std::any_cast<std::vector<Statements::UpdateColumn*>>(visit(context->updateColumnsList()));
+        statement->updates = std::any_cast<DataStructures::PolymorphicArray<Statements::UpdateColumn*>>(visit(context->updateColumnsList()));
 
         if (context->whereClause() != nullptr)
             statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));
@@ -545,9 +545,9 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitOrderByStatement(SQLParser::OrderByStatementContext *context){
         auto* statement = this->_compileContext->Allocate<Statements::OrderByStatement>();
 
-        statement->columns = std::move(std::any_cast<std::vector<Statements::OrderColumn*>>(visit(context->orderColumnList())));
+        statement->columns = std::move(std::any_cast<DataStructures::PolymorphicArray<Statements::OrderColumn*>>(visit(context->orderColumnList())));
 
-        if (statement->columns.empty())
+        if (statement->columns.Empty())
             throw SyntaxError("No columns were specified in the order by statement", CreatePositionErrorMessage(context));
 
         return std::any(statement);

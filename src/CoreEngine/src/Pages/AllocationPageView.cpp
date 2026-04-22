@@ -56,7 +56,7 @@ namespace Pages{
     }
 
     extent_id_t AllocationPageView::SetExtentsAllocated(
-        const std::vector<extent_id_t>& extentIds,
+        const DataStructures::Array<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
     ) const{
         for (const auto extentId : extentIds){
@@ -78,15 +78,15 @@ namespace Pages{
         this->framePtr->isDirty = true;
     }
 
-    void AllocationPageView::GetAllocatedExtents(std::vector<extent_id_t>* allocatedExtents) const{
+    void AllocationPageView::GetAllocatedExtents(DataStructures::Array<extent_id_t>* allocatedExtents) const{
         this->GetAllocatedExtents(allocatedExtents, 0);
     }
 
     void AllocationPageView::GetAllocatedExtents(
-        std::vector<extent_id_t>* allocatedExtents,
+        DataStructures::Array<extent_id_t>* allocatedExtents,
         const extent_id_t startingExtentIndex
     ) const{
-        allocatedExtents->clear();
+        allocatedExtents->Clear();
         const page_id_t globalAllocationMapPageId = CoreEngine::Database::GetGamAssociatedPage(this->framePtr->headerPtr->pageId);
         const page_id_t offSet = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
 
@@ -96,7 +96,7 @@ namespace Pages{
         MultiThreading::ReaderGuard lock(&this->framePtr->latch);
         for (extent_id_t id = startingExtentIndex - offSet; id < this->framePtr->additionalHeader.allocationHeaderPtr->lastAllocatedExtentId; id++){
             if (this->GetBit(id))
-                allocatedExtents->push_back(offSet + id);
+                allocatedExtents->Push(offSet + id);
         }
     }
 

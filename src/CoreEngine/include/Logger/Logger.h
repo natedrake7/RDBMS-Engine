@@ -7,6 +7,8 @@
 #include <cstdint>
 #include <mutex>
 
+#include "DataStructures/Array.h"
+#include "DataStructures/PolymorphicArray.h"
 
 
 namespace CoreEngine::Logging {
@@ -62,7 +64,7 @@ namespace CoreEngine::Logging {
     table_id_t tableOrdinalPosition; //in master db
 
     // LoggingStructures::LogEntryBody* body;
-    std::vector<char> body;
+    DataStructures::PolymorphicArray<char> body;
 
     log_sequence_number_t logSequenceNumber; // Sequence number for the log entry
 
@@ -72,7 +74,7 @@ namespace CoreEngine::Logging {
       const log_sequence_number_t& logSequenceNumber,
       const OperationType& operation,
       const table_id_t& tableOrdinalPosition,
-      std::vector<char>& body
+      DataStructures::PolymorphicArray<char>& body
       // LoggingStructures::LogEntryBody* body
     );
 
@@ -124,7 +126,7 @@ namespace CoreEngine::Logging {
             const transaction_id_t& transactionId,
             const OperationType& operation,
             const table_id_t& tableOrdinalPosition,
-            std::vector<char>& body
+            DataStructures::PolymorphicArray<char>& body
       );
 
      [[nodiscard]] transaction_id_t StartTransaction();

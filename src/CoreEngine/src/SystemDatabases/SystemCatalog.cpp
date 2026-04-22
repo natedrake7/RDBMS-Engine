@@ -1947,9 +1947,10 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     )const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
 
-        const std::vector updates = {
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            allocator,
             Value(lastValue, allocator, static_cast<column_index_t>(SysIdentityColumns::LastValue))
-        };
+        );
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
@@ -1958,28 +1959,29 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
     }
 
-void SystemCatalog::UpdateTableStatisticsById(
-    const ::Memory::IAllocator* allocator,
-    const Int tableId,
-    const BigInt rowCount,
-    const Int rowSize,
-    const Int pageCount
-  ) const{
+    void SystemCatalog::UpdateTableStatisticsById(
+        const ::Memory::IAllocator* allocator,
+        const Int tableId,
+        const BigInt rowCount,
+        const Int rowSize,
+        const Int pageCount
+    ) const{
 
-    const std::vector updates = {
-      Value(rowCount, allocator, static_cast<column_index_t>(SysTableStats::RowCount)),
-      Value(rowSize, allocator, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
-      Value(pageCount, allocator, static_cast<column_index_t>(SysTableStats::PageCount)),
-      Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
-    };
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            allocator,
+            Value(rowCount, allocator, static_cast<column_index_t>(SysTableStats::RowCount)),
+            Value(rowSize, allocator, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+            Value(pageCount, allocator, static_cast<column_index_t>(SysTableStats::PageCount)),
+            Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
+        );
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
-    DataTypes::Indexing::Key key(allocator);
-    key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-    const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
-  }
+        const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
+    }
 
     void SystemCatalog::UpdateColumnStatisticsById(
         const ::Memory::IAllocator* allocator,
@@ -1989,7 +1991,9 @@ void SystemCatalog::UpdateTableStatisticsById(
         const Value& min,
         const Value& max
     ) const{
-        const std::vector updates = {
+
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            allocator,
             Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
             Value(nullCount, allocator, static_cast<column_index_t>(SysColumnStats::NullCount)),
             Value(
@@ -2002,7 +2006,7 @@ void SystemCatalog::UpdateTableStatisticsById(
                 allocator,
                 static_cast<column_index_t>(SysColumnStats::MaximumValue)
             )
-        };
+        );
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
@@ -2012,82 +2016,84 @@ void SystemCatalog::UpdateTableStatisticsById(
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
     }
 
-  void SystemCatalog::UpdateIndexStatisticsById(
+    void SystemCatalog::UpdateIndexStatisticsById(
         const ::Memory::IAllocator* allocator,
         const Int tableId,
         const Int indexId,
         const BigInt leafPages,
         const TinyInt depth,
         const DataTypes::Decimal &averageFragmentation
-  ) const {
-   const std::vector updates = {
-     Value(leafPages, allocator, static_cast<column_index_t>(SysIndexStats::LeafPages)),
-     Value(depth, allocator, static_cast<column_index_t>(SysIndexStats::Depth)),
-     Value(averageFragmentation, allocator, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-     Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysIndexStats::LastUpdated)),
-   };
+    ) const {
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            allocator,
+            Value(leafPages, allocator, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+            Value(depth, allocator, static_cast<column_index_t>(SysIndexStats::Depth)),
+            Value(averageFragmentation, allocator, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+            Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysIndexStats::LastUpdated))
+        );
 
-   auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
-   DataTypes::Indexing::Key key(allocator);
-   key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
-   key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
+        key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
 
-   const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
- }
+        const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
+    }
 
-  Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
-    const ::Memory::IAllocator* allocator,
-    const Int columnId,
-    const Int histogramId,
-    const Value& min,
-    const Value& max,
-    const Int rowCount,
-    const BigInt& distinctCount
-  ) const{
-    const std::vector updates = {
-       Value(
-           std::string(reinterpret_cast<const char*>(min.Data()), min.Size()),
-           allocator,
-           static_cast<column_index_t>(SysColumnHistograms::RangeStart)
-        ),
-       Value(
-           std::string(reinterpret_cast<const char*>(max.Data()), max.Size()),
-           allocator,
-           static_cast<column_index_t>(SysColumnHistograms::RangeEnd)
-        ),
-       Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-       Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount)),
-     };
-
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
-
-    DataTypes::Indexing::Key key(allocator);
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
-    key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int, allocator));
-
-    auto result = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
-
-    std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
-
-    return result;
-  }
-
-  Errors::RuntimeStatus SystemCatalog::UpdateColumnById(
+    Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
         const ::Memory::IAllocator* allocator,
-      const Int columnId,
-      const std::vector<Value> &updates
+        const Int columnId,
+        const Int histogramId,
+        const Value& min,
+        const Value& max,
+        const Int rowCount,
+        const BigInt& distinctCount
     ) const{
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            allocator,
+            Value(
+            std::string(reinterpret_cast<const char*>(min.Data()), min.Size()),
+                allocator,
+                static_cast<column_index_t>(SysColumnHistograms::RangeStart)
+            ),
+            Value(
+            std::string(reinterpret_cast<const char*>(max.Data()), max.Size()),
+                allocator,
+                static_cast<column_index_t>(SysColumnHistograms::RangeEnd)
+            ),
+            Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
+        );
 
-    DataTypes::Indexing::Key key(allocator);
-    key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-    return table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
-  }
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
+        key.InsertKey(DataTypes::Indexing::Key(&histogramId, sizeof(histogramId), DataType::Int, allocator));
+
+        auto result = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
+
+        std::cout << "Updated histogram Bucket for column: " << columnId << " and id: " << histogramId << std::endl;
+
+        return result;
+    }
+
+    Errors::RuntimeStatus SystemCatalog::UpdateColumnById(
+        const ::Memory::IAllocator* allocator,
+        const Int columnId,
+        const DataStructures::Array<Value> &updates
+    ) const{
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
+
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
+
+        return table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
+    }
 
     Errors::RuntimeStatus SystemCatalog::UpdateUserById(
-        const ExecutionContext& executionContext,
+        const ExecutionContext& context,
         const DataTypes::StringView& username,
         const Int userId,
         const Int roleId
@@ -2096,15 +2102,16 @@ void SystemCatalog::UpdateTableStatisticsById(
 
         const auto currentDate = DataTypes::DateTime::Now();
 
-        const std::vector updates = {
-            Value(roleId, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
-            Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy))
-        };
+        const auto updates = DataStructures::PolymorphicArray<Value>::From(
+            context.GetAllocator(),
+            Value(roleId, context.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
+            Value(currentDate, context.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+            Value(username, context.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy))
+        );
 
-        DataTypes::Indexing::Key key(executionContext.GetAllocator());
-        key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int, executionContext.GetAllocator()));
+        DataTypes::Indexing::Key key(context.GetAllocator());
+        key.InsertKey(DataTypes::Indexing::Key(&userId, sizeof(userId), DataType::Int, context.GetAllocator()));
 
-        return table->ClusteredIndexSeekUpdate(executionContext, key, updates);
+        return table->ClusteredIndexSeekUpdate(context, key, updates);
     }
 }

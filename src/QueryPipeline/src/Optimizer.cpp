@@ -22,8 +22,8 @@ namespace QueryPipeline {
   JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult(
     const PipelineConstants::JoinAlgorithm& algorithm,
     Expressions::Expression* expression,
-    std::vector<column_index_t>& leftKeyColumns,
-    std::vector<column_index_t>& rightKeyColumns
+    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
   ){
     this->remainingPredicate = expression;
     this->algorithm = algorithm;
@@ -78,11 +78,11 @@ namespace QueryPipeline {
     this->isReordered = false;
   }
 
-  void Optimizer::SplitConjunctions(Expressions::Expression* expression, std::vector<Expressions::Expression*>& conjunctions){
+  void Optimizer::SplitConjunctions(Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions){
     if (expression == nullptr) return;
 
     if (!expression->IsLogical()){
-      conjunctions.push_back(expression);
+      conjunctions.Push(expression);
       return;
     }
 
@@ -98,7 +98,7 @@ namespace QueryPipeline {
     }
 
     //or expression
-    conjunctions.push_back(expression);
+    conjunctions.Push(expression);
   }
 
   void Optimizer::GetInvolvedTables(const Expressions::Expression* expression, HashSet<table_id_t>& involvedTables){
@@ -123,12 +123,12 @@ namespace QueryPipeline {
     involvedTables.Add(columnExpr->tableId);
   }
 
-  std::vector<table_id_t> Optimizer::GetInvolvedTables(const Expressions::Expression* expression){
+  DataStructures::PolymorphicArray<table_id_t> Optimizer::GetInvolvedTables(const Expressions::Expression* expression) const{
     HashSet<table_id_t> involvedTablesSet;
 
     Optimizer::GetInvolvedTables(expression, involvedTablesSet);
 
-    return involvedTablesSet.ToVector();
+    return involvedTablesSet.ToPolymorphicArray(this->context->_context.GetAllocator());
   }
 
   void Optimizer::CombineExpressionsWithAnd(
@@ -154,13 +154,13 @@ namespace QueryPipeline {
         Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
         Expressions::Expression*& remainingPredicate
     ) const{
-        std::vector<Expressions::Expression*> expressions;
+        DataStructures::PolymorphicArray<Expressions::Expression*> expressions;
         Optimizer::SplitConjunctions(baseExpression, expressions);
 
         for (auto* expression : expressions){
-            const auto involvedTables = Optimizer::GetInvolvedTables(expression);
+            const auto involvedTables = this->GetInvolvedTables(expression);
 
-            if (involvedTables.size() == 1){
+            if (involvedTables.Size() == 1){
                 Expressions::Expression* existing = nullptr;
                 tablePredicatesDictionary.TryGetValue(involvedTables[0], existing);
                 Optimizer::CombineExpressionsWithAnd(existing, expression);
@@ -175,13 +175,13 @@ namespace QueryPipeline {
   void Optimizer::AnalyzeTableScan(
     Expressions::Expression* baseExpression,
     const Expressions::BinaryExpression* expression,
-    Dictionary<column_id_t, std::vector<Expressions::Expression*>>& columnPredicatesDictionary
+    Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>>& columnPredicatesDictionary
   ){
     if (expression->left->IsColumn()
       && (expression->right->IsConstant() || expression->right->IsVariable()))
     {
       const auto* columnExpr = expression->left->AsColumn();
-      columnPredicatesDictionary[columnExpr->columnId].push_back(baseExpression);
+      columnPredicatesDictionary[columnExpr->columnId].Push(baseExpression);
       return;
     }
 
@@ -189,7 +189,7 @@ namespace QueryPipeline {
       && (expression->left->IsConstant() || expression->left->IsVariable()))
     {
       const auto* columnExpr = expression->right->AsColumn();
-      columnPredicatesDictionary[columnExpr->columnId].push_back(baseExpression);
+      columnPredicatesDictionary[columnExpr->columnId].Push(baseExpression);
     }
   }
 
@@ -293,13 +293,13 @@ namespace QueryPipeline {
       analyzeResult.expression = binaryExpr;
   }
 
-  std::vector<IndexSeekColumnAnalysisResults> Optimizer::AnalyzeTableScan(
+  DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> Optimizer::AnalyzeTableScan(
     const Headers::IndexHeader& index,
-    const std::vector<Expressions::Expression*>& conjunctions
+    const DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
   ){
-    std::vector<IndexSeekColumnAnalysisResults> result;
+    DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> result;
 
-    Dictionary<column_id_t, std::vector<Expressions::Expression*>> columnPredicates;
+    Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>> columnPredicates;
     for (const auto& column : index.columns)
       columnPredicates.Add(column.columnId, {});
 
@@ -311,7 +311,7 @@ namespace QueryPipeline {
     }
 
     for (const auto& column : index.columns) {
-      std::vector<Expressions::Expression*> predicates;
+      DataStructures::PolymorphicArray<Expressions::Expression*> predicates;
       if (!columnPredicates.TryGetValue(column.columnId, predicates))
         break;
 
@@ -337,15 +337,15 @@ namespace QueryPipeline {
       if (!analyzeResult.canIndexSeek)
         break;
 
-      result.push_back(analyzeResult);
+      result.Push(analyzeResult);
     }
 
     return result;
   }
 
   Range Optimizer::BuildSeekKeys(
-    const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
-    std::vector<Expressions::Expression*>& conjunctions
+    const DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults>& analyzeResults,
+    DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
   ){
     Range range;
     bool canSeek = true;
@@ -386,7 +386,7 @@ namespace QueryPipeline {
 
   void Optimizer::ProcessJoinCondition(
     Expressions::Expression* expression,
-    std::vector<JoinConditionInfo>& conditionsInfo,
+    DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
     bool& isEqualityJoin
   ){
     if (!expression->IsBinary())
@@ -412,26 +412,26 @@ namespace QueryPipeline {
 
     info.expression = expression;
 
-    conditionsInfo.push_back(info);
+    conditionsInfo.Push(info);
   }
 
-  std::vector<Int> Optimizer::CheckPredicatesSorting(
+  DataStructures::PolymorphicArray<Int> Optimizer::CheckPredicatesSorting(
     const Headers::TableStatistics& tableStats,
-    const std::vector<JoinConditionInfo>& joinConditions
+    const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
   ){
     const auto indexes = CoreEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
 
     if (indexes.empty())
       return {};
 
-    std::vector<Int> bestMatch;
+    DataStructures::PolymorphicArray<Int> bestMatch;
     for (const auto& index : indexes){
       const auto columns = CoreEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_context.GetAllocator(), index.indexId);
 
-      std::vector<Int> matches;
+      DataStructures::PolymorphicArray<Int> matches;
       for (const auto& column : columns){
 
-        for (int i = 0;i < joinConditions.size();i++){
+        for (int i = 0;i < joinConditions.Size();i++){
           const auto& joinCondition = joinConditions[i];
 
           const auto columnId = (joinCondition.leftTableId == tableStats.tableId)
@@ -439,14 +439,14 @@ namespace QueryPipeline {
                   : joinCondition.rightColumnId;
 
           if (column.columnId == columnId){
-            matches.push_back(i);
+            matches.Push(i);
             continue;
           }
 
           break;
         }
 
-        if (bestMatch.size() < matches.size())
+        if (bestMatch.Size() < matches.Size())
           bestMatch = std::move(matches);
       }
     }
@@ -455,16 +455,16 @@ namespace QueryPipeline {
   }
 
   JoinAlgorithmAnalysisResult Optimizer::CreateMergeJoinKeys(
-    const std::vector<JoinConditionInfo>& conditionsInfo,
-    const std::vector<Int>& leftKeyColumns,
-    const std::vector<Int>& rightKeyColumns,
+    const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
+    const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
+    const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
     const Int leftTableId,
     const Int rightTableId
   ) const{
     JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
 
-    const auto leftSize = leftKeyColumns.size();
-    const auto rightSize = rightKeyColumns.size();
+    const auto leftSize = leftKeyColumns.Size();
+    const auto rightSize = rightKeyColumns.Size();
 
     const auto min = std::min(leftSize, rightSize);
 
@@ -479,8 +479,8 @@ namespace QueryPipeline {
           ? joinCondition.leftColumnIndex
           : joinCondition.rightColumnIndex;
 
-      result.leftKeyColumns.push_back(leftExprIndex);
-      result.rightKeyColumns.push_back(rightExprIndex);
+      result.leftKeyColumns.Push(leftExprIndex);
+      result.rightKeyColumns.Push(rightExprIndex);
     }
 
     if (leftSize > min){
@@ -506,105 +506,107 @@ namespace QueryPipeline {
       this->context = &context;
   }
 
-  JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement){
-    JoinOrderAnalyzeResult result;
+    JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement) const{
+        JoinOrderAnalyzeResult result;
 
-    if (statement->IsConstant())
-      return result;
+        if (statement->IsConstant()) return result;
 
-    if (!statement->HasJoins()){
-      result.order.push_back(statement->table->tableId);
-      return result;
+        if (!statement->HasJoins()){
+            result.order.Push(statement->table->tableId);
+            return result;
+        }
+
+        DataStructures::PolymorphicArray<JoinOrderAnalyzeInfo> infoVector(this->context->_context.GetAllocator());
+        const auto baseSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(statement->table->tableId);
+
+        //optimize by using hasIndex bool on tableStats to avoid lookups
+        const auto baseSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
+
+        const JoinOrderAnalyzeInfo baseInfo(
+            statement->table->tableId,
+            baseSourceStats.rowCount,
+            !baseSourceIndexStats.empty()
+        );
+
+        //base table info
+        infoVector.Push(baseInfo);
+
+        //each join info
+        for (const auto& join : statement->joins) {
+            if (join->IsRightJoin()){
+                result.order.Insert(join->table->tableId, 0);
+                result.orderedJoins.Insert(join, 0);
+                continue;
+            }
+
+            if (!join->IsInnerJoin()) {
+                result.order.Push(join->table->tableId);
+                result.orderedJoins.Push(join);
+                continue;
+            }
+
+            const auto joinSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(join->table->tableId);
+            const auto joinSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(join->table->tableId);
+
+            const JoinOrderAnalyzeInfo joinInfo(
+                join->table->tableId,
+                joinSourceStats.rowCount,
+                !joinSourceIndexStats.empty(),
+                join
+            );
+
+            infoVector.Push(joinInfo);
+        }
+
+        std::ranges::sort(infoVector, JoinOrderAnalyzeInfo());
+
+        auto* baseSource = statement->table;
+        Statements::JoinStatement* reorderedJoin = nullptr;
+
+        const auto preReorderSize = result.orderedJoins.Size();
+
+        for (int i = 0;i < infoVector.Size(); i++){
+            auto& info = infoVector[i];
+            //swap occurred
+            if (i == 0 && info.joinStatement != nullptr){
+                statement->table = info.joinStatement->table;
+                info.joinStatement->table = baseSource;
+                baseSource = statement->table;
+
+                reorderedJoin = info.joinStatement;
+
+                result.order.Insert(info.tableId, result.order.Size() - preReorderSize);
+                result.orderedJoins.Insert(nullptr, result.orderedJoins.Size() - preReorderSize);
+                continue;
+            }
+
+            result.order.Insert(info.tableId, result.order.Size() - preReorderSize);
+
+            if (info.joinStatement == nullptr){
+                result.orderedJoins.Insert(reorderedJoin, result.orderedJoins.Size() - preReorderSize);
+                continue;
+            }
+
+            result.orderedJoins.Insert(info.joinStatement, result.orderedJoins.Size() - preReorderSize);
+        }
+
+        //remove the first which is always null
+        result.orderedJoins.erase(result.orderedJoins.begin());
+        result.isReordered = result.order[0] != statement->table->tableId;
+
+        return result;
     }
-
-    std::vector<JoinOrderAnalyzeInfo> infoVector;
-
-    const auto baseSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(statement->table->tableId);
-
-    //optimize by using hasIndex bool on tableStats to avoid lookups
-    const auto baseSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
-
-    //base table info
-    infoVector.emplace_back(
-      statement->table->tableId,
-      baseSourceStats.rowCount,
-      !baseSourceIndexStats.empty()
-    );
-
-    //each join info
-    for (const auto& join : statement->joins) {
-      if (join->IsRightJoin()){
-        result.order.insert(result.order.begin(), join->table->tableId);
-        result.orderedJoins.insert(result.orderedJoins.begin(), join);
-        continue;
-      }
-
-      if (!join->IsInnerJoin()) {
-        result.order.push_back(join->table->tableId);
-        result.orderedJoins.push_back(join);
-        continue;
-      }
-
-      const auto joinSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(join->table->tableId);
-      const auto joinSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(join->table->tableId);
-
-      infoVector.emplace_back(
-        join->table->tableId,
-        joinSourceStats.rowCount,
-        !joinSourceIndexStats.empty(),
-        join
-      );
-    }
-
-    std::ranges::sort(infoVector, JoinOrderAnalyzeInfo());
-
-    auto* baseSource = statement->table;
-    Statements::JoinStatement* reorderedJoin = nullptr;
-
-    const auto preReorderSize = result.orderedJoins.size();
-
-    for (int i = 0;i < infoVector.size(); i++){
-      auto& info = infoVector[i];
-      //swap occurred
-      if (i == 0 && info.joinStatement != nullptr){
-        statement->table = info.joinStatement->table;
-        info.joinStatement->table = baseSource;
-        baseSource = statement->table;
-
-        reorderedJoin = info.joinStatement;
-
-        result.order.insert(result.order.end() - preReorderSize, info.tableId);
-        result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, nullptr);
-        continue;
-      }
-
-      result.order.insert(result.order.end() - preReorderSize, info.tableId);
-
-      if (info.joinStatement == nullptr){
-        result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, reorderedJoin);
-        continue;
-      }
-
-      result.orderedJoins.insert(result.orderedJoins.end() - preReorderSize, info.joinStatement);
-    }
-
-    //remove the first which is always null
-    result.orderedJoins.erase(result.orderedJoins.begin());
-    result.isReordered = result.order[0] != statement->table->tableId;
-
-    return result;
-  }
 
   PredicatePushDownResult Optimizer::PushDownPredicates(
-    const std::vector<table_id_t>& tables,
+    const DataStructures::PolymorphicArray<table_id_t>& tables,
     Expressions::Expression* whereClause,
-    const std::vector<Statements::JoinStatement*>& joins
+    const DataStructures::PolymorphicArray<Statements::JoinStatement*>& joins
   ) const{
     PredicatePushDownResult result;
 
-    if (whereClause == nullptr && joins.empty()) return result;
+    if (whereClause == nullptr && joins.Empty()) return result;
 
-    result.tablePredicatesDictionary = Dictionary<table_id_t, Expressions::Expression*>::FromVector(tables, nullptr);
+    result.tablePredicatesDictionary = Dictionary<table_id_t, Expressions::Expression*>::FromArray(tables, nullptr);
     Optimizer::ProcessPredicate(whereClause, result.tablePredicatesDictionary, result.remainingPredicate);
 
     for (const auto& join : joins) {
@@ -621,14 +623,14 @@ namespace QueryPipeline {
   }
 
    Range Optimizer::PerformIndexAnalysis(
-    std::vector<Headers::IndexHeader>& indexes,
+    DataStructures::PolymorphicArray<Headers::IndexHeader>& indexes,
     Expressions::Expression* expression,
     const Headers::TableStatistics& tableStatistics
   ){
-    std::vector<IndexCandidate> candidates;
-    candidates.reserve(indexes.size());
+    DataStructures::PolymorphicArray<IndexCandidate> candidates(this->context->_context.GetAllocator());
+    candidates.Reserve(indexes.Size());
 
-    std::vector<Expressions::Expression*> conjunctions;
+    DataStructures::PolymorphicArray<Expressions::Expression*> conjunctions;
     Optimizer::SplitConjunctions(expression, conjunctions);
 
     for (auto& index : indexes) {
@@ -641,13 +643,13 @@ namespace QueryPipeline {
       candidate.header = &index;
       candidate.analyzeInfo = std::move(analyzeResults);
       candidate.conjunctions = &conjunctions;
-      candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.size());
+      candidate.matchingColumns = static_cast<int>(candidate.analyzeInfo.Size());
       CostEstimator::EstimateIndexCost(this->context, candidate, tableStatistics);
 
-      candidates.push_back(candidate);
+      candidates.Push(candidate);
     }
 
-    if (candidates.empty())
+    if (candidates.Empty())
       return {};
 
     for (auto& candidate : candidates){
@@ -684,10 +686,10 @@ namespace QueryPipeline {
       const auto leftInfo = statisticsManager.GetTableStatistics(leftTableId);
       const auto rightInfo = statisticsManager.GetTableStatistics(rightTableId);
 
-      std::vector<Expressions::Expression*> conjunctions;
+      DataStructures::PolymorphicArray<Expressions::Expression*> conjunctions;
       SplitConjunctions(joinCondition, conjunctions);
 
-      std::vector<JoinConditionInfo> conditionsInfo;
+      DataStructures::PolymorphicArray<JoinConditionInfo> conditionsInfo;
       bool isEqualityJoin = false;
       for (const auto& conjunction : conjunctions)
         Optimizer::ProcessJoinCondition(conjunction, conditionsInfo, isEqualityJoin);
@@ -702,7 +704,7 @@ namespace QueryPipeline {
       const auto leftBestMatch = Optimizer::CheckPredicatesSorting(leftInfo, conditionsInfo);
       const auto rightBestMatch = Optimizer::CheckPredicatesSorting(rightInfo, conditionsInfo);
 
-      if (!leftBestMatch.empty() && !rightBestMatch.empty()){
+      if (!leftBestMatch.Empty() && !rightBestMatch.Empty()){
 
         //expression should be consumed by the best index as keys will be used match
         return this->CreateMergeJoinKeys(

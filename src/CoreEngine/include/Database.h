@@ -114,13 +114,14 @@ public:
     static void LogCheckPoint(Logging::CheckPoint& checkPoint);
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
+        const ExecutionContext& context,
         const StorageTypes::InsertPayload& payload,
         transaction_id_t transactionId,
         table_id_t tableOrdinal
     );
 
     [[nodiscard]] static Logging::CheckPoint LogRowBatchInsert(
-      std::vector<char>& buffer,
+      DataStructures::PolymorphicArray<char>& buffer,
       transaction_id_t transactionId,
       table_id_t tableOrdinal
     );

@@ -51,8 +51,8 @@ namespace QueryPipeline {
   struct JoinAlgorithmAnalysisResult{
     PipelineConstants::JoinAlgorithm algorithm;
 
-    std::vector<column_index_t> leftKeyColumns;
-    std::vector<column_index_t> rightKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
 
     Expressions::Expression* remainingPredicate;
 
@@ -61,13 +61,13 @@ namespace QueryPipeline {
     JoinAlgorithmAnalysisResult(
       const PipelineConstants::JoinAlgorithm& algorithm,
       Expressions::Expression* expression,
-      std::vector<column_index_t>& leftKeyColumns,
-      std::vector<column_index_t>& rightKeyColumns
+      DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+      DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
     );
   };
 
   struct JoinAlgorithmInfo{
-    std::vector<JoinConditionInfo> joinConditions;
+    DataStructures::PolymorphicArray<JoinConditionInfo> joinConditions;
     Expressions::Expression* remainingPredicate;
   };
 
@@ -115,14 +115,14 @@ namespace QueryPipeline {
   };
 
   struct IndexSeekAnalysisResult{
-    std::vector<IndexSeekColumnAnalysisResults> analyzeResults;
-    std::vector<Expressions::Expression*> conjunctions;
+    DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeResults;
+    DataStructures::PolymorphicArray<Expressions::Expression*> conjunctions;
   };
 
   struct IndexCandidate{
     Headers::IndexHeader* header;
-    std::vector<IndexSeekColumnAnalysisResults> analyzeInfo;
-    std::vector<Expressions::Expression*>* conjunctions;
+    DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeInfo;
+    DataStructures::PolymorphicArray<Expressions::Expression*>* conjunctions;
     double estimatedCost;
     int matchingColumns;
 
@@ -138,8 +138,8 @@ namespace QueryPipeline {
   };
 
   struct JoinOrderAnalyzeResult{
-    std::vector<table_id_t> order;
-    std::vector<Statements::JoinStatement*> orderedJoins;
+    DataStructures::PolymorphicArray<table_id_t> order;
+    DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
     bool isReordered;
 
     JoinOrderAnalyzeResult();
@@ -210,7 +210,7 @@ namespace QueryPipeline {
 
       static void SplitConjunctions(
         Expressions::Expression* expression,
-        std::vector<Expressions::Expression*>& conjunctions
+        DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
       );
 
       static void GetInvolvedTables(
@@ -218,7 +218,7 @@ namespace QueryPipeline {
         HashSet<table_id_t>& involvedTables
       );
 
-      static std::vector<table_id_t> GetInvolvedTables(const Expressions::Expression* expression);
+      DataStructures::PolymorphicArray<table_id_t> GetInvolvedTables(const Expressions::Expression* expression) const;
 
       void CombineExpressionsWithAnd(
         Expressions::Expression*& baseExpression,
@@ -234,7 +234,7 @@ namespace QueryPipeline {
       static void AnalyzeTableScan(
         Expressions::Expression* baseExpression,
         const Expressions::BinaryExpression* expression,
-        Dictionary<column_id_t, std::vector<Expressions::Expression*>>& columnPredicatesDictionary
+        Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>>& columnPredicatesDictionary
       );
 
       static void DetermineCanSeekOnEquality(
@@ -271,46 +271,46 @@ namespace QueryPipeline {
         Expressions::Expression* otherExpression
       );
 
-      static std::vector<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
+      static DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
         const Headers::IndexHeader& index,
-        const std::vector<Expressions::Expression*>& conjunctions
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
       );
 
       Range BuildSeekKeys(
-        const std::vector<IndexSeekColumnAnalysisResults>& analyzeResults,
-        std::vector<Expressions::Expression*>& conjunctions
+        const DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults>& analyzeResults,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
       );
 
       static void ProcessJoinCondition(
         Expressions::Expression* expression,
-        std::vector<JoinConditionInfo>& conditionsInfo,
+        DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
         bool& isEqualityJoin
       );
 
-      [[nodiscard]] std::vector<Int> CheckPredicatesSorting(
+      [[nodiscard]] DataStructures::PolymorphicArray<Int> CheckPredicatesSorting(
         const Headers::TableStatistics& tableStats,
-        const std::vector<JoinConditionInfo>& joinConditions
+        const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
       );
 
       JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
-        const std::vector<JoinConditionInfo>& conditionsInfo,
-        const std::vector<Int>& leftKeyColumns,
-        const std::vector<Int>& rightKeyColumns,
+        const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
+        const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
+        const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
         Int leftTableId,
         Int rightTableId
       ) const;
 
     public:
-        Optimizer(QueryContext& context);
+        explicit Optimizer(QueryContext& context);
 
-        [[nodiscard]] static JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement);
+        [[nodiscard]] JoinOrderAnalyzeResult DetermineJoinOrder(Statements::SelectStatement* statement) const;
         [[nodiscard]] PredicatePushDownResult PushDownPredicates(
-            const std::vector<table_id_t>& tables,
+            const DataStructures::PolymorphicArray<table_id_t>& tables,
             Expressions::Expression* whereClause,
-            const std::vector<Statements::JoinStatement*>& joins
+            const DataStructures::PolymorphicArray<Statements::JoinStatement*>& joins
         ) const;
         [[nodiscard]] Range PerformIndexAnalysis(
-            std::vector<Headers::IndexHeader>& indexes,
+            DataStructures::PolymorphicArray<Headers::IndexHeader>& indexes,
             Expressions::Expression* expression,
             const Headers::TableStatistics& tableStatistics
         );

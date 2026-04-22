@@ -12,7 +12,6 @@
 #include <csignal>
 #include <iostream>
 #include <string>
-#include <vector>
 
 #include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
 #include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
@@ -100,8 +99,8 @@
 //fix stats manager
 
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
-int main(){
 
+int main(){
     // Tests::InitializeTester();
     // Tests::RunTest(&Tests::DecimalTest);
     //
@@ -142,6 +141,24 @@ int main(){
     static constexpr DataTypes::StringView CONFIG_FILE_PATH = "configuration.json";
     server.Initialize(CONFIG_FILE_PATH);
 
+    CommandLineInterface(server);
+
+    globalMemoryManager.Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
+    serverRunning.store(false, std::memory_order_relaxed);
+
+    CoreEngine::GarbageCollector::Stop();
+    CoreEngine::StatisticsScheduler::Stop();
+
+    connectionThread.join();
+    statisticsThread.join();
+    garbageCollectorThread.join();
+
+    server.Shutdown();
+    return 0;
+}
+
+void CommandLineInterface(Network::Server& server) {
+#ifdef IS_DEBUG
     const std::string DEBUG_USERNAME = "admin";
     const std::string DEBUG_PASSWORD = "admin";
 
@@ -149,35 +166,27 @@ int main(){
 
     if (user == nullptr) {
         server.Shutdown();
-        return 0;
+        return;
     }
 
     const auto* session = server.CreateSession(user);
 
     std::cout << "Please enter a query: "<< endl;
+#endif
 
     const std::string exit = "exit";
 
     while (true) {
         std::string input;
-
         std::getline(std::cin, input);
 
         if (Functions::String::EqualsIgnoreCase(input, exit))
             break;
 
+#ifdef IS_DEBUG
         ExecuteQuery(input, session->sessionId);
+#endif
     }
-
-    globalMemoryManager.Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
-    serverRunning.store(false, std::memory_order_relaxed);
-
-    connectionThread.join();
-    statisticsThread.join();
-    // garbageCollectorThread.join();
-
-    server.Shutdown();
-    return 0;
 }
 
 void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
@@ -225,7 +234,6 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
     std::cout << "Rows affected: " << count << std::endl;
-
     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
 }
 

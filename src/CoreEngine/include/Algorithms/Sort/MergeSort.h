@@ -24,7 +24,7 @@ namespace CoreEngine::StorageTypes {
 struct MergeSortParameters{
     const CoreEngine::ExecutionContext* properties;
     DataStructures::PolymorphicArray<QueryResult>* rows;
-    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+    const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions;
     Int left;
     Int right;
     Int mid;

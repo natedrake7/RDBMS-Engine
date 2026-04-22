@@ -145,7 +145,7 @@ namespace QueryPipeline::Statements {
 
   struct PrimaryKeyConstraint {
     DataTypes::String name;
-    std::vector<ColumnName> columns;
+    DataStructures::PolymorphicArray<ColumnName> columns;
   };
 
   struct WhereClause{
@@ -156,10 +156,13 @@ namespace QueryPipeline::Statements {
   };
 
   struct OrderByStatement{
-    std::vector<OrderColumn*> columns;
+    DataStructures::PolymorphicArray<OrderColumn*> columns;
 
     ~OrderByStatement();
-    bool Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict);
+    bool Validate(
+        const DataStructures::PolymorphicArray<OrderColumn*>& selectColumns,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict
+    );
   };
 
 //can be a table a view or a subquery or a function returning a table literally many things
@@ -193,7 +196,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct Inserts {
-    std::vector<Expressions::Expression*> values;
+    DataStructures::PolymorphicArray<Expressions::Expression*> values;
   };
 
   struct Statement {
@@ -289,9 +292,9 @@ namespace QueryPipeline::Statements {
   };
 
   struct CreateTableStatement final: Statement {
-    std::vector<NewColumn*> columns;
+    DataStructures::PolymorphicArray<NewColumn*> columns;
     PrimaryKeyConstraint* constraint;
-    std::vector<column_index_t> primaryKey;
+    DataStructures::PolymorphicArray<column_index_t> primaryKey;
 
     CreateTableStatement();
     ~CreateTableStatement() override;
@@ -310,15 +313,15 @@ namespace QueryPipeline::Statements {
   };
 
   struct SelectStatement final: Statement{
-    std::vector<Headers::ColumnHeader> columnHeaders;
-    std::vector<Expressions::Expression*> results;
-    std::vector<JoinStatement*> joins;
+    DataStructures::PolymorphicArray<Headers::ColumnHeader> columnHeaders;
+    DataStructures::PolymorphicArray<Expressions::Expression*> results;
+    DataStructures::PolymorphicArray<JoinStatement*> joins;
     OrderByStatement* orderBy;
     WhereClause where;
     BigInt top;
     bool distinct;
 
-    SelectStatement();
+    explicit SelectStatement(const ::Memory::IAllocator* allocator);
     ~SelectStatement() override;
 
     [[nodiscard]] Dictionary<DataTypes::String, column_index_t> CreatePostProjectionIndicesDictionary()const;
@@ -341,9 +344,9 @@ namespace QueryPipeline::Statements {
     ) const;
     [[nodiscard]] Dictionary<Int, column_index_t> BuildColumnsIndicesDictionary(
         const QueryContext& context,
-        const std::vector<table_id_t>& joinOrder
+        const DataStructures::PolymorphicArray<table_id_t>& joinOrder
     )const;
-    void AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const;
+    void AssignColumnsToIndices(const QueryContext& context, const DataStructures::PolymorphicArray<table_id_t>& order)const;
     void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary) const;
     [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
     constexpr Security::Permission RequiredPermissions()const override;
@@ -375,10 +378,10 @@ namespace QueryPipeline::Statements {
   };
 
   struct InsertStatement final : Statement{
-    std::vector<ColumnName> columns;
-    std::vector<Inserts> values;
+    DataStructures::PolymorphicArray<ColumnName> columns;
+    DataStructures::PolymorphicArray<Inserts> values;
 
-    std::vector<column_index_t> columnIndices;
+    DataStructures::PolymorphicArray<column_index_t> columnIndices;
     SelectStatement* selectStatement;
 
     ~InsertStatement() override;
@@ -419,7 +422,7 @@ namespace QueryPipeline::Statements {
   };
 
   struct UpdateStatement final : Statement {
-    std::vector<UpdateColumn*> updates;
+    DataStructures::PolymorphicArray<UpdateColumn*> updates;
     WhereClause where;
 
     [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
@@ -434,8 +437,8 @@ namespace QueryPipeline::Statements {
 
   struct CreateIndexStatement final : Statement {
     DataTypes::String name;
-    std::vector<DataTypes::String> columns;
-    std::vector<column_index_t> columnIndices;
+    DataStructures::PolymorphicArray<DataTypes::String> columns;
+    DataStructures::PolymorphicArray<column_index_t> columnIndices;
     bool isUnique;
 
     Errors::ValidationStatus CompileDerived(QueryContext& context) override;
@@ -604,7 +607,7 @@ namespace QueryPipeline::Statements {
         const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
         const DataTypes::String& tableAlias,
         const StatementValidationScope& statementValidationScope,
-        std::vector<Expressions::Expression*>& results
+        DataStructures::PolymorphicArray<Expressions::Expression*>& results
     );
 
   /** @} End of Expression Compilation Functions */

@@ -70,13 +70,13 @@ namespace QueryPipeline {
   class LogicalProject final: public LogicalPlan {
     public:
       LogicalPlan* child;
-      std::vector<Expressions::Expression*> resultExpressions;
-      std::vector<Headers::ColumnHeader> columnsHeaders;
+      DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
+      DataStructures::PolymorphicArray<Headers::ColumnHeader> columnsHeaders;
 
       LogicalProject(
         LogicalPlan* child,
-        std::vector<Expressions::Expression*>& resultExpressions,
-        std::vector<Headers::ColumnHeader>& columnsHeaders);
+        DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders);
       ~LogicalProject() override;
       PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;
   };
@@ -134,11 +134,11 @@ namespace QueryPipeline {
   class LogicalOrder final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      std::vector<Statements::OrderColumn*> expressions;
+      DataStructures::PolymorphicArray<Statements::OrderColumn*> expressions;
 
       explicit LogicalOrder(
         LogicalPlan* child,
-        std::vector<Statements::OrderColumn*>& expressions
+        DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
       );
       PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
   };
@@ -165,16 +165,16 @@ namespace QueryPipeline {
   class LogicalInsert final : public LogicalPlan {
     public:
       Statements::DataSource* table;
-      std::vector<Statements::Inserts> fields;
+      DataStructures::PolymorphicArray<Statements::Inserts> fields;
 
       LogicalPlan* child;
-      std::vector<column_index_t> columnsIndices;
+      DataStructures::PolymorphicArray<column_index_t> columnsIndices;
 
       explicit LogicalInsert(
         Statements::DataSource* table,
-        std::vector<Statements::Inserts>& fields,
+        DataStructures::PolymorphicArray<Statements::Inserts>& fields,
         LogicalPlan* child,
-        std::vector<column_index_t>& columnIndices
+        DataStructures::PolymorphicArray<column_index_t>& columnIndices
       );
       ~LogicalInsert()override;
       PhysicalPlan::PhysicalInsert* ToPhysical(QueryContext& context)override;
@@ -199,12 +199,12 @@ namespace QueryPipeline {
     class LogicalUpdate final : public LogicalPlan {
     public:
         Statements::DataSource* table;
-        std::vector<Expressions::Expression*> updates;
+        DataStructures::PolymorphicArray<Expressions::Expression*> updates;
         Expressions::Expression* expression;
 
         explicit LogicalUpdate(
           Statements::DataSource* table,
-          std::vector<Expressions::Expression*>& updates,
+          DataStructures::PolymorphicArray<Expressions::Expression*>& updates,
           Expressions::Expression* expression
         );
         PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
@@ -214,14 +214,14 @@ namespace QueryPipeline {
     public:
         Statements::DataSource* table;
         DataTypes::String constraintName;
-        std::vector<Statements::NewColumn*> columns;
-        std::vector<column_index_t> primaryKey;
+        DataStructures::PolymorphicArray<Statements::NewColumn*> columns;
+        DataStructures::PolymorphicArray<column_index_t> primaryKey;
 
         explicit LogicalTableCreate(
             const DataTypes::Guid& sessionId,
             Statements::DataSource* table,
-            std::vector<Statements::NewColumn*>& columns,
-            std::vector<column_index_t> primaryKey,
+            DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
+            DataStructures::PolymorphicArray<column_index_t> primaryKey,
             DataTypes::String& constraintName
         );
         PhysicalPlan::PhysicalTableCreate* ToPhysical(QueryContext& context)override;
@@ -231,12 +231,12 @@ namespace QueryPipeline {
     public:
     Statements::DataSource* table;
     DataTypes::String constraintName;
-    std::vector<column_index_t> columns;
+    DataStructures::PolymorphicArray<column_index_t> columns;
     explicit LogicalIndexCreate(
       const DataTypes::Guid& sessionId,
       Statements::DataSource* table,
       DataTypes::String& constraintName,
-      std::vector<column_index_t>& columns
+      DataStructures::PolymorphicArray<column_index_t>& columns
     );
     PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
   };

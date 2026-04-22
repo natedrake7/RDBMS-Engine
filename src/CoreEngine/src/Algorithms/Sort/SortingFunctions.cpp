@@ -74,7 +74,7 @@ bool SortingFunctions::CompareRows(
      const CoreEngine::ExecutionContext& context,
     const QueryResult& firstRow,
     const QueryResult& secondRow,
-    const std::vector<QueryPipeline::Statements::OrderColumn*> &sortConditions
+    const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*> &sortConditions
 ){
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::MaterializedRow,
@@ -112,7 +112,7 @@ bool SortingFunctions::CompareRows(
 void SortingFunctions::OrderBy(
      const CoreEngine::ExecutionContext& context,
     DataStructures::PolymorphicArray<QueryResult> &rows,
-    const std::vector<QueryPipeline::Statements::OrderColumn*> &conditions
+    const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*> &conditions
 ){
     if(rows.Empty())
         return;
@@ -201,7 +201,7 @@ std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
 }
 
 MergeComparator::MergeComparator(
-    const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions,
+    const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions,
     const CoreEngine::ExecutionContext* context
 ): sortConditions(sortConditions), context(context){}
 

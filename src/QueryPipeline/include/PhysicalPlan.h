@@ -70,7 +70,7 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode();
       explicit ExecutionNode(const DataTypes::Guid& currentSessionId);
       virtual ~ExecutionNode() = default;
-      void InsertToTemporaryDatabase(const std::vector<Pages::RowReference>& rows);
+      void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows);
       void InsertPostProjectionResultsToTemporaryDatabase(
         const CoreEngine::ExecutionContext& context,
         ExecutionResult& result,
@@ -142,14 +142,14 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalTableCreate final : public ExecutionNode{
     Statements::DataSource*  table;
     DataTypes::String constraintName;
-    std::vector<Statements::NewColumn*> columns;
+    DataStructures::PolymorphicArray<Statements::NewColumn*> columns;
     Headers::Index primaryKey;
 
   public:
     PhysicalTableCreate(
       const DataTypes::Guid& sessionId,
       Statements::DataSource*  table,
-      std::vector<Statements::NewColumn*>& columns,
+      DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
       const Headers::Index& primaryKey,
       DataTypes::String& constraintName
     );
@@ -160,14 +160,14 @@ namespace QueryPipeline::PhysicalPlan{
   class PhysicalIndexCreate final : public ExecutionNode {
     Statements::DataSource* table;
     DataTypes::String constraintName;
-    std::vector<column_index_t> columns;
+    DataStructures::PolymorphicArray<column_index_t> columns;
 
   public:
     PhysicalIndexCreate(
         const DataTypes::Guid& sessionId,
         Statements::DataSource*  table,
         DataTypes::String& constraintName,
-        std::vector<column_index_t>& columns
+        DataStructures::PolymorphicArray<column_index_t>& columns
     );
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
   };
@@ -295,8 +295,8 @@ namespace QueryPipeline::PhysicalPlan{
   */
 
   class PhysicalProject final : public ExecutionNode{
-    std::vector<Expressions::Expression*> resultExpressions;
-    std::vector<Headers::ColumnHeader> columnHeaders;
+    DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
+    DataStructures::PolymorphicArray<Headers::ColumnHeader> columnHeaders;
     ExecutionNode* child;
 
 
@@ -306,8 +306,8 @@ namespace QueryPipeline::PhysicalPlan{
     public:
       PhysicalProject(
         ExecutionNode* child,
-        std::vector<Expressions::Expression*>& resultExpressions,
-        std::vector<Headers::ColumnHeader>& columnHeaders);
+        DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders);
       ~PhysicalProject() override;
       ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
       void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
@@ -348,7 +348,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalOrderBy final : public ExecutionNode{
     ExecutionNode* child;
-    std::vector<Statements::OrderColumn*> expressions;
+    DataStructures::PolymorphicArray<Statements::OrderColumn*> expressions;
 
     MergeComparator comparator;
     PriorityQueue<MergeElement, MergeComparator> priorityQueue;
@@ -356,7 +356,7 @@ namespace QueryPipeline::PhysicalPlan{
     [[nodiscard]] bool CanBeSortedInMemory(bool canFetchMore)const;
 
   public:
-    PhysicalOrderBy(ExecutionNode* child, std::vector<Statements::OrderColumn*>& expressions);
+    PhysicalOrderBy(ExecutionNode* child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions);
     ~PhysicalOrderBy()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
     void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
@@ -372,10 +372,10 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalInsert final : public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Statements::Inserts> fields;
+    DataStructures::PolymorphicArray<Statements::Inserts> fields;
 
     ExecutionNode* child;
-    std::vector<column_index_t> columnsIndices;
+    DataStructures::PolymorphicArray<column_index_t> columnsIndices;
 
     static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
@@ -388,9 +388,9 @@ namespace QueryPipeline::PhysicalPlan{
   public:
     PhysicalInsert(
       Statements::DataSource* table,
-      std::vector<Statements::Inserts>& fields,
+      DataStructures::PolymorphicArray<Statements::Inserts>& fields,
       ExecutionNode* child,
-      std::vector<column_index_t>& columnsIndices
+      DataStructures::PolymorphicArray<column_index_t>& columnsIndices
     );
     ~PhysicalInsert()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
@@ -398,14 +398,14 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalHeapUpdate final: public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Expressions::Expression*>  updates;
+    DataStructures::PolymorphicArray<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
     PhysicalHeapUpdate(
         Statements::DataSource* table,
         Expressions::Expression* expression,
-        std::vector<Expressions::Expression*> & updates
+        DataStructures::PolymorphicArray<Expressions::Expression*> & updates
     );
     ~PhysicalHeapUpdate()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
@@ -413,22 +413,22 @@ namespace QueryPipeline::PhysicalPlan{
 
   class PhysicalIndexScanUpdate final : public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Expressions::Expression*>  updates;
+    DataStructures::PolymorphicArray<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
+    PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*> & updates);
     ~PhysicalIndexScanUpdate()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
   };
 
   class PhysicalIndexSeekUpdate final : public ExecutionNode{
     Statements::DataSource* table;
-    std::vector<Expressions::Expression*>  updates;
+    DataStructures::PolymorphicArray<Expressions::Expression*>  updates;
     Expressions::Expression* expression;
 
   public:
-    PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, std::vector<Expressions::Expression*> & updates);
+    PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*> & updates);
     ~PhysicalIndexSeekUpdate()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
   };
@@ -498,8 +498,8 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* right;
     Expressions::Expression* expression;
 
-    std::vector<column_index_t> leftKeyColumns;
-    std::vector<column_index_t> rightKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
       const CoreEngine::ExecutionContext& context,
@@ -511,8 +511,8 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode* left,
       ExecutionNode* right,
       Expressions::Expression* expression,
-      std::vector<column_index_t>& leftKeyColumns,
-      std::vector<column_index_t>& rightKeyColumns
+      DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+      DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
     );
     ~PhysicalMergeInnerJoin()override;
     ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
@@ -523,8 +523,8 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* right;
     Expressions::Expression* expression;
 
-    std::vector<column_index_t> leftKeyColumns;
-    std::vector<column_index_t> rightKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
       const CoreEngine::ExecutionContext& context,
@@ -536,8 +536,8 @@ namespace QueryPipeline::PhysicalPlan{
         ExecutionNode* left,
         ExecutionNode* right,
         Expressions::Expression* expression,
-        std::vector<column_index_t>& leftKeyColumns,
-        std::vector<column_index_t>& rightKeyColumns
+        DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+        DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
       );
 
       ~PhysicalMergeLeftJoin()override;
@@ -549,8 +549,8 @@ namespace QueryPipeline::PhysicalPlan{
     ExecutionNode* right;
     Expressions::Expression* expression;
 
-    std::vector<column_index_t> leftKeyColumns;
-    std::vector<column_index_t> rightKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
+    DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
 
     ExecutionResult ExecuteBatchJoin(
       const CoreEngine::ExecutionContext& context,
@@ -562,8 +562,8 @@ namespace QueryPipeline::PhysicalPlan{
       ExecutionNode* left,
       ExecutionNode* right,
       Expressions::Expression* expression,
-      std::vector<column_index_t>& leftKeyColumns,
-      std::vector<column_index_t>& rightKeyColumns
+      DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+      DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
     );
 
     ~PhysicalMergeFullJoin()override;

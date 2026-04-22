@@ -340,7 +340,10 @@ namespace QueryPipeline::Statements {
 
     OrderByStatement::~OrderByStatement() = default;
 
-    bool OrderByStatement::Validate(const std::vector<OrderColumn*>& selectColumns, const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict){
+    bool OrderByStatement::Validate(
+        const DataStructures::PolymorphicArray<OrderColumn*>& selectColumns,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict
+    ){
         HashSet<DataTypes::String> selectColumnMap;
         // for (const auto& selectColumn : selectColumns) {
         //   selectColumnMap.Add(selectColumn->name.name);
@@ -517,7 +520,7 @@ namespace QueryPipeline::Statements {
         }
 
         if (column->isPrimaryKey) {
-            this->primaryKey.push_back(column->index);
+            this->primaryKey.Push(column->index);
             primaryKeyFound = true;
         }
 
@@ -555,7 +558,7 @@ namespace QueryPipeline::Statements {
 
         //primary key will be clear for sure here
         for (const auto& column: this->constraint->columns)
-            this->primaryKey.push_back(columnNamesToIndexes[column.name]);
+            this->primaryKey.Push(columnNamesToIndexes[column.name]);
 
         return Errors::ValidationStatus::Ok();
     }
@@ -578,7 +581,8 @@ namespace QueryPipeline::Statements {
         return Constants::DB_OWNER_PERMISSIONS;
     }
 
-    SelectStatement::SelectStatement(){
+    SelectStatement::SelectStatement(const ::Memory::IAllocator* allocator)
+        : Statement(), columnHeaders(allocator), results(allocator), joins(allocator) {
         this->top = INVALID_TOP;
         this->distinct = false;
         this->orderBy = nullptr;
@@ -589,7 +593,7 @@ namespace QueryPipeline::Statements {
     Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
         Dictionary<DataTypes::String, column_index_t> dict;
 
-        for (int i = 0;i < this->results.size(); i++) {
+        for (int i = 0;i < this->results.Size(); i++) {
             const auto& resultExpr = this->results[i];
 
             if (resultExpr->name.Empty()) continue;
@@ -601,7 +605,7 @@ namespace QueryPipeline::Statements {
 
     bool SelectStatement::HasTopStatement() const{ return this->top != INVALID_TOP; }
 
-    bool SelectStatement::HasJoins()const{ return !this->joins.empty(); }
+    bool SelectStatement::HasJoins()const{ return !this->joins.Empty(); }
 
     bool SelectStatement::HasWhere() const{ return this->where.expression != nullptr; }
 
@@ -654,7 +658,7 @@ namespace QueryPipeline::Statements {
         );
 
         //start resolving aliases
-        for (int i = 0; i < this->results.size(); i++) {
+        for (int i = 0; i < this->results.Size(); i++) {
             statementValidationScope.indexPos = &i;
             auto expressionResult = CompileExpression(context, statementValidationScope, this->results[i]);
 
@@ -756,7 +760,7 @@ namespace QueryPipeline::Statements {
 
     Dictionary<Int, column_index_t> SelectStatement::BuildColumnsIndicesDictionary(
         const QueryContext& context,
-        const std::vector<table_id_t>& joinOrder
+        const DataStructures::PolymorphicArray<table_id_t>& joinOrder
     ) const{
         Dictionary<Int, column_index_t> result;
         column_index_t columnIndex = 0;
@@ -775,7 +779,10 @@ namespace QueryPipeline::Statements {
         return result;
     }
 
-    void SelectStatement::AssignColumnsToIndices(const QueryContext& context, const std::vector<table_id_t>& order)const {
+    void SelectStatement::AssignColumnsToIndices(
+        const QueryContext& context,
+        const DataStructures::PolymorphicArray<table_id_t>& order
+    )const {
         const auto columnIndicesDictionary = this->BuildColumnsIndicesDictionary(context, order);
         for (const auto& resultExpr : this->results)
             AssignColumnIndicesToExpression(columnIndicesDictionary, resultExpr);
@@ -798,7 +805,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
-        if (!this->joins.empty() && this->table == nullptr) {
+        if (!this->joins.Empty() && this->table == nullptr) {
             return Errors::ValidationStatus::Error(
              Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
              context.GetAllocator()

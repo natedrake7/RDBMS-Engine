@@ -60,7 +60,7 @@ class SortingFunctions{
             const CoreEngine::ExecutionContext& context,
             const QueryResult& firstRow,
             const QueryResult& secondRow,
-            const std::vector<QueryPipeline::Statements::OrderColumn*>& sortConditions
+            const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
             const CoreEngine::ExecutionContext& context,
@@ -77,7 +77,7 @@ class SortingFunctions{
          static void OrderBy(
             const CoreEngine::ExecutionContext& context,
             DataStructures::PolymorphicArray<QueryResult>& rows,
-            const std::vector<QueryPipeline::Statements::OrderColumn*>& conditions
+            const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(
            const std::vector<Pages::RowReference>& rows,
@@ -86,12 +86,12 @@ class SortingFunctions{
 };
 
 class MergeComparator final{
-        const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions;
+        const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions;
         const CoreEngine::ExecutionContext* context;
 
     public:
         explicit MergeComparator(
-          const std::vector<QueryPipeline::Statements::OrderColumn*>* sortConditions,
+          const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions,
           const CoreEngine::ExecutionContext* context
         );
         bool operator()(
@@ -99,5 +99,5 @@ class MergeComparator final{
           const MergeElement& second
         ) const;
         void SetExecutionContext(const CoreEngine::ExecutionContext* otherContext);
-        bool HasProperties() const;
+        [[nodiscard]] bool HasProperties() const;
 };

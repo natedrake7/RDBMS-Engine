@@ -129,11 +129,12 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const std::vector updates = {
-      Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::Name)),
-      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy)),
-    };
+    const auto updates = DataStructures::PolymorphicArray<Value>::From(
+        context.GetAllocator(),
+        Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::Name)),
+        Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
+        Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
+    );
 
     const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
@@ -157,11 +158,12 @@ namespace QueryPipeline::PhysicalPlan{
         context.GetAllocator()
       );
 
-    const std::vector updates = {
+    const auto updates = DataStructures::PolymorphicArray<Value>::From(
+      context.GetAllocator(),
       Value(this->column->type.size, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::RecordSize)),
       Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
-      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy)),
-    };
+      Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
+    );
 
     const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 

@@ -355,11 +355,11 @@ namespace CoreEngine {
         [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(
             const ::Memory::IAllocator* allocator,
             Int columnId,
-            const std::vector<Value>& updates
+            const DataStructures::Array<Value>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
-            const ExecutionContext& executionContext,
+            const ExecutionContext& context,
             const DataTypes::StringView& username,
             Int userId,
             Int roleId

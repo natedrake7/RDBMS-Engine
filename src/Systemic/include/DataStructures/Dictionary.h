@@ -2,6 +2,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Array.h"
+
 template<typename Key, typename Value>
 class Dictionary : public std::unordered_map<Key, Value>{
     public:
@@ -111,6 +113,13 @@ class Dictionary : public std::unordered_map<Key, Value>{
         }
 
         static Dictionary FromVector(const std::vector<Key>& items, const Value& defaultValue) {
+            Dictionary dict;
+            for (const auto& item : items)
+                dict.Add(item, defaultValue);
+            return dict;
+        }
+
+        static Dictionary FromArray(const DataStructures::Array<Key>& items, const Value& defaultValue) {
             Dictionary dict;
             for (const auto& item : items)
                 dict.Add(item, defaultValue);

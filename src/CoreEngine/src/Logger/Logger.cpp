@@ -68,7 +68,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
     const log_sequence_number_t& logSequenceNumber,
     const OperationType &operation,
     const table_id_t &tableOrdinalPosition,
-    std::vector<char>& body
+    DataStructures::PolymorphicArray<char>& body
   ){
 
     this->transactionId = transactionId;
@@ -84,7 +84,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
   // }
 
   int LogEntry::GetSize()const{
-    return this->GetStaticDataSize() + this->body.size();
+    return CoreEngine::Logging::LogEntry::GetStaticDataSize() + this->body.Size();
   }
 
   void LogEntry::DeserializeHeader(const std::vector<char> &buffer, uint32_t &pos){
@@ -211,7 +211,7 @@ uint32_t CheckPoint::CalculateCheckSum(const CheckPoint& checkpoint){
       const transaction_id_t& transactionId,
       const OperationType &operation,
       const table_id_t& tableOrdinalPosition,
-      std::vector<char>& body
+      DataStructures::PolymorphicArray<char>& body
   ) {
     log_sequence_number_t logSequenceNumber = 0;
 

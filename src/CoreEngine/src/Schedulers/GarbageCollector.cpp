@@ -14,7 +14,11 @@ namespace CoreEngine {
         extent_id_t lastScannedExtentId = 0;
 
         while (isServerRunning) {
-            std::this_thread::sleep_for(20000ms);
+            std::unique_lock lock(_mutex);
+            _cv.wait_for(lock, 20000ms, [&] { return !isServerRunning.load(std::memory_order::relaxed); });
+
+            if (!isServerRunning)
+                break;
 
             if (!versionDatabase.HasPendingVersions())
                 continue;
@@ -22,5 +26,9 @@ namespace CoreEngine {
             const auto oldestTransactionId = transactionManager.GetOldestActiveTransactionId();
             lastScannedExtentId = versionDatabase.CleanupVersionedData(oldestTransactionId, lastScannedExtentId);
         }
+    }
+
+    void GarbageCollector::Stop(){
+        _cv.notify_all();
     }
 }
