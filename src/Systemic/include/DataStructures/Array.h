@@ -40,6 +40,40 @@ namespace DataStructures{
             this->_data[this->_size++] = value;
         }
 
+        void Insert(const T& value, const Int index){
+            if (index >= this->_size)
+                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+
+            if (this->_size >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0)
+                    ? 1
+                    : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+
+            for (Int i = this->_size - 1; i >= index; --i)
+                this->_data[i + 1] = std::move(this->_data[i]);
+
+            this->_data[index] = value;
+        }
+
+        void Insert(const T& value, const Int index, const Int count){
+            if (index >= this->_size)
+                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+
+            if (this->_size + count >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0)
+                    ? 1
+                    : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+            for (Int i = this->_size - 1; i >= index; --i)
+                this->_data[i + count] = std::move(this->_data[i]);
+
+            for (Int i = 0; i < count; ++i)
+                this->_data[index + i] = value;
+        }
+
         void Remove(Int index){
             if (index < 0 || index >= this->_size)
                 throw std::out_of_range("Index out of range.");

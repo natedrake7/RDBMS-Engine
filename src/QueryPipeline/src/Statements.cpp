@@ -358,7 +358,7 @@ namespace QueryPipeline::Statements {
         //   Headers::ColumnHeader header;
         //   columnsDict.TryGetValue(column->name.name, header);
         //
-        //   this->columnIndices.emplace_back(header.ordinalPosition);
+        //   this->columnIndices.Push(header.ordinalPosition);
         // }
 
         return true;
@@ -533,6 +533,9 @@ namespace QueryPipeline::Statements {
 
         result = this->CompileSchema(context);
         if (!result.IsOk()) return result;
+
+        this->columns.TrySetAllocator(context.GetAllocator());
+        this->primaryKey.TrySetAllocator(context.GetAllocator());
 
         column_index_t indexPosition = 0;
         bool primaryKeyFound = false;
@@ -773,7 +776,7 @@ namespace QueryPipeline::Statements {
                 result.Add(column.id, columnIndex + column.ordinalPosition);
             }
 
-            columnIndex += columns.size();
+            columnIndex += columns.Size();
         }
 
         return result;
@@ -836,9 +839,9 @@ namespace QueryPipeline::Statements {
         if (this->IsConstant())
             return context._context.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
 
-        const auto joinReorderResult = Optimizer::DetermineJoinOrder(this);
-
         const Optimizer optimizer(context);
+        const auto joinReorderResult = optimizer.DetermineJoinOrder(this);
+
         auto predicatesResult = optimizer.PushDownPredicates(
             joinReorderResult.order,
             this->where.expression,
@@ -947,7 +950,7 @@ namespace QueryPipeline::Statements {
         const Headers::ColumnHeader &header,
         const Headers::DefaultValuesHeader& defaultValue
     ){
-        this->columns.emplace_back(ColumnName{
+        this->columns.Push(ColumnName{
             .name = header.name,
             .alias = header.name,
             .tableId = this->table->tableId,
@@ -969,12 +972,12 @@ namespace QueryPipeline::Statements {
                 0
             );
 
-            insertColumns.emplace_back(context._context.Allocate<Expressions::ConstantExpression>(value));
+            insertColumns.Push(context._context.Allocate<Expressions::ConstantExpression>(value));
         }
     }
 
     void InsertStatement::InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header){
-        this->columns.emplace_back(ColumnName{
+        this->columns.Push(ColumnName{
             .name = header.name,
             .alias = header.name,
             .tableId = this->table->tableId,
@@ -985,7 +988,7 @@ namespace QueryPipeline::Statements {
         );
 
         for (auto& [insertColumns] : this->values)
-            insertColumns.emplace_back(new Expressions::ConstantExpression(Value::Null()));
+            insertColumns.Push(new Expressions::ConstantExpression(Value::Null()));
     }
 
     Errors::ValidationStatus InsertStatement::ValidateReturnType(
@@ -1042,7 +1045,7 @@ namespace QueryPipeline::Statements {
         if (this->selectStatement == nullptr)
             return Errors::ValidationStatus::Ok();
 
-        if (this->selectStatement->results.size() != this->columns.size())
+        if (this->selectStatement->results.Size() != this->columns.Size())
             return Errors::ValidationStatus::Error(
                 Messages::INSERT_STATEMENT_INVALID_NUMBER_OF_ARGUMENTS_ON_SUB_SELECT,
                 context.GetAllocator()
@@ -1053,7 +1056,7 @@ namespace QueryPipeline::Statements {
         auto selectStatus = this->selectStatement->CompileDerived(context);
         if (!selectStatus.IsOk()) return selectStatus;
 
-        for (int i = 0;i < this->selectStatement->results.size();i++) {
+        for (int i = 0;i < this->selectStatement->results.Size();i++) {
             const auto& resultExpression = this->selectStatement->results[i];
 
             auto returnTypeStatus = this->ValidateReturnType(context, resultExpression, this->columns[i].name);
@@ -1078,7 +1081,7 @@ namespace QueryPipeline::Statements {
         );
 
         for (auto& [insertColumns] : this->values) {
-            for (int i = 0;i < insertColumns.size(); i++) {
+            for (int i = 0;i < insertColumns.Size(); i++) {
                 auto& value = insertColumns[i];
 
                 auto expressionStatus = CompileExpression(context, statementValidationScope, value);
@@ -1102,6 +1105,8 @@ namespace QueryPipeline::Statements {
 
         auto tableStatus = this->table->Validate(context, this->databaseId);
         if (!tableStatus.IsOk()) return tableStatus;
+
+        this->columnIndices.TrySetAllocator(context.GetAllocator());
 
         const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
 
@@ -1142,7 +1147,7 @@ namespace QueryPipeline::Statements {
             column.index = header.ordinalPosition;
             column.columnId = header.id;
             statementColumns.Add(header.id);
-            this->columnIndices.emplace_back(header.ordinalPosition);
+            this->columnIndices.Push(header.ordinalPosition);
         }
 
         for (const auto&[columnName, header]:  columnsDict) {
@@ -1151,7 +1156,7 @@ namespace QueryPipeline::Statements {
                 || statementColumns.Contains(header.id)
             ) continue;
 
-            this->columnIndices.emplace_back(static_cast<column_index_t>(header.ordinalPosition));
+            this->columnIndices.Push(static_cast<column_index_t>(header.ordinalPosition));
 
             //Insert the null value
             if (header.isNullable) {
@@ -1326,11 +1331,9 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan* UpdateStatement::ToLogical(QueryContext& context){
-        std::vector<Expressions::Expression*> expressions;
-        expressions.reserve(this->updates.size());
-
+        DataStructures::PolymorphicArray<Expressions::Expression*> expressions(context.GetAllocator(), this->updates.Size());
         for (const auto& update : this->updates)
-            expressions.push_back(update->value);
+            expressions.Push(update->value);
 
         return context._context.Allocate<LogicalUpdate>(
             this->table,
@@ -1343,12 +1346,15 @@ namespace QueryPipeline::Statements {
         auto tableStatus = this->table->Validate(context, this->databaseId);
         if (!tableStatus.IsOk()) return tableStatus;
 
+        this->columns.TrySetAllocator(context.GetAllocator());
+        this->columnIndices.TrySetAllocator(context.GetAllocator());
+
         const auto columnsDict = this->catalog->SelectColumnsToDictionary(context.GetAllocator(), this->table->tableId);
 
         for(auto& column: this->columns) {
             Headers::ColumnHeader header;
             if (columnsDict.TryGetValue(column, header)) {
-                this->columnIndices.push_back(header.ordinalPosition);
+                this->columnIndices.Push(header.ordinalPosition);
                 continue;
             }
 
@@ -2293,9 +2299,9 @@ namespace QueryPipeline::Statements {
         const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
         const DataTypes::String& tableAlias,
         const StatementValidationScope& statementValidationScope,
-        std::vector<Expressions::Expression*>& results
+        DataStructures::PolymorphicArray<Expressions::Expression*>& results
     ) {
-        results.insert(results.begin() + *statementValidationScope.indexPos, columnsDict.size(), nullptr);
+        results.Insert(nullptr, *statementValidationScope.indexPos, columnsDict.size());
         // results.resize(results.size() + columnsDict.size());
         for (const auto &header: columnsDict | std::views::values) {
             auto* columnExpression = context._context.Allocate<Expressions::ColumnExpression>(

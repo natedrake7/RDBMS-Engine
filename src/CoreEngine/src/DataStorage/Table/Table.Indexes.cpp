@@ -229,7 +229,7 @@ namespace CoreEngine::StorageTypes {
     ){
         const auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
-        std::vector<DataTypes::RowIdentifier> rowIds;
+        DataStructures::PolymorphicArray<DataTypes::RowIdentifier> rowIds(executionContext.GetAllocator());
         tree->IndexScan(&rowIds, state, executionContext.GetBatchSize());
 
         Expressions::EvaluationContext evaluationContext(
@@ -324,8 +324,8 @@ namespace CoreEngine::StorageTypes {
 
     }
 
-    Int Table::CreateNonClusteredIndex(const std::vector<column_index_t>& columnIndices){
-        const Headers::Index index(columnIndices.data(), static_cast<Int>(columnIndices.size()));
+    Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
+        const Headers::Index index(columnIndices.Data(), columnIndices.Size());
         this->nonClusteredIndexes.Push(index);
         return this->nonClusteredIndexes.Size() - 1;
     }
@@ -337,11 +337,11 @@ namespace CoreEngine::StorageTypes {
     }
 
     page_id_t Table::GetNonClusteredIndexPageId(const Int indexPosition) const{
-        return this->header.nonClusteredIndexPageIds.at(indexPosition);
+        return this->header.nonClusteredIndexPageIds[indexPosition];
     }
 
     void Table::SetNonClusteredIndexPageId(const page_id_t indexPageId, const Int indexPosition){
-        this->header.nonClusteredIndexPageIds.at(indexPosition) = indexPageId;
+        this->header.nonClusteredIndexPageIds[indexPosition] = indexPageId;
     }
 
     Indexing::BTree* Table::GetClusteredIndexedTree(){
@@ -367,13 +367,13 @@ namespace CoreEngine::StorageTypes {
           if(this->nonClusteredIndexedTrees.Empty())
               this->nonClusteredIndexedTrees.Resize(numOfIndexes);
 
-          if (this->header.nonClusteredIndexPageIds.size() < numOfIndexes)
-              this->header.nonClusteredIndexPageIds.resize(numOfIndexes, INVALID_PAGE_ID);
+          // if (this->header.nonClusteredIndexPageIds.Size() < numOfIndexes)
+          //     this->header.nonClusteredIndexPageIds.Resize(numOfIndexes);
 
           auto* nonClusteredTree = this->nonClusteredIndexedTrees[nonClusteredIndexId];
 
           if (nonClusteredTree == nullptr){
-              const auto indexPageId = this->header.nonClusteredIndexPageIds.at(nonClusteredIndexId);
+              const auto indexPageId = this->header.nonClusteredIndexPageIds[nonClusteredIndexId];
 
               nonClusteredTree = this->_allocator.Allocate<Indexing::BTree>(
                   this,

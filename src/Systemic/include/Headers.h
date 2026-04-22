@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "DataStructures/PolymorphicArray.h"
 #include "DataStructures/StaticArray.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/Value.h"
@@ -136,7 +137,7 @@ namespace Headers {
     bool isDisabled;
     AuditInformation additionalInfo;
 
-    std::vector<IndexColumnsHeader> columns;
+   DataStructures::PolymorphicArray<IndexColumnsHeader> columns;
     IdentityColumnsHeader identity;
   };
 
@@ -155,7 +156,7 @@ namespace Headers {
     bool isDisabled;
     Int indexId = INVALID_INDEX_ID;
     IndexHeader index;
-    std::vector<ConstraintsColumnsHeader> columns;
+   DataStructures::PolymorphicArray<ConstraintsColumnsHeader> columns;
 
     AuditInformation additionalInfo;
   };
@@ -329,10 +330,10 @@ namespace Headers {
 
         TableStatistics statistics;
 
-        std::vector<ColumnHeader> columns;
-        std::vector<ConstraintsHeader> constraints;
+       DataStructures::PolymorphicArray<ColumnHeader> columns;
+       DataStructures::PolymorphicArray<ConstraintsHeader> constraints;
 
-        std::vector<IdentityColumnsHeader> identity;
+       DataStructures::PolymorphicArray<IdentityColumnsHeader> identity;
 
         TableHeader()
             : databaseId(INVALID_DATABASE_ID), id(INVALID_TABLE_ID), schemaId(INVALID_SCHEMA_ID), ordinalPosition(0), isSystem(false){}
@@ -364,8 +365,8 @@ namespace Headers {
     bool isSystem;
     AuditInformation additionalInfo;
 
-    std::vector<TableHeader> tables;
-    std::vector<SchemaHeader> schemas;
+   DataStructures::PolymorphicArray<TableHeader> tables;
+   DataStructures::PolymorphicArray<SchemaHeader> schemas;
   };
 
   struct sysColumn {

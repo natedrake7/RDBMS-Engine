@@ -22,7 +22,6 @@ namespace CoreEngine {
         ~SystemCatalog();
 
         Database* masterDb;
-
         std::vector<Headers::sysTable> sysTables;
 
         std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(const ::Memory::IAllocator* allocator, const DataTypes::StringView& configPath);
@@ -42,8 +41,8 @@ namespace CoreEngine {
         static Headers::DatabaseHeader ToDatabaseHeader(
             const ::Memory::IAllocator* allocator,
             const Pages::RowReference& rowPtr,
-            std::vector<Headers::TableHeader>& dbTables,
-            std::vector<Headers::SchemaHeader>& schemas
+           DataStructures::PolymorphicArray<Headers::TableHeader>& dbTables,
+           DataStructures::PolymorphicArray<Headers::SchemaHeader>& schemas
         );
         static Headers::SchemaHeader ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
         static Headers::TableHeader ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
@@ -54,7 +53,7 @@ namespace CoreEngine {
         static Headers::ConstraintsHeader ToConstraintsHeader(
             const ::Memory::IAllocator* allocator,
             const Pages::RowReference& rowPtr,
-            std::vector<Headers::ConstraintsColumnsHeader>& constraintColumns,
+           DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader>& constraintColumns,
             Headers::IndexHeader& indexHeader
         );
         static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
@@ -88,7 +87,7 @@ namespace CoreEngine {
         );
         void Shutdown();
 
-        [[nodiscard]] std::vector<Headers::DatabaseHeader> RetrieveCatalog()const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::DatabaseHeader> RetrieveCatalog()const;
 
         [[nodiscard]] DataStructures::PolymorphicArray<Security::Role*> InsertSystemRoles(const ExecutionContext& baseContext)const;
         [[nodiscard]] Security::User InsertSystemUsers(
@@ -264,7 +263,7 @@ namespace CoreEngine {
         [[nodiscard]] bool DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
         [[nodiscard]] Headers::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const;
         [[nodiscard]] Headers::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int databaseId) const;
-        [[nodiscard]] std::vector<Headers::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
         [[nodiscard]] Dictionary<DataTypes::String, Headers::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
         [[nodiscard]] bool SchemaExists(
             const ::Memory::IAllocator* allocator,
@@ -272,8 +271,8 @@ namespace CoreEngine {
             const DataTypes::StringView& schema,
             int* schemaId = nullptr
         ) const;
-        [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
-        [[nodiscard]] std::vector<Headers::TableHeader> SelectTables(
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::TableHeader> SelectTables(
             const ::Memory::IAllocator* allocator,
             Int databaseId
         ) const;
@@ -288,17 +287,17 @@ namespace CoreEngine {
             const DataTypes::StringView& tableName,
             const DataTypes::StringView& schema
         ) const;
-        [[nodiscard]] std::vector<Headers::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Headers::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
-        [[nodiscard]] std::vector<Headers::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Dictionary<DataTypes::String, Headers::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] std::vector<Headers::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Headers::IndexHeader SelectIndexById(const ::Memory::IAllocator* allocator, Int indexId) const;
-        [[nodiscard]] std::vector<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int indexId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int indexId) const;
         [[nodiscard]] Dictionary<Int, Headers::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const ::Memory::IAllocator* allocator, Int indexId) const;
-        [[nodiscard]] std::vector<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const ::Memory::IAllocator* allocator, Int tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Dictionary<Int , Headers::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] std::vector<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const ::Memory::IAllocator* allocator, Int constraintId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const ::Memory::IAllocator* allocator, Int constraintId) const;
         [[nodiscard]] Dictionary<Int, Headers::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const ::Memory::IAllocator* allocator, Int constraintId) const;
         [[nodiscard]] Headers::DefaultValuesHeader SelectDefaultValueByColumnId(const ::Memory::IAllocator* allocator, Int columnId) const;
         [[nodiscard]] Headers::TableStatistics SelectTableStatisticsById(const ::Memory::IAllocator* allocator, Int tableId)const;
@@ -307,12 +306,12 @@ namespace CoreEngine {
             Int columnId,
             DataType columnType
         )const;
-        [[nodiscard]] std::vector<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::ColumnHistograms> SelectColumnHistogramsByColumnId(
             const ::Memory::IAllocator* allocator,
             Int tableId,
             Int columnId
         )const;
-        [[nodiscard]] std::vector<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const ::Memory::IAllocator* allocator, Int tableId)const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Headers::IndexStatistics> SelectIndexStatisticsByTableId(const ::Memory::IAllocator* allocator, Int tableId)const;
 
         void UpdateIdentityByColumnId(
             const ::Memory::IAllocator* allocator,

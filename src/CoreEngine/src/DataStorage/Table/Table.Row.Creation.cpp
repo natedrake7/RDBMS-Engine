@@ -2,7 +2,6 @@
 #include "../../../include/DataStorage/Table.h"
 #include "DataStorage/InsertPayload.h"
 
-
 namespace CoreEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,

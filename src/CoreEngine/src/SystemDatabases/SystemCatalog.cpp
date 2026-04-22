@@ -11,8 +11,7 @@
 #include "Converter.h"
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
-
-#include "../../include/Extensions/StringExtensions.h"
+#include "Extensions/StringExtensions.h"
 
 namespace Headers {
     void from_json(const nlohmann::json& j, sysColumn& sysColumn) {
@@ -315,8 +314,8 @@ namespace CoreEngine {
   Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(
     const ::Memory::IAllocator* allocator,
     const Pages::RowReference& rowPtr,
-    std::vector<Headers::TableHeader> &dbTables,
-    std::vector<Headers::SchemaHeader> &schemas
+    DataStructures::PolymorphicArray<Headers::TableHeader>& dbTables,
+    DataStructures::PolymorphicArray<Headers::SchemaHeader>& schemas
   ) {
     const auto materializedRow = rowPtr.Materialize(allocator);
     const auto& data = materializedRow.Data();
@@ -478,7 +477,7 @@ namespace CoreEngine {
   Headers::ConstraintsHeader SystemCatalog::ToConstraintsHeader(
     const ::Memory::IAllocator* allocator,
     const Pages::RowReference& rowPtr,
-    std::vector<Headers::ConstraintsColumnsHeader> &constraintColumns,
+    DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader> &constraintColumns,
     Headers::IndexHeader &indexHeader
   ) {
     const auto materializedRow = rowPtr.Materialize(allocator);
@@ -657,7 +656,7 @@ namespace CoreEngine {
     this->masterDb = nullptr;
  }
 
- std::vector<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
+ DataStructures::PolymorphicArray<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
    auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
 
    // DataStructures::Array<Pages::RowReference> selectedDatabases;
@@ -665,7 +664,7 @@ namespace CoreEngine {
    // IndexState state;
    // sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, state, nullptr);
    //
-   // std::vector<Headers::DatabaseHeader> databasesHeaders;
+   // DataStructures::PolymorphicArray<Headers::DatabaseHeader> databasesHeaders;
    //
    // if (selectedDatabases.Empty())
    //   return {};
@@ -699,7 +698,7 @@ namespace CoreEngine {
    //     // table.identity = this->SelectIdentityColumnsByTableId(table.id);
    //   }
    //
-   //   databasesHeaders.emplace_back(SystemCatalog::ToDatabaseHeader(row, tables, schemas));
+   //   databasesHeaders.Push(SystemCatalog::ToDatabaseHeader(row, tables, schemas));
    // }
 
    // return databasesHeaders;
@@ -1429,7 +1428,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAlloc
   return SystemCatalog::ToDatabaseHeader(allocator, selectedDatabases[0]);
 }
 
-std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int databaseId) const{
+DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int databaseId) const{
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
      DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 2);
 
@@ -1440,10 +1439,10 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
     if (selectedSchemas.Empty()) return {};
 
-     std::vector<Headers::SchemaHeader> schemas;
+     DataStructures::PolymorphicArray<Headers::SchemaHeader> schemas;
 
     for (const auto& row : selectedSchemas)
-      schemas.emplace_back(SystemCatalog::ToSchemaHeader(allocator, row));
+      schemas.Push(SystemCatalog::ToSchemaHeader(allocator, row));
 
      return schemas;
   }
@@ -1490,7 +1489,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     return false;
   }
 
-    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(
+    DataStructures::PolymorphicArray<Headers::TableHeader> SystemCatalog::SelectTables(
         const ::Memory::IAllocator* allocator,
         const DataTypes::StringView& dbName
     ) const{
@@ -1498,7 +1497,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return this->SelectTables(allocator, databaseHeader.id);
     }
 
-    std::vector<Headers::TableHeader> SystemCatalog::SelectTables(
+    DataStructures::PolymorphicArray<Headers::TableHeader> SystemCatalog::SelectTables(
         const ::Memory::IAllocator* allocator,
         const Int databaseId
     ) const{
@@ -1514,11 +1513,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         if (selectedTables.Empty())
             return {};
 
-        std::vector<Headers::TableHeader> selectedTableHeaders;
-        selectedTableHeaders.reserve(selectedTables.Size());
-
+        DataStructures::PolymorphicArray<Headers::TableHeader> selectedTableHeaders(allocator, selectedTables.Size());
         for (const auto& row : selectedTables)
-            selectedTableHeaders.emplace_back(SystemCatalog::ToTableHeader(allocator, row));
+            selectedTableHeaders.Push(SystemCatalog::ToTableHeader(allocator, row));
 
         std::ranges::sort(selectedTableHeaders,
             [](const Headers::TableHeader& a, const Headers::TableHeader& b) {
@@ -1575,7 +1572,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
     return SystemCatalog::ToTableHeader(allocator, selectedTables[0]);
   }
 
-    std::vector<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(
+    DataStructures::PolymorphicArray<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
@@ -1589,8 +1586,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         if (selectedConstraints.Empty()) return {};
 
-        std::vector<Headers::ConstraintsHeader> selectedConstraintsHeader;
-        selectedConstraintsHeader.reserve(selectedConstraints.Size());
+        DataStructures::PolymorphicArray<Headers::ConstraintsHeader> selectedConstraintsHeader(allocator, selectedConstraints.Size());
 
         for (const auto& row : selectedConstraints) {
             const auto materializedRow = row.Materialize(allocator);
@@ -1606,7 +1602,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
             if(indexId != -1)
                 index = this->SelectIndexById(allocator, indexId);
 
-            selectedConstraintsHeader.emplace_back(SystemCatalog::ToConstraintsHeader(allocator, row, constraintColumns, index));
+            selectedConstraintsHeader.Push(SystemCatalog::ToConstraintsHeader(allocator, row, constraintColumns, index));
         }
 
         return selectedConstraintsHeader;
@@ -1632,7 +1628,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return SystemCatalog::ToColumnHeader(allocator, selectedColumns.Start());
     }
 
-    std::vector<Headers::ColumnHeader> SystemCatalog::SelectColumns(
+    DataStructures::PolymorphicArray<Headers::ColumnHeader> SystemCatalog::SelectColumns(
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
@@ -1646,11 +1642,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         if (selectedColumns.Empty()) return {};
 
-        std::vector<Headers::ColumnHeader> selectedColumnHeaders;
-        selectedColumnHeaders.reserve(selectedColumns.Size());
-
+        DataStructures::PolymorphicArray<Headers::ColumnHeader> selectedColumnHeaders(allocator, selectedColumns.Size());
         for (const auto& row : selectedColumns)
-            selectedColumnHeaders.emplace_back(SystemCatalog::ToColumnHeader(allocator, row));
+            selectedColumnHeaders.Push(SystemCatalog::ToColumnHeader(allocator, row));
 
         std::ranges::sort(selectedColumnHeaders,
         [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
@@ -1674,7 +1668,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return selectedColumns;
     }
 
-   std::vector<Headers::IndexHeader> SystemCatalog::SelectIndexes(
+   DataStructures::PolymorphicArray<Headers::IndexHeader> SystemCatalog::SelectIndexes(
         const ::Memory::IAllocator* allocator,
        const Int tableId
     ) const{
@@ -1686,10 +1680,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         sysIndexes->SystemClusteredIndexSeek(allocator, &selectedIndexes, key, nullptr);
 
-        std::vector<Headers::IndexHeader> selectedIndexHeaders;
-
+        DataStructures::PolymorphicArray<Headers::IndexHeader> selectedIndexHeaders(allocator, selectedIndexes.Size());
         for (const auto& row : selectedIndexes)
-            selectedIndexHeaders.emplace_back(SystemCatalog::ToIndexHeader(allocator, row));
+            selectedIndexHeaders.Push(SystemCatalog::ToIndexHeader(allocator, row));
 
       //get the clustered first
         std::ranges::sort(selectedIndexHeaders,
@@ -1712,7 +1705,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         auto indexColumns = this->SelectIndexColumnsByIndexId(allocator, indexId);
 
-        std::vector<Headers::IndexHeader> selectedIndexHeaders;
+        DataStructures::PolymorphicArray<Headers::IndexHeader> selectedIndexHeaders(allocator);
 
         auto header = SystemCatalog::ToIndexHeader(allocator, selectedIndexes[0]);
         header.columns = std::move(indexColumns);
@@ -1720,7 +1713,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return header;
     }
 
-    std::vector<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(
+    DataStructures::PolymorphicArray<Headers::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(
         const ::Memory::IAllocator* allocator,
         const Int indexId
     ) const{
@@ -1734,10 +1727,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         if(rows.Empty()) return {};
 
-        std::vector<Headers::IndexColumnsHeader> indexColumns;
-
+        DataStructures::PolymorphicArray<Headers::IndexColumnsHeader> indexColumns(allocator, rows.Size());
         for (const auto& row : rows)
-            indexColumns.emplace_back(SystemCatalog::ToIndexColumnsHeader(allocator, row));
+            indexColumns.Push(SystemCatalog::ToIndexColumnsHeader(allocator, row));
 
         //get them sorted by ordinal position
         std::ranges::sort(indexColumns,
@@ -1762,7 +1754,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return indexColumnsDict;
     }
 
-   std::vector<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(
+   DataStructures::PolymorphicArray<Headers::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(
         const ::Memory::IAllocator* allocator,
        const Int tableId
     ) const{
@@ -1776,10 +1768,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         if(rows.Empty()) return {};
 
-        std::vector<Headers::IdentityColumnsHeader> columns;
-
+        DataStructures::PolymorphicArray<Headers::IdentityColumnsHeader> columns(allocator, rows.Size());
         for (const auto& row : rows)
-            columns.emplace_back(SystemCatalog::ToIdentityColumnsHeader(allocator, row));
+            columns.Push(SystemCatalog::ToIdentityColumnsHeader(allocator, row));
 
         //get them sorted by ordinal position
         std::ranges::sort(columns,
@@ -1803,7 +1794,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return dict;
     }
 
-    std::vector<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(
+    DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(
         const ::Memory::IAllocator* allocator,
         const Int constraintId
     ) const{
@@ -1817,10 +1808,9 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
 
         if(rows.Empty()) return {};
 
-        std::vector<Headers::ConstraintsColumnsHeader> constraintColumns;
-
+        DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader> constraintColumns(allocator, rows.Size());
         for(const auto& row : rows)
-            constraintColumns.emplace_back(SystemCatalog::ToConstraintsColumnsHeader(allocator, row));
+            constraintColumns.Push(SystemCatalog::ToConstraintsColumnsHeader(allocator, row));
 
         std::ranges::sort(constraintColumns,
         [](const Headers::ConstraintsColumnsHeader& a, const Headers::ConstraintsColumnsHeader& b) {
@@ -1896,16 +1886,14 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         return SystemCatalog::ToColumnStatistics(allocator, rows.Start(), columnType);
     }
 
-    std::vector<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
+    DataStructures::PolymorphicArray<Headers::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
         const ::Memory::IAllocator* allocator,
         const Int tableId,
         const Int columnId
     ) const {
         auto columnHeader = this->SelectColumnById(allocator, tableId, columnId);
 
-        std::vector<Headers::ColumnHistograms> result;
-        result.reserve(NUMBER_OF_HISTOGRAM_BUCKETS);
-
+        DataStructures::PolymorphicArray<Headers::ColumnHistograms> result(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
         DataTypes::Indexing::Key key(allocator);
@@ -1915,16 +1903,16 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
         for (const auto& row : rows)
-            result.emplace_back(SystemCatalog::ToColumnHistograms(allocator, row, static_cast<DataType>(columnHeader.dataType)));
+            result.Push(SystemCatalog::ToColumnHistograms(allocator, row, static_cast<DataType>(columnHeader.dataType)));
 
         return result;
     }
 
-    std::vector<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(
+    DataStructures::PolymorphicArray<Headers::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const {
-        std::vector<Headers::IndexStatistics> result;
+        DataStructures::PolymorphicArray<Headers::IndexStatistics> result(allocator);
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
         DataTypes::Indexing::Key key(allocator);
@@ -1934,7 +1922,7 @@ std::vector<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
         for (const auto& row : rows)
-            result.emplace_back(SystemCatalog::ToIndexStatistics(allocator, row));
+            result.Push(SystemCatalog::ToIndexStatistics(allocator, row));
 
         return result;
     }

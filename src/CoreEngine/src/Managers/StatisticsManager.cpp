@@ -56,20 +56,20 @@ namespace CoreEngine {
     return catalogStats;
   }
 
-  std::vector<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
+  DataStructures::PolymorphicArray<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
     MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
 
-    std::vector<Headers::IndexStatistics> stats;
-    if (this->indexStatisticsCache.TryGetValue(tableId, stats))
-      return stats;
+    DataStructures::PolymorphicArray<Headers::IndexStatistics> stats;
+    // if (this->indexStatisticsCache.TryGetValue(tableId, stats))
+    //   return stats;
 
     const Memory::Allocator allocator;
     auto catalogStats = SystemCatalog::Get().SelectIndexStatisticsByTableId(&allocator, tableId);
 
-    if (catalogStats.empty())
+    if (catalogStats.Empty())
       return stats;
 
-    auto writerLock = MultiThreading::WriterGuard::Promote(&this->indexStatisticsLatch, lock);
+    // auto writerLock = MultiThreading::WriterGuard::Promote(&this->indexStatisticsLatch, lock);
 
     //// this->indexStatisticsCache.ForceAdd(tableId, catalogStats);
 
@@ -78,8 +78,8 @@ namespace CoreEngine {
 
   void StatisticsManager::Update(
     const Headers::TableStatistics &tableStatistics,
-    const std::vector<Headers::ColumnStatistics> &columnStatistics,
-    const std::vector<Headers::IndexStatistics>& indexStatistics
+    const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
+    const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics
   ) {
     {
       MultiThreading::WriterGuard lock(&this->tableStatisticsLatch);

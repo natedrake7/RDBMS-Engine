@@ -48,7 +48,7 @@ namespace CoreEngine::StorageTypes
         column_number_t numberOfColumns;
 
         page_id_t clusteredIndexPageId;
-        DataStructures::PolymorphicArray<page_id_t> nonClusteredIndexPageIds;
+        DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
 
         TableHeader();
         ~TableHeader();
@@ -99,7 +99,7 @@ namespace CoreEngine::StorageTypes
                 block_size_t &remainingBlockSize,
                 Pages::LargeObjectView* previousDataObject
             )const;
-            [[nodiscard]] Pages::LargeObjectView GetOrCreateLargeDataPage() const;
+            [[nodiscard]] Pages::LargeObjectView GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const;
 
         /** @} End of: Class Constructors and Destructors*/
 
@@ -107,7 +107,10 @@ namespace CoreEngine::StorageTypes
             void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
             void RemoveColumnByClusteredIndex(column_index_t index);
             void RemoveColumnByHeap(column_index_t index)const;
-            void InsertToVersionDatabase(const Pages::RawRowReference& rowRef) const;
+            void InsertToVersionDatabase(
+                const ::Memory::IAllocator* allocator,
+                const Pages::RawRowReference& rowRef
+            ) const;
 
         public:
             InsertPayload CreateInsertPayload(
@@ -168,7 +171,11 @@ namespace CoreEngine::StorageTypes
                 InsertPayload& payload,
                 Int pagesToAllocate
             );
-            Errors::RuntimeStatus HeapInsert(const InsertPayload& payload, Int pagesToAllocate)const;
+            Errors::RuntimeStatus HeapInsert(
+                const ExecutionContext& executionContext,
+                const InsertPayload& payload,
+                Int pagesToAllocate
+            )const;
             Errors::RuntimeStatus ClusteredIndexInsert(
                 const ExecutionContext& executionContext,
                 InsertPayload& payload,
@@ -316,14 +323,14 @@ namespace CoreEngine::StorageTypes
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
-                const ExecutionContext& executionContext,
+                const ExecutionContext& context,
                 const DataStructures::Array<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
-                const ExecutionContext& executionContext,
+                const ExecutionContext& context,
                 const DataStructures::Array<Expressions::Expression*>& updates
             );
             [[nodiscard]]

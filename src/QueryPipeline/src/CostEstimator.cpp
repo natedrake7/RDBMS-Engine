@@ -154,10 +154,10 @@ namespace QueryPipeline{
     }
 
     int CostEstimator::FindBucketForValue(
-        const std::vector<Headers::ColumnHistograms>& histograms,
+        const DataStructures::Array<Headers::ColumnHistograms>& histograms,
         const Value& value
     ){
-        for (int i = 0;i < histograms.size(); i++){
+        for (int i = 0;i < histograms.Size(); i++){
             const auto& histogram = histograms[i];
 
             if ((value < histogram.rangeEnd).AsBool())
@@ -230,7 +230,7 @@ namespace QueryPipeline{
             columnStats.columnId
         );
 
-        if (histograms.empty())
+        if (histograms.Empty())
             return CostEstimator::EstimateSelectivityForSmallTable(range, columnStats);
 
         const auto hasStart = range.HasStart();
@@ -374,7 +374,7 @@ namespace QueryPipeline{
         const Headers::TableStatistics& tableStats
     ){
         //if empty default to full scan
-        if (candidate.analyzeInfo.empty()){
+        if (candidate.analyzeInfo.Empty()){
             candidate.estimatedCost = 1.0;
             return;
         }

@@ -28,7 +28,7 @@ namespace Pages{
 
             void SetTreeType(Constants::TreeType treeType) const;
             void SetTreeId(page_id_t treeId) const;
-            void SetKeyTypes(const std::vector<DataType>& keyTypes) const;
+            void SetKeyTypes(const DataStructures::StaticArray<DataType, 10>& keyTypes) const;
 
             [[nodiscard]] bool IsEmpty() const;
             [[nodiscard]] bool IsLeaf() const;

@@ -336,10 +336,14 @@ Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes
     return framePtr;
 }
 
-Pages::HeaderPageView StorageManager::GetHeaderPage(const FileKey fileKey, const DataTypes::StringView& filename)
-{
+Pages::HeaderPageView StorageManager::GetHeaderPage(
+    const FileKey fileKey,
+    const DataTypes::StringView& filename
+){
     auto* frame = this->GetRawPage(fileKey, filename, Constants::HEADER_PAGE_ID, nullptr);
-    return Pages::HeaderPageView(frame);
+    auto view =  Pages::HeaderPageView(frame);
+    view.ReadTableHeadersFromDisk();
+    return view;
 }
 
 Pages::PageFreeSpaceView StorageManager::GetPageFreeSpacePage(const FileKey fileKey, const DataTypes::StringView& filename, const page_id_t pageId)

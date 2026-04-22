@@ -790,7 +790,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
 
-    const auto index = static_cast<SmallInt>(tables.empty() ? 0 : tables[tables.size() - 1].ordinalPosition + 1);
+    const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
 
     const auto tableResult = this->catalog->InsertTableToMasterDb(
         context,
@@ -1072,24 +1072,24 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         const auto constraintId = constraintResult.primaryKey.AsInt(1);
 
         for (const auto& columnPos : this->columns) {
-        const auto& header = columnsHeaders.at(columnPos);
+            const auto& header = columnsHeaders[columnPos];
 
-        const auto indexColumnResult =
-            this->catalog->InsertIndexColumnToMasterDb(
+            const auto indexColumnResult =
+                this->catalog->InsertIndexColumnToMasterDb(
+                    context,
+                    indexId,
+                    header.id,
+                    columnPos,
+                    true
+                );
+
+            const auto constraintColumnResult =
+            this->catalog->InsertConstraintColumnToMasterDb(
                 context,
-                indexId,
+                constraintId,
                 header.id,
-                columnPos,
-                true
-            );
-
-        const auto constraintColumnResult =
-        this->catalog->InsertConstraintColumnToMasterDb(
-            context,
-            constraintId,
-            header.id,
-            columnPos
-            );
+                columnPos
+                );
         }
 
         const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(

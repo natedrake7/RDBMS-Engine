@@ -96,7 +96,11 @@ namespace CoreEngine {
         headerPage.SetDatabaseHeader(this->header);
     }
 
-    bool VersionDatabase::AllocateNewExtent(page_id_t& newPageId, extent_id_t& newExtentId){
+    bool VersionDatabase::AllocateNewExtent(
+        const ::Memory::IAllocator* allocator,
+        page_id_t& newPageId,
+        extent_id_t& newExtentId
+    ){
         {
             const MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
@@ -118,13 +122,12 @@ namespace CoreEngine {
                 this->header.lastGamPageId = gamPage.PageId();
             }
 
-            std::vector<extent_id_t> extents;
-
+            DataStructures::PolymorphicArray<extent_id_t> extents(allocator);
             MultiThreading::WriterGuard gamPageLock(&gamPage.Latch());
             // Step 3: allocate an extent from the current (or new) GAM page
             const auto allocatedExtentsCount = gamPage.AllocateExtentsNoLock(extents, 1);
 
-            newExtentId = extents.front();
+            newExtentId = extents[0];
             newPageId   = Database::CalculateExtentFirstPageId(newExtentId);
         }
 
@@ -177,11 +180,11 @@ namespace CoreEngine {
         return {};
     }
 
-    Pages::PageView VersionDatabase::CreateUndoPage(){
+    Pages::PageView VersionDatabase::CreateUndoPage(const ::Memory::IAllocator* allocator){
         extent_id_t newExtentId = 0;
         page_id_t newPageId = 0;
 
-        this->AllocateNewExtent(newPageId, newExtentId);
+        this->AllocateNewExtent(allocator, newPageId, newExtentId);
 
         {
             MultiThreading::WriterGuard pageIdLock(&this->lastUsedPageMutex);
@@ -215,6 +218,7 @@ namespace CoreEngine {
     }
 
     Pages::PageView VersionDatabase::GetLastUndoPage(
+        const ::Memory::IAllocator* allocator,
         const StorageTypes::Table* table,
         const row_size_t size
     ) {
@@ -266,17 +270,18 @@ namespace CoreEngine {
             }
         }
 
-        return this->CreateUndoPage();
+        return this->CreateUndoPage(allocator);
     }
 
     Errors::RuntimeStatus VersionDatabase::InsertRow(
+        const ::Memory::IAllocator* allocator,
         const Pages::RawRowReference& rowRef,
         StorageTypes::RowVersionPointer& rowPointer,
         const StorageTypes::Table* table
     ){
         Errors::RuntimeStatus status;
         const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
-        const auto page = this->GetLastUndoPage(table, payload.Size());
+        const auto page = this->GetLastUndoPage(allocator, table, payload.Size());
 
         MultiThreading::WriterGuard lock(&page.Latch());
 

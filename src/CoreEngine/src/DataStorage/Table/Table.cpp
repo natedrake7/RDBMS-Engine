@@ -175,10 +175,13 @@ namespace CoreEngine::StorageTypes {
         // }
     }
 
-    void Table::InsertToVersionDatabase(const Pages::RawRowReference& rowRef)const{
+    void Table::InsertToVersionDatabase(
+        const ::Memory::IAllocator* allocator,
+        const Pages::RawRowReference& rowRef
+    )const{
         static auto& versionDatabase = VersionDatabase::Get();
         RowVersionPointer versionPtr;
-        versionDatabase.InsertRow(rowRef, versionPtr, this);
+        versionDatabase.InsertRow(allocator, rowRef, versionPtr, this);
     }
 
     Table::Table(const table_id_t tableId, const Int ordinalPosition, Database* database){
@@ -418,7 +421,7 @@ namespace CoreEngine::StorageTypes {
         //row_id
         auto status = this->IsClustered()
             ? this->ClusteredIndexInsert(executionContext, payload, pagesToAllocate)
-            : this->HeapInsert(payload, pagesToAllocate);
+            : this->HeapInsert(executionContext, payload, pagesToAllocate);
 
         const auto rowId = status.rowId;
         if (status.code != Errors::RuntimeError::Ok)
@@ -665,7 +668,11 @@ namespace CoreEngine::StorageTypes {
         }
     }
 
-    Errors::RuntimeStatus Table::HeapInsert(const InsertPayload& payload, const Int pagesToAllocate)const{
+    Errors::RuntimeStatus Table::HeapInsert(
+        const ExecutionContext& executionContext,
+        const InsertPayload& payload,
+        const Int pagesToAllocate
+    )const{
         const auto systemFilename = this->database->GetSystemFilename();
         const auto systemFileKey = this->database->GetSystemFileKey();
 
@@ -677,7 +684,11 @@ namespace CoreEngine::StorageTypes {
         // this->HandleRowOverflow(row);
 
       if (this->header.allocationPageId == INVALID_PAGE_ID){
-          const auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
+          const auto newPage = this->database->CreateDataPage(
+              executionContext.GetAllocator(),
+              this->header.ordinalPosition,
+              pagesToAllocate
+            );
 
           MultiThreading::WriterGuard pageLock(&newPage.Latch());
 
@@ -733,7 +744,11 @@ namespace CoreEngine::StorageTypes {
           }
       }
 
-      const auto newPage = this->database->CreateDataPage(this->header.ordinalPosition, pagesToAllocate);
+      const auto newPage = this->database->CreateDataPage(
+          executionContext.GetAllocator(),
+          this->header.ordinalPosition,
+          pagesToAllocate
+        );
 
       MultiThreading::WriterGuard pageLock(&newPage.Latch());
 
@@ -1079,7 +1094,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
-        const ExecutionContext& executionContext,
+        const ExecutionContext& context,
         const DataStructures::Array<Value>& updates
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
@@ -1089,9 +1104,9 @@ namespace CoreEngine::StorageTypes {
         //this has the pointers of the old row to LOBS and overflow pages
 
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
-        this->InsertToVersionDatabase(rowRawData);
 
-        const auto* allocator = executionContext.GetAllocator();
+        const auto* allocator = context.GetAllocator();
+        this->InsertToVersionDatabase(allocator, rowRawData);
 
         auto materializedRow = rowPtr.Materialize(allocator);
         materializedRow.Update(updates);
@@ -1100,7 +1115,7 @@ namespace CoreEngine::StorageTypes {
         auto newPayload = this->CreateUpdatePayload(
             status,
             allocator,
-            executionContext.GetCurrentTransactionId(),
+            context.GetCurrentTransactionId(),
             materializedRow.Data()
         );
 
@@ -1111,7 +1126,7 @@ namespace CoreEngine::StorageTypes {
             return status;
 
           //only for heap tables
-          auto insertResult = this->InsertRow(executionContext, newPayload, 1);
+          auto insertResult = this->InsertRow(context, newPayload, 1);
 
           if (!insertResult.IsOk())
               return insertResult;
@@ -1124,17 +1139,18 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
-        const ExecutionContext& executionContext,
+        const ExecutionContext& context,
         const DataStructures::Array<Expressions::Expression*>& updates
     ){
 
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
-        this->InsertToVersionDatabase(rowRawData);
 
-        const auto* allocator = executionContext.GetAllocator();
+        const auto* allocator = context.GetAllocator();
+        this->InsertToVersionDatabase(allocator, rowRawData);
+
         auto materializedRow = rowPtr.Materialize(allocator);
 
-        const Expressions::EvaluationContext evaluationContext(&rowPtr, executionContext);
+        const Expressions::EvaluationContext evaluationContext(&rowPtr, context);
         for (const auto* updateExpr : updates) {
             auto updatedValue = updateExpr->Evaluate(evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
@@ -1146,7 +1162,7 @@ namespace CoreEngine::StorageTypes {
         auto newPayload = this->CreateUpdatePayload(
             status,
             allocator,
-            executionContext.GetCurrentTransactionId(),
+            context.GetCurrentTransactionId(),
             materializedRow.Data()
         );
 
@@ -1157,7 +1173,7 @@ namespace CoreEngine::StorageTypes {
             return status;
 
         //only for heap tables
-        auto insertResult = this->InsertRow(executionContext, newPayload, 1);
+        auto insertResult = this->InsertRow(context, newPayload, 1);
 
         if (!insertResult.IsOk())
             return insertResult;
@@ -1181,7 +1197,7 @@ namespace CoreEngine::StorageTypes {
         //this has the pointers of the old row to LOBS and overflow pages
 
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
-        this->InsertToVersionDatabase(rowRawData);
+        this->InsertToVersionDatabase(allocator, rowRawData);
 
         auto materializedRow = rowPtr.Materialize(allocator);
         materializedRow.Update(updates);
@@ -1215,9 +1231,9 @@ namespace CoreEngine::StorageTypes {
     void Table::RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const{
         const auto headers = SystemCatalog::Get().SelectColumns(allocator, this->header.tableId);
 
-        assert(headers.size() == this->_columns.Size());
+        assert(headers.Size() == this->_columns.Size());
 
-        if (headers.empty()) return;
+        if (headers.Empty()) return;
 
         for (int i = 0;i < this->_columns.Size(); i++) {
             auto* column = this->_columns[i];
@@ -1230,7 +1246,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto headers = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
-        if(headers.empty())return;
+        if(headers.Empty())return;
 
         for(const auto& column: this->_columns){
             for (const auto& identity: headers) {
@@ -1248,7 +1264,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
-        if(identityHeaders.empty()) return;
+        if(identityHeaders.Empty()) return;
 
         for(const auto& column: this->_columns){
             for (const auto& identity: identityHeaders) {
@@ -1266,7 +1282,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->header.tableId);
 
-        if (identityHeaders.empty()) return;
+        if (identityHeaders.Empty()) return;
 
         for(const auto& column: this->_columns){
             if (columnId != column->GetColumnId())
@@ -1293,7 +1309,7 @@ namespace CoreEngine::StorageTypes {
         for (const auto& index: indexes) {
             const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(allocator, index.id);
 
-            DataStructures::PolymorphicArray<column_index_t> indexColumnsIndices(allocator, static_cast<Int>(indexedColumns.size()));
+            DataStructures::PolymorphicArray<column_index_t> indexColumnsIndices(allocator, indexedColumns.Size());
             for (const auto& indexedColumn : indexedColumns)
                 indexColumnsIndices.Push(columnsDict.Get(indexedColumn.columnId)->OrdinalPosition());
 

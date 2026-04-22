@@ -7,8 +7,7 @@
 #include <cstdint>
 #include <mutex>
 
-#include "DataStructures/Array.h"
-#include "DataStructures/PolymorphicArray.h"
+#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 
 namespace CoreEngine::Logging {

@@ -122,9 +122,18 @@ namespace Indexing{
         return Errors::RuntimeStatus(Errors::RuntimeError::DuplicateKey, std::move(str));
     }
 
-    Pages::IndexPageView BTree::CreateRootPage(Int& indexPosition, const Int pagesToAllocate) {
+    Pages::IndexPageView BTree::CreateRootPage(
+        const CoreEngine::ExecutionContext& context,
+        Int& indexPosition,
+        const Int pagesToAllocate
+    ) {
         //maybe root page is removed and need to be reopened
-        auto root = this->AllocateNewPage(INVALID_PAGE_ID, INVALID_PAGE_ID, pagesToAllocate);
+        auto root = this->AllocateNewPage(
+            context.GetAllocator(),
+            INVALID_PAGE_ID,
+            INVALID_PAGE_ID,
+            pagesToAllocate
+        );
 
         {
             MultiThreading::WriterGuard lock(&root.Latch());
@@ -147,7 +156,12 @@ namespace Indexing{
         const Int pagesToAllocate
     ){
         {
-            auto newRoot = this->AllocateNewPage(this->rootPageId, INVALID_PAGE_ID, pagesToAllocate);
+            auto newRoot = this->AllocateNewPage(
+                context.GetAllocator(),
+                this->rootPageId,
+                INVALID_PAGE_ID,
+                pagesToAllocate
+            );
 
             MultiThreading::WriterGuard newRootLock(&newRoot.Latch());
 
@@ -239,7 +253,12 @@ namespace Indexing{
         const Pages::IndexPageView &child,
         const Int pagesToAllocate
     ) {
-        const auto newChild = this->AllocateNewPage(parent.PageId(), child.PageId(), pagesToAllocate);
+        const auto newChild = this->AllocateNewPage(
+            context.GetAllocator(),
+            parent.PageId(),
+            child.PageId(),
+            pagesToAllocate
+        );
 
         MultiThreading::WriterGuard newChildLock(&newChild.Latch());
 
@@ -419,8 +438,14 @@ namespace Indexing{
         return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
     }
 
-    Pages::IndexPageView BTree::AllocateNewPage(const page_id_t parentPageId, const page_id_t splitChildPageId, const Int pagesToAllocate){
+    Pages::IndexPageView BTree::AllocateNewPage(
+        const ::Memory::IAllocator* allocator,
+        const page_id_t parentPageId,
+        const page_id_t splitChildPageId,
+        const Int pagesToAllocate
+    ){
         return this->database->FindOrAllocateNextIndexPage(
+            allocator,
             this->table,
             parentPageId,
             splitChildPageId,
@@ -949,13 +974,9 @@ namespace Indexing{
         const Int pagesToAllocate,
         Int &indexPosition
     ){
-        if (pagesToAllocate == 56)
-        {
-            int val = 0;
-        }
         //base case scenario
         if (this->IsEmpty()) {
-            const auto root =  this->CreateRootPage(indexPosition, pagesToAllocate);
+            const auto root =  this->CreateRootPage(context, indexPosition, pagesToAllocate);
 
             if(this->nonClusteredIndexId != -1)
                 this->table->SetNonClusteredIndexPageId(this->rootPageId, this->nonClusteredIndexId);
@@ -1540,7 +1561,7 @@ namespace Indexing{
         // }
     }
 
-    void BTree::IndexScan DataStructures::Array<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
+    void BTree::IndexScan(DataStructures::Array<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->IsEmpty())
             return;
 

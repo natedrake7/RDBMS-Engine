@@ -74,10 +74,11 @@ class Database final{
 
     void WriteHeaderToFile() const;
 
-    std::vector<extent_id_t> AllocateNewExtents(
-      Int pagesToAllocate,
-      table_id_t tableId,
-      page_id_t& lowerLimit
+    DataStructures::PolymorphicArray<extent_id_t> AllocateNewExtents(
+        const ::Memory::IAllocator* allocator,
+        Int pagesToAllocate,
+        table_id_t tableId,
+        page_id_t& lowerLimit
     );
 
     [[nodiscard]] const StorageTypes::Table *GetTable(table_id_t tableId) const;
@@ -196,23 +197,43 @@ public:
 
     void TruncateTable(table_id_t tableId) const;
 
-    Pages::OverflowPageView CreateOverflowPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
+    Pages::OverflowPageView CreateOverflowPage(
+        const ::Memory::IAllocator* allocator,
+        Int pagesToAllocate,
+        table_id_t tableOrdinalPosition
+    );
 
-    Pages::PageView CreateDataPage(table_id_t tableId, Int pagesToAllocate);
+    Pages::PageView CreateDataPage(
+        const ::Memory::IAllocator* allocator,
+        table_id_t tableId,
+        Int pagesToAllocate
+    );
 
-    Pages::LargeObjectView CreateLargeDataPage(Int pagesToAllocate, table_id_t tableOrdinalPosition);
+    Pages::LargeObjectView CreateLargeDataPage(
+        const ::Memory::IAllocator* allocator,
+        Int pagesToAllocate,
+        table_id_t tableOrdinalPosition
+    );
 
-    [[nodiscard]] Pages::LargeObjectView GetTableLastLargeDataPage(table_id_t tableId)const;
+    [[nodiscard]] Pages::LargeObjectView GetTableLastLargeDataPage(
+        const ::Memory::IAllocator* allocator,
+        table_id_t tableId
+    )const;
 
     [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
 
-    Pages::OverflowPageView GetLastOverflowPage(table_id_t tableId, const block_size_t& size);
+    Pages::OverflowPageView GetLastOverflowPage(
+        const ::Memory::IAllocator* allocator,
+        table_id_t tableId,
+        const block_size_t& size
+    );
 
     Pages::IndexPageView CreateIndexPage(
-      table_id_t tableOrdinalPosition,
-      Int pageCount,
-      Constants::TreeType treeType,
-      page_id_t treeId = 0
+        const ::Memory::IAllocator* allocator,
+        table_id_t tableOrdinalPosition,
+        Int pageCount,
+        Constants::TreeType treeType,
+        page_id_t treeId = 0
     );
 
     [[nodiscard]] DataTypes::StringView GetFileName() const;
@@ -227,14 +248,16 @@ public:
     static extent_id_t CalculateExtentId(page_id_t pageId);
 
     [[nodiscard]] Pages::PageView FindOrAllocateNextDataPage(
-      Pages::PageFreeSpaceView &pageFreeSpacePage,
-      page_id_t pageId,
-      page_id_t extentFirstPageId,
-      const StorageTypes::Table &table,
-      Int pageToAllocate
+        const ::Memory::IAllocator* allocator,
+        Pages::PageFreeSpaceView &pageFreeSpacePage,
+        page_id_t pageId,
+        page_id_t extentFirstPageId,
+        const StorageTypes::Table &table,
+        Int pageToAllocate
     );
 
     [[nodiscard]] Pages::IndexPageView FindOrAllocateNextIndexPage(
+        const ::Memory::IAllocator* allocator,
         StorageTypes::Table*& table,
         page_id_t parentPageId,
         page_id_t splitChildPageId,

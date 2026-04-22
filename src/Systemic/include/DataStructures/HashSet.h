@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_set>
 #include <vector>
+#include "../DataStructures/PolymorphicArray.h"
 
 template <typename T>
 class HashSet : public std::unordered_set<T>
@@ -11,6 +12,8 @@ class HashSet : public std::unordered_set<T>
         HashSet(const std::initializer_list<T>& values) : std::unordered_set<T>(values) {}
         
         explicit HashSet(const std::vector<T>& values) : std::unordered_set<T>(values.begin(), values.end()) {}
+
+        explicit HashSet(const DataStructures::PolymorphicArray<T>& values) : std::unordered_set<T>(values.begin(), values.end()) {}
         
         bool TryGetValue(const T& key, T& value)
         {

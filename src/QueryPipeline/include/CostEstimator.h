@@ -67,7 +67,7 @@ namespace QueryPipeline{
         );
 
         [[nodiscard]] static int FindBucketForValue(
-            const std::vector<Headers::ColumnHistograms>& histograms,
+            const DataStructures::Array<Headers::ColumnHistograms>& histograms,
             const Value& value
         );
 

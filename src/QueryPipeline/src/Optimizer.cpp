@@ -418,10 +418,10 @@ namespace QueryPipeline {
   DataStructures::PolymorphicArray<Int> Optimizer::CheckPredicatesSorting(
     const Headers::TableStatistics& tableStats,
     const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
-  ){
+  ) const{
     const auto indexes = CoreEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
 
-    if (indexes.empty())
+    if (indexes.Empty())
       return {};
 
     DataStructures::PolymorphicArray<Int> bestMatch;
@@ -525,7 +525,7 @@ namespace QueryPipeline {
         const JoinOrderAnalyzeInfo baseInfo(
             statement->table->tableId,
             baseSourceStats.rowCount,
-            !baseSourceIndexStats.empty()
+            !baseSourceIndexStats.Empty()
         );
 
         //base table info
@@ -551,7 +551,7 @@ namespace QueryPipeline {
             const JoinOrderAnalyzeInfo joinInfo(
                 join->table->tableId,
                 joinSourceStats.rowCount,
-                !joinSourceIndexStats.empty(),
+                !joinSourceIndexStats.Empty(),
                 join
             );
 

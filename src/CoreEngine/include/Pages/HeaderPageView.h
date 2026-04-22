@@ -13,7 +13,6 @@ namespace Pages{
         CoreEngine::DatabaseHeader* databaseHeaderPtr;
         std::vector<CoreEngine::StorageTypes::TableHeader> tablesHeaders;
 
-        void ReadTableHeadersFromDisk();
 
         public:
             explicit HeaderPageView(Frame* framePtr);
@@ -30,5 +29,6 @@ namespace Pages{
             void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header);
 
             void WriteTableHeadersToDisk() const;
+            void ReadTableHeadersFromDisk();
     };
 }

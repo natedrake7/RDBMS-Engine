@@ -57,6 +57,7 @@ namespace CoreEngine {
     }
 
    Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
+        const ::Memory::IAllocator* allocator,
         StorageTypes::Table*& table,
 	    const page_id_t parentPageId,
 	    const page_id_t splitChildPageId,
@@ -76,7 +77,10 @@ namespace CoreEngine {
                                     : Constants::TreeType::Clustered;
 
         if(parentPageId == INVALID_PAGE_ID)
-            return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
+            return this->CreateIndexPage(
+                allocator, tableHeader.ordinalPosition,
+                pagesToAllocate, treeType, indexId
+            );
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
             this->dataFileKey,
@@ -85,7 +89,7 @@ namespace CoreEngine {
             table
         );
 
-        std::vector<extent_id_t> allocatedExtents;
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator);
         indexAllocationMapPage.GetAllocatedExtents(&allocatedExtents, Database::CalculateExtentId(parentPageId));
 
         for(const auto& extentId: allocatedExtents){
@@ -131,6 +135,9 @@ namespace CoreEngine {
             }
         }
 
-        return this->CreateIndexPage(tableHeader.ordinalPosition, pagesToAllocate, treeType, indexId);
+        return this->CreateIndexPage(
+            allocator, tableHeader.ordinalPosition,
+            pagesToAllocate, treeType, indexId
+        );
     }
 }

@@ -97,8 +97,8 @@ namespace Pages{
         this->framePtr->additionalHeader.indexHeaderPtr->treeId = treeId;
     }
 
-    void IndexPageView::SetKeyTypes(const std::vector<DataType>& keyTypes) const{
-        for (int i = 0;i < keyTypes.size(); i++)
+    void IndexPageView::SetKeyTypes(const DataStructures::StaticArray<DataType, 10>& keyTypes) const{
+        for (int i = 0;i < keyTypes.Size(); i++)
             this->framePtr->additionalHeader.indexHeaderPtr->keyTypes[i] = keyTypes[i];
     }
 

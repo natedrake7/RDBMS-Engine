@@ -97,9 +97,6 @@ namespace DataStructures{
             T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
 
-            // for (Int i = 0; i < this->_size; ++i)
-            //     this->_data[i] = std::move(newData[i]);
-
             this->_data = newData;
             this->_capacity = newCapacity;
         }
@@ -112,23 +109,6 @@ namespace DataStructures{
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
-        }
-
-        void Insert(const T& value, const Int index){
-            if (index >= this->_size)
-                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
-
-            if (this->_size >= this->_capacity){
-                auto newCapacity = (this->_capacity == 0)
-                    ? 1
-                    : this->_capacity * 2;
-                this->Resize(newCapacity);
-            }
-
-            for (Int i = this->_size - 1; i >= index; --i)
-                this->_data[i + 1] = std::move(this->_data[i]);
-
-            this->_data[index] = value;
         }
 
         template<typename... Args>

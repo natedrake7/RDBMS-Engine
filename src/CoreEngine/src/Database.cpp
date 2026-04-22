@@ -156,9 +156,9 @@ namespace CoreEngine{
         const auto masterDbData = catalog.SelectTables(allocator, this->name.ToView());
         const auto& headerPageTables = headerPage.GetTableHeaders();
 
-        if (headerPageTables.size() != masterDbData.size()) return;
+        if (headerPageTables.size() != masterDbData.Size()) return;
 
-        for (int i = 0;i < masterDbData.size(); i++)
+        for (int i = 0;i < masterDbData.Size(); i++)
             this->CreateTable(masterDbData[i], headerPageTables[i]);
     }
 
@@ -481,13 +481,13 @@ namespace CoreEngine{
     }
 
     Pages::PageView Database::FindOrAllocateNextDataPage(
+        const ::Memory::IAllocator* allocator,
         Pages::PageFreeSpaceView &pageFreeSpacePage,
         const page_id_t pageId,
         const page_id_t extentFirstPageId,
         const StorageTypes::Table &table,
         const Int pageToAllocate
-    )
-    {
+    ){
         Pages::PageView page;
         bool pageAllocated = false;
         if (pageId < extentFirstPageId + Constants::EXTENT_SIZE - 1){
@@ -510,7 +510,7 @@ namespace CoreEngine{
         }
 
         if (!pageAllocated || page.PageSize() > 0){
-            page = this->CreateDataPage(table.GetTableId(), pageToAllocate);
+            page = this->CreateDataPage(allocator, table.GetTableId(), pageToAllocate);
             pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, this->systemFilenameView, page.PageId());
         }
 
@@ -566,12 +566,19 @@ namespace CoreEngine{
         table->UpdateIndexAllocationMapPageId(INVALID_PAGE_ID);
     }
 
-    Pages::OverflowPageView Database::CreateOverflowPage(const Int pagesToAllocate, const table_id_t tableOrdinalPosition){
+    Pages::OverflowPageView Database::CreateOverflowPage(
+        const ::Memory::IAllocator* allocator,
+        const Int pagesToAllocate,
+        const table_id_t tableOrdinalPosition
+    ){
         page_id_t lowerLimit = 0;
 
         const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pagesToAllocate) / Constants::EXTENT_SIZE));
 
-        const auto extents = this->AllocateNewExtents(extentsToAllocate, tableOrdinalPosition, lowerLimit);
+        const auto extents = this->AllocateNewExtents(
+            allocator, extentsToAllocate,
+            tableOrdinalPosition, lowerLimit
+        );
 
         Pages::OverflowPageView firstPage;
         for (const auto& extentId : extents) {
@@ -600,12 +607,16 @@ namespace CoreEngine{
     }
 
     Pages::PageView Database::CreateDataPage(
+        const ::Memory::IAllocator* allocator,
         const table_id_t tableId,
         const Int pagesToAllocate
     ) {
         page_id_t lowerLimit = INVALID_PAGE_ID;
 
-        const auto extents = this->AllocateNewExtents(pagesToAllocate, tableId, lowerLimit);
+        const auto extents = this->AllocateNewExtents(
+            allocator, pagesToAllocate,
+            tableId, lowerLimit
+        );
 
         Pages::PageView page;
         bool pageAllocated = false;
@@ -637,10 +648,17 @@ namespace CoreEngine{
         return page;
     }
 
-    Pages::LargeObjectView Database::CreateLargeDataPage(const Int pagesToAllocate, const table_id_t tableOrdinalPosition){
+    Pages::LargeObjectView Database::CreateLargeDataPage(
+        const ::Memory::IAllocator* allocator,
+        const Int pagesToAllocate,
+        const table_id_t tableOrdinalPosition
+    ){
         page_id_t lowerLimit = 0;
 
-        const auto extents = this->AllocateNewExtents(pagesToAllocate, tableOrdinalPosition, lowerLimit);
+        const auto extents = this->AllocateNewExtents(
+            allocator, pagesToAllocate,
+            tableOrdinalPosition, lowerLimit
+        );
 
         Pages::LargeObjectView page;
         for (const auto& extentId : extents) {
@@ -669,6 +687,7 @@ namespace CoreEngine{
     }
 
     Pages::IndexPageView Database::CreateIndexPage(
+        const ::Memory::IAllocator* allocator,
         const table_id_t tableOrdinalPosition,
         const Int pageCount,
         const Constants::TreeType treeType,
@@ -678,7 +697,10 @@ namespace CoreEngine{
 
         const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pageCount) / Constants::EXTENT_SIZE));
 
-        const auto extents = this->AllocateNewExtents(extentsToAllocate, tableOrdinalPosition, lowerLimit);
+        const auto extents = this->AllocateNewExtents(
+            allocator, extentsToAllocate,
+            tableOrdinalPosition, lowerLimit
+        );
 
         const auto& table = this->_tables[tableOrdinalPosition];
         const auto indexedColumnDatatypes = table->GetColumnTypeByTreeId(treeType);
@@ -708,7 +730,7 @@ namespace CoreEngine{
                 indexPage.SetTreeId(parentPageId);
                 indexPage.SetTreeType(treeType);
                 indexPage.SetKeyTypes(indexedColumnDatatypes);
-                indexPage.SetSubKeys(indexedColumnDatatypes.size());
+                indexPage.SetSubKeys(indexedColumnDatatypes.Size());
 
                 if (!pageAssigned){
                     page = std::move(indexPage);
@@ -720,15 +742,15 @@ namespace CoreEngine{
         return page;
     }
 
-    std::vector<extent_id_t> Database::AllocateNewExtents(
+    DataStructures::PolymorphicArray<extent_id_t> Database::AllocateNewExtents(
+        const ::Memory::IAllocator* allocator,
         const Int pagesToAllocate,
         const table_id_t tableId,
         page_id_t& lowerLimit
     ) {
         const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(pagesToAllocate);
 
-        std::vector<extent_id_t> allocatedExtents;
-        allocatedExtents.reserve(extentsToAllocate);
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator, extentsToAllocate);
 
         const auto* table = this->_tables[tableId];
         const page_id_t indexAllocationMapPageId = table->GetHeader().allocationPageId;
@@ -777,11 +799,11 @@ namespace CoreEngine{
                 remainingExtents-= extentsAllocated;
             }
 
-            if (allocatedExtents.empty())
+            if (allocatedExtents.Empty())
                 throw std::runtime_error("Failed to allocate any extents");
 
             // Set output parameters based on first allocated extent
-            newExtentId = allocatedExtents.front();
+            newExtentId = allocatedExtents[0];
             newPageId = Database::CalculateExtentFirstPageId(newExtentId);
         }
 
@@ -886,8 +908,10 @@ namespace CoreEngine{
         return this->_tables[tableId];
     }
 
-    Pages::LargeObjectView Database::GetTableLastLargeDataPage(const table_id_t tableId)const
-    {
+    Pages::LargeObjectView Database::GetTableLastLargeDataPage(
+        const ::Memory::IAllocator* allocator,
+        const table_id_t tableId
+    )const{
         if (tableId >= this->_tables.Size())
             return Pages::LargeObjectView();
 
@@ -907,7 +931,7 @@ namespace CoreEngine{
             table
         );
 
-        std::vector<extent_id_t> allocatedExtents;
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator);
         tableMapPage.GetAllocatedExtents(&allocatedExtents);
 
         for (const auto &extentId : allocatedExtents)
@@ -942,7 +966,11 @@ namespace CoreEngine{
         return {};
     }
 
-    Pages::OverflowPageView Database::GetLastOverflowPage(const table_id_t  tableId, const block_size_t& size){
+    Pages::OverflowPageView Database::GetLastOverflowPage(
+        const ::Memory::IAllocator* allocator,
+        const table_id_t tableId,
+        const block_size_t& size
+    ){
         if (tableId >= this->_tables.Size())
             return {};
 
@@ -962,10 +990,9 @@ namespace CoreEngine{
             table
         );
 
-        std::vector<extent_id_t> allocatedExtents;
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator);
         tableMapPage.GetAllocatedExtents(&allocatedExtents);
-
-        for (const auto &extentId : allocatedExtents)
+        for (const auto extentId : allocatedExtents)
         {
             const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
@@ -999,7 +1026,7 @@ namespace CoreEngine{
             }
         }
 
-        return this->CreateOverflowPage(1, tableId);
+        return this->CreateOverflowPage(allocator, 1, tableId);
     }
 
     Pages::LargeObjectView Database::GetLargeDataPage(const page_id_t pageId, const table_id_t tableId)const

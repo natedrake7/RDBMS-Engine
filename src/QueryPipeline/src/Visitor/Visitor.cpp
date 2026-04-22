@@ -78,7 +78,7 @@ namespace QueryPipeline {
   }
 
     antlrcpp::Any SQLVisitorImplementation::visitSelectStatement(SQLParser::SelectStatementContext *context) {
-        auto* statement = this->_compileContext->Allocate<Statements::SelectStatement>();
+        auto* statement = this->_compileContext->Allocate<Statements::SelectStatement>(this->_compileContext->GetAllocator());
 
         if (!context->resultList())
             throw SyntaxError("No arguments specified", CreatePositionErrorMessage(context));
@@ -296,10 +296,11 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitOrderColumnList(SQLParser::OrderColumnListContext *context){
-        std::vector<Statements::OrderColumn*> orderColumns;
+        const auto& columnExpressions = context->orderColumn();
 
+        DataStructures::PolymorphicArray<Statements::OrderColumn*> orderColumns(this->_compileContext->GetAllocator(), columnExpressions.size());
         for (const auto& orderColumn : context->orderColumn())
-            orderColumns.push_back(std::any_cast<Statements::OrderColumn*>(visit(orderColumn)));
+            orderColumns.Push(std::any_cast<Statements::OrderColumn*>(visit(orderColumn)));
 
         return std::any(orderColumns);
     }
@@ -336,14 +337,12 @@ namespace QueryPipeline {
     }
 
     std::any SQLVisitorImplementation::visitValuesList(SQLParser::ValuesListContext *context){
-        std::vector<Statements::Inserts> values;
-
-        values.reserve(context->resultList().size());
+        DataStructures::PolymorphicArray<Statements::Inserts> values(this->_compileContext->GetAllocator(), context->resultList().size());
 
         for (const auto& value : context->resultList()) {
-            auto resultList = std::any_cast<std::vector<Expressions::Expression*>>(visit(value));
+            auto resultList = std::any_cast<DataStructures::PolymorphicArray<Expressions::Expression*>>(visit(value));
 
-            values.emplace_back(Statements::Inserts{
+            values.Push(Statements::Inserts{
                 .values = std::move(resultList),
             });
         }
@@ -558,13 +557,15 @@ namespace QueryPipeline {
 
         statement->isUnique = context->UNIQUE() != nullptr;
         statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
-
         statement->name = std::any_cast<DataTypes::String>(visit(context->identifier()));
+
+        statement->columns.TrySetAllocator(this->_compileContext->GetAllocator());
+        statement->columnIndices.TrySetAllocator(this->_compileContext->GetAllocator());
 
         const auto colCtx = context->columnList();
         for (const auto col : colCtx->columnName()){
             auto str = col->getText();
-            statement->columns.push_back(DataTypes::String(str, this->_compileContext->GetAllocator()));
+            statement->columns.Push(DataTypes::String(str, this->_compileContext->GetAllocator()));
         }
         return std::any(statement);
     }
@@ -700,11 +701,12 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitResultList(SQLParser::ResultListContext *context){
-        std::vector<Expressions::Expression*> columns;
+        const auto& resultExpressions = context->resultExpression();
+        DataStructures::PolymorphicArray<Expressions::Expression*> columns(this->_compileContext->GetAllocator(), resultExpressions.size());
 
-        for (const auto& resultExpression : context->resultExpression()) {
+        for (const auto& resultExpression : resultExpressions) {
             const auto& [expression] = std::any_cast<ExpressionWrapper>(visit(resultExpression));
-            columns.push_back(expression);
+            columns.Push(expression);
         }
 
         return std::any(columns);

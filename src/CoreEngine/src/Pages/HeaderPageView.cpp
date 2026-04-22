@@ -29,10 +29,10 @@ namespace Pages{
             offSet += sizeof(UnsignedTinyInt);
 
             for (int j = 0; j < numberOfNonClusteredIndexes; j++){
-                page_id_t pageId = 0;
+                page_id_t pageId = INVALID_PAGE_ID;
                 std::memcpy(&pageId, this->framePtr->data + offSet, sizeof(page_id_t));
 
-                tableHeader.nonClusteredIndexPageIds.push_back(pageId);
+                tableHeader.nonClusteredIndexPageIds.Push(pageId);
                 offSet += sizeof(page_id_t);
             }
 
@@ -44,8 +44,6 @@ namespace Pages{
         this->databaseHeaderPtr = reinterpret_cast<CoreEngine::DatabaseHeader*>(
             framePtr->data + Constants::PAGE_HEADER_SIZE
         );
-
-        this->ReadTableHeadersFromDisk();
     }
 
     HeaderPageView::HeaderPageView(HeaderPageView&& other) noexcept{
@@ -110,7 +108,7 @@ namespace Pages{
             std::memcpy(this->framePtr->data + offSet, &tableHeader.clusteredIndexPageId, sizeof(page_id_t));
             offSet += sizeof(page_id_t);
 
-            auto numberOfNonClusteredIndexes = static_cast<UnsignedTinyInt>(tableHeader.nonClusteredIndexPageIds.size());
+            auto numberOfNonClusteredIndexes = static_cast<UnsignedTinyInt>(tableHeader.nonClusteredIndexPageIds.Size());
             std::memcpy(this->framePtr->data + offSet, &numberOfNonClusteredIndexes, sizeof(UnsignedTinyInt));
             offSet += sizeof(UnsignedTinyInt);
 

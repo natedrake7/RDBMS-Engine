@@ -1,3 +1,4 @@
+#include "CompileContext.h"
 #include "../../include/Visitor.h"
 #include "../../include/Statements.h"
 #include "../../../Systemic/include/Converter.h"
@@ -6,13 +7,16 @@
 namespace QueryPipeline{
 
   antlrcpp::Any SQLVisitorImplementation::visitCreateTableStatement(SQLParser::CreateTableStatementContext *context){
-    auto* statement = new Statements::CreateTableStatement();
+    auto* statement = this->_compileContext->Allocate<Statements::CreateTableStatement>();
 
     statement->table = std::any_cast<Statements::DataSource*>(visit(context->tableName()));
 
+    statement->columns.TrySetAllocator(this->_compileContext->GetAllocator());
+    statement->primaryKey.TrySetAllocator(this->_compileContext->GetAllocator());
+
     for (const auto columnContext: context->addColumn()) {
       const auto column = std::any_cast<Statements::NewColumn*>(visit(columnContext));
-      statement->columns.push_back(column);
+      statement->columns.Push(column);
     }
 
     if (context->primaryKeyConstraint())

@@ -77,7 +77,11 @@ namespace Indexing{
             const ::Memory::IAllocator* allocator
         );
 
-        Pages::IndexPageView CreateRootPage(Int& indexPosition, Int pagesToAllocate);
+        Pages::IndexPageView CreateRootPage(
+            const CoreEngine::ExecutionContext& context,
+            Int& indexPosition,
+            Int pagesToAllocate
+        );
 
         void SplitRoot(
             const CoreEngine::ExecutionContext& context,
@@ -141,7 +145,12 @@ namespace Indexing{
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const CoreEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
 
-        [[nodiscard]] Pages::IndexPageView AllocateNewPage(page_id_t parentPageId, page_id_t splitChildPageId, Int pagesToAllocate);
+        [[nodiscard]] Pages::IndexPageView AllocateNewPage(
+            const ::Memory::IAllocator* allocator,
+            page_id_t parentPageId,
+            page_id_t splitChildPageId,
+            Int pagesToAllocate
+        );
 
         void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::Array<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();

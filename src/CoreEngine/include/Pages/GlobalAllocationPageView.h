@@ -14,7 +14,7 @@ namespace Pages{
             GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept;
             GlobalAllocationPageView& operator=(GlobalAllocationPageView&& other) noexcept;
 
-            int AllocateExtentsNoLock(std::vector<extent_id_t>& extents, Int numberOfExtents) const;
+            int AllocateExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, Int numberOfExtents) const;
             void DeallocateExtent(extent_id_t extentId) const;
             // void WriteToDisk(std::fstream *filePtr) override;
             // void ReadFromDisk(

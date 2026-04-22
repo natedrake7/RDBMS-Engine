@@ -46,7 +46,7 @@ namespace Pages{
         return *this;
     }
 
-    int GlobalAllocationPageView::AllocateExtentsNoLock(std::vector<extent_id_t>& extents, const Int numberOfExtents) const{
+    int GlobalAllocationPageView::AllocateExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, const Int numberOfExtents) const{
         int allocatedExtents = 0;
 
         for (extent_id_t extentId = 0; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
@@ -61,7 +61,7 @@ namespace Pages{
 
             allocatedExtents++;
 
-            extents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->framePtr->headerPtr->pageId) + extentId);
+            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->framePtr->headerPtr->pageId) + extentId);
         }
 
         return allocatedExtents;

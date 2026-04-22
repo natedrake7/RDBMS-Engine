@@ -33,7 +33,7 @@ namespace CoreEngine {
 
     bool StatisticsScheduler::GenerateColumnHistograms(
         const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
-        std::vector<Headers::ColumnHistograms>& histograms,
+        DataStructures::PolymorphicArray<Headers::ColumnHistograms>& histograms,
         const Headers::ColumnStatistics& columnStatistics,
         const BigInt totalRows
     ){
@@ -56,7 +56,7 @@ namespace CoreEngine {
                 continue;
 
             //insert
-            if (histograms.size() <= counter){
+            if (histograms.Size() <= counter){
                 auto histogram = Headers::ColumnHistograms(
                 columnStatistics.columnId,
                 bucketStart,
@@ -65,7 +65,7 @@ namespace CoreEngine {
                 distinctCountPerBucket
                 );
 
-                histograms.push_back(std::move(histogram));
+                histograms.Push(std::move(histogram));
             } //or update
             else{
                 auto& histogram = histograms[counter];
@@ -92,7 +92,8 @@ namespace CoreEngine {
             auto currentTime = DataTypes::DateTime::Now();
             currentTime.AddMinutes(-1); // Update stats if older than 10-minutes test for production grade this should be dynamic
 
-            if (currentTime <= cacheStats.lastModified
+            if (
+                currentTime <= cacheStats.lastModified
                 && cacheStats.tableId != INVALID_TABLE_ID
             ) continue;
 
@@ -109,14 +110,15 @@ namespace CoreEngine {
         auto tableStatistics = Headers::TableStatistics(table->GetTableId());
 
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>> sortedValues;
-        Dictionary<Int, std::vector<Headers::ColumnHistograms>> columnHistogramsDictionary;;
-        std::vector<Headers::ColumnStatistics> columnStatistics;
+        Dictionary<Int, DataStructures::PolymorphicArray<Headers::ColumnHistograms>> columnHistogramsDictionary;
 
         const auto _baseContext = ExecutionContext::BaseContext();
+
+        DataStructures::PolymorphicArray<Headers::ColumnStatistics> columnStatistics(_baseContext.GetAllocator());
         for (const auto& column : table->GetColumns()) {
             const auto& columnId = column->GetColumnId();
 
-            columnStatistics.emplace_back(
+            columnStatistics.Push(
                 Headers::ColumnStatistics{
                     .columnId = columnId,
                     .distinctCount = 0,
@@ -134,7 +136,7 @@ namespace CoreEngine {
         auto indexStatistics = StatisticsManager::Get().GetIndexStatistics(tableStatistics.tableId);
 
         bool clusteredIndexUpdated = false;
-        if (indexStatistics.empty()){
+        if (indexStatistics.Empty()){
             const auto indexes = SystemCatalog::Get().SelectIndexes(_baseContext.GetAllocator(), tableStatistics.tableId);
 
             for (const auto& index : indexes){
@@ -167,7 +169,6 @@ namespace CoreEngine {
             }
         }
 
-
         if (!clusteredIndexUpdated){
             StatisticsScheduler::UpdateHeapStatistics(
                 table,
@@ -179,11 +180,14 @@ namespace CoreEngine {
         }
 
         for (const auto& column : columnStatistics){
-            const auto& columnId = column.columnId;
+            auto& histograms = columnHistogramsDictionary[column.columnId];
+
+            if (!histograms.HasAllocator())
+                histograms.SetAllocator(_baseContext.GetAllocator());
 
             StatisticsScheduler::GenerateColumnHistograms(
-                sortedValues[columnId],
-                columnHistogramsDictionary[columnId],
+                sortedValues[column.columnId],
+                histograms,
                 column,
                 tableStatistics.rowCount
             );
@@ -204,7 +208,7 @@ namespace CoreEngine {
         StorageTypes::Table *table,
         Headers::IndexStatistics& indexStatistics,
         Headers::TableStatistics& tableStatistics,
-        std::vector<Headers::ColumnStatistics>& columnStatistics,
+        DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     )  {
         indexStatistics.Reset();
@@ -231,7 +235,7 @@ namespace CoreEngine {
         const StorageTypes::Table *table,
         const page_id_t iamPageId,
         Headers::TableStatistics &tableStatistics,
-        std::vector<Headers::ColumnStatistics> &columnStatistics,
+        DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) {
 
@@ -248,7 +252,7 @@ namespace CoreEngine {
             table
         );
 
-        std::vector<extent_id_t> extents;
+        DataStructures::PolymorphicArray<extent_id_t> extents;
         iamPage.GetAllocatedExtents(&extents, 0);
 
         int estimatedRowCount = 1000;
@@ -306,7 +310,7 @@ namespace CoreEngine {
                     tableStatistics.averageRowSize += row.Size();
                     sampleRowCount++;
 
-                    for (int j = 0; j < columnStatistics.size(); j++){
+                    for (int j = 0; j < columnStatistics.Size(); j++){
                         auto& columnStats = columnStatistics[j];
                         StatisticsScheduler::UpdateColumnStatistics(
                             columnStats,
@@ -319,7 +323,7 @@ namespace CoreEngine {
     }
 
     averageRowsPerPage = StatisticsScheduler::EstimateRowsPerPage(averageRowsPerPage, allocatedPagesPerExtent);
-    const auto numberOfExtents = static_cast<int>(extents.size());
+    const auto numberOfExtents = extents.Size();
 
     const auto averageAllocatedPagesPerExtent = StatisticsScheduler::EstimateAllocatedPagesPerExtent(
         allocatedPagesPerExtent,
@@ -337,9 +341,9 @@ namespace CoreEngine {
     void StatisticsScheduler::UpdateCatalogStatistics(
         const ExecutionContext& baseContext,
         const Headers::TableStatistics &tableStatistics,
-        const std::vector<Headers::ColumnStatistics> &columnStatistics,
-        const std::vector<Headers::IndexStatistics>& indexStatistics,
-        const Dictionary<Int, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
+        const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
+        const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics,
+        const Dictionary<Int, DataStructures::PolymorphicArray<Headers::ColumnHistograms>> &columnHistogramsDictionary
     )const {
 
         this->catalog->UpdateTableStatisticsById(
@@ -400,8 +404,8 @@ namespace CoreEngine {
 
     void StatisticsScheduler::UpdateCache(
         const Headers::TableStatistics &tableStatistics,
-        const std::vector<Headers::ColumnStatistics> &columnStatistics,
-        const std::vector<Headers::IndexStatistics> &indexStatistics
+        const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
+        const DataStructures::PolymorphicArray<Headers::IndexStatistics> &indexStatistics
     ) const {
         this->statsManager->Update(tableStatistics, columnStatistics, indexStatistics);
     }
@@ -417,7 +421,7 @@ namespace CoreEngine {
     }
 
     void StatisticsScheduler::UpdateStatistics()const {
-        for (const auto& database : this->GetDatabases())
+        for (const auto* database : this->GetDatabases())
             this->UpdateDatabaseStatistics(database);
     }
 
@@ -437,7 +441,8 @@ namespace CoreEngine {
 
             if (!isServerRunning)
                 break;
-            // scheduler.UpdateStatistics();
+
+            scheduler.UpdateStatistics();
         }
     }
 

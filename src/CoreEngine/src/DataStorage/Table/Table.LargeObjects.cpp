@@ -92,13 +92,16 @@ namespace CoreEngine::StorageTypes {
         // return page->PageId();
     }
 
-    Pages::LargeObjectView Table::GetOrCreateLargeDataPage() const{
-        auto largeDataPage = this->database->GetTableLastLargeDataPage(this->header.tableId);
+    Pages::LargeObjectView Table::GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const{
+        auto largeDataPage = this->database->GetTableLastLargeDataPage(
+            allocator,
+            this->header.tableId
+        );
 
         if (largeDataPage.IsValid())
             return largeDataPage;
 
-        return this->database->CreateLargeDataPage(this->header.tableId, 1);
+        return this->database->CreateLargeDataPage(allocator, this->header.tableId, 1);
     }
 
     void Table::LinkLargePageDataObjectChunks(const Pages::LargeObjectView* dataObject, const page_id_t lastLargePageId){

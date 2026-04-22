@@ -290,7 +290,7 @@ namespace QueryPipeline {
       [[nodiscard]] DataStructures::PolymorphicArray<Int> CheckPredicatesSorting(
         const Headers::TableStatistics& tableStats,
         const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
-      );
+      ) const;
 
       JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
         const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,

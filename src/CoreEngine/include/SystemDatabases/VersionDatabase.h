@@ -32,6 +32,7 @@ namespace CoreEngine{
         void WriteHeaderToFile()const;
 
         bool AllocateNewExtent(
+            const ::Memory::IAllocator* allocator,
             page_id_t& newPageId,
             extent_id_t& newExtentId
         );
@@ -41,8 +42,12 @@ namespace CoreEngine{
             row_size_t size
         );
 
-        Pages::PageView CreateUndoPage();
-        Pages::PageView GetLastUndoPage(const StorageTypes::Table* table, row_size_t size);
+        Pages::PageView CreateUndoPage(const ::Memory::IAllocator* allocator);
+        Pages::PageView GetLastUndoPage(
+            const ::Memory::IAllocator* allocator,
+            const StorageTypes::Table* table,
+            row_size_t size
+        );
 
         VersionDatabase();
         ~VersionDatabase();
@@ -69,6 +74,7 @@ namespace CoreEngine{
             );
 
             Errors::RuntimeStatus InsertRow(
+                const ::Memory::IAllocator* allocator,
                 const Pages::RawRowReference& rowRef,
                 StorageTypes::RowVersionPointer& rowPointer,
                 const StorageTypes::Table* table

@@ -24,12 +24,12 @@ namespace CoreEngine {
         Int tableId,
         Int columnId
       );
-      std::vector<Headers::IndexStatistics> GetIndexStatistics(Int tableId);
+      DataStructures::PolymorphicArray<Headers::IndexStatistics> GetIndexStatistics(Int tableId);
 
       void Update(
         const Headers::TableStatistics& tableStatistics,
-        const std::vector<Headers::ColumnStatistics>& columnStatistics,
-        const std::vector<Headers::IndexStatistics>& indexStatistics
+        const DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+        const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics
       );
   };
 }

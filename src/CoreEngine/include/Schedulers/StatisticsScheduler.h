@@ -42,14 +42,14 @@ namespace CoreEngine {
         SystemCatalog* catalog;
         StatisticsManager* statsManager;
 
-        [[nodiscard]] std::vector<Database *> GetDatabases()const;
+        [[nodiscard]] std::vector<Database*> GetDatabases()const;
 
         static Int EstimateRowsPerPage(Int totalRows, Int allocatedPagesPerExtent);
         static Int EstimateAllocatedPagesPerExtent(Int allocatedPagesPerExtent, Int numberOfExtents);
 
         static bool GenerateColumnHistograms(
             const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
-            std::vector<Headers::ColumnHistograms>& histograms,
+            DataStructures::PolymorphicArray<Headers::ColumnHistograms>& histograms,
             const Headers::ColumnStatistics& columnStatistics,
             BigInt totalRows
         );
@@ -61,7 +61,7 @@ namespace CoreEngine {
             StorageTypes::Table* table,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         );
 
@@ -69,28 +69,28 @@ namespace CoreEngine {
             const StorageTypes::Table* table,
             page_id_t iamPageId,
             Headers::TableStatistics& tableStatistics,
-            std::vector<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         );
 
         void UpdateCatalogStatistics(
             const ExecutionContext& baseContext,
             const Headers::TableStatistics& tableStatistics,
-            const std::vector<Headers::ColumnStatistics>& columnStatistics,
-            const std::vector<Headers::IndexStatistics>& indexStatistics,
-            const Dictionary<Int, std::vector<Headers::ColumnHistograms>> &columnHistogramsDictionary
+            const DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+            const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics,
+            const Dictionary<Int, DataStructures::PolymorphicArray<Headers::ColumnHistograms>> &columnHistogramsDictionary
         )const;
 
         void UpdateCache(
             const Headers::TableStatistics& tableStatistics,
-            const std::vector<Headers::ColumnStatistics>& columnStatistics,
-            const std::vector<Headers::IndexStatistics> &indexStatistics
+            const DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+            const DataStructures::PolymorphicArray<Headers::IndexStatistics> &indexStatistics
         )const;
 
         public:
             StatisticsScheduler(const Dictionary<Int, Database*>& databasesDictionary, MultiThreading::ReadWriteMutex& latch);
             void UpdateStatistics()const;
-                static void Start(
+            static void Start(
                 const std::atomic<bool> &isServerRunning,
                 const Dictionary<Int, Database*> &databasesDictionary,
                 MultiThreading::ReadWriteMutex &latch

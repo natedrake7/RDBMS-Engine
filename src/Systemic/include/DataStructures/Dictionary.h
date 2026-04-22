@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "Array.h"
+#include "PolymorphicArray.h"
 
 template<typename Key, typename Value>
 class Dictionary : public std::unordered_map<Key, Value>{
@@ -110,6 +111,14 @@ class Dictionary : public std::unordered_map<Key, Value>{
                 values.push_back(pair.second);
 
             return values;
+        }
+
+        DataStructures::PolymorphicArray<Value> ToPolymorphicArray(const ::Memory::IAllocator* allocator) const{
+            DataStructures::PolymorphicArray<Value> array(allocator, this->size());
+            for (const auto& pair : *this)
+                array.Push(pair.second);
+
+            return array;
         }
 
         static Dictionary FromVector(const std::vector<Key>& items, const Value& defaultValue) {
