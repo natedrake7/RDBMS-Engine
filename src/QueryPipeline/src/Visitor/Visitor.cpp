@@ -169,14 +169,20 @@ namespace QueryPipeline {
 
     antlrcpp::Any SQLVisitorImplementation::visitLiteralValue(SQLParser::LiteralValueContext *context){
         if (context->STRING()) {
-            const auto& str = context->STRING()->getText();
-            auto value = Value(Functions::String::RemoveQuotesFromString(str), this->_compileContext->GetAllocator(), 0);
+            const auto str = Functions::String::RemoveQuotesFromString(context->STRING()->getText());
+            auto value = Value(
+                DataTypes::String(str, this->_compileContext->GetAllocator()),
+                this->_compileContext->GetAllocator(), 0
+            );
             return std::any(value);
         }
 
         if (context->UNICODESTRING()) {
-            const auto& str = context->UNICODESTRING()->getText();
-            auto value = Value(Functions::String::RemoveQuotesFromString(str), this->_compileContext->GetAllocator(), 0);
+            const auto str = Functions::String::RemoveQuotesFromString(context->UNICODESTRING()->getText());
+            auto value = Value(
+                DataTypes::String(str, this->_compileContext->GetAllocator()),
+                this->_compileContext->GetAllocator(), 0
+            );
             return std::any(value);
         }
 

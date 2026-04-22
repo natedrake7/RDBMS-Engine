@@ -227,29 +227,34 @@ namespace DataTypes{
 	    return parsedDate;
 	}
 
-    String DateTime::ToString(const ::Memory::IAllocator* allocator, const StringView& format) const
-	{
+    DateTime::StringBuffer DateTime::ToStringBuffer(const StringView& format) const{
 	    const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 	    const std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
 	    const auto* localTime = std::localtime(&t);
 
 	    // Format date/time using strftime into a char buffer
-	    char buffer[DATETIME_TO_STRING_BUFFER_SIZE] = {};
-	    const auto bufferBytes = std::strftime(buffer, sizeof(buffer), format.Data(), localTime);
+	    StringBuffer buffer;
+	    const auto bufferBytes = std::strftime(
+            buffer.Data(),
+            StringBuffer::Capacity(),
+            format.Data(),
+            localTime
+        );
+	    buffer.SetSize(static_cast<Int>(bufferBytes));
 
 	    // Append milliseconds manually
 	    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
             timePoint.time_since_epoch()) % 1000;
 
-	    char msBuffer[DATETIME_TO_STRING_MS_BUFFER_SIZE] = {};
-	    const auto msBytes = std::snprintf(msBuffer, sizeof(msBuffer), ".%03lld", static_cast<long long>(ms.count()));
+	    const auto msBytes = std::snprintf(buffer.Data() + bufferBytes, StringBuffer::Capacity() - buffer.Size(), ".%03lld", static_cast<long long>(ms.count()));
+	    buffer.SetSize(static_cast<Int>(bufferBytes) + msBytes);
 
-	    String result(allocator, static_cast<Int>(bufferBytes + msBytes));
+	    return buffer;
+    }
 
-	    result.Insert(0, buffer, static_cast<Int>(bufferBytes));
-        result.Insert(static_cast<Int>(bufferBytes), msBuffer, msBytes);
-
-	    return result;
+    String DateTime::ToString(const ::Memory::IAllocator* allocator, const StringView& format) const{
+        auto buffer = this->ToStringBuffer(format);
+	    return String(buffer.Data(), buffer.Size(), allocator);
 	}
 
 
@@ -278,12 +283,9 @@ bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime&
 	return !(firstDate == secondDate);
 }
 
-void DataTypes::DateTime::Print(
-    std::ostream& os,
-    const Memory::IAllocator* allocator,
-    const StringView& format
-) const{
-    os << this->ToString(allocator, format);
+void DataTypes::DateTime::Print(std::ostream& os, const StringView& format) const{
+    const auto buffer = this->ToStringBuffer(format);
+    os.write(buffer.Data(), buffer.Size());
 }
 
 bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {

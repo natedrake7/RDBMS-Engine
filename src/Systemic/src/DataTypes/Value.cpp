@@ -70,11 +70,10 @@ Value Value::PerformBigIntAddition(const Value& lhs, const Value& rhs){
 
 Value Value::PerformStringAddition(const Value& lhs, const Value& rhs){
     return Value(
-        DataTypes::String::Concat(lhs.AsStringView(), lhs.AsStringView(), lhs.GetAllocator()),
+        DataTypes::String::Concat(lhs.AsStringView(), rhs.AsStringView(), lhs.GetAllocator()),
         lhs.GetAllocator(),
         0
     );
-
 }
 
 Value Value::PerformDecimalAddition(const Value& lhs, const Value& rhs){
@@ -756,7 +755,7 @@ std::ostream & operator<<(std::ostream& os, const Value &field){
         os << field.AsBool();
         break;
     case DataType::DateTime:
-        field.AsDateTime().Print(os, field.GetAllocator());
+        field.AsDateTime().Print(os);
         break;
     case DataType::Guid:
         os << field.AsGuid();

@@ -59,9 +59,9 @@ namespace Expressions{
         Pair(Constants::FunctionType::Coalesce, &FunctionExpression::ValidateCoalesce),
     };
 
-    EvaluationContext::EvaluationContext(){
+    EvaluationContext::EvaluationContext(const ::Memory::IAllocator* allocator){
         this->type = EvaluationContextType::Constant;
-        this->allocator = nullptr;
+        this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
         this->outerRow = nullptr;
@@ -527,7 +527,7 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        Value value(std::string(""), context.allocator, 0);
+        Value value(DataTypes::String::Null(), context.allocator, 0);
 
         for (const auto& argument : arguments)
           value += Value(argument.AsString(), context.allocator, 0);

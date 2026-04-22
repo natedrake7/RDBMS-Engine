@@ -7,9 +7,6 @@
 
 
 static constexpr Int ITOS_BUFFER_SIZE = 32;
-static constexpr Int DATETIME_TO_STRING_BUFFER_SIZE = 32;
-static constexpr Int DATETIME_TO_STRING_MS_BUFFER_SIZE = 8;
-
 static constexpr Int NUMBER_OF_HISTOGRAM_BUCKETS = 100;
 
 static constexpr Int INVALID_DATABASE_ID = -1;

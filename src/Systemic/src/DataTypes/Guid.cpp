@@ -62,8 +62,13 @@ namespace DataTypes {
     const std::array<UnsignedTinyInt, GUID_SIZE> & Guid::GetData() const{ return this->_data; }
 
     String Guid::ToString(const ::Memory::IAllocator* allocator) const {
-        char buffer[GUID_STRING_SIZE] = {};
-        std::snprintf(buffer, sizeof(buffer) + 1,
+        auto buffer = this->ToStringBuffer();
+        return String(buffer.Data(), GUID_STRING_SIZE, allocator);
+    }
+
+    Guid::StringBuffer Guid::ToStringBuffer() const{
+        auto buffer = StringBuffer(GUID_STRING_SIZE);
+        std::snprintf(buffer.Data(), sizeof(buffer) + 1,
             GUID_STRING_FORMAT.Data(),
                 this->_data[0],  this->_data[1],  this->_data[2],  this->_data[3],
                 this->_data[4],  this->_data[5],
@@ -73,7 +78,7 @@ namespace DataTypes {
                 this->_data[13], this->_data[14], this->_data[15]
         );
 
-        return String(buffer, GUID_STRING_SIZE, allocator);
+        return buffer;
     }
 
     Guid Guid::Parse(const String& str){ return Guid::Parse(str.Data(), str.Size());}
@@ -101,7 +106,8 @@ namespace DataTypes {
     bool operator>=(const Guid &guid1, const Guid &guid2){ return !(guid1 < guid2); }
 
     std::ostream & operator<<(std::ostream &os, const Guid &guid){
-        // os << guid.ToString();
+        auto buffer = guid.ToStringBuffer();
+        os.write(buffer.Data(), GUID_STRING_SIZE);
         return os;
     }
 

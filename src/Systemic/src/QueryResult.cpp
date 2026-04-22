@@ -71,7 +71,7 @@ void QueryResult::Print() const{
       std::cout << (column.AsBool() ? "TRUE" : "FALSE");
       break;
     case DataType::DateTime:
-      column.AsDateTime().Print(std::cout, column.GetAllocator());
+      column.AsDateTime().Print(std::cout);
       break;
     case DataType::Guid:
       std::cout << column.AsGuid();
@@ -247,7 +247,7 @@ ostream& operator<<(std::ostream& os, const QueryResult& result){
       os << (column.AsBool() ? "TRUE" : "FALSE");
       break;
     case DataType::DateTime:
-        column.AsDateTime().Print(os, column.GetAllocator());
+        column.AsDateTime().Print(os);
         break;
     case DataType::Guid:
       os << column.AsGuid();

@@ -5,6 +5,7 @@
 #include "DataTypes.h"
 #include "String.h"
 #include "StringView.h"
+#include "../DataStructures/StaticArray.h"
 
 namespace DataTypes {
     constexpr Int GUID_SIZE = 16;
@@ -14,11 +15,14 @@ namespace DataTypes {
     constexpr static StringView GUID_STRING_FORMAT = "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x";
     constexpr static StringView GUID_VALIDATION_FORMAT = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$";
 
+
     class Guid {
         std::array<UnsignedTinyInt, GUID_SIZE> _data;
 
         static bool Validate(const char* str, Int size);
         static Guid Parse(const char* str, Int size);
+
+        using StringBuffer = DataStructures::StaticArray<char, GUID_STRING_SIZE>;
 
     public:
         Guid();
@@ -29,6 +33,7 @@ namespace DataTypes {
         [[nodiscard]] const std::array<UnsignedTinyInt, GUID_SIZE>& GetData() const;
 
         [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
+        [[nodiscard]] StringBuffer ToStringBuffer() const;
         static Guid Parse(const String& str);
         static Guid Parse(const StringView& str);
         static Guid Parse(const std::string& str);

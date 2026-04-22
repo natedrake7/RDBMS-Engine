@@ -49,7 +49,7 @@ namespace Expressions{
 
         EvaluationContextType type;
 
-        EvaluationContext();
+        EvaluationContext(const ::Memory::IAllocator* allocator);
         EvaluationContext(
             EvaluationContextType type,
             const ::Memory::IAllocator* allocator

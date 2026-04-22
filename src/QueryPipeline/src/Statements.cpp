@@ -1839,7 +1839,7 @@ namespace QueryPipeline::Statements {
         }
 
         //validate functionExpression
-        DataTypes::String errorMessage;
+        DataTypes::String errorMessage(context.GetAllocator());
         if (!funcExpr->ValidateNumberOfArguments(errorMessage))
             return Errors::ValidationStatus::Error(std::move(errorMessage));
 
@@ -2389,7 +2389,7 @@ namespace QueryPipeline::Statements {
 
             if (!branch->IsConstant()) return;
 
-            const auto value = branch->AsConstant()->Evaluate(Expressions::EvaluationContext());
+            const auto value = branch->AsConstant()->Evaluate(Expressions::EvaluationContext(context.GetAllocator()));
             if (value.AsBool()) {
                 PropagateExpression(expression, castExpr->results[i]);
                 FoldExpression(context, expression);
@@ -2405,7 +2405,7 @@ namespace QueryPipeline::Statements {
     }
 
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
-        auto value = expression->Evaluate(Expressions::EvaluationContext());
+        auto value = expression->Evaluate(Expressions::EvaluationContext(context.GetAllocator()));
         expression = context._context.Allocate<Expressions::ConstantExpression>(value);
     }
 
