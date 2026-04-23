@@ -142,7 +142,7 @@ namespace QueryPipeline {
     DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
     bool isReordered;
 
-    JoinOrderAnalyzeResult();
+    JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator);
   };
 
   struct JoinOrderAnalyzeInfo{

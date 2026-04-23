@@ -143,10 +143,10 @@ namespace QueryPipeline{
         const std::any &queries,
         const DataTypes::Guid& sessionId
     ){
-        const auto castQueries = std::any_cast<std::vector<std::any>>(queries);
+        const auto castQueries = std::any_cast<DataStructures::PolymorphicArray<std::any>>(queries);
         const auto* session = Network::Server::Get().GetSession(sessionId);
 
-         context.Reserve(castQueries.size());
+         context.Reserve(castQueries.Size());
          for (const auto& query: castQueries) {
              std::function<Statements::Statement *(const std::any &)> handler;
 

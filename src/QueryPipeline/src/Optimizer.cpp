@@ -74,7 +74,8 @@ namespace QueryPipeline {
     this->columnId = INVALID_COLUMN_ID;
   }
 
-  JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(){
+  JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator)
+    : order(allocator), orderedJoins(allocator) {
     this->isReordered = false;
   }
 
@@ -507,7 +508,7 @@ namespace QueryPipeline {
   }
 
     JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement) const{
-        JoinOrderAnalyzeResult result;
+        JoinOrderAnalyzeResult result(this->context->_context.GetAllocator());
 
         if (statement->IsConstant()) return result;
 
