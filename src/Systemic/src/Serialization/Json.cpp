@@ -47,7 +47,7 @@ namespace Serialization {
             this->_data._array = std::move(other._data._array);
             break;
         case JsonType::Object:
-            this->_data._object = std::move(other._data._object);
+            new (&this->_data._object) JsonObject(std::move(other._data._object));
             break;
         default:
             break;
@@ -99,7 +99,7 @@ namespace Serialization {
     }
 
     JsonValue::JsonValue(JsonObject&& value) : _type(JsonType::Object) {
-        this->_data._object = std::move(value);
+        new (&this->_data._object) JsonObject(std::move(value));
     }
 
     void JsonParser::SkipWhitespace(){
@@ -163,33 +163,40 @@ namespace Serialization {
                 case 'n':  result.Append('\n'); break;
                 case 't':  result.Append('\t'); break;
                 case 'r':  result.Append('\r'); break;
-                default: throw std::runtime_error("JsonParser::ParseString: Invalid escape sequence");
+                default: throw std::runtime_error("JsonParser::ParseString: Invalid escape sequence. Error at position: " + std::to_string(this->_pos));
             }
         }
 
         if (this->Peek() != '"')
-            throw std::runtime_error("JsonParser::ParseString: Unterminated string");
+            throw std::runtime_error("JsonParser::ParseString: Unterminated string. Error at position: " + std::to_string(this->_pos));
         this->Consume();
 
         return result;
     }
 
-    JsonNumber JsonParser::ParseNumber(){
+    JsonNumber JsonParser::ParseNumber() {
         const auto start = this->_pos;
 
         if (this->Peek() == '-')
             this->Consume();
 
-        while (std::isdigit(this->Peek())){
+        while (std::isdigit(this->Peek()))
             this->Consume();
+
+        // Decimal part
+        if (this->Peek() == '.') {
+            this->Consume();
+            while (std::isdigit(this->Peek()))
+                this->Consume();
         }
 
-        const auto peekChar = this->Peek();
-        if (peekChar == '.' || peekChar == 'e' || peekChar == 'E' || peekChar == ','){
+        // Exponent part
+        if (this->Peek() == 'e' || this->Peek() == 'E') {
             this->Consume();
-            while (std::isdigit(this->Peek())){
+            if (this->Peek() == '+' || this->Peek() == '-')
                 this->Consume();
-            }
+            while (std::isdigit(this->Peek()))
+                this->Consume();
         }
 
         const auto view = DataTypes::StringView(this->_src.Data() + start, this->_pos - start);
@@ -197,26 +204,26 @@ namespace Serialization {
     }
 
     JsonBool JsonParser::ParseBool(){
-        if (DataTypes::String::SubString(this->_src, this->_pos, 4) == "true"){
+        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 4) == "true"){
             this->_pos += 4;
             return true;
         }
 
-        if (DataTypes::String::SubString(this->_src, this->_pos, 5) == "false"){
+        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 5) == "false"){
             this->_pos += 5;
             return false;
         }
 
-        throw std::runtime_error("JsonParser::ParseBool: Invalid boolean value");
+        throw std::runtime_error("JsonParser::ParseBool: Invalid boolean value. Error at position: " + std::to_string(this->_pos));
     }
 
     JsonNull JsonParser::ParseNull(){
-        if (DataTypes::String::SubString(this->_src, this->_pos, 4) == "null"){
+        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 4) == "null"){
             this->_pos += 4;
             return nullptr;
         }
 
-        throw std::runtime_error("JsonParser::ParseNull: Invalid null value");
+        throw std::runtime_error("JsonParser::ParseNull: Invalid null value. Error at position: " + std::to_string(this->_pos));
     }
 
     JsonArray JsonParser::ParseArray(){
@@ -237,7 +244,7 @@ namespace Serialization {
                 break;
             }
             if (this->Peek() != ',')
-                throw std::runtime_error("JsonParser::ParseArray: Expected ',' in array");
+                throw std::runtime_error("JsonParser::ParseArray: Expected ',' in array. Error at position: " + std::to_string(this->_pos));
             this->Consume();
         }
 
@@ -258,13 +265,13 @@ namespace Serialization {
             this->SkipWhitespace();
 
             if (this->Peek() != '"') {
-                throw std::runtime_error("JsonParser::ParseObject: Expected string key");
+                throw std::runtime_error("JsonParser::ParseObject: Expected string key. Error at position: " + std::to_string(this->_pos));
             }
 
             auto key = this->ParseString();
             this->SkipWhitespace();
             if (this->Consume() != ':') {
-                throw std::runtime_error("JsonParser::ParseObject: Expected ':' in object");
+                throw std::runtime_error("JsonParser::ParseObject: Expected ':' in object. Error at position: " + std::to_string(this->_pos));
             }
             object[key] = this->ParseValue();
             this->SkipWhitespace();
@@ -274,7 +281,7 @@ namespace Serialization {
             }
 
             if (this->Peek() != ','){
-                throw std::runtime_error("JsonParser::ParseObject: Expected ',' in object");
+                throw std::runtime_error("JsonParser::ParseObject: Expected ',' in object. Error at position: " + std::to_string(this->_pos));
             }
 
             this->Consume();

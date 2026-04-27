@@ -261,7 +261,7 @@ namespace Tests{
                     "street": "123 Main St",
                     "city": "Anytown",
                     "nestedObject": {
-                        "key": "value"
+                        "key": "value",
                         "nestedArray": [
                             "obj1"
                         ]
