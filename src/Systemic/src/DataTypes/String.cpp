@@ -713,11 +713,15 @@ namespace DataTypes{
     }
 
     String& String::Append(const std::string_view other){
-        return this->Append(other.data(), other.size());
+        return this->Append(other.data(), static_cast<Int>(other.size()));
     }
 
     String& String::Append(const std::string& other){
-        return this->Append(other.data(), other.size());
+        return this->Append(other.data(), static_cast<Int>(other.size()));
+    }
+
+    String& String::Append(const char other){
+        return this->Append(&other, 1);
     }
 
     void String::Insert(const Int pos, const char* data, const Int size){

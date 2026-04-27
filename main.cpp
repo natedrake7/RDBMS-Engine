@@ -101,15 +101,6 @@
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 
 int main(){
-    // Tests::InitializeTester();
-    // Tests::RunTest(&Tests::DecimalTest);
-    //
-    // return 0;
-    // External::Plugin plugin;
-    // plugin.Load("plugins/PluginLibrary.dll");
-    // External::Plugin::Execute("AddNumbers");
-    //
-    // return 0;
 
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 
@@ -120,6 +111,16 @@ int main(){
 
     static auto& bufferPoolMemoryManager = CoreEngine::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
+
+    Tests::InitializeTester();
+    Tests::RunTest(&Tests::ParseJson);
+
+    return 0;
+    // External::Plugin plugin;
+    // plugin.Load("plugins/PluginLibrary.dll");
+    // External::Plugin::Execute("AddNumbers");
+    //
+    // return 0;
 
     static auto& server = Network::Server::Get();
 

@@ -187,6 +187,7 @@ namespace DataTypes{
             String& Append(const char* other);
             String& Append(std::string_view other);
             String& Append(const std::string& other);
+            String& Append(char other);
 
             void Insert(Int pos, const char* data, Int size);
 

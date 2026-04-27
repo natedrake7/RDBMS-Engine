@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "../../CoreEngine/include/DataStorage/Table.h"
+#include "../../src/Systemic/include/Serialization/Json.h"
 #ifdef __linux__
     #include <csignal>
 #endif
@@ -246,5 +247,31 @@ namespace Tests{
         //
         // std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
         // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << INDEX_PAGE_DEFAULT_SIZE << std::endl;
+    }
+
+    void ParseJson(){
+        const CoreEngine::Memory::Allocator allocator;
+        const auto json = R"(
+            {
+                "name": "Alice",
+                "age": 30,
+                "isStudent": false,
+                "scores": [85.5, 90.0, 78.0],
+                "address": {
+                    "street": "123 Main St",
+                    "city": "Anytown",
+                    "nestedObject": {
+                        "key": "value"
+                        "nestedArray": [
+                            "obj1"
+                        ]
+                    }
+                },
+                "nullValue": null
+            }
+        )";
+
+        Serialization::JsonParser parser(&allocator, json);
+        auto result = parser.Parse();
     }
 }

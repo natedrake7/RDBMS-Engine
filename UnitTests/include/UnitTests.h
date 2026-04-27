@@ -10,4 +10,5 @@ namespace Tests{
     void DecimalTest();
     void IndexPageUpdate();
     void PageUpdate();
+    void ParseJson();
 }
