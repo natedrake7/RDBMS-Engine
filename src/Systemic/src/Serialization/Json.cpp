@@ -111,14 +111,14 @@ namespace Serialization {
         if (this->_src.Size() < this->_pos + 2)
             return;
 
-        if (this->_src[this->_pos] == '/' && this->_src[this->_pos + 1] == '/') {
-            while (this->_pos < this->_src.Size() && this->_src[this->_pos] != '\n')
+        if (this->_src[this->_pos] == JSON_SLASH && this->_src[this->_pos + 1] == JSON_SLASH) {
+            while (this->_pos < this->_src.Size() && this->_src[this->_pos] != JSON_NEWLINE)
                 this->_pos++;
         }
     }
 
     char JsonParser::Peek() const{
-        return this->_pos < this->_src.Size() ? this->_src[this->_pos] : '\0';
+        return this->_pos < this->_src.Size() ? this->_src[this->_pos] : JSON_NULL_CHAR;
     }
 
     char JsonParser::Consume(){
@@ -130,46 +130,53 @@ namespace Serialization {
         this->SkipComment();
 
         const auto character = this->Peek();
-        if (character == '"')
+        if (character == JSON_QUOTE)
             return JsonValue(this->ParseString());
-        if (character == '{')
+        if (character == JSON_OPEN_BRACE)
             return JsonValue(this->ParseObject());
-        if (character == '[')
+        if (character == JSON_OPEN_BRACKET)
             return JsonValue(this->ParseArray());
-        if (character == 't' || character == 'f')
+        if (character == JSON_TRUE_START || character == JSON_FALSE_START)
             return JsonValue(this->ParseBool());
-        if (character == 'n')
+        if (character == JSON_NULL_START)
             return JsonValue(this->ParseNull());
-        if (character == '-' || std::isdigit(character))
+        if (character == JSON_MINUS || std::isdigit(character))
             return JsonValue(this->ParseNumber());
         throw std::runtime_error(std::string("Unexpected character: ") + character);
     }
 
     JsonString JsonParser::ParseString(){
-        this->Consume();
+        this->Consume(); // opening "
 
         DataTypes::String result(this->_allocator);
-        while (this->_pos < this->_src.Size() && this->Peek() != '"'){
-            if (this->Peek() != '\\'){
-                result.Append(this->Consume());
+
+        const auto* base = this->_src.Data();
+        const auto size = this->_src.Size();
+
+        while (this->_pos < size && base[this->_pos] != JSON_QUOTE) {
+            if (base[this->_pos] != JSON_BACKSLASH) {
+                const Int start = this->_pos;
+                while (this->_pos < size && base[this->_pos] != JSON_QUOTE && base[this->_pos] != JSON_BACKSLASH)
+                    ++this->_pos;
+                result.Append(base + start, this->_pos - start);
                 continue;
             }
 
-            this->Consume();
-            switch (this->Consume()) {
-                case '"':  result.Append('"');  break;
-                case '\\': result.Append('\\'); break;
-                case '/':  result.Append('/');  break;
-                case 'n':  result.Append('\n'); break;
-                case 't':  result.Append('\t'); break;
-                case 'r':  result.Append('\r'); break;
+            ++this->_pos; // skip backslash
+            switch (this->_src[this->_pos++]) {
+                case JSON_QUOTE:     result.Append(JSON_QUOTE);     break;
+                case JSON_BACKSLASH: result.Append(JSON_BACKSLASH); break;
+                case JSON_SLASH:     result.Append(JSON_SLASH);     break;
+                case 'n':            result.Append(JSON_NEWLINE);   break;
+                case 't':            result.Append(JSON_TAB);       break;
+                case 'r':            result.Append(JSON_CR);        break;
                 default: throw std::runtime_error("JsonParser::ParseString: Invalid escape sequence. Error at position: " + std::to_string(this->_pos));
             }
         }
 
-        if (this->Peek() != '"')
+        if (this->_pos >= size || base[this->_pos] != JSON_QUOTE)
             throw std::runtime_error("JsonParser::ParseString: Unterminated string. Error at position: " + std::to_string(this->_pos));
-        this->Consume();
+        ++this->_pos; // closing "
 
         return result;
     }
@@ -177,23 +184,23 @@ namespace Serialization {
     JsonNumber JsonParser::ParseNumber() {
         const auto start = this->_pos;
 
-        if (this->Peek() == '-')
+        if (this->Peek() == JSON_MINUS)
             this->Consume();
 
         while (std::isdigit(this->Peek()))
             this->Consume();
 
         // Decimal part
-        if (this->Peek() == '.') {
+        if (this->Peek() == JSON_DOT) {
             this->Consume();
             while (std::isdigit(this->Peek()))
                 this->Consume();
         }
 
         // Exponent part
-        if (this->Peek() == 'e' || this->Peek() == 'E') {
+        if (this->Peek() == JSON_EXP_LOWER || this->Peek() == JSON_EXP_UPPER) {
             this->Consume();
-            if (this->Peek() == '+' || this->Peek() == '-')
+            if (this->Peek() == JSON_PLUS || this->Peek() == JSON_MINUS)
                 this->Consume();
             while (std::isdigit(this->Peek()))
                 this->Consume();
@@ -204,34 +211,26 @@ namespace Serialization {
     }
 
     JsonBool JsonParser::ParseBool(){
-        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 4) == "true"){
-            this->_pos += 4;
-            return true;
-        }
-
-        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 5) == "false"){
-            this->_pos += 5;
-            return false;
-        }
-
+        const char* p = this->_src.Data() + this->_pos;
+        if (std::memcmp(p, "true", 4) == 0)  { this->_pos += 4; return true; }
+        if (std::memcmp(p, "false", 5) == 0) { this->_pos += 5; return false; }
         throw std::runtime_error("JsonParser::ParseBool: Invalid boolean value. Error at position: " + std::to_string(this->_pos));
     }
 
     JsonNull JsonParser::ParseNull(){
-        if (DataTypes::String::SubString(this->_src, this->_pos, this->_pos + 4) == "null"){
+        if (std::memcmp(this->_src.Data() + this->_pos, "null", 4) == 0) {
             this->_pos += 4;
             return nullptr;
         }
-
         throw std::runtime_error("JsonParser::ParseNull: Invalid null value. Error at position: " + std::to_string(this->_pos));
     }
 
     JsonArray JsonParser::ParseArray(){
-        this->Consume();
+        this->Consume(); // opening [
 
         JsonArray array(this->_allocator);
         this->SkipWhitespace();
-        if (this->Peek() == ']') {
+        if (this->Peek() == JSON_CLOSE_BRACKET) {
             this->Consume();
             return array;
         }
@@ -239,11 +238,11 @@ namespace Serialization {
         while (true) {
             array.Push(this->ParseValue());
             this->SkipWhitespace();
-            if (this->Peek() == ']') {
+            if (this->Peek() == JSON_CLOSE_BRACKET) {
                 this->Consume();
                 break;
             }
-            if (this->Peek() != ',')
+            if (this->Peek() != JSON_COMMA)
                 throw std::runtime_error("JsonParser::ParseArray: Expected ',' in array. Error at position: " + std::to_string(this->_pos));
             this->Consume();
         }
@@ -252,38 +251,35 @@ namespace Serialization {
     }
 
     JsonObject JsonParser::ParseObject(){
-        this->Consume();
+        this->Consume(); // opening {
 
         JsonObject object;
         this->SkipWhitespace();
-        if (this->Peek() == '}')
-        {
+        if (this->Peek() == JSON_CLOSE_BRACE) {
             this->Consume();
             return object;
         }
+
         while (true) {
             this->SkipWhitespace();
 
-            if (this->Peek() != '"') {
+            if (this->Peek() != JSON_QUOTE)
                 throw std::runtime_error("JsonParser::ParseObject: Expected string key. Error at position: " + std::to_string(this->_pos));
-            }
 
             auto key = this->ParseString();
             this->SkipWhitespace();
-            if (this->Consume() != ':') {
+            if (this->Consume() != JSON_COLON)
                 throw std::runtime_error("JsonParser::ParseObject: Expected ':' in object. Error at position: " + std::to_string(this->_pos));
-            }
+
             object[key] = this->ParseValue();
             this->SkipWhitespace();
-            if (this->Peek() == '}'){
+
+            if (this->Peek() == JSON_CLOSE_BRACE) {
                 this->Consume();
                 break;
             }
-
-            if (this->Peek() != ','){
+            if (this->Peek() != JSON_COMMA)
                 throw std::runtime_error("JsonParser::ParseObject: Expected ',' in object. Error at position: " + std::to_string(this->_pos));
-            }
-
             this->Consume();
         }
 
@@ -308,5 +304,84 @@ namespace Serialization {
         if (this->_pos != this->_src.Size())
             throw std::runtime_error("JsonParser::Parse: Unexpected trailing characters");
         return val;
+    }
+
+    // ── JsonWriter ────────────────────────────────────────────────────────────
+
+    void JsonWriter::PrintIndent(std::ostream& os, const int indent) {
+        static constexpr char spaces[128] = "                                                                                                                               ";
+        const int n = indent * 4;
+        os.write(spaces, n < 128 ? n : 128);
+    }
+
+    void JsonWriter::PrintString(std::ostream& os, const JsonString& str) {
+        os << JSON_QUOTE;
+        for (Int i = 0; i < str.Size(); ++i) {
+            const auto character = str[i];
+            switch (character) {
+                case JSON_QUOTE:     os << "\\\""; break;
+                case JSON_BACKSLASH: os << "\\\\"; break;
+                case JSON_NEWLINE:   os << "\\n";  break;
+                case JSON_CR:        os << "\\r";  break;
+                case JSON_TAB:       os << "\\t";  break;
+                default:             os << character;      break;
+            }
+        }
+        os << JSON_QUOTE;
+    }
+
+    void JsonWriter::PrintValue(std::ostream& os, const JsonValue& value, const int indent) {
+        switch (value.Type()) {
+            case JsonType::Null:
+                os << "null";
+                break;
+            case JsonType::Bool:
+                os << (value.AsBool() ? "true" : "false");
+                break;
+            case JsonType::Number:
+                os << value.AsNumber();
+                break;
+            case JsonType::String:
+                PrintString(os, value.AsString());
+                break;
+            case JsonType::Array: {
+                const auto& arr = value.AsArray();
+                if (arr.Size() == 0) { os << "[]"; break; }
+                os << JSON_OPEN_BRACKET << JSON_NEWLINE;
+                for (Int i = 0; i < arr.Size(); ++i) {
+                    PrintIndent(os, indent + 1);
+                    PrintValue(os, arr[i], indent + 1);
+                    if (i < arr.Size() - 1) os << JSON_COMMA;
+                    os << JSON_NEWLINE;
+                }
+                PrintIndent(os, indent);
+                os << JSON_CLOSE_BRACKET;
+                break;
+            }
+            case JsonType::Object: {
+                const auto& obj = value.AsObject();
+                if (obj.empty()) { os << "{}"; break; }
+                os << JSON_OPEN_BRACE << JSON_NEWLINE;
+                Int i = 0;
+                const auto count = obj.size();
+                for (const auto& [key, val] : obj) {
+                    PrintIndent(os, indent + 1);
+                    PrintString(os, key);
+                    os << JSON_COLON << ' ';
+                    PrintValue(os, val, indent + 1);
+                    if (i < count - 1) os << JSON_COMMA;
+                    os << JSON_NEWLINE;
+                    ++i;
+                }
+                PrintIndent(os, indent);
+                os << JSON_CLOSE_BRACE;
+                break;
+            }
+        }
+    }
+
+    void JsonWriter::Print(std::ostream& os, const JsonValue& value, const int indent) {
+        PrintValue(os, value, indent);
+        os << JSON_NEWLINE;
     }
 }

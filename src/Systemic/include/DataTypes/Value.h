@@ -127,7 +127,6 @@ class Value {
         [[nodiscard]] DataTypes::String AsString()const;
         [[nodiscard]] std::string AsStdString()const;
         [[nodiscard]] DataTypes::StringView AsStringView()const;
-        [[nodiscard]] std::u16string AsUnicodeString()const;
         [[nodiscard]] DataTypes::Decimal AsDecimal()const;
         [[nodiscard]] DataTypes::DateTime AsDateTime()const;
         [[nodiscard]] time_t AsUnixTimeStamp() const;

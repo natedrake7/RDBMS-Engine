@@ -13,7 +13,7 @@
 #include "DataTypes/DataTypes.StaticData.h"
 
 bool Value::TryParseAsBool()const{
-    if (this->type == DataType::String || this->type == DataType::UnicodeString)
+    if (this->type == DataType::String)
         return this->TryParseAsBoolFromString();
 
     if (this->type == DataType::BigInt
@@ -683,10 +683,6 @@ DataTypes::StringView Value::AsStringView() const{
     return DataTypes::Coercions::ToStringView(*this);
 }
 
-std::u16string Value::AsUnicodeString() const {
-    return DataTypes::Coercions::ToUnicodeString(*this);
-}
-
 DataTypes::Decimal Value::AsDecimal() const {
     return DataTypes::Coercions::ToDecimal(*this);
 }
@@ -748,7 +744,6 @@ std::ostream & operator<<(std::ostream& os, const Value &field){
         os << field.AsDecimal();
         break;
     case DataType::String:
-    case DataType::UnicodeString:
         os << field.AsString();
         break;
     case DataType::Bool:
@@ -801,7 +796,6 @@ Value operator+(const Value &lhs, const Value &rhs){
     case DataType::Decimal:
         return Value::PerformDecimalAddition(lhs, rhs);
     case DataType::String:
-    case DataType::UnicodeString:
         return Value::PerformStringAddition(lhs, rhs);
     case DataType::Bool:
         return Value(lhs.AsBool() + rhs.AsBool(), lhs.GetAllocator(), 0);
@@ -834,7 +828,6 @@ Value operator-(const Value &lhs, const Value &rhs){
         case DataType::Decimal:
             return Value::PerformDecimalSubtraction(lhs, rhs);
         case DataType::String:
-        case DataType::UnicodeString:
         case DataType::Bool:
         case DataType::DateTime:
         case DataType::Guid:
@@ -866,7 +859,6 @@ Value operator%(const Value &lhs, const Value &rhs){
     case DataType::Decimal:
     // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);WWW
     case DataType::String:
-    case DataType::UnicodeString:
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
@@ -893,7 +885,6 @@ Value operator*(const Value &lhs, const Value &rhs){
     case DataType::Decimal:
         return Value(lhs.AsDecimal() * rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
-    case DataType::UnicodeString:
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
@@ -920,8 +911,6 @@ Value operator<(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDecimal() < rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
         return Value(lhs.AsStringView() < rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() < rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
         return Value(lhs.AsBool() < rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::DateTime:
@@ -956,8 +945,6 @@ Value operator<=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDecimal() <= rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
         return Value(lhs.AsStringView() <= rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() <= rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
         return Value(lhs.AsBool() <= rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::DateTime:
@@ -992,8 +979,6 @@ Value operator>=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDecimal() >= rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
         return Value(lhs.AsStringView() >= rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() >= rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
         return Value(lhs.AsBool() >= rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::DateTime:
@@ -1027,8 +1012,6 @@ Value operator==(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDecimal() == rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
         return Value(lhs.AsString() == rhs.AsString(), lhs.GetAllocator(), 0);
-    case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() == rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
         return Value(lhs.AsBool() == rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::DateTime:
@@ -1062,8 +1045,6 @@ Value operator!=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDecimal() != rhs.AsDecimal(), lhs.GetAllocator(), 0);
     case DataType::String:
         return Value(lhs.AsString() != rhs.AsString(), lhs.GetAllocator(), 0);
-    case DataType::UnicodeString:
-        return Value(lhs.AsUnicodeString() != rhs.AsUnicodeString(), lhs.GetAllocator(), 0);
     case DataType::Bool:
         return Value(lhs.AsBool() != rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::DateTime:
@@ -1120,7 +1101,6 @@ long double Value::Interpolate() const{
     case DataType::Decimal:
         return this->AsDecimal().ToDouble();
     case DataType::String:
-    case DataType::UnicodeString:
         return this->InterpolateString();
     case DataType::Bool:
         return this->AsBool();

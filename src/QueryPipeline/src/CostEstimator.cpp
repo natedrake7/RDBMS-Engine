@@ -128,7 +128,6 @@ namespace QueryPipeline{
             case DataType::Decimal:
                 return CostEstimator::DECIMAL_COMPARISON_COST;
             case DataType::String:
-            case DataType::UnicodeString:
             case DataType::Guid:
                 return CostEstimator::STRING_COMPARISON_COST;
             default:

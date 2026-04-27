@@ -70,12 +70,11 @@ enum class DataType : uint8_t{
   BigInt = 3,
   Decimal = 4,
   String = 5,
-  UnicodeString = 6,
-  Bool = 7,
-  DateTime = 8,
-  Guid = 9,
-  RowIdentifier = 10,
-  Unknown = 11
+  Bool = 6,
+  DateTime = 7,
+  Guid = 8,
+  RowIdentifier = 9,
+  Unknown = 10
 };
 
 enum class StringComparisonType: UnsignedTinyInt{

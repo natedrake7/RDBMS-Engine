@@ -42,6 +42,5 @@ namespace QueryPipeline::PipelineConstants {
 
     static constexpr ConstexprHashSet<DataType, 2> ValidTableStringConversions{
         DataType::String,
-        DataType::UnicodeString
     };
 }

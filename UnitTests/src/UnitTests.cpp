@@ -272,6 +272,8 @@ namespace Tests{
         )";
 
         Serialization::JsonParser parser(&allocator, json);
-        auto result = parser.Parse();
+        const auto result = parser.Parse();
+
+        Serialization::JsonWriter::Print(std::cout, result);
     }
 }

@@ -45,11 +45,6 @@ namespace DataTypes{
                 CoercionType::Explicit, CoercionType::Implicit, CoercionType::Explicit, CoercionType::Explicit,
                 CoercionType::Explicit, CoercionType::Explicit, CoercionType::None,    CoercionType::None
             },
-            /* UString */ {
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit,
-                CoercionType::Explicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Explicit,
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::None,    CoercionType::None
-            },
             /* Bool */ {
                 CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
                 CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
@@ -105,7 +100,6 @@ namespace DataTypes{
     [[nodiscard]] static bool CanGetInt(const Value& value);
     [[nodiscard]] static bool CanGetBigInt(const Value& value);
     [[nodiscard]] static bool CanGetString(const Value& value);
-    [[nodiscard]] static bool CanGetUnicodeString(const Value& value);
     [[nodiscard]] static bool CanGetGuid(const Value& value);
     [[nodiscard]] static bool CanGetDateTime(const Value& value);
     [[nodiscard]] static bool CanGetDecimal(const Value& value);
@@ -123,7 +117,6 @@ namespace DataTypes{
         [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static String ToString(const Value& value, bool explicitCast = false);
         [[nodiscard]] static StringView ToStringView(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static std::u16string ToUnicodeString(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
         [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);

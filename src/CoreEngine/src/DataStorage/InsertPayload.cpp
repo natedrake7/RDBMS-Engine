@@ -171,7 +171,6 @@ namespace CoreEngine::StorageTypes{
         case DataType::Decimal:
             return this->SetDecimal(value, column, status);
         case DataType::String:
-        case DataType::UnicodeString:
             return this->SetString(value, column, status);
         case DataType::Bool:
             return this->SetBool(value, status);

@@ -1,10 +1,33 @@
 ﻿#pragma once
+#include <ostream>
 #include "../DataStructures/PolymorphicArray.h"
-#include "../DataStructures/Dictionary.h"
 #include "../DataTypes/Decimal.h"
+#include "../DataStructures/SortedDictionary.h"
 
 namespace Serialization{
     struct JsonValue;
+
+    static constexpr char JSON_QUOTE         = '"';
+    static constexpr char JSON_BACKSLASH     = '\\';
+    static constexpr char JSON_SLASH         = '/';
+    static constexpr char JSON_OPEN_BRACE    = '{';
+    static constexpr char JSON_CLOSE_BRACE   = '}';
+    static constexpr char JSON_OPEN_BRACKET  = '[';
+    static constexpr char JSON_CLOSE_BRACKET = ']';
+    static constexpr char JSON_COLON         = ':';
+    static constexpr char JSON_COMMA         = ',';
+    static constexpr char JSON_NEWLINE       = '\n';
+    static constexpr char JSON_TAB           = '\t';
+    static constexpr char JSON_CR            = '\r';
+    static constexpr char JSON_MINUS         = '-';
+    static constexpr char JSON_DOT           = '.';
+    static constexpr char JSON_EXP_LOWER     = 'e';
+    static constexpr char JSON_EXP_UPPER     = 'E';
+    static constexpr char JSON_PLUS          = '+';
+    static constexpr char JSON_TRUE_START    = 't';
+    static constexpr char JSON_FALSE_START   = 'f';
+    static constexpr char JSON_NULL_START    = 'n';
+    static constexpr char JSON_NULL_CHAR     = '\0';
 
     enum class JsonType : UnsignedTinyInt{
         Null = 0,
@@ -16,7 +39,7 @@ namespace Serialization{
     };
 
     using JsonArray = DataStructures::PolymorphicArray<JsonValue>;
-    using JsonObject = Dictionary<DataTypes::String, JsonValue>;
+    using JsonObject = SortedDictionary<DataTypes::String, JsonValue, StringComparator>;
     using JsonString = DataTypes::String;
     using JsonNumber = DataTypes::Decimal;
     using JsonBool = bool;
@@ -54,6 +77,21 @@ namespace Serialization{
         explicit JsonValue(JsonString&& value);
         explicit JsonValue(JsonArray&& value);
         explicit JsonValue(JsonObject&& value);
+
+        [[nodiscard]] JsonType Type() const { return _type; }
+
+        [[nodiscard]] JsonBool          AsBool()   const { return _data._bool; }
+        [[nodiscard]] const JsonNumber& AsNumber() const { return _data._number; }
+        [[nodiscard]] const JsonString& AsString() const { return _data._string; }
+        [[nodiscard]] const JsonArray&  AsArray()  const { return _data._array; }
+        [[nodiscard]] const JsonObject& AsObject() const { return _data._object; }
+
+        [[nodiscard]] bool IsNull()   const { return _type == JsonType::Null; }
+        [[nodiscard]] bool IsBool()   const { return _type == JsonType::Bool; }
+        [[nodiscard]] bool IsNumber() const { return _type == JsonType::Number; }
+        [[nodiscard]] bool IsString() const { return _type == JsonType::String; }
+        [[nodiscard]] bool IsArray()  const { return _type == JsonType::Array; }
+        [[nodiscard]] bool IsObject() const { return _type == JsonType::Object; }
     };
 
     class JsonParser{
@@ -82,6 +120,14 @@ namespace Serialization{
             explicit JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&&  src);
 
             JsonValue Parse();
+    };
+
+    class JsonWriter {
+        static void PrintIndent(std::ostream& os, int indent);
+        static void PrintValue(std::ostream& os, const JsonValue& value, int indent);
+        static void PrintString(std::ostream& os, const JsonString& str);
+    public:
+        static void Print(std::ostream& os, const JsonValue& value, int indent = 0);
     };
 
 }

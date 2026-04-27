@@ -25,11 +25,6 @@ namespace DataTypes{
         [[nodiscard]] inline bool Contains(const char* other, Int size) const;
         [[nodiscard]] inline bool ContainsIgnoreCase(const char* other, Int size) const;
 
-        [[nodiscard]] inline String& Append(
-            const char* data,
-            Int size
-        );
-
         [[nodiscard]] static inline String Normalize(
             const char* str,
             Int size,
@@ -185,6 +180,7 @@ namespace DataTypes{
             String& Append(const String& other);
             String& Append(const StringView& other);
             String& Append(const char* other);
+            inline String& Append(const char* data, Int size);
             String& Append(std::string_view other);
             String& Append(const std::string& other);
             String& Append(char other);
@@ -555,5 +551,12 @@ struct std::hash<DataTypes::String> {
             hash *= 1099511628211ULL;
         }
         return hash;
+    }
+};
+
+struct StringComparator{
+    bool operator()(const DataTypes::String& lhs, const DataTypes::String& rhs) const {
+        return std::memcmp(lhs.Data(), rhs.Data(), std::min(lhs.Size(), rhs.Size())) < 0 ||
+               (lhs.Size() < rhs.Size() && std::memcmp(lhs.Data(), rhs.Data(), lhs.Size()) == 0);
     }
 };

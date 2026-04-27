@@ -255,7 +255,6 @@ namespace Expressions{
             case DataType::BigInt:
             case DataType::Decimal:
             case DataType::String:
-            case DataType::UnicodeString:
             case DataType::Bool:
               return true;
             case DataType::DateTime:
@@ -280,7 +279,6 @@ namespace Expressions{
             case DataType::Bool:
               return true;
             case DataType::String:
-            case DataType::UnicodeString:
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
@@ -303,7 +301,6 @@ namespace Expressions{
             case DataType::Bool:
               return true;
             case DataType::String:
-            case DataType::UnicodeString:
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
@@ -331,7 +328,6 @@ namespace Expressions{
             case DataType::Decimal:
               return true;
             case DataType::String:
-            case DataType::UnicodeString:
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:

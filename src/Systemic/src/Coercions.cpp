@@ -64,8 +64,6 @@ namespace DataTypes{
       return false;
     case DataType::String:
       return Converter<TinyInt>::TryStoi(value.AsStringView());
-    case DataType::UnicodeString:
-      return Converter<TinyInt>::TryStoi(value.AsUnicodeString());
     default:
       return false;
     }
@@ -84,7 +82,6 @@ namespace DataTypes{
     case DataType::Decimal:
       return false;
     case DataType::String: {
-    case DataType::UnicodeString:
       bool outVal = false;
       return Coercions::ParseAsBoolFromString(value, outVal);
     }
@@ -109,8 +106,6 @@ namespace DataTypes{
       return false;
     case DataType::String:
       return Converter<SmallInt>::TryStoi(value.AsStringView());
-    case DataType::UnicodeString:
-      return Converter<SmallInt>::TryStoi(value.AsUnicodeString());
     default:
       return false;
     }
@@ -129,8 +124,6 @@ namespace DataTypes{
       return false;
     case DataType::String:
       return Converter<Int>::TryStoi(value.AsStringView());
-    case DataType::UnicodeString:
-      return Converter<Int>::TryStoi(value.AsUnicodeString());
     default:
       return false;
     }
@@ -148,8 +141,6 @@ namespace DataTypes{
       return false;
     case DataType::String:
       return Converter<BigInt>::TryStoi(value.AsStringView());
-    case DataType::UnicodeString:
-      return Converter<BigInt>::TryStoi(value.AsUnicodeString());
     default:
       return false;
     }
@@ -157,14 +148,11 @@ namespace DataTypes{
 
     bool Coercions::CanGetString(const Value &value){ return true;}
 
-    bool Coercions::CanGetUnicodeString(const Value &value){ return true;}
-
     bool Coercions::CanGetGuid(const Value &value){
         switch (value.GetType()) {
         case DataType::Guid:
             return true;
         case DataType::String:
-        case DataType::UnicodeString:
             return Guid::Validate(value.AsString());
         default:
             return false;
@@ -176,7 +164,6 @@ namespace DataTypes{
             case DataType::DateTime:
                 return true;
             case DataType::String:
-            case DataType::UnicodeString:
                 return DateTime::FromString(value.AsStringView());
             default:
                 return false;
@@ -260,8 +247,6 @@ namespace DataTypes{
                 return false;
             case DataType::String:
                 return value.ParseAsBoolFromString();
-            case DataType::UnicodeString:
-                return Converter<TinyInt>::Stoi(value.AsUnicodeString());
             case DataType::Bool:
                 return *reinterpret_cast<const bool*>(value.Data());
             default:
@@ -285,8 +270,6 @@ namespace DataTypes{
                 return 0;
             case DataType::String:
                 return Converter<TinyInt>::Stoi(value.AsString());
-            case DataType::UnicodeString:
-                return Converter<TinyInt>::Stoi(value.AsUnicodeString());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
             default:
@@ -310,8 +293,6 @@ namespace DataTypes{
                 return 0;
             case DataType::String:
                 return Converter<SmallInt>::Stoi(value.AsString());
-            case DataType::UnicodeString:
-                return Converter<SmallInt>::Stoi(value.AsUnicodeString());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
             default:
@@ -334,7 +315,6 @@ namespace DataTypes{
             case DataType::Decimal:
                 return 0;
             case DataType::String:
-            case DataType::UnicodeString:
                 return Converter<Int>::Stoi(value.AsStringView());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
@@ -359,7 +339,6 @@ namespace DataTypes{
             case DataType::Decimal:
                 return 0;
             case DataType::String:
-            case DataType::UnicodeString:
                 return Converter<BigInt>::Stoi(value.AsStringView());
             case DataType::Bool:
                 return value.AsBool() ? 1 : 0;
@@ -383,7 +362,6 @@ namespace DataTypes{
             case DataType::Decimal:
                 return value.AsDecimal().ToString(value.GetAllocator());
             case DataType::String:
-            case DataType::UnicodeString:
                 return String(value.Data(), value.Size(), value.GetAllocator());
             case DataType::Bool:{
                 const auto* str = value.AsBool() ? "true" : "false";
@@ -405,7 +383,6 @@ namespace DataTypes{
       const auto valueType = value.GetType();
       switch (valueType){
           case DataType::String:
-          case DataType::UnicodeString:
               return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
           case DataType::TinyInt:
           case DataType::SmallInt:
@@ -423,17 +400,12 @@ namespace DataTypes{
       return StringView(nullptr);
   }
 
-    std::u16string Coercions::ToUnicodeString(const Value &value, const bool explicitCast){
-        return {reinterpret_cast<const char16_t *>(value.Data()), value.Size()};
-    }
-
     Guid Coercions::ToGuid(const Value &value, const bool explicitCast){
         const auto valueType = value.GetType();
         switch (valueType) {
             case DataType::Guid:
                 return Guid(value.Data(), value.Size());
             case DataType::String:
-            case DataType::UnicodeString:
                 return Guid::Parse(value.AsStringView());
             default:
                 Coercions::ThrowException(valueType);
@@ -444,7 +416,6 @@ namespace DataTypes{
     DateTime Coercions::ToDateTime(const Value &value, const bool explicitCast){
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::UnicodeString:
             case DataType::String: {
                 DateTime date;
                 DateTime::FromString(date, value.AsStringView());
@@ -472,7 +443,6 @@ namespace DataTypes{
             case DataType::Decimal:
                 return Decimal(value.Data(), value.Size());
             case DataType::String:
-            case DataType::UnicodeString:
                 return Decimal(value.AsStringView());
             case DataType::Bool:
                 return Decimal(value.AsBool());
@@ -510,8 +480,6 @@ namespace DataTypes{
                 return Coercions::CanGetDecimal(value);
             case DataType::String:
                 return Coercions::CanGetString(value);
-            case DataType::UnicodeString:
-                return Coercions::CanGetUnicodeString(value);
             case DataType::Bool:
                 return Coercions::CanGetBool(value);
             case DataType::DateTime:

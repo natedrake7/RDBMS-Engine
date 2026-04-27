@@ -64,7 +64,6 @@ void QueryResult::Print() const{
       std::cout << column.AsDecimal();
       break;
     case DataType::String:
-    case DataType::UnicodeString:
       std::cout << column.AsString();
       break;
     case DataType::Bool:
@@ -240,7 +239,6 @@ ostream& operator<<(std::ostream& os, const QueryResult& result){
       os << column.AsDecimal();
       break;
     case DataType::String:
-    case DataType::UnicodeString:
       os << column.AsStringView();
       break;
     case DataType::Bool:

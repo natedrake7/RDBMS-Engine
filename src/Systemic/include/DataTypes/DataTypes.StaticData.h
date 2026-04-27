@@ -5,7 +5,6 @@
 
 static constexpr ConstexprDictionary ColumnTypeRank{
     Pair(DataType::String, 1),
-    Pair(DataType::UnicodeString, 2),
     Pair(DataType::Bool, 3),
     Pair(DataType::TinyInt, 4),
     Pair(DataType::SmallInt, 5),
@@ -47,7 +46,6 @@ static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseIn
     Pair(DataTypes::StringView("bool"), DataType::Bool),
     Pair(DataTypes::StringView("string"), DataType::String),
     Pair(DataTypes::StringView("decimal"), DataType::Decimal),
-    Pair(DataTypes::StringView("unicodestring"), DataType::UnicodeString),
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
@@ -60,7 +58,6 @@ static constexpr ConstexprDictionary DataTypeToStringDictionary{
     Pair(DataType::Bool, DataTypes::StringView("Bool")),
     Pair(DataType::String, DataTypes::StringView("String")),
     Pair(DataType::Decimal, DataTypes::StringView("Decimal")),
-    Pair(DataType::UnicodeString, DataTypes::StringView("Unicodestring")),
     Pair(DataType::Guid, DataTypes::StringView("Guid")),
     Pair(DataType::Unknown, DataTypes::StringView("Invalid"))
     //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
