@@ -15,6 +15,7 @@
 
 #include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
 #include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
+#include "src/Systemic/include/Coercions.h"
 #include "src/Systemic/include/Memory/Functions.h"
 #include "UnitTests/include/UnitTests.h"
 
@@ -101,6 +102,7 @@
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 
 int main(){
+    DataTypes::Coercions::Initialize();
 
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 

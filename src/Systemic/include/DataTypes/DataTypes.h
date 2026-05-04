@@ -64,17 +64,18 @@ typedef uint32_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
 enum class DataType : uint8_t{
-  TinyInt = 0,
-  SmallInt = 1,
-  Int = 2,
-  BigInt = 3,
-  Decimal = 4,
-  String = 5,
-  Bool = 6,
-  DateTime = 7,
-  Guid = 8,
-  RowIdentifier = 9,
-  Unknown = 10
+    TinyInt = 0,
+    SmallInt = 1,
+    Int = 2,
+    BigInt = 3,
+    Decimal = 4,
+    String = 5,
+    Bool = 6,
+    DateTime = 7,
+    Guid = 8,
+    Json = 9,
+    RowIdentifier = 10,
+    Unknown = 11
 };
 
 enum class StringComparisonType: UnsignedTinyInt{

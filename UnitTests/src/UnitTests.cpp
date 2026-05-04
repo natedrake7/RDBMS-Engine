@@ -2,7 +2,10 @@
 
 #include <iostream>
 #include "../../CoreEngine/include/DataStorage/Table.h"
-#include "../../src/Systemic/include/Serialization/Json.h"
+#include "../../src/Systemic/include/Serialization/JsonParser.h"
+#include "../../src/Systemic/include/Serialization/JsonBuilder.h"
+#include "../../src/Systemic/include/DataTypes/JsonBinary.h"
+
 #ifdef __linux__
     #include <csignal>
 #endif
@@ -274,6 +277,30 @@ namespace Tests{
         Serialization::JsonParser parser(&allocator, json);
         const auto result = parser.Parse();
 
-        Serialization::JsonWriter::Print(std::cout, result);
+        // Serialization::JsonWriter::Print(std::cout, result);
+
+        Serialization::JsonBuilder builder(&allocator);
+        builder.StartObject();
+        builder.Key("name");
+        auto str = DataTypes::String("Alice", &allocator);
+        builder.Value(Serialization::JsonValue(std::move(str)));
+        // builder.Key("age");
+        // builder.Value(Serialization::JsonValue(DataTypes::Decimal(30)));
+        builder.Key("isStudent");
+        builder.Value(Serialization::JsonValue(true));
+        builder.Key("scores");
+        builder.StartObject();
+        builder.Key("0");
+        builder.Value(Serialization::JsonValue(true));
+        builder.EndObject();
+        // builder.StartArray();
+        // builder.Value(Serialization::JsonValue(DataTypes::Decimal("85.5")));
+        // builder.Value(Serialization::JsonValue(DataTypes::Decimal("90.0")));
+        // builder.EndArray();
+        builder.EndObject();
+
+        const DataTypes::JsonBinary jsonBinary = builder.Build();
+        const auto jsonEntry = jsonBinary[DataTypes::StringView("scores.0")];
+        std::cout << jsonEntry.AsBool() << std::endl;
     }
 }

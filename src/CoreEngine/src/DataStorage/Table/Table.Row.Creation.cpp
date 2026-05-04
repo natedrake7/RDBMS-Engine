@@ -7,7 +7,7 @@ namespace CoreEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
-        const DataStructures::Array<Value> &inputData
+        const DataStructures::PolymorphicArray<Value> &inputData
     ) const{
         auto rowHeader = RowHeader(allocator, this->_columns.Size());
         rowHeader.version.createdTransactionId = transactionId;
@@ -126,7 +126,7 @@ namespace CoreEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
         const transaction_id_t transactionId,
-        const DataStructures::Array<Value> &inputData
+        const DataStructures::PolymorphicArray<Value> &inputData
     ) const{
         auto rowHeader = RowHeader(allocator, this->_columns.Size());
         rowHeader.version.createdTransactionId = transactionId;

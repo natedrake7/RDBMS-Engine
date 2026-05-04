@@ -88,7 +88,9 @@ add_library(Systemic SHARED
         src/Systemic/src/Memory/Functions.cpp
         src/Systemic/src/DataTypes/StringView.cpp
         src/Systemic/src/DataTypes/String.cpp
-        src/Systemic/src/Serialization/Json.cpp
+        src/Systemic/src/Serialization/JsonParser.cpp
+        src/Systemic/src/Serialization/JsonBuilder.cpp
+        src/Systemic/src/DataTypes/JsonBinary.cpp
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

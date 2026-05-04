@@ -354,7 +354,7 @@ namespace CoreEngine {
         [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(
             const ::Memory::IAllocator* allocator,
             Int columnId,
-            const DataStructures::Array<Value>& updates
+            const DataStructures::PolymorphicArray<Value>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus UpdateUserById(

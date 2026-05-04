@@ -138,7 +138,7 @@ namespace Indexing{
         );
 
         [[nodiscard]] Pages::IndexPageView SearchKey(const ::Memory::IAllocator* allocator, const DataTypes::Indexing::Key& key) const;
-        [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::Array<Pages::IndexPageView>& ancestors) const;
+        [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors) const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator, TinyInt& depth) const;
 
@@ -152,7 +152,7 @@ namespace Indexing{
             Int pagesToAllocate
         );
 
-        void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::Array<Pages::IndexPageView>& ancestors, Int& parentIndex);
+        void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
 
         bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
@@ -187,7 +187,7 @@ namespace Indexing{
             Pages::IndexPageView& rightNode,
             Pages::IndexPageView& parent,
             Int parentKeyIndex,
-            DataStructures::Array<Pages::IndexPageView>& ancestors,
+            DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors,
             Int& parentIndex
         );
 
@@ -196,7 +196,7 @@ namespace Indexing{
             Pages::IndexPageView& currentNode,
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
@@ -222,112 +222,112 @@ namespace Indexing{
         void IndexSeekRange(
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::Array<DataTypes::Indexing::QueryData>& result
+            DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData>& result
         )const;
 
         void IndexSeekRange(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::Array<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowReference>* result
         )const;
 
         void IndexSeekRange(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::Array<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowReference>* result
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::Array<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowReference>* result
         )const;
         void SystemIndexSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
 
-        void IndexScan(DataStructures::Array<DataTypes::Indexing::QueryData>& result)const;
+        void IndexScan(DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             CoreEngine::IndexState& state
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             CoreEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::Array<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowReference>* result
         )const;
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::Array<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowReference>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::Array<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowReference>* result
         )const;
         void IndexScan(
-            DataStructures::Array<DataTypes::RowIdentifier>* result,
+            DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result,
             CoreEngine::IndexState& state,
             Int rowsToSelect
         )const;
 
-        void IndexScan(DataStructures::Array<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
+        void IndexScan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
-            const DataStructures::Array<Value> &updates
+            const DataStructures::PolymorphicArray<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
             const Expressions::Expression* expression,
-           const DataStructures::Array<Expressions::Expression*>& updates
+           const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus IndexScanUpdate(
             const CoreEngine::ExecutionContext& context,
-            const DataStructures::Array<Expressions::Expression*>& updates
+            const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            const DataStructures::Array<Value>& updates
+            const DataStructures::PolymorphicArray<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
@@ -335,20 +335,20 @@ namespace Indexing{
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const DataStructures::Array<Value>& updates
+            const DataStructures::PolymorphicArray<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus IndexSeekUpdate(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
-            const DataStructures::Array<Value>& updates
+            const DataStructures::PolymorphicArray<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SystemIndexSeekUpdate(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            const DataStructures::Array<Value>& updates
+            const DataStructures::PolymorphicArray<Value>& updates
         )const;
 
         void SearchKey(const DataTypes::Indexing::Key& key, DataTypes::Indexing::QueryData& result) const;
@@ -374,7 +374,7 @@ namespace Indexing{
         void CalculateIndexStatistics(
             Headers::IndexStatistics& indexStatistics,
             Headers::TableStatistics& tableStatistics,
-            DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
+            DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
     };

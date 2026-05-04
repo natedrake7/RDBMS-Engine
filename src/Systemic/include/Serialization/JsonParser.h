@@ -62,7 +62,6 @@ namespace Serialization{
         void Copy(const JsonValue& other);
         void Move(JsonValue&& other) noexcept;
     public:
-
         JsonValue();
 
         JsonValue(const JsonValue& other);
@@ -77,21 +76,29 @@ namespace Serialization{
         explicit JsonValue(JsonString&& value);
         explicit JsonValue(JsonArray&& value);
         explicit JsonValue(JsonObject&& value);
+        explicit JsonValue(
+            const ::Memory::IAllocator* allocator,
+            const object_t* data, Int size,
+            JsonType type
+        );
 
-        [[nodiscard]] JsonType Type() const { return _type; }
+        [[nodiscard]] JsonType Type() const { return this->_type; }
 
-        [[nodiscard]] JsonBool          AsBool()   const { return _data._bool; }
-        [[nodiscard]] const JsonNumber& AsNumber() const { return _data._number; }
-        [[nodiscard]] const JsonString& AsString() const { return _data._string; }
-        [[nodiscard]] const JsonArray&  AsArray()  const { return _data._array; }
-        [[nodiscard]] const JsonObject& AsObject() const { return _data._object; }
+        [[nodiscard]] JsonBool          AsBool()   const { return this->_data._bool; }
+        [[nodiscard]] const JsonNumber& AsNumber() const { return this->_data._number; }
+        [[nodiscard]] const JsonString& AsString() const { return this->_data._string; }
+        [[nodiscard]] const JsonArray&  AsArray()  const { return this->_data._array; }
+        [[nodiscard]] const JsonObject& AsObject() const { return this->_data._object; }
 
-        [[nodiscard]] bool IsNull()   const { return _type == JsonType::Null; }
-        [[nodiscard]] bool IsBool()   const { return _type == JsonType::Bool; }
-        [[nodiscard]] bool IsNumber() const { return _type == JsonType::Number; }
-        [[nodiscard]] bool IsString() const { return _type == JsonType::String; }
-        [[nodiscard]] bool IsArray()  const { return _type == JsonType::Array; }
-        [[nodiscard]] bool IsObject() const { return _type == JsonType::Object; }
+        [[nodiscard]] bool IsNull()   const { return this->_type == JsonType::Null; }
+        [[nodiscard]] bool IsBool()   const { return this->_type == JsonType::Bool; }
+        [[nodiscard]] bool IsNumber() const { return this->_type == JsonType::Number; }
+        [[nodiscard]] bool IsString() const { return this->_type == JsonType::String; }
+        [[nodiscard]] bool IsArray()  const { return this->_type == JsonType::Array; }
+        [[nodiscard]] bool IsObject() const { return this->_type == JsonType::Object; }
+
+        [[nodiscard]] Int Size() const;
+        [[nodiscard]] const void* Data() const;
     };
 
     class JsonParser{
@@ -127,6 +134,7 @@ namespace Serialization{
         static void PrintValue(std::ostream& os, const JsonValue& value, int indent);
         static void PrintString(std::ostream& os, const JsonString& str);
     public:
+        static void ToJsonBinary(const JsonValue& value);
         static void Print(std::ostream& os, const JsonValue& value, int indent = 0);
     };
 

@@ -33,8 +33,8 @@ public:
     void Serialize(std::vector<char>& buffer)const;
     void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, Int dataSize);
 
-    void Update(DataStructures::Array<Value>& updates);
-    void Update(const DataStructures::Array<Value>& updates);
+    void Update(DataStructures::PolymorphicArray<Value>& updates);
+    void Update(const DataStructures::PolymorphicArray<Value>& updates);
     void Update(Value& update);
 
     QueryResult& operator=(const QueryResult& other);

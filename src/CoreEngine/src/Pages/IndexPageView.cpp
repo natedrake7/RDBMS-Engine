@@ -370,7 +370,7 @@ namespace Pages{
 
     void IndexPageView::AppendRowToBuffer(
         const ::Memory::IAllocator* allocator,
-        DataStructures::Array<RowReference>* buffer,
+        DataStructures::PolymorphicArray<RowReference>* buffer,
         const CoreEngine::Snapshot& snapshot,
         const Int indexPosition
     ) const{
@@ -394,7 +394,7 @@ namespace Pages{
 
     void IndexPageView::AppendRowToBuffer(
         const ::Memory::IAllocator* allocator,
-        DataStructures::Array<RowReference>* buffer,
+        DataStructures::PolymorphicArray<RowReference>* buffer,
         const Int indexPosition
     ) const{
         Int outKeySize = 0;

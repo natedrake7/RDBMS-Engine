@@ -117,13 +117,13 @@ namespace CoreEngine::StorageTypes
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
-                const DataStructures::Array<Value> &inputData
+                const DataStructures::PolymorphicArray<Value> &inputData
             ) const;
             InsertPayload CreateUpdatePayload(
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
-                const DataStructures::Array<Value> &inputData
+                const DataStructures::PolymorphicArray<Value> &inputData
             ) const;
         /**
         * @name Class Constructors and Destructors
@@ -164,7 +164,7 @@ namespace CoreEngine::StorageTypes
             );
             Errors::RuntimeStatus InsertRow(
                 const ExecutionContext& executionContext,
-                const DataStructures::Array<Value> &inputData
+                const DataStructures::PolymorphicArray<Value> &inputData
             );
             Errors::RuntimeStatus InsertRow(
                 const ExecutionContext& executionContext,
@@ -205,7 +205,7 @@ namespace CoreEngine::StorageTypes
             [[nodiscard]] DataTypes::StringView GetSystemFileNameView() const;
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
-            [[nodiscard]] const DataStructures::Array<Column*>& GetColumns() const;
+            [[nodiscard]] const DataStructures::PolymorphicArray<Column*>& GetColumns() const;
             void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
@@ -223,42 +223,42 @@ namespace CoreEngine::StorageTypes
         */
             void ClusteredIndexSeekRange(
                 const ExecutionContext& executionContext,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexScan(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::Array<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
@@ -285,60 +285,60 @@ namespace CoreEngine::StorageTypes
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const DataStructures::Array<Value> &updates
+                const DataStructures::PolymorphicArray<Value> &updates
             );
             Errors::RuntimeStatus HeapUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const DataStructures::Array<Expressions::Expression*> &updates
+                const DataStructures::PolymorphicArray<Expressions::Expression*> &updates
             );
             void ClusteredIndexScanUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const DataStructures::Array<Value> &updates
+                const DataStructures::PolymorphicArray<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexScanUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
-                const DataStructures::Array<Expressions::Expression*> &updates
+                const DataStructures::PolymorphicArray<Expressions::Expression*> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionContext& executionContext,
                 const Expressions::Expression* expression,
                 const DataTypes::Indexing::Key* minimumValue,
                 const DataTypes::Indexing::Key* maximumValue,
-                const DataStructures::Array<Value> &updates
+                const DataStructures::PolymorphicArray<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus ClusteredIndexSeekUpdate(
                 const ExecutionContext& executionContext,
                 const DataTypes::Indexing::Key& key,
-                const DataStructures::Array<Value> &updates
+                const DataStructures::PolymorphicArray<Value> &updates
             );
             [[nodiscard]] Errors::RuntimeStatus SystemClusteredIndexSeekUpdate(
                 const ::Memory::IAllocator* allocator,
                 const DataTypes::Indexing::Key& key,
-                const DataStructures::Array<Value> &updates
+                const DataStructures::PolymorphicArray<Value> &updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionContext& context,
-                const DataStructures::Array<Value>& updates
+                const DataStructures::PolymorphicArray<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ExecutionContext& context,
-                const DataStructures::Array<Expressions::Expression*>& updates
+                const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus SystemUpdateRowNoLock(
                 const Pages::PageView* page,
                 const Pages::RowReference& rowPtr,
                 const ::Memory::IAllocator* allocator,
-                const DataStructures::Array<Value>& updates
+                const DataStructures::PolymorphicArray<Value>& updates
             ) const;
         /** @} End of: Update Functions*/
 

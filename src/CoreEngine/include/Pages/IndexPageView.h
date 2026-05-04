@@ -78,13 +78,13 @@ namespace Pages{
             ) const;
             void AppendRowToBuffer(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::Array<RowReference>* buffer,
+                DataStructures::PolymorphicArray<RowReference>* buffer,
                 const CoreEngine::Snapshot& snapshot,
                 Int indexPosition
             ) const;
             void AppendRowToBuffer(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::Array<RowReference>* buffer,
+                DataStructures::PolymorphicArray<RowReference>* buffer,
                 Int indexPosition
             ) const;
             void RemoveKeyFromChild(

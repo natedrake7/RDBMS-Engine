@@ -1,6 +1,6 @@
 ﻿#include <utility>
 
-#include "../include/Serialization/Json.h"
+#include "../include/Serialization/JsonParser.h"
 
 namespace Serialization {
     JsonValue::Data::Data()
@@ -100,6 +100,56 @@ namespace Serialization {
 
     JsonValue::JsonValue(JsonObject&& value) : _type(JsonType::Object) {
         new (&this->_data._object) JsonObject(std::move(value));
+    }
+
+    JsonValue::JsonValue(
+        const ::Memory::IAllocator* allocator,
+        const object_t* data, const Int size,
+        const JsonType type
+    )
+    {
+        this->_type = type;
+        switch (type) {
+        case JsonType::Bool:
+            this->_data._bool = *reinterpret_cast<const JsonBool*>(data);
+            break;
+        case JsonType::Number:
+            this->_data._number = DataTypes::Decimal(data, size);
+            break;
+        case JsonType::String:
+            this->_data._string = DataTypes::String(data, size, allocator);
+            break;
+        default:
+            break;
+        }
+    }
+
+    Int JsonValue::Size() const{
+        switch (this->_type) {
+        case JsonType::Bool:
+            return 1;
+        case JsonType::Number:
+            return this->_data._number.GetRawDataSize();
+        case JsonType::String:
+            return this->_data._string.Size();
+        case JsonType::Null:
+            return 0;
+        case JsonType::Array:
+            return this->_data._array.Size();
+        case JsonType::Object:
+            return static_cast<Int>(this->_data._object.size());
+        }
+    }
+
+    const void* JsonValue::Data() const{
+        switch (this->_type) {
+            case JsonType::Bool: return &this->_data._bool;
+            case JsonType::Number: return &this->_data._number.Data();
+            case JsonType::String: return this->_data._string.Data();
+            case JsonType::Null: return nullptr;
+            case JsonType::Array: return this->_data._array.Data();
+            case JsonType::Object: return &this->_data._object;
+        }
     }
 
     void JsonParser::SkipWhitespace(){

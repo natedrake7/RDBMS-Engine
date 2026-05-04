@@ -2,7 +2,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Array.h"
 #include "PolymorphicArray.h"
 
 template<typename Key, typename Value>
@@ -128,7 +127,7 @@ class Dictionary : public std::unordered_map<Key, Value>{
             return dict;
         }
 
-        static Dictionary FromArray(const DataStructures::Array<Key>& items, const Value& defaultValue) {
+        static Dictionary FromArray(const DataStructures::PolymorphicArray<Key>& items, const Value& defaultValue) {
             Dictionary dict;
             for (const auto& item : items)
                 dict.Add(item, defaultValue);

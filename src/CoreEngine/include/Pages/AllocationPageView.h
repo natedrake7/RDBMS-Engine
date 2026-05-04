@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "PageView.h"
 
+namespace DataStructures{
+    template
+    class PolymorphicArray<extent_id_t>;
+}
+
 namespace Pages{
     struct IndexAllocationPageAdditionalHeader {
         extent_id_t lastAllocatedExtentId;
@@ -24,12 +29,12 @@ namespace Pages{
             AllocationPageView& operator=(AllocationPageView&& other) noexcept;
 
             extent_id_t SetExtentsAllocated(
-                const DataStructures::Array<extent_id_t>& extentIds,
+                const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
                 page_id_t globalAllocationMapPageId
             ) const;
             void SetDeallocatedExtent(extent_id_t extentId) const;
-            void GetAllocatedExtents(DataStructures::Array<extent_id_t>* allocatedExtents) const;
-            void GetAllocatedExtents(DataStructures::Array<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;
+            void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents) const;
+            void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;
             void SetNextPageId(page_id_t nextPageId) const;
             [[nodiscard]] page_id_t NextPageId() const;
             static page_id_t CalculatePageIdOffsetByGamPageId(page_id_t globalAllocationMapPageId);

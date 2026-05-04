@@ -340,6 +340,23 @@ namespace DataTypes{
         return String(newStr, newSize, allocator);
     }
 
+    StringView String::Split(
+        const char* str,
+        const Int size,
+        const Int startIndex,
+        const char delimiter
+    ){
+        if (size == 0)
+            return StringView(str, 0);
+
+        for (int i = startIndex; i < size; i++){
+            if (strncasecmp(&str[i], &delimiter, 1) == 0)
+                return StringView(str + startIndex, i - startIndex);
+        }
+
+        return StringView(str + startIndex, size - startIndex);
+    }
+
     String::String(){
         this->_allocator = nullptr;
         this->_data = nullptr;
@@ -1262,6 +1279,46 @@ namespace DataTypes{
         auto* buf = static_cast<char*>(allocator->AllocateRaw(count));
         std::memset(buf, ' ', count);
         return String(buf, count, allocator);
+    }
+
+    StringView String::Split(
+        const String& str,
+        const Int startIndex,
+        const char delimiter
+    ){
+        return String::Split(str._data, str._size, startIndex, delimiter);
+    }
+
+    StringView String::Split(
+        const StringView& str,
+        const Int startIndex,
+        const char delimiter
+    ){
+        return String::Split(str.Data(), str.Size(), startIndex, delimiter);
+    }
+
+    StringView String::Split(
+        const char* str,
+        const Int startIndex,
+        const char delimiter
+    ){
+        return String::Split(str, static_cast<Int>(std::strlen(str)), startIndex, delimiter);
+    }
+
+    StringView String::Split(
+        const std::string_view str,
+        const Int startIndex,
+        const char delimiter
+    ){
+        return String::Split(str.data(), static_cast<Int>(str.size()), startIndex, delimiter);
+    }
+
+    StringView String::Split(
+        const std::string& str,
+        const Int startIndex,
+        const char delimiter
+    ){
+        return String::Split(str.data(), static_cast<Int>(str.size()), startIndex, delimiter);
     }
 
     String::const_iterator String::begin() const{

@@ -1,4 +1,5 @@
 ﻿#include "../../include/Pages/AllocationPageView.h"
+#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 #include "Database.h"
 #include "Guards/ReaderGuard.h"
@@ -56,7 +57,7 @@ namespace Pages{
     }
 
     extent_id_t AllocationPageView::SetExtentsAllocated(
-        const DataStructures::Array<extent_id_t>& extentIds,
+        const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
     ) const{
         for (const auto extentId : extentIds){
@@ -78,12 +79,12 @@ namespace Pages{
         this->framePtr->isDirty = true;
     }
 
-    void AllocationPageView::GetAllocatedExtents(DataStructures::Array<extent_id_t>* allocatedExtents) const{
+    void AllocationPageView::GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents) const{
         this->GetAllocatedExtents(allocatedExtents, 0);
     }
 
     void AllocationPageView::GetAllocatedExtents(
-        DataStructures::Array<extent_id_t>* allocatedExtents,
+        DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents,
         const extent_id_t startingExtentIndex
     ) const{
         allocatedExtents->Clear();

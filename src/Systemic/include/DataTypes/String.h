@@ -98,6 +98,13 @@ namespace DataTypes{
             const ::Memory::IAllocator* allocator
         );
 
+        [[nodiscard]] static StringView Split(
+                const char* str,
+                Int size,
+                Int startIndex,
+                char delimiter
+        );
+
         public:
             String();
             String(const ::Memory::IAllocator* allocator);
@@ -324,6 +331,12 @@ namespace DataTypes{
             [[nodiscard]] static String Repeat(const std::string& str, Int count, const ::Memory::IAllocator* allocator);
 
             [[nodiscard]] static String Space(Int count, const ::Memory::IAllocator* allocator);
+
+            [[nodiscard]] static StringView Split(const String& str, Int startIndex, char delimiter);
+            [[nodiscard]] static StringView Split(const StringView& str, Int startIndex, char delimiter);
+            [[nodiscard]] static StringView Split(const char* str, Int startIndex, char delimiter);
+            [[nodiscard]] static StringView Split(std::string_view str, Int startIndex, char delimiter);
+            [[nodiscard]] static StringView Split(const std::string& str, Int startIndex, char delimiter);
 
             // STL compatibility
             using const_iterator = const char*;

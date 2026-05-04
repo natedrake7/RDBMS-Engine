@@ -350,7 +350,7 @@ namespace CoreEngine::StorageTypes {
 
   Errors::RuntimeStatus Table::InsertRow(
         const ExecutionContext& executionContext,
-        const DataStructures::Array<Value> &inputData
+        const DataStructures::PolymorphicArray<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
 
@@ -525,7 +525,7 @@ namespace CoreEngine::StorageTypes {
 
     const TableHeader &Table::GetHeader() const { return this->header; }
 
-    const DataStructures::Array<Column*>& Table::GetColumns() const { return this->_columns; }
+    const DataStructures::PolymorphicArray<Column*>& Table::GetColumns() const { return this->_columns; }
 
     void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
         for (const auto* column : this->_columns)
@@ -761,7 +761,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapUpdate(
         const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     ){
         if(this->header.allocationPageId == INVALID_PAGE_ID) return {};
 
@@ -825,7 +825,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::HeapUpdate(
         const ExecutionContext& executionContext,
         const Expressions::Expression *expression,
-        const DataStructures::Array<Expressions::Expression*> &updates
+        const DataStructures::PolymorphicArray<Expressions::Expression*> &updates
     ){
         if(this->header.allocationPageId == INVALID_PAGE_ID)
             return {};
@@ -887,7 +887,7 @@ namespace CoreEngine::StorageTypes {
     void Table::ClusteredIndexScanUpdate(
       const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
-      const DataStructures::Array<Value> &updates
+      const DataStructures::PolymorphicArray<Value> &updates
     ){
       const auto* tree = this->GetClusteredIndexedTree();
       tree->IndexScanUpdate(executionContext, expression, updates);
@@ -896,7 +896,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
       const ExecutionContext& executionContext,
       const Expressions::Expression *expression,
-      const DataStructures::Array<Expressions::Expression*>& updates
+      const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -910,7 +910,7 @@ namespace CoreEngine::StorageTypes {
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minimumValue,
         const DataTypes::Indexing::Key* maximumValue,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -922,7 +922,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::ClusteredIndexSeekUpdate(
         const ExecutionContext& executionContext,
         const DataTypes::Indexing::Key &key,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     ) {
         const auto* tree = this->GetClusteredIndexedTree();
         return tree->IndexSeekUpdate(executionContext, key, updates);
@@ -931,7 +931,7 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::SystemClusteredIndexSeekUpdate(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        const DataStructures::Array<Value>& updates
+        const DataStructures::PolymorphicArray<Value>& updates
     ){
           const auto* tree = this->GetClusteredIndexedTree();
           return tree->SystemIndexSeekUpdate(allocator, key, updates);
@@ -1095,7 +1095,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionContext& context,
-        const DataStructures::Array<Value>& updates
+        const DataStructures::PolymorphicArray<Value>& updates
     ){
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
@@ -1140,7 +1140,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ExecutionContext& context,
-        const DataStructures::Array<Expressions::Expression*>& updates
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ){
 
         const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
@@ -1188,7 +1188,7 @@ namespace CoreEngine::StorageTypes {
         const Pages::PageView* page,
         const Pages::RowReference& rowPtr,
         const ::Memory::IAllocator* allocator,
-        const DataStructures::Array<Value>& updates
+        const DataStructures::PolymorphicArray<Value>& updates
     ) const{
         // this->DeleteLargeObjectFromPage(row, updatedColumns);
         // this->DeleteOverflowedRowsFromPage(row, updatedColumns);

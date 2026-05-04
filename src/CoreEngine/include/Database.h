@@ -279,7 +279,7 @@ public:
 
     void UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const;
 
-    const DataStructures::Array<StorageTypes::Table*>& GetTables() const;
+    const DataStructures::PolymorphicArray<StorageTypes::Table*>& GetTables() const;
 };
 
 void CreateDatabase(Int databaseId, const DataTypes::String& dbName);

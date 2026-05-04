@@ -1104,7 +1104,7 @@ namespace CoreEngine{
             table->UpdateSystemCatalog(allocator);
     }
 
-    const DataStructures::Array<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
+    const DataStructures::PolymorphicArray<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
 
     DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilenameView; }
 

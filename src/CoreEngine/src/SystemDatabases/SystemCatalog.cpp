@@ -659,7 +659,7 @@ namespace CoreEngine {
  DataStructures::PolymorphicArray<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
    auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
 
-   // DataStructures::Array<Pages::RowReference> selectedDatabases;
+   // DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases;
    //
    // IndexState state;
    // sysDatabases->ClusteredIndexScan(this->baseExecutionContext, &selectedDatabases, state, nullptr);
@@ -2070,7 +2070,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     Errors::RuntimeStatus SystemCatalog::UpdateColumnById(
         const ::Memory::IAllocator* allocator,
         const Int columnId,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
 

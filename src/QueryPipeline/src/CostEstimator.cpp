@@ -153,7 +153,7 @@ namespace QueryPipeline{
     }
 
     int CostEstimator::FindBucketForValue(
-        const DataStructures::Array<Headers::ColumnHistograms>& histograms,
+        const DataStructures::PolymorphicArray<Headers::ColumnHistograms>& histograms,
         const Value& value
     ){
         for (int i = 0;i < histograms.Size(); i++){

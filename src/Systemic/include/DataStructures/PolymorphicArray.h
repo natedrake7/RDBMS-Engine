@@ -1,13 +1,16 @@
 ﻿#pragma once
+#include <stdexcept>
 #include <cstring>
-#include "Array.h"
 #include "../DataTypes/DataTypes.h"
 #include "../Memory/IAllocator.h"
 
 namespace DataStructures{
     template <typename T>
-    class PolymorphicArray final : public Array<T>{
+    class PolymorphicArray final{
         const Memory::IAllocator* _allocator;
+        T* _data;
+        Int _size;
+        Int _capacity;
 
     public:
         PolymorphicArray(){
@@ -88,9 +91,81 @@ namespace DataStructures{
             return *this;
         }
 
-        ~PolymorphicArray() override = default;
+        ~PolymorphicArray() = default;
 
-        void Resize(Int newCapacity) override{
+        void Clear() { this->_size = 0; }
+
+        void Push(T&& value){
+            if (this->_size >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+
+            this->_data[this->_size++] = std::move(value);
+        }
+
+        void Push(const T& value){
+            if (this->_size >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+
+            this->_data[this->_size++] = value;
+        }
+
+        void Insert(const T& value, const Int index){
+            if (index != 0 && index >= this->_size)
+                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+
+            if (this->_size >= this->_capacity){
+                auto newCapacity = (this->_capacity == 0)
+                    ? 1
+                    : this->_capacity * 2;
+                this->Resize(newCapacity);
+            }
+
+            for (Int i = this->_size - 1; i >= index; --i)
+                this->_data[i + 1] = std::move(this->_data[i]);
+
+            this->_data[index] = value;
+        }
+
+        void Insert(const T& value, const Int index, const Int count){
+            if (index != 0 && index >= this->_size)
+                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+
+            if (this->_size + count >= this->_capacity){
+                if (this->_capacity == 0)
+                    this->Resize(count);
+                else{
+                    auto newCapacity = this->_capacity * 2;
+                    while (newCapacity < this->_size + count)
+                        newCapacity *= 2;
+
+                    this->Resize(newCapacity);
+                }
+            }
+            for (Int i = this->_size - 1; i >= index; --i)
+                this->_data[i + count] = std::move(this->_data[i]);
+
+            for (Int i = 0; i < count; ++i)
+                this->_data[index + i] = value;
+
+            this->_size += count;
+        }
+
+
+        void MemoryCopy(const void* src, const Int size){
+            if (this->_size + size > this->_capacity){
+                auto newCapacity = (this->_capacity == 0) ? size : this->_capacity * 2;
+                while (newCapacity < this->_size + size) newCapacity *= 2;
+                Resize(newCapacity);
+            }
+            std::memcpy(this->_data + this->_size, src, size);
+            this->_size += size;
+        }
+
+        void Resize(Int newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 
@@ -101,7 +176,7 @@ namespace DataStructures{
             this->_capacity = newCapacity;
         }
 
-        void Reserve(Int newCapacity) override{
+        void Reserve(Int newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 
@@ -109,6 +184,57 @@ namespace DataStructures{
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
             this->_data = newData;
             this->_capacity = newCapacity;
+        }
+
+        void Remove(Int index){
+            if (index < 0 || index >= this->_size)
+                throw std::out_of_range("Index out of range.");
+
+            // Shift elements to the left to fill the gap
+            for (Int i = index; i < this->_size - 1; i++)
+                this->_data[i] = std::move(this->_data[i + 1]);
+
+            --this->_size;
+        }
+
+        void RemoveFrom(Int index){
+            if (index < 0 || index >= this->_size)
+                throw std::out_of_range("Index out of range.");
+
+            this->_size = index;
+        }
+
+        T& At(const Int index){
+            return this->_data[index];
+        }
+
+        const T& At(const Int index) const{
+            return this->_data[index];
+        }
+
+        T& Start(){
+            if (this->_size == 0)
+                throw std::runtime_error("Array is empty.");
+
+            return this->_data[0];
+        }
+
+        [[nodiscard]] T& operator[](Int index){
+            if (index < 0 || index >= this->_size)
+                throw std::out_of_range("Index out of range.");
+
+            return this->_data[index];
+        }
+
+        [[nodiscard]] const T& operator[](Int index) const{
+            if (index < 0 || index >= this->_size)
+                throw std::out_of_range("Index out of range.");
+
+            return this->_data[index];
+        }
+
+        void Pop(){
+            this->Remove(this->_size - 1);
         }
 
         template<typename... Args>
@@ -130,5 +256,40 @@ namespace DataStructures{
         [[nodiscard]] const Memory::IAllocator* GetAllocator() const { return this->_allocator; }
 
         [[nodiscard]] bool HasAllocator() const { return this->_allocator != nullptr; }
+
+        [[nodiscard]] Int Size() const { return this->_size; }
+        [[nodiscard]] Int Capacity() const { return this->_capacity; }
+        [[nodiscard]] bool Empty() const { return this->_size == 0; }
+
+        [[nodiscard]] T* Data() { return this->_data; }
+        [[nodiscard]] const T* Data() const { return this->_data; }
+
+        [[nodiscard]] T* Begin() { return this->_data; }
+        [[nodiscard]] T* End() { return this->_data + this->_size; }
+
+        [[nodiscard]] T* Front() { return this->_data; }
+        [[nodiscard]] T* Back() { return this->_data + this->_size - 1; }
+
+        //STL Compatibility
+        using iterator = T*;
+        using const_iterator = const T*;
+
+        iterator begin() { return this->_data; }
+        iterator end() { return this->_data + this->_size; }
+
+        const_iterator begin() const { return this->_data; }
+        const_iterator end() const { return this->_data + this->_size; }
+
+        const_iterator cbegin() const { return this->_data; }
+        const_iterator cend() const { return this->_data + this->_size; }
+
+        iterator erase(iterator pos){
+            if (pos < this->begin() || pos >= this->end())
+                throw std::out_of_range("Iterator out of range.");
+
+            Int index = pos - this->begin();
+            this->Remove(index);
+            return this->begin() + index;
+        }
     };
 }

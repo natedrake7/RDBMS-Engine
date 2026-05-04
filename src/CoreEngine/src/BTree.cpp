@@ -358,7 +358,7 @@ namespace Indexing{
         }
     }
 
-    Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::Array<Pages::IndexPageView> & ancestors) const{
+    Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::PolymorphicArray<Pages::IndexPageView> & ancestors) const{
       auto currentNode = this->GetNode(this->rootPageId);
 
     //   while (!currentNode.IsLeaf()){
@@ -454,7 +454,7 @@ namespace Indexing{
         );
     }
 
-    void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::Array<Pages::IndexPageView>& ancestors, Int& parentIndex) {
+    void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex) {
         if (node.IsRoot()) {
            this->HandleRootUnderflow();
            return;
@@ -817,7 +817,7 @@ namespace Indexing{
        Pages::IndexPageView& leftNode,
        Pages::IndexPageView& rightNode,
        Pages::IndexPageView& parent,
-        Int parentKeyIndex, DataStructures::Array<Pages::IndexPageView>& ancestors,
+        Int parentKeyIndex, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors,
         Int& parentIndex){
          //  auto* leftNodeKeys = leftNode->GetKeysUnsafe();
          //  auto* rightNodeKeys = rightNode->GetKeysUnsafe();
@@ -888,7 +888,7 @@ namespace Indexing{
         const ::Memory::IAllocator* allocator,
         Pages::IndexPageView& currentNode,
         Headers::IndexStatistics& indexStatistics,
-        Headers::TableStatistics& tableStatistics, DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
+        Headers::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const{
 
@@ -1003,7 +1003,7 @@ namespace Indexing{
     //TODO fix non clusteredIndex Seek
     void BTree::IndexSeekRange(
         const DataTypes::Indexing::Key &minKey,
-        const DataTypes::Indexing::Key &maxKey, DataStructures::Array<DataTypes::Indexing::QueryData> &result
+        const DataTypes::Indexing::Key &maxKey, DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData> &result
     ) const{
         if (this->IsEmpty())
             return;
@@ -1048,7 +1048,7 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        DataStructures::Array<Pages::RowReference>* result
+        DataStructures::PolymorphicArray<Pages::RowReference>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -1082,7 +1082,7 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1123,7 +1123,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::Array<Pages::RowReference>* result
+        DataStructures::PolymorphicArray<Pages::RowReference>* result
     ) const {
         if (this->IsEmpty())
             return;
@@ -1158,7 +1158,7 @@ namespace Indexing{
     void BTree::IndexSeek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         const Expressions::Expression *expression
     ) const {
         if (this->IsEmpty())
@@ -1202,7 +1202,7 @@ namespace Indexing{
     void BTree::SystemIndexSeek(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        DataStructures::Array<Pages::RowReference>* result
+        DataStructures::PolymorphicArray<Pages::RowReference>* result
     ) const{
         if (this->IsEmpty())
             return;
@@ -1236,7 +1236,7 @@ namespace Indexing{
     void BTree::SystemIndexSeek(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1276,7 +1276,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(DataStructures::Array<DataTypes::Indexing::QueryData> &result)const
+    void BTree::IndexScan(DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData> &result)const
     {
         if (this->IsEmpty())
             return;
@@ -1301,7 +1301,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         CoreEngine::IndexState& state
     )const{
         if (this->IsEmpty())
@@ -1339,7 +1339,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         CoreEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
@@ -1390,7 +1390,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
@@ -1426,7 +1426,7 @@ namespace Indexing{
 
     void BTree::SystemIndexScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::Array<Pages::RowReference>* result,
+        DataStructures::PolymorphicArray<Pages::RowReference>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1461,7 +1461,7 @@ namespace Indexing{
 
     void BTree::SystemIndexScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::Array<Pages::RowReference>* result
+        DataStructures::PolymorphicArray<Pages::RowReference>* result
     ) const{
         if (this->IsEmpty())
             return;
@@ -1485,7 +1485,7 @@ namespace Indexing{
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::Array<Pages::RowReference>* result
+        DataStructures::PolymorphicArray<Pages::RowReference>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -1509,7 +1509,7 @@ namespace Indexing{
     }
 
     void BTree::IndexScan(
-     DataStructures::Array<DataTypes::RowIdentifier> *result,
+     DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result,
         CoreEngine::IndexState& state,
         const Int rowsToSelect
     )const{
@@ -1561,7 +1561,7 @@ namespace Indexing{
         // }
     }
 
-    void BTree::IndexScan(DataStructures::Array<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
+    void BTree::IndexScan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->IsEmpty())
             return;
 
@@ -1589,7 +1589,7 @@ namespace Indexing{
     void BTree::IndexScanUpdate(
         const CoreEngine::ExecutionContext& context,
         const Expressions::Expression *expression,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     )const{
         if (this->IsEmpty())
             return;
@@ -1630,7 +1630,7 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::IndexScanUpdate(
         const CoreEngine::ExecutionContext& context,
         const Expressions::Expression *expression,
-        const DataStructures::Array<Expressions::Expression*>& updates
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1676,7 +1676,7 @@ namespace Indexing{
 
    Errors::RuntimeStatus BTree::IndexScanUpdate(
        const CoreEngine::ExecutionContext& context,
-       const DataStructures::Array<Expressions::Expression*>& updates
+       const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1713,7 +1713,7 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::IndexSeekUpdate(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     ) const {
         if (this->IsEmpty())
             return {};
@@ -1751,7 +1751,7 @@ namespace Indexing{
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
-        const DataStructures::Array<Value>& updates
+        const DataStructures::PolymorphicArray<Value>& updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1806,7 +1806,7 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
-        const DataStructures::Array<Value> &updates
+        const DataStructures::PolymorphicArray<Value> &updates
     )const{
         if (this->IsEmpty())
             return {};
@@ -1846,7 +1846,7 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::SystemIndexSeekUpdate(
         const Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        const DataStructures::Array<Value>& updates
+        const DataStructures::PolymorphicArray<Value>& updates
     ) const{
         if (this->IsEmpty())
             return {};
@@ -2051,7 +2051,7 @@ namespace Indexing{
 
     void BTree::CalculateIndexStatistics(
         Headers::IndexStatistics& indexStatistics,
-        Headers::TableStatistics& tableStatistics, DataStructures::Array<Headers::ColumnStatistics>& columnStatistics,
+        Headers::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const {
         if (this->IsEmpty())

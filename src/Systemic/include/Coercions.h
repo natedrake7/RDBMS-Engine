@@ -11,84 +11,26 @@ namespace DataTypes{
     };
 
     class Coercions {
-        static constexpr CoercionType TypeCoercionMatrix[][12] = {
-            // To:        TinyInt  SmallInt Int     BigInt
-            //            Decimal  String   UString  Bool
-            //            DateTime Guid    RowId   Invalid
-            /* TinyInt */ {
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Explicit,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* SmallInt */ {
-                CoercionType::Explicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Explicit,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* Int */ {
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::Implicit, CoercionType::Implicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Explicit,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* BigInt */ {
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit, CoercionType::Implicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Explicit,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* Decimal */ {
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::None,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* String */ {
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit, CoercionType::Explicit,
-                CoercionType::Explicit, CoercionType::Implicit, CoercionType::Explicit, CoercionType::Explicit,
-                CoercionType::Explicit, CoercionType::Explicit, CoercionType::None,    CoercionType::None
-            },
-            /* Bool */ {
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
-                CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit, CoercionType::Implicit,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* DateTime */ {
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::Implicit, CoercionType::Implicit, CoercionType::None,
-                CoercionType::Implicit, CoercionType::None,    CoercionType::None,    CoercionType::None
-            },
-            /* Guid */ {
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::Implicit, CoercionType::Implicit, CoercionType::None,
-                CoercionType::None,     CoercionType::Implicit, CoercionType::None,    CoercionType::None
-            },
-            /* RowId */ {
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::None,    CoercionType::Implicit, CoercionType::None
-            },
-            /* Invalid */ {
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None,
-                CoercionType::None,     CoercionType::None,    CoercionType::None,    CoercionType::None
-            }
-        };
+    static constexpr Int TYPE_COUNT = 12;
+    static CoercionType TypeCoercionMatrix[TYPE_COUNT][TYPE_COUNT];
 
-        static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
-            StringView("true"),
-            StringView("1"),
-            StringView("yes"),
-            StringView("y"),
-            StringView("on")
-        };
+    static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
+        StringView("true"),
+        StringView("1"),
+        StringView("yes"),
+        StringView("y"),
+        StringView("on")
+    };
 
-        static constexpr ConstexprHashSet<StringView, 5> FalseStrings = {
-            StringView("false"),
-            StringView("0"),
-            StringView("no"),
-            StringView("n"),
-            StringView("off")
-        };
+    static constexpr ConstexprHashSet<StringView, 5> FalseStrings = {
+        StringView("false"),
+        StringView("0"),
+        StringView("no"),
+        StringView("n"),
+        StringView("off")
+    };
 
-        static void ThrowException(DataType type);
+    static void ThrowException(DataType type);
 
     [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
@@ -108,7 +50,14 @@ namespace DataTypes{
     static void DownCastFromInt(Value& value);
     static void DownCastFromBigInt(Value& value);
 
+    // static void constexpr InitializeTrueStrings();
+    // static void constexpr InitializeFalseStrings();
+
+    static void InitializeTypeCoercionMatrix();
+
     public:
+        static void Initialize();
+
         [[nodiscard]] static bool IsCoercionAllowed(DataType fromType, DataType toType, bool explicitCast = false);
         [[nodiscard]] static bool ToBool(const Value& value, bool explicitCast = false);
         [[nodiscard]] static TinyInt ToTinyInt(const Value& value, bool explicitCast = false);
@@ -123,6 +72,5 @@ namespace DataTypes{
 
         [[nodiscard]] static bool CanBeParsedToType(DataType toType, const Value& value);
         static void DeduceIntegerType(Value& value);
-
     };
 }

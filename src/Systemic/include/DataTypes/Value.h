@@ -28,16 +28,10 @@ class Value {
     [[nodiscard]] bool TryParseAsBoolFromInt()const;
     [[nodiscard]] bool TryParseDate();
 
-    // static Value PerformTinyIntAddition(TinyInt lhs, TinyInt rhs);
-    // static Value PerformSmallIntAddition(SmallInt lhs, SmallInt rhs);
-    // static Value PerformIntAddition(Int lhs, Int rhs);
     static Value PerformBigIntAddition(const Value& lhs, const Value& rhs);
     static Value PerformStringAddition(const Value& lhs, const Value& rhs);
     static Value PerformDecimalAddition(const Value& lhs, const Value& rhs);
 
-    // static Value PerformTinyIntSubtraction(TinyInt lhs, TinyInt rhs);
-    // static Value PerformSmallIntSubtraction(SmallInt lhs, SmallInt rhs);
-    // static Value PerformIntSubtraction(Int lhs, Int rhs);
     static Value PerformBigIntSubtraction(const Value& lhs, const Value& rhs);
     static Value PerformDecimalSubtraction(const Value& lhs, const Value& rhs);
 
@@ -66,15 +60,6 @@ class Value {
             column_index_t index = 0
         );
         ~Value();
-        // explicit Value(bool data, column_index_t index = 0);
-        // explicit Value(TinyInt data, column_index_t index = 0);
-        // explicit Value(SmallInt data, column_index_t index = 0);
-        // explicit Value(Int data, column_index_t index = 0);
-        // explicit Value(BigInt data, column_index_t index = 0);
-        // explicit Value(const std::string& data, column_index_t index = 0);
-        // explicit Value(const DataTypes::DateTime& data, column_index_t index = 0);
-        // explicit Value(const DataTypes::Decimal& data, column_index_t index = 0);
-        // explicit Value(const DataTypes::Guid& data, column_index_t index = 0);
 
         Value(bool data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(TinyInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
