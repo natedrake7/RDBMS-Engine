@@ -1,25 +1,45 @@
 ﻿#include "../include/Serialization/JsonBuilder.h"
 
 namespace Serialization{
+    void JsonBuilder::Value(const void* data, const Int size, const JsonType type){
+        const auto offSet = this->_buffer.Size();
+        this->_buffer.MemoryCopy(data, size);
+
+        auto* parent = this->_containers.Back();
+
+        if (parent->_type == JsonType::Array)
+        {
+            JsonEntry entry(0, offSet, size);
+            parent->_entries.Push(std::move(entry));
+        }
+
+        auto* entry = parent->_entries.Back();
+        entry->_valueOffset = JsonBuilder::RelativeOffSet(offSet, parent->_headerPosition);
+        entry->_valueSize = size;
+        entry->_type = static_cast<UnsignedTinyInt>(type);
+
+        if (parent->_type != JsonType::Array)
+            parent->_expectingKey = true;
+    }
+
     JsonBuilder::JsonBuilder(const Memory::IAllocator* allocator)
         : _buffer(allocator), _containers(allocator), _allocator(allocator) {}
 
     void JsonBuilder::StartObject(){
-        auto offSet = 0;
         if (!this->_containers.Empty()){
             auto* parent = this->_containers.Back();
             if (parent->_type == JsonType::Object
                 || parent->_type == JsonType::Array
             ){
-                offSet = JsonBuilder::RelativeOffSet(this->_buffer.Size(), parent->_headerPosition);
                 auto* entry = parent->_entries.Back();
-                entry->_valueOffset = offSet;
+                entry->_valueOffset = JsonBuilder::RelativeOffSet(this->_buffer.Size(), parent->_headerPosition);
                 entry->_valueSize = 0;
                 entry->_type = static_cast<UnsignedTinyInt>(JsonType::Object);
             }
         }
 
-        JsonContainer object(this->_allocator, offSet, JsonType::Object, true);
+        //even though the container stores the absolute offSet, all offsets written are relative to the parent
+        JsonContainer object(this->_allocator, this->_buffer.Size(), JsonType::Object, true);
         this->_containers.Push(std::move(object));
 
         constexpr JsonHeader header(0, 0, static_cast<UnsignedTinyInt>(JsonType::Object));
@@ -32,9 +52,14 @@ namespace Serialization{
 
         if (!this->_containers.Empty()){
             auto* parent = this->_containers.Back();
-            if (parent->_type == JsonType::Object
+
+            if (
+                parent->_type == JsonType::Object
                 || parent->_type == JsonType::Array
             ){
+                if (parent->_type == JsonType::Object)
+                    parent->_expectingKey = true;
+
                 auto* entry = parent->_entries.Back();
                 entry->_valueSize = object->_entries.Size();
             }
@@ -51,6 +76,8 @@ namespace Serialization{
         });
 
         this->_buffer.MemoryCopy(object->_entries.Data(),  object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE));
+
+
     }
 
     void JsonBuilder::StartArray(){
@@ -81,6 +108,9 @@ namespace Serialization{
         header->_size = static_cast<UnsignedTinyInt>(object->_entries.Size());
 
         this->_buffer.MemoryCopy(object->_entries.Data(),  object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE));
+
+        auto* parent = this->_containers.Back();
+        parent->_expectingKey = true;
     }
 
     void JsonBuilder::Key(const DataTypes::StringView& key){
@@ -103,17 +133,29 @@ namespace Serialization{
     }
 
     void JsonBuilder::Value(const JsonValue& value){
-        const auto offSet = this->_buffer.Size();
+        // this->Value(value.Data(), value.Size(), value.Type());
+    }
 
-        const auto type = value.Type();
-        const auto size = value.Size();
-        this->_buffer.MemoryCopy(value.Data(), size);
+    void JsonBuilder::Value(const DataTypes::String& value){
+        this->Value(value.Data(), value.Size(), JsonType::String);
+    }
+
+    void JsonBuilder::Value(const bool value){
+        this->Value(&value, sizeof(value), JsonType::Bool);
+    }
+
+    void JsonBuilder::Value(const DataTypes::Decimal& value){
+        this->Value(value.GetRawData(), value.GetRawDataSize(), JsonType::Number);
+    }
+
+    void JsonBuilder::ValueNull(){
+        const auto offSet = this->_buffer.Size();
 
         auto* parent = this->_containers.Back();
         auto* entry = parent->_entries.Back();
         entry->_valueOffset = JsonBuilder::RelativeOffSet(offSet, parent->_headerPosition);
-        entry->_valueSize = size;
-        entry->_type = static_cast<UnsignedTinyInt>(type);
+        entry->_valueSize = 0;
+        entry->_type = static_cast<UnsignedTinyInt>(JsonType::Null);
         if (parent->_type != JsonType::Array)
             parent->_expectingKey = true;
     }

@@ -33,7 +33,7 @@ static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10, Ca
     Pair(DataTypes::StringView("bool"), static_cast<block_size_t>(sizeof(bool))),
     Pair(DataTypes::StringView("string"), static_cast<block_size_t>(0)),
     Pair(DataTypes::StringView("decimal"), static_cast<block_size_t>(0)),
-    Pair(DataTypes::StringView("unicodestring"), static_cast<block_size_t>(0)),
+    Pair(DataTypes::StringView("json"), static_cast<block_size_t>(0)),
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
@@ -46,6 +46,7 @@ static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseIn
     Pair(DataTypes::StringView("bool"), DataType::Bool),
     Pair(DataTypes::StringView("string"), DataType::String),
     Pair(DataTypes::StringView("decimal"), DataType::Decimal),
+    Pair(DataTypes::StringView("json"), DataType::Json),
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
@@ -59,6 +60,7 @@ static constexpr ConstexprDictionary DataTypeToStringDictionary{
     Pair(DataType::String, DataTypes::StringView("String")),
     Pair(DataType::Decimal, DataTypes::StringView("Decimal")),
     Pair(DataType::Guid, DataTypes::StringView("Guid")),
+    Pair(DataType::Json, DataTypes::StringView("Json")),
     Pair(DataType::Unknown, DataTypes::StringView("Invalid"))
     //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
 };

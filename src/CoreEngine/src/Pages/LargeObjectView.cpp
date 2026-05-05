@@ -61,6 +61,8 @@ namespace Pages{
     }
 
     void LargeObjectView::SetData(const object_t* object, const page_size_t size) const{
+        *this->nextPageIdPtr = INVALID_PAGE_ID;
+        *this->objectSizePtr = size;
         std::memcpy(this->framePtr->data + Constants::LARGE_OBJECT_METADATA_SIZE, object, size);
     }
 }

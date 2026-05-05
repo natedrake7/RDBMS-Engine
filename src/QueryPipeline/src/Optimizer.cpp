@@ -155,7 +155,9 @@ namespace QueryPipeline {
         Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
         Expressions::Expression*& remainingPredicate
     ) const{
-        DataStructures::PolymorphicArray<Expressions::Expression*> expressions;
+        DataStructures::PolymorphicArray<Expressions::Expression*> expressions(
+            this->context->_context.GetAllocator()
+        );
         Optimizer::SplitConjunctions(baseExpression, expressions);
 
         for (auto* expression : expressions){

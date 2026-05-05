@@ -18,13 +18,10 @@ StorageManager::StorageManager(){
 }
 
 StorageManager::~StorageManager() {
-    for (const auto frameIndex : this->pageTable | std::views::values) {
-        const auto* frame = this->_memoryManager->GetFrame(frameIndex);
-
-        if (frame == nullptr)
+    for (const auto* framePtr : this->pageTable | std::views::values) {
+        if (framePtr == nullptr)
             continue;
-
-        this->RemovePageWithoutKeyDeletion(frame);
+        this->RemovePageWithoutKeyDeletion(framePtr);
     }
 }
 
@@ -141,7 +138,7 @@ Pages::Frame* StorageManager::OpenExtent(
             if (currentPageId == pageId)
                 framePtr = newFramePtr;
 
-            this->pageTable[key] = frame;
+            this->pageTable[key] = newFramePtr;
             this->clockHand = (this->clockHand + 1) % this->capacity;
         }
     }
@@ -165,27 +162,14 @@ Pages::Frame* StorageManager::GetRawPage(
     {
         MultiThreading::ReaderGuard lock(&this->tableMutex);
 
-        if (pageId == 8176)
-        {
-            int val = 0;
-        }
-
-        auto frame = 0;
-        const auto key = PageKey::Create(fileKey, pageId);
-        if (this->pageTable.TryGetValue(key, frame))
-        {
-            if (frame == 8693)
-                int val = 0;
-            else if (frame == 8692)
-                int val = 0;
-            return this->_memoryManager->GetFrame(frame);
-        }
+        Pages::Frame* framePtr = nullptr;
+        if (this->pageTable.TryGetValue(PageKey::Create(fileKey, pageId), framePtr))
+            return framePtr;
     }
 
     const auto extentId = CoreEngine::Database::CalculateExtentId(pageId);
     //cache miss
-    auto* framePtr = this->OpenExtent(fileKey, pageId, extentId, filename, table);
-    return framePtr;
+    return this->OpenExtent(fileKey, pageId, extentId, filename, table);
 }
 
 Pages::PageView StorageManager::CreatePage(
@@ -315,7 +299,7 @@ Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes
     if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES)
         this->EvictPage();
 
-    const size_t frameIndex = this->clockHand % this->capacity;
+    const auto frameIndex = this->clockHand % this->capacity;
 
     auto* framePtr = this->_memoryManager->GetFrame(frameIndex);
 
@@ -330,8 +314,8 @@ Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes
     framePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(framePtr->data);
     framePtr->headerPtr->pageId = pageId;
 
-    this->pageTable[PageKey::Create(fileKey, pageId)] = frameIndex;
-    clockHand = (clockHand + 1) % capacity;
+    this->pageTable[PageKey::Create(fileKey, pageId)] = framePtr;
+    this->clockHand = (this->clockHand + 1) % this->capacity;
 
     return framePtr;
 }
@@ -342,7 +326,6 @@ Pages::HeaderPageView StorageManager::GetHeaderPage(
 ){
     auto* frame = this->GetRawPage(fileKey, filename, Constants::HEADER_PAGE_ID, nullptr);
     auto view =  Pages::HeaderPageView(frame);
-    view.ReadTableHeadersFromDisk();
     return view;
 }
 

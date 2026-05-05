@@ -531,11 +531,11 @@ Value::Value(
     const Memory::IAllocator* allocator,
     const column_index_t index
 ){
-    this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
-    std::memcpy(this->data, data.GetData().data(), data.Size());
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(DataTypes::Guid::Size()));
+    std::memcpy(this->data, data.GetData().data(), DataTypes::Guid::Size());
 
     this->_allocator = allocator;
-    this->size = data.Size();
+    this->size = DataTypes::Guid::Size();
     this->columnIndex = index;
     this->type = DataType::Guid;
 }
@@ -695,6 +695,10 @@ time_t Value::AsUnixTimeStamp() const{ return *reinterpret_cast<time_t *>(this->
 
 DataTypes::Guid Value::AsGuid() const {
     return DataTypes::Coercions::ToGuid(*this);
+}
+
+DataTypes::JsonBinary Value::AsJson() const{
+    return DataTypes::Coercions::ToJsonBinary(*this);
 }
 
 page_id_t Value::AsLargeObjectPointer() const{

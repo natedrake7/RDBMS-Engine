@@ -1439,7 +1439,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
     if (selectedSchemas.Empty()) return {};
 
-     DataStructures::PolymorphicArray<Headers::SchemaHeader> schemas;
+     DataStructures::PolymorphicArray<Headers::SchemaHeader> schemas(allocator, selectedSchemas.Size());
 
     for (const auto& row : selectedSchemas)
       schemas.Push(SystemCatalog::ToSchemaHeader(allocator, row));

@@ -44,7 +44,8 @@ namespace Expressions {
         Logical = 4,
         Variable = 5,
         Branch = 6,
-        Function = 7
+        Function = 7,
+        Json = 8
     };
 
     static constexpr ConstexprDictionary ExpressionOperatorsDictionary{

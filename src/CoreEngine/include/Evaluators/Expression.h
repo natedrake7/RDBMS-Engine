@@ -4,6 +4,12 @@
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
+
+namespace DataTypes
+{
+    struct JsonPathStep;
+}
+
 class Variable;
 
 namespace CoreEngine{
@@ -20,6 +26,7 @@ namespace Pages{
 }
 
 namespace Expressions{
+    class JsonExpression;
     class BinaryExpression;
     class LogicalExpression;
     class FunctionExpression;
@@ -94,6 +101,7 @@ namespace Expressions{
         [[nodiscard]] bool IsColumn()const;
         [[nodiscard]] bool IsFunction()const;
         [[nodiscard]] bool IsBranch()const;
+        [[nodiscard]] bool IsJson()const;
 
         [[nodiscard]] BinaryExpression* AsBinary();
         [[nodiscard]] LogicalExpression* AsLogical();
@@ -102,6 +110,7 @@ namespace Expressions{
         [[nodiscard]] ConstantExpression* AsConstant();
         [[nodiscard]] BranchExpression* AsBranch();
         [[nodiscard]] FunctionExpression* AsFunction();
+        [[nodiscard]] JsonExpression* AsJson();
 
         [[nodiscard]] const BinaryExpression* AsBinary()const;
         [[nodiscard]] const LogicalExpression* AsLogical()const;
@@ -110,6 +119,7 @@ namespace Expressions{
         [[nodiscard]] const ConstantExpression* AsConstant()const;
         [[nodiscard]] const BranchExpression* AsBranch()const;
         [[nodiscard]] const FunctionExpression* AsFunction()const;
+        [[nodiscard]] const JsonExpression* AsJson()const;
     };
 
     class ColumnExpression final : public Expression {
@@ -117,8 +127,8 @@ namespace Expressions{
         DataTypes::String alias;
         DataTypes::String tableAlias;
 
-        int32_t tableId;
-        int32_t columnId;
+        Int tableId;
+        Int columnId;
 
         DataType returnType;
         block_size_t size;
@@ -126,6 +136,7 @@ namespace Expressions{
         column_index_t index;
 
         ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias);
+        ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
         explicit ColumnExpression(column_index_t index);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
@@ -276,5 +287,17 @@ namespace Expressions{
 
       [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
       [[nodiscard]]DataType GetReturnType() const override;
+    };
+
+    class JsonExpression final : public Expression {
+    public:
+        ColumnExpression* columnPtr;
+        DataStructures::PolymorphicArray<DataTypes::JsonPathStep> pathSegments;
+        DataType dataType;
+
+        explicit JsonExpression(ColumnExpression* columnPtr, const ::Memory::IAllocator* allocator);
+
+        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
+        [[nodiscard]]DataType GetReturnType() const override;
     };
 }

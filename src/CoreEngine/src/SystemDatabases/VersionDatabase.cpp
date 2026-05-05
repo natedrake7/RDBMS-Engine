@@ -89,7 +89,7 @@ namespace CoreEngine {
     }
 
     void VersionDatabase::WriteHeaderToFile() const{
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
+        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
             this->systemFileKey,
             this->systemFilenameView
         );

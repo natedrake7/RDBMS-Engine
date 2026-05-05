@@ -54,7 +54,7 @@ namespace Storage {
         Int capacity;
         Int clockHand;
         // std::vector<Pages::Frame*> frames;
-        Dictionary<PageKey, Int> pageTable; // pageId -> frame index
+        Dictionary<PageKey, Pages::Frame*> pageTable; // pageId -> frame index
 
         CoreEngine::BufferPoolMemoryManager* _memoryManager;
 

@@ -123,6 +123,30 @@ resultValue
     | literalValue
     | variableName
     | branchingExpression
+    | jsonExpression
+    ;
+
+jsonExpression
+    : (columnAlias)? identifier (jsonAccessor)*
+    ;
+
+jsonAccessor
+    : jsonObjectAccessor
+    | jsonScalarAccessor
+    ;
+
+jsonObjectAccessor
+    : JSON_OBJECT_ACCESSOR jsonKey
+    ;
+
+jsonScalarAccessor
+    : JSON_SCALAR_ACCESSOR jsonKey
+    ;
+
+jsonKey
+    : identifier
+    | STRING
+    | INT
     ;
 
 branchingExpression
@@ -228,18 +252,14 @@ dataType
     | INT
     | BIGINT
     | stringType
-    | uStringType
     | decimalType
     | DATETIME
     | GUID
+    | JSON
     ;
 
 stringType
     : STRING_LITERAL LAPRENT (num=NUMBER | max=MAX) RAPRENT
-    ;
-
-uStringType
-    : USTRING_LITERAL LAPRENT (num=NUMBER | max=MAX) RAPRENT
     ;
 
 decimalType
@@ -392,7 +412,6 @@ variableType
     | INT
     | BIGINT
     | stringType
-    | uStringType
     | decimalType
     | DATETIME
     | GUID
@@ -528,7 +547,7 @@ SMALLINT                : 'SMALLINT';
 INT                     : 'INT';
 BIGINT                  : 'BIGINT';
 STRING_LITERAL          : 'STRING';
-USTRING_LITERAL         : 'USTRING';
+JSON                    : 'JSON';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -682,6 +701,17 @@ OR              : 'OR';
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 
+//Json Operators
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+JSON_OBJECT_ACCESSOR : '->';
+JSON_SCALAR_ACCESSOR  : '->>';
+
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
 
 //More Datatypes and identifiers
 ////////////////////////////////////////////////////////////

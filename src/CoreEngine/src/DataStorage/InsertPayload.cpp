@@ -112,8 +112,8 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsString();
         const auto& columnHeader = column->GetColumnHeader();
 
-        const auto size = val.Size();
-        if (size > columnHeader.recordSize) {
+        const auto strSize = val.Size();
+        if (strSize > columnHeader.recordSize) {
             std::ostringstream ss;
 
             ss  << "Value "
@@ -126,7 +126,13 @@ namespace CoreEngine::StorageTypes{
         }
 
         this->CopyToBuffer(val);
-        return size;
+        return strSize;
+    }
+
+    Int InsertPayload::SetJson(const Value& value){
+        auto jsonBinary = value.AsJson();
+        this->CopyToBuffer(value);
+        return value.Size();
     }
 
     Int InsertPayload::SetBool(const Value &value, Errors::RuntimeStatus& status){
@@ -172,6 +178,8 @@ namespace CoreEngine::StorageTypes{
             return this->SetDecimal(value, column, status);
         case DataType::String:
             return this->SetString(value, column, status);
+        case DataType::Json:
+            return this->SetJson(value);
         case DataType::Bool:
             return this->SetBool(value, status);
         case DataType::DateTime:

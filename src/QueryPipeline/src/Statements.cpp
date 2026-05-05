@@ -1006,18 +1006,15 @@ namespace QueryPipeline::Statements {
         const auto columnType = static_cast<DataType>(columnHeader.dataType);
 
         if (DataTypes::Coercions::IsCoercionAllowed(
-        valueType,
-        columnType
+            valueType,
+            columnType
         )) return Errors::ValidationStatus::Ok();
-
-        std::ostringstream os;
 
         if (expression->IsConstant()) {
             auto* constantExpr = expression->AsConstant();
 
             if (constantExpr->value.IsNull()) {
                 if (columnHeader.isNullable) return Errors::ValidationStatus::Ok();
-
 
                 return Errors::ValidationStatus::Error(
             Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
@@ -1070,7 +1067,7 @@ namespace QueryPipeline::Statements {
 
     Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context){
         const Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary{
-        {this->table->GetAlias(context), this->table->tableId}
+        std::pair(this->table->GetAlias(context), this->table->tableId)
         };
 
         auto statementValidationScope = StatementValidationScope(
@@ -1118,9 +1115,8 @@ namespace QueryPipeline::Statements {
                 this->table->tableId
             );
 
-        //validate insert columns existance
+        //validate insert columns existence
         HashSet<Int> statementColumns;
-        std::ostringstream os;
         for (auto& column : this->columns) {
             Headers::ColumnHeader header;
 
@@ -1150,7 +1146,7 @@ namespace QueryPipeline::Statements {
             this->columnIndices.Push(header.ordinalPosition);
         }
 
-        for (const auto&[columnName, header]:  columnsDict) {
+        for (const auto& header : columnsDict | std::views::values) {
             if (header.isSystem
                 || identityColumns.Contains(header.id)
                 || statementColumns.Contains(header.id)
@@ -1686,6 +1682,8 @@ namespace QueryPipeline::Statements {
                 return CompileVariableExpression(context, expression->AsVariable());
             case Expressions::ExpressionType::Constant:
                 return CompileConstantExpression(expression->AsConstant());
+            case Expressions::ExpressionType::Json:
+                return CompileJsonExpression(context, expression->AsJson());
             case Expressions::ExpressionType::Expression:
             default:
                 break;
@@ -1717,6 +1715,8 @@ namespace QueryPipeline::Statements {
                 return CompileVariableExpression(context, expression->AsVariable());
             case Expressions::ExpressionType::Constant:
                 return CompileConstantExpression(expression->AsConstant());
+            case Expressions::ExpressionType::Json:
+                return CompileJsonExpression(context, expression->AsJson(), statementValidationScope);
             case Expressions::ExpressionType::Expression:
             default:
                 break;
@@ -2093,6 +2093,41 @@ namespace QueryPipeline::Statements {
 
     Errors::ValidationStatus CompileConstantExpression(Expressions::ConstantExpression* constantExpr){
         DataTypes::Coercions::DeduceIntegerType(constantExpr->value);
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus CompileJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* jsonExpr,
+        const StatementValidationScope& statementValidationScope
+    ){
+        auto result = CompileColumnExpression(context, jsonExpr->columnPtr, statementValidationScope);
+        if (!result.IsOk()) return result;
+
+        if (jsonExpr->pathSegments.Empty())
+            return Errors::ValidationStatus::Error(
+                Messages::EMPTY_JSON_PATH,
+                context.GetAllocator()
+            );
+
+        //verify json validity maybe
+
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus CompileJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* jsonExpr
+    ){
+        auto result = CompileColumnExpression(context, jsonExpr->columnPtr);
+        if (!result.IsOk()) return result;
+
+        if (jsonExpr->pathSegments.Empty())
+            return Errors::ValidationStatus::Error(
+                Messages::EMPTY_JSON_PATH,
+                context.GetAllocator()
+            );
+
         return Errors::ValidationStatus::Ok();
     }
 

@@ -259,8 +259,6 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitDataType(SQLParser::DataTypeContext *context) {
         if (context->stringType())
             return visit(context->stringType());
-        if (context->uStringType())
-            return visit(context->uStringType());
         if (context->decimalType())
             return visit(context->decimalType());
 
@@ -278,18 +276,6 @@ namespace QueryPipeline {
         const auto size = number
                   ? Converter<Int>::Stoi(number->getText())
                   : -1;
-
-        auto column = Statements::ColumnType(typeName, size);
-        return std::any(column);
-    }
-
-    antlrcpp::Any SQLVisitorImplementation::visitUStringType(SQLParser::UStringTypeContext *context){
-        const auto& number = context->NUMBER();
-
-        auto typeName = DataTypes::String::FromView(QueryPipeline::UnicodeString, this->_compileContext->GetAllocator());
-        const auto size = number
-            ? Converter<Int>::Stoi(number->getText())
-            : -1;
 
         auto column = Statements::ColumnType(typeName, size);
         return std::any(column);
@@ -733,15 +719,21 @@ namespace QueryPipeline {
             return std::any(wrapper);
         }
 
-        if (context->variableName())
+        if (context->variableName()){
             wrapper.expression = this->_compileContext->Allocate<Expressions::VariableExpression>(
                 std::any_cast<DataTypes::String>(visit(context->variableName())),
                 this->_compileContext->GetAllocator()
             );
             return std::any(wrapper);
+        }
 
         if (context->branchingExpression()){
             wrapper.expression = std::any_cast<Expressions::BranchExpression*>(visit(context->branchingExpression()));
+            return std::any(wrapper);
+        }
+
+        if (context->jsonExpression()){
+            wrapper.expression = std::any_cast<Expressions::JsonExpression*>(visit(context->jsonExpression()));
             return std::any(wrapper);
         }
 

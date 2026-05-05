@@ -4,7 +4,17 @@
 #include "DataStorage/InsertPayload.h"
 
 namespace CoreEngine::StorageTypes {
-    void Table::InsertLargeObjectToPage(Pages::RowReference& rowPtr) {
+    void Table::InsertLargeObjectToPage(InsertPayload& payload) {
+        // Constants::LARGE_OBJECT_THRESHOLD_SIZE
+
+        // for (const auto& column : this->_columns) {
+        //     // payload.
+        //     if (column->Size() < Constants::LARGE_OBJECT_THRESHOLD_SIZE)
+        //         continue;
+        //
+        //     // Handle large object insertion for this column
+        // }
+
         // const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
         //
         // if (largeBlockIndexes.empty())
@@ -33,63 +43,66 @@ namespace CoreEngine::StorageTypes {
     }
 
     page_id_t Table::StoreLargeObject(
+        const ::Memory::IAllocator* allocator,
         const Value& value,
         page_offset_t &offset,
         block_size_t& remainingBlockSize,
-        Pages::LargeObjectView* previousDataObject
+        const Pages::LargeObjectView* previousDataObject
     )const{
-        // auto page = this->GetOrCreateLargeDataPage();
-        //
-        // const auto pageSize = page->BytesLeft();
-        //
-        // const auto& data = value.Data();
-        //
+        const auto page = this->GetOrCreateLargeDataPage(allocator);
+
+        const auto pageSize = page.BytesLeft();
+
+        const auto& data = value.Data();
+
         // //can fit in page
-        // if (remainingBlockSize + OBJECT_METADATA_SIZE_T < pageSize){
-        //     page->InsertObject(data + offset, remainingBlockSize);
-        //
-        //     auto pfsPage = Database::GetAssociatedPfsPage(
-        //         this->database->GetSystemFilename(),
-        //         page->PageId()
-        //     );
-        //     pfsPage.SetPageMetaData(&page);
-        //
-        //     if (previousDataObject != nullptr){
-        //         previousDataObject->nextPageId = page->PageId();
-        //         return 0;
-        //     }
-        //
-        //     //if previous object is null, it is first pass so we return the pageId
-        //     return page->PageId();
-        // }
-        // //
-        // // // blockSize < pageSize
-        // const auto bytesToBeInserted = pageSize - OBJECT_METADATA_SIZE_T;
-        //
-        // remainingBlockSize -= bytesToBeInserted;
-        //
-        // auto* dataObject = page->InsertObject(
-        //     data + offset, bytesToBeInserted
-        // );
-        //
-        // auto pfsPage = Database::GetAssociatedPfsPage(
-        //     this->database->GetSystemFilename(),
-        //     page->PageId()
-        // );
-        // pfsPage->SetPageMetaData(page.Get());
-        //
-        // if (previousDataObject != nullptr)
-        //     previousDataObject->nextPageId = page->PageId();
-        //
-        // offset += bytesToBeInserted;
-        //
-        // this->StoreLargeObject(
-        //     value,
-        //     offset,
-        //     remainingBlockSize,
-        //     dataObject
-        // );
-        // return page->PageId();
+        if (remainingBlockSize + Constants::OBJECT_METADATA_SIZE_T < pageSize){
+            page.SetData(data + offset, remainingBlockSize);
+
+            const auto pfsPage = Database::GetAssociatedPfsPage(
+                this->GetSystemFileKey(),
+                this->GetSystemFileNameView(),
+                page.PageId()
+            );
+            pfsPage.SetPageMetaData(&page);
+
+            if (previousDataObject != nullptr){
+                previousDataObject->SetNextPageId(page.PageId());
+                return 0;
+            }
+
+            //if previous object is null, it is first pass so we return the pageId
+            return page.PageId();
+        }
+
+        // blockSize < pageSize
+        const auto bytesToBeInserted = pageSize - Constants::OBJECT_METADATA_SIZE_T;
+        remainingBlockSize -= bytesToBeInserted;
+        page.SetData(
+            data + offset, bytesToBeInserted
+        );
+
+        const auto pfsPage = Database::GetAssociatedPfsPage(
+            this->GetSystemFileKey(),
+            this->GetSystemFileNameView(),
+            page.PageId()
+        );
+        pfsPage.SetPageMetaData(&page);
+
+        if (previousDataObject != nullptr)
+            previousDataObject->SetNextPageId(page.PageId());
+
+        offset += bytesToBeInserted;
+
+        this->StoreLargeObject(
+            allocator,
+            value,
+            offset,
+            remainingBlockSize,
+            &page
+        );
+
+        return page.PageId();
     }
 
     Pages::LargeObjectView Table::GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const{
@@ -101,7 +114,7 @@ namespace CoreEngine::StorageTypes {
         if (largeDataPage.IsValid())
             return largeDataPage;
 
-        return this->database->CreateLargeDataPage(allocator, this->header.tableId, 1);
+        return this->database->CreateLargeDataPage(allocator, this->header.tableId, this->header.ordinalPosition);
     }
 
     void Table::LinkLargePageDataObjectChunks(const Pages::LargeObjectView* dataObject, const page_id_t lastLargePageId){

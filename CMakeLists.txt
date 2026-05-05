@@ -111,6 +111,7 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/CostEstimator.cpp
         src/QueryPipeline/src/Contexts/CompileContext.cpp
         ${ANTLR_SRC}
+        src/QueryPipeline/src/Visitor/Visitor.Json.cpp
 )
 
 target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)

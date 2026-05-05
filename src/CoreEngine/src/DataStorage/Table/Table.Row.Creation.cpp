@@ -77,6 +77,7 @@ namespace CoreEngine::StorageTypes{
                 block_size_t size = value.Size();
                 page_offset_t offSet = 0;
                 const auto pageId = this->StoreLargeObject(
+                    allocator,
                     value,
                     offSet,
                     size,
@@ -174,6 +175,7 @@ namespace CoreEngine::StorageTypes{
                 block_size_t size = value.Size();
                 page_offset_t offSet = 0;
                 const auto pageId = this->StoreLargeObject(
+                    allocator,
                     value,
                     offSet,
                     size,

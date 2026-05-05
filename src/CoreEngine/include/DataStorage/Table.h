@@ -41,14 +41,14 @@ namespace ByteMaps{
 namespace CoreEngine::StorageTypes
 {
     struct TableHeader{
+        DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
+        page_id_t allocationPageId;
+        page_id_t clusteredIndexPageId;
+
         table_id_t tableId;
         SmallInt ordinalPosition;
 
-        page_id_t allocationPageId;
         column_number_t numberOfColumns;
-
-        page_id_t clusteredIndexPageId;
-        DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
 
         TableHeader();
         ~TableHeader();
@@ -94,10 +94,11 @@ namespace CoreEngine::StorageTypes
                 column_index_t largeBlockIndex
             ) const;
             page_id_t StoreLargeObject(
+                const ::Memory::IAllocator* allocator,
                 const Value& value,
                 page_offset_t &offset,
                 block_size_t &remainingBlockSize,
-                Pages::LargeObjectView* previousDataObject
+                const Pages::LargeObjectView* previousDataObject
             )const;
             [[nodiscard]] Pages::LargeObjectView GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const;
 
@@ -424,7 +425,7 @@ namespace CoreEngine::StorageTypes
             int HandleRowOverflow(Pages::RowReference& rowPtr) const;
             int HandleRowOverflow(Pages::RowReference& rowPtr, const Column* column)const;
 
-            void InsertLargeObjectToPage(Pages::RowReference& rowPtr);
+            void InsertLargeObjectToPage(InsertPayload& payload);
 
             void PopulateColumn(column_index_t index, const Value& defaultValue);
             void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);

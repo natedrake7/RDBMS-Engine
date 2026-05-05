@@ -156,29 +156,41 @@ namespace Expressions{
     bool Expression::IsVariable() const{ return this->expressionType == ExpressionType::Variable; }
     bool Expression::IsColumn() const{ return this->expressionType == ExpressionType::Column; }
     bool Expression::IsFunction() const{ return this->expressionType == ExpressionType::Function; }
-
     bool Expression::IsBranch() const{ return this->expressionType == ExpressionType::Branch; }
-    BinaryExpression * Expression::AsBinary(){ return this->IsBinary() ? static_cast<BinaryExpression*>(this) : nullptr; }
-    LogicalExpression * Expression::AsLogical(){ return this->IsLogical() ? static_cast<LogicalExpression*>(this) : nullptr; }
-    ColumnExpression * Expression::AsColumn(){ return this->IsColumn() ? static_cast<ColumnExpression*>(this) : nullptr; }
-    VariableExpression * Expression::AsVariable(){ return this->IsVariable() ? static_cast<VariableExpression*>(this) : nullptr; }
-    ConstantExpression * Expression::AsConstant(){ return this->IsConstant() ? static_cast<ConstantExpression*>(this) : nullptr; }
-    BranchExpression * Expression::AsBranch(){ return this->IsBranch() ? static_cast<BranchExpression*>(this) : nullptr; }
+    bool Expression::IsJson() const{ return this->expressionType == ExpressionType::Json; }
 
-    FunctionExpression * Expression::AsFunction(){ return this->IsFunction() ? static_cast<FunctionExpression*>(this) : nullptr; }
-    const BinaryExpression * Expression::AsBinary() const{ return this->IsBinary() ? static_cast<const BinaryExpression*>(this) : nullptr; }
-    const LogicalExpression * Expression::AsLogical() const{ return this->IsLogical() ? static_cast<const LogicalExpression*>(this) : nullptr; }
-    const ColumnExpression * Expression::AsColumn() const{ return this->IsColumn() ? static_cast<const ColumnExpression*>(this) : nullptr; }
-    const VariableExpression * Expression::AsVariable() const{ return this->IsVariable() ? static_cast<const VariableExpression*>(this) : nullptr; }
-    const ConstantExpression * Expression::AsConstant() const{ return this->IsConstant() ? static_cast<const ConstantExpression*>(this) : nullptr; }
-    const BranchExpression * Expression::AsBranch() const{ return this->IsBranch() ? static_cast<const BranchExpression*>(this) : nullptr; }
+    BinaryExpression * Expression::AsBinary(){ return static_cast<BinaryExpression*>(this); }
+    LogicalExpression * Expression::AsLogical(){ return static_cast<LogicalExpression*>(this); }
+    ColumnExpression * Expression::AsColumn(){ return static_cast<ColumnExpression*>(this); }
+    VariableExpression * Expression::AsVariable(){ return static_cast<VariableExpression*>(this); }
+    ConstantExpression * Expression::AsConstant(){ return static_cast<ConstantExpression*>(this); }
+    BranchExpression * Expression::AsBranch(){ return static_cast<BranchExpression*>(this); }
+    FunctionExpression * Expression::AsFunction(){ return static_cast<FunctionExpression*>(this); }
+    JsonExpression* Expression::AsJson(){ return static_cast<JsonExpression*>(this); }
 
-    const FunctionExpression * Expression::AsFunction() const{ return this->IsFunction() ? static_cast<const FunctionExpression*>(this) : nullptr; }
+    const BinaryExpression * Expression::AsBinary() const{ return static_cast<const BinaryExpression*>(this); }
+    const LogicalExpression * Expression::AsLogical() const{ return static_cast<const LogicalExpression*>(this); }
+    const ColumnExpression * Expression::AsColumn() const{ return static_cast<const ColumnExpression*>(this); }
+    const VariableExpression * Expression::AsVariable() const{ return static_cast<const VariableExpression*>(this); }
+    const ConstantExpression * Expression::AsConstant() const{ return static_cast<const ConstantExpression*>(this); }
+    const BranchExpression * Expression::AsBranch() const{ return static_cast<const BranchExpression*>(this); }
+    const FunctionExpression * Expression::AsFunction() const{ return static_cast<const FunctionExpression*>(this); }
+    const JsonExpression* Expression::AsJson() const{ return static_cast<const JsonExpression*>(this); }
 
     ColumnExpression::ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias){
         this->alias = name;
         this->tableAlias = tableAlias;
 
+        this->tableId = INVALID_TABLE_ID;
+        this->columnId = INVALID_COLUMN_ID;
+        this->index = 0;
+        this->size = 0;
+        this->returnType = DataType::Unknown;
+        this->expressionType = ExpressionType::Column;
+    }
+
+    ColumnExpression::ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias)
+        : alias(std::move(name)), tableAlias(std::move(tableAlias)){
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
         this->index = 0;
@@ -851,4 +863,17 @@ namespace Expressions{
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }
+
+    JsonExpression::JsonExpression(ColumnExpression* columnPtr, const Memory::IAllocator* allocator)
+        :columnPtr(columnPtr), pathSegments(allocator), dataType(DataType::Unknown){
+        this->expressionType = ExpressionType::Json;
+    }
+
+    Value JsonExpression::Evaluate(const EvaluationContext& context) const{
+        return Value::Null();
+    }
+
+    DataType JsonExpression::GetReturnType() const{
+        return DataType::Json;
+    }
 }

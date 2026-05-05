@@ -11,8 +11,8 @@ namespace Pages{
 
     class HeaderPageView final : public PageView{
         CoreEngine::DatabaseHeader* databaseHeaderPtr;
-        std::vector<CoreEngine::StorageTypes::TableHeader> tablesHeaders;
 
+        inline object_t* GetTableHeaderDataOffset(Int ordinalPosition) const;
 
         public:
             explicit HeaderPageView(Frame* framePtr);
@@ -22,13 +22,10 @@ namespace Pages{
 
             [[nodiscard]] CoreEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
-            [[nodiscard]] const std::vector<CoreEngine::StorageTypes::TableHeader>& GetTableHeaders()const;
-            [[nodiscard]] const CoreEngine::StorageTypes::TableHeader& GetTableHeader(Int indexPosition) const;
+            // [[nodiscard]] const std::vector<CoreEngine::StorageTypes::TableHeader>& GetTableHeaders()const;
+            [[nodiscard]] CoreEngine::StorageTypes::TableHeader* GetTableHeader(Int ordinalPosition) const;
 
             void SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const;
-            void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header);
-
-            void WriteTableHeadersToDisk() const;
-            void ReadTableHeadersFromDisk();
+            void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header) const;
     };
 }

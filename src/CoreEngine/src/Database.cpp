@@ -21,7 +21,7 @@
 namespace CoreEngine{
     void Database::WriteHeaderToFile() const
     {
-        const auto metaDataPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+        auto metaDataPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
         metaDataPage.SetDatabaseHeader(this->header);
     }
 
@@ -154,12 +154,11 @@ namespace CoreEngine{
 
         //query get from masterDb
         const auto masterDbData = catalog.SelectTables(allocator, this->name.ToView());
-        const auto& headerPageTables = headerPage.GetTableHeaders();
 
-        if (headerPageTables.size() != masterDbData.Size()) return;
+        if (this->header.numberOfTables != masterDbData.Size()) return;
 
         for (int i = 0;i < masterDbData.Size(); i++)
-            this->CreateTable(masterDbData[i], headerPageTables[i]);
+            this->CreateTable(masterDbData[i], *headerPage.GetTableHeader(i));
     }
 
     Database::Database(
@@ -189,7 +188,7 @@ namespace CoreEngine{
                     index.columns[counter++] = j;
             }
 
-            this->CreateTable(tables[i], headerPage.GetTableHeader(i), index, i);
+            this->CreateTable(tables[i], *headerPage.GetTableHeader(i), index, i);
         }
     }
 
@@ -206,7 +205,6 @@ namespace CoreEngine{
             dbTable->Destroy();
         }
 
-        headerPage.WriteTableHeadersToDisk();
         this->_allocator.Reset();
     }
 
@@ -471,7 +469,7 @@ namespace CoreEngine{
         Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysKey, sysDbNameView, firstGamPageId);
         Storage::StorageManager::Get().CreatePageFreeSpacePage(sysKey, sysDbNameView, firstPfsPageId);
 
-        const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysKey, sysDbNameView);
+        auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysKey, sysDbNameView);
         headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamPageId));
     }
 

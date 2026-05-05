@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "DataTypes.h"
+#include "JsonBinary.h"
 #include "StringView.h"
 
 namespace Memory{
@@ -116,6 +117,7 @@ class Value {
         [[nodiscard]] DataTypes::DateTime AsDateTime()const;
         [[nodiscard]] time_t AsUnixTimeStamp() const;
         [[nodiscard]] DataTypes::Guid AsGuid()const;
+        [[nodiscard]] DataTypes::JsonBinary AsJson()const;
         [[nodiscard]] page_id_t AsLargeObjectPointer() const;
         // [[nodiscard]] Pages::OverflowPointer AsOverflowPointer() const;
 

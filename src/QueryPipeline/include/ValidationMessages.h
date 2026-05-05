@@ -3,8 +3,7 @@
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
-namespace QueryPipeline::Messages
-{
+namespace QueryPipeline::Messages{
     static DataTypes::String ADDED_VARIABLE(
         const DataTypes::StringView& name,
         const ::Memory::IAllocator* allocator
@@ -291,4 +290,6 @@ namespace QueryPipeline::Messages
     static DataTypes::String INVALID_VARIABLE(const ::Memory::IAllocator* allocator, const DataTypes::String& variableName){
         return DataTypes::String::Concat(allocator, "Variable: ", variableName, " was not declared in this scope.");
     }
+
+    static DataTypes::StringView EMPTY_JSON_PATH = "JSON data access path cannot be empty.";
 }

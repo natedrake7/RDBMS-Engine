@@ -374,7 +374,7 @@ namespace QueryPipeline::Statements {
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
-    struct InsertStatement final : Statement {
+    struct InsertStatement final: Statement {
         DataStructures::PolymorphicArray<ColumnName> columns;
         DataStructures::PolymorphicArray<Inserts> values;
 
@@ -568,6 +568,17 @@ namespace QueryPipeline::Statements {
 
     static Errors::ValidationStatus CompileConstantExpression(
         Expressions::ConstantExpression* constantExpr
+    );
+
+    static Errors::ValidationStatus CompileJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* jsonExpr,
+        const StatementValidationScope& statementValidationScope
+    );
+
+    static Errors::ValidationStatus CompileJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* jsonExpr
     );
 
     static Errors::ValidationStatus CompileColumnWhenTableAliasExists(

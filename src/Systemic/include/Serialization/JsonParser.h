@@ -4,7 +4,13 @@
 #include "../DataTypes/Decimal.h"
 #include "../DataStructures/SortedDictionary.h"
 
+namespace DataTypes
+{
+    class JsonBinary;
+}
+
 namespace Serialization{
+    class JsonBuilder;
     struct JsonValue;
 
     static constexpr char JSON_QUOTE         = '"';
@@ -106,35 +112,42 @@ namespace Serialization{
         DataTypes::StringView _src;
         Int _pos;
 
-            void SkipWhitespace();
-            void SkipComment();
+        void SkipWhitespace();
+        void SkipComment();
 
-            [[nodiscard]] char Peek() const;
-            char Consume();
+        [[nodiscard]] char Peek() const;
+        char Consume();
 
-            [[nodiscard]] JsonValue ParseValue();
-            [[nodiscard]] JsonString ParseString();
-            [[nodiscard]] JsonNumber ParseNumber();
-            [[nodiscard]] JsonBool ParseBool();
-            [[nodiscard]] JsonNull ParseNull();
-            [[nodiscard]] JsonArray ParseArray();
-            [[nodiscard]] JsonObject ParseObject();
+        void ParseValue(JsonBuilder& builder);
+        [[nodiscard]] JsonString ParseString();
+        void ParseNumber(JsonBuilder& builder);
+        void ParseBool(JsonBuilder& builder);
+        void ParseNull(JsonBuilder& builder);
+        void ParseArray(JsonBuilder& builder);
+        void ParseObject(JsonBuilder& builder);
 
         public:
             explicit JsonParser(const ::Memory::IAllocator* allocator, const char* src);
             explicit JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::String& src);
             explicit JsonParser(const ::Memory::IAllocator* allocator, const std::string& src);
-            explicit JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&&  src);
+            explicit JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::StringView& src);
 
-            JsonValue Parse();
+            DataTypes::JsonBinary Parse();
+            static bool IsJson(const DataTypes::StringView& src);
     };
 
     class JsonWriter {
         static void PrintIndent(std::ostream& os, int indent);
         static void PrintValue(std::ostream& os, const JsonValue& value, int indent);
         static void PrintString(std::ostream& os, const JsonString& str);
+
+        static void BuildJsonObject(JsonBuilder& builder, const JsonObject& object);
+        static void BuildJsonArray(JsonBuilder& builder, const JsonArray& array);
+
+        static void BuildJsonBinary(JsonBuilder& builder, const JsonValue& value);
+
     public:
-        static void ToJsonBinary(const JsonValue& value);
+        static DataTypes::JsonBinary ToJsonBinary(const ::Memory::IAllocator* allocator, const JsonValue& value);
         static void Print(std::ostream& os, const JsonValue& value, int indent = 0);
     };
 

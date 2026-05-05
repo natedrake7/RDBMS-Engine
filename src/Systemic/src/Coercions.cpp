@@ -174,6 +174,18 @@ namespace DataTypes {
         return false;
     }
 
+    bool Coercions::CanGetJsonBinary(const Value& value){
+        switch (value.GetType()){
+        case DataType::Json:
+            return true;
+        case DataType::String:
+            //TODO maybe convert to json binary format
+            return Serialization::JsonParser::IsJson(value.AsStringView());
+        default:
+            return false;
+        }
+    }
+
     void Coercions::DownCastFromSmallInt(Value& value) {
         const auto smallInt = value.AsSmallInt();
         if (!Converter<TinyInt>::TryStoi(smallInt))
@@ -315,22 +327,22 @@ namespace DataTypes {
     bool Coercions::ToBool(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return Converter<bool>::Stoi(value.AsTinyInt());
-            case DataType::SmallInt:
-                return Converter<bool>::Stoi(value.AsSmallInt());
-            case DataType::Int:
-                return Converter<bool>::Stoi(value.AsInt());
-            case DataType::BigInt:
-                return Converter<bool>::Stoi(value.AsBigInt());
-            case DataType::Decimal:
-                return false;
-            case DataType::String:
-                return value.ParseAsBoolFromString();
-            case DataType::Bool:
-                return *reinterpret_cast<const bool*>(value.Data());
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return Converter<bool>::Stoi(value.AsTinyInt());
+        case DataType::SmallInt:
+            return Converter<bool>::Stoi(value.AsSmallInt());
+        case DataType::Int:
+            return Converter<bool>::Stoi(value.AsInt());
+        case DataType::BigInt:
+            return Converter<bool>::Stoi(value.AsBigInt());
+        case DataType::Decimal:
+            return false;
+        case DataType::String:
+            return value.ParseAsBoolFromString();
+        case DataType::Bool:
+            return *reinterpret_cast<const bool*>(value.Data());
+        default:
+            Coercions::ThrowException(valueType);
         }
         return false;
     }
@@ -338,22 +350,22 @@ namespace DataTypes {
     TinyInt Coercions::ToTinyInt(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return *reinterpret_cast<const TinyInt*>(value.Data());
-            case DataType::SmallInt:
-                return Converter<TinyInt>::Stoi(value.AsSmallInt());
-            case DataType::Int:
-                return Converter<TinyInt>::Stoi(value.AsInt());
-            case DataType::BigInt:
-                return Converter<TinyInt>::Stoi(value.AsBigInt());
-            case DataType::Decimal:
-                return 0;
-            case DataType::String:
-                return Converter<TinyInt>::Stoi(value.AsString());
-            case DataType::Bool:
-                return value.AsBool() ? 1 : 0;
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return *reinterpret_cast<const TinyInt*>(value.Data());
+        case DataType::SmallInt:
+            return Converter<TinyInt>::Stoi(value.AsSmallInt());
+        case DataType::Int:
+            return Converter<TinyInt>::Stoi(value.AsInt());
+        case DataType::BigInt:
+            return Converter<TinyInt>::Stoi(value.AsBigInt());
+        case DataType::Decimal:
+            return 0;
+        case DataType::String:
+            return Converter<TinyInt>::Stoi(value.AsString());
+        case DataType::Bool:
+            return value.AsBool() ? 1 : 0;
+        default:
+            Coercions::ThrowException(valueType);
         }
         return -1;
     }
@@ -361,22 +373,22 @@ namespace DataTypes {
     SmallInt Coercions::ToSmallInt(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return *reinterpret_cast<const TinyInt*>(value.Data());
-            case DataType::SmallInt:
-                return *reinterpret_cast<const SmallInt*>(value.Data());
-            case DataType::Int:
-                return Converter<SmallInt>::Stoi(value.AsInt());
-            case DataType::BigInt:
-                return Converter<SmallInt>::Stoi(value.AsBigInt());
-            case DataType::Decimal:
-                return 0;
-            case DataType::String:
-                return Converter<SmallInt>::Stoi(value.AsString());
-            case DataType::Bool:
-                return value.AsBool() ? 1 : 0;
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return *reinterpret_cast<const TinyInt*>(value.Data());
+        case DataType::SmallInt:
+            return *reinterpret_cast<const SmallInt*>(value.Data());
+        case DataType::Int:
+            return Converter<SmallInt>::Stoi(value.AsInt());
+        case DataType::BigInt:
+            return Converter<SmallInt>::Stoi(value.AsBigInt());
+        case DataType::Decimal:
+            return 0;
+        case DataType::String:
+            return Converter<SmallInt>::Stoi(value.AsString());
+        case DataType::Bool:
+            return value.AsBool() ? 1 : 0;
+        default:
+            Coercions::ThrowException(valueType);
         }
         return -1;
     }
@@ -384,22 +396,22 @@ namespace DataTypes {
     Int Coercions::ToInt(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return *reinterpret_cast<const TinyInt*>(value.Data());
-            case DataType::SmallInt:
-                return *reinterpret_cast<const SmallInt*>(value.Data());
-            case DataType::Int:
-                return *reinterpret_cast<const Int*>(value.Data());
-            case DataType::BigInt:
-                return Converter<Int>::Stoi(value.AsBigInt());
-            case DataType::Decimal:
-                return 0;
-            case DataType::String:
-                return Converter<Int>::Stoi(value.AsStringView());
-            case DataType::Bool:
-                return value.AsBool() ? 1 : 0;
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return *reinterpret_cast<const TinyInt*>(value.Data());
+        case DataType::SmallInt:
+            return *reinterpret_cast<const SmallInt*>(value.Data());
+        case DataType::Int:
+            return *reinterpret_cast<const Int*>(value.Data());
+        case DataType::BigInt:
+            return Converter<Int>::Stoi(value.AsBigInt());
+        case DataType::Decimal:
+            return 0;
+        case DataType::String:
+            return Converter<Int>::Stoi(value.AsStringView());
+        case DataType::Bool:
+            return value.AsBool() ? 1 : 0;
+        default:
+            Coercions::ThrowException(valueType);
         }
         return -1;
     }
@@ -407,22 +419,22 @@ namespace DataTypes {
     BigInt Coercions::ToBigInt(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return *reinterpret_cast<const TinyInt*>(value.Data());
-            case DataType::SmallInt:
-                return *reinterpret_cast<const SmallInt*>(value.Data());
-            case DataType::Int:
-                return *reinterpret_cast<const Int*>(value.Data());
-            case DataType::BigInt:
-                return *reinterpret_cast<const BigInt*>(value.Data());
-            case DataType::Decimal:
-                return 0;
-            case DataType::String:
-                return Converter<BigInt>::Stoi(value.AsStringView());
-            case DataType::Bool:
-                return value.AsBool() ? 1 : 0;
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return *reinterpret_cast<const TinyInt*>(value.Data());
+        case DataType::SmallInt:
+            return *reinterpret_cast<const SmallInt*>(value.Data());
+        case DataType::Int:
+            return *reinterpret_cast<const Int*>(value.Data());
+        case DataType::BigInt:
+            return *reinterpret_cast<const BigInt*>(value.Data());
+        case DataType::Decimal:
+            return 0;
+        case DataType::String:
+            return Converter<BigInt>::Stoi(value.AsStringView());
+        case DataType::Bool:
+            return value.AsBool() ? 1 : 0;
+        default:
+            Coercions::ThrowException(valueType);
         }
         return -1;
     }
@@ -430,30 +442,30 @@ namespace DataTypes {
     String Coercions::ToString(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return Converter<TinyInt>::Itos(value.AsTinyInt(), value.GetAllocator());
-            case DataType::SmallInt:
-                return Converter<SmallInt>::Itos(value.AsSmallInt(), value.GetAllocator());
-            case DataType::Int:
-                return Converter<Int>::Itos(value.AsInt(), value.GetAllocator());
-            case DataType::BigInt:
-                return Converter<BigInt>::Itos(value.AsBigInt(), value.GetAllocator());
-            case DataType::Decimal:
-                return value.AsDecimal().ToString(value.GetAllocator());
-            case DataType::String:
-                return String(value.Data(), value.Size(), value.GetAllocator());
-            case DataType::Bool: {
-                const auto* str = value.AsBool() ? "true" : "false";
-                return String(str, value.GetAllocator());
-            }
-            case DataType::DateTime:
-                return value.AsDateTime().ToString(value.GetAllocator());
-            case DataType::Guid:
-                return value.AsGuid().ToString(value.GetAllocator());
-            case DataType::RowIdentifier:
-            case DataType::Unknown:
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return Converter<TinyInt>::Itos(value.AsTinyInt(), value.GetAllocator());
+        case DataType::SmallInt:
+            return Converter<SmallInt>::Itos(value.AsSmallInt(), value.GetAllocator());
+        case DataType::Int:
+            return Converter<Int>::Itos(value.AsInt(), value.GetAllocator());
+        case DataType::BigInt:
+            return Converter<BigInt>::Itos(value.AsBigInt(), value.GetAllocator());
+        case DataType::Decimal:
+            return value.AsDecimal().ToString(value.GetAllocator());
+        case DataType::String:
+            return String(value.Data(), value.Size(), value.GetAllocator());
+        case DataType::Bool: {
+            const auto* str = value.AsBool() ? "true" : "false";
+            return String(str, value.GetAllocator());
+        }
+        case DataType::DateTime:
+            return value.AsDateTime().ToString(value.GetAllocator());
+        case DataType::Guid:
+            return value.AsGuid().ToString(value.GetAllocator());
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            Coercions::ThrowException(valueType);
         }
         return String(nullptr);
     }
@@ -461,20 +473,20 @@ namespace DataTypes {
     StringView Coercions::ToStringView(const Value& value, bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::String:
-                return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::Decimal:
-            case DataType::Unknown:
-            case DataType::Bool:
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::String:
+            return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Unknown:
+        case DataType::Bool:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        default:
+            Coercions::ThrowException(valueType);
         }
         return StringView(nullptr);
     }
@@ -482,12 +494,12 @@ namespace DataTypes {
     Guid Coercions::ToGuid(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::Guid:
-                return Guid(value.Data(), value.Size());
-            case DataType::String:
-                return Guid::Parse(value.AsStringView());
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::Guid:
+            return Guid(value.Data(), value.Size());
+        case DataType::String:
+            return Guid::Parse(value.AsStringView());
+        default:
+            Coercions::ThrowException(valueType);
         }
         return Guid::Empty();
     }
@@ -495,15 +507,15 @@ namespace DataTypes {
     DateTime Coercions::ToDateTime(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::String: {
-                DateTime date;
-                DateTime::FromString(date, value.AsStringView());
-                return date;
-            }
-            case DataType::DateTime:
-                return DateTime(*reinterpret_cast<const BigInt*>(value.Data()));
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::String: {
+            DateTime date;
+            DateTime::FromString(date, value.AsStringView());
+            return date;
+        }
+        case DataType::DateTime:
+            return DateTime(*reinterpret_cast<const BigInt*>(value.Data()));
+        default:
+            Coercions::ThrowException(valueType);
         }
         return DateTime::Now();
     }
@@ -511,28 +523,45 @@ namespace DataTypes {
     Decimal Coercions::ToDecimal(const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
-            case DataType::TinyInt:
-                return Decimal(value.AsTinyInt());
-            case DataType::SmallInt:
-                return Decimal(value.AsSmallInt());
-            case DataType::Int:
-                return Decimal(value.AsInt());
-            case DataType::BigInt:
-                return Decimal(value.AsBigInt());
-            case DataType::Decimal:
-                return Decimal(value.Data(), value.Size());
-            case DataType::String:
-                return Decimal(value.AsStringView());
-            case DataType::Bool:
-                return Decimal(value.AsBool());
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            case DataType::Unknown:
-            default:
-                Coercions::ThrowException(valueType);
+        case DataType::TinyInt:
+            return Decimal(value.AsTinyInt());
+        case DataType::SmallInt:
+            return Decimal(value.AsSmallInt());
+        case DataType::Int:
+            return Decimal(value.AsInt());
+        case DataType::BigInt:
+            return Decimal(value.AsBigInt());
+        case DataType::Decimal:
+            return Decimal(value.Data(), value.Size());
+        case DataType::String:
+            return Decimal(value.AsStringView());
+        case DataType::Bool:
+            return Decimal(value.AsBool());
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Unknown:
+        default:
+            Coercions::ThrowException(valueType);
         }
         return Decimal();
+    }
+
+    JsonBinary Coercions::ToJsonBinary(const Value& value, bool explicitCast){
+        const auto valueType = value.GetType();
+        switch (valueType){
+        case DataType::Json:
+            return JsonBinary(value.GetAllocator(), value.Data(), value.Size());
+        case DataType::String:{
+            const auto view = value.AsStringView();
+            Serialization::JsonParser parser(value.GetAllocator(), view);
+            return parser.Parse();
+        }
+        default:
+            Coercions::ThrowException(valueType);
+        }
+
+        return JsonBinary(value.GetAllocator());
     }
 
     bool Coercions::CanBeParsedToType(const DataType toType, const Value& value) {
@@ -546,40 +575,42 @@ namespace DataTypes {
             return true;
 
         switch (toType) {
-            case DataType::TinyInt:
-                return Coercions::CanGetTinyInt(value);
-            case DataType::SmallInt:
-                return Coercions::CanGetSmallInt(value);
-            case DataType::Int:
-                return Coercions::CanGetInt(value);
-            case DataType::BigInt:
-                return Coercions::CanGetBigInt(value);
-            case DataType::Decimal:
-                return Coercions::CanGetDecimal(value);
-            case DataType::String:
-                return Coercions::CanGetString(value);
-            case DataType::Bool:
-                return Coercions::CanGetBool(value);
-            case DataType::DateTime:
-                return Coercions::CanGetDateTime(value);
-            case DataType::Guid:
-                return Coercions::CanGetGuid(value);
-            default:
-                return false;
+        case DataType::TinyInt:
+            return Coercions::CanGetTinyInt(value);
+        case DataType::SmallInt:
+            return Coercions::CanGetSmallInt(value);
+        case DataType::Int:
+            return Coercions::CanGetInt(value);
+        case DataType::BigInt:
+            return Coercions::CanGetBigInt(value);
+        case DataType::Decimal:
+            return Coercions::CanGetDecimal(value);
+        case DataType::String:
+            return Coercions::CanGetString(value);
+        case DataType::Json:
+            return Coercions::CanGetJsonBinary(value);
+        case DataType::Bool:
+            return Coercions::CanGetBool(value);
+        case DataType::DateTime:
+            return Coercions::CanGetDateTime(value);
+        case DataType::Guid:
+            return Coercions::CanGetGuid(value);
+        default:
+            return false;
         }
     }
 
     void Coercions::DeduceIntegerType(Value& value) {
         switch (value.GetType()) {
-            case DataType::SmallInt:
-                return Coercions::DownCastFromSmallInt(value);
-            case DataType::Int:
-                return Coercions::DownCastFromInt(value);
-            case DataType::BigInt:
-                return Coercions::DownCastFromBigInt(value);
-            case DataType::TinyInt:
-            default:
-                break;
+        case DataType::SmallInt:
+            return Coercions::DownCastFromSmallInt(value);
+        case DataType::Int:
+            return Coercions::DownCastFromInt(value);
+        case DataType::BigInt:
+            return Coercions::DownCastFromBigInt(value);
+        case DataType::TinyInt:
+        default:
+            break;
         }
     }
 }

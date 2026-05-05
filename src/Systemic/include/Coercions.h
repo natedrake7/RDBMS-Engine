@@ -2,6 +2,7 @@
 #include "DataStructures/ConstexprHashSet.h"
 #include "DataTypes/Value.h"
 #include "DataTypes/Guid.h"
+#include "DataTypes/JsonBinary.h"
 
 namespace DataTypes{
     enum class CoercionType : UnsignedTinyInt {
@@ -45,6 +46,7 @@ namespace DataTypes{
     [[nodiscard]] static bool CanGetGuid(const Value& value);
     [[nodiscard]] static bool CanGetDateTime(const Value& value);
     [[nodiscard]] static bool CanGetDecimal(const Value& value);
+    [[nodiscard]] static bool CanGetJsonBinary(const Value& value);
 
     static void DownCastFromSmallInt(Value& value);
     static void DownCastFromInt(Value& value);
@@ -69,6 +71,7 @@ namespace DataTypes{
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
         [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static JsonBinary ToJsonBinary(const Value& value, bool explicitCast = false);
 
         [[nodiscard]] static bool CanBeParsedToType(DataType toType, const Value& value);
         static void DeduceIntegerType(Value& value);

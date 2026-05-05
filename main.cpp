@@ -114,10 +114,10 @@ int main(){
     static auto& bufferPoolMemoryManager = CoreEngine::BufferPoolMemoryManager::Get();
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
-    Tests::InitializeTester();
-    Tests::RunTest(&Tests::ParseJson);
-
-    return 0;
+    // Tests::InitializeTester();
+    // Tests::RunTest(&Tests::ParseJson);
+    //
+    // return 0;
     // External::Plugin plugin;
     // plugin.Load("plugins/PluginLibrary.dll");
     // External::Plugin::Execute("AddNumbers");
@@ -134,12 +134,12 @@ int main(){
 
     std::thread garbageCollectorThread(CoreEngine::GarbageCollector::Collect, std::ref(serverRunning));
 
-    std::thread statisticsThread(
-        CoreEngine::StatisticsScheduler::Start,
-        std::ref(serverRunning),
-        std::ref(server.GetDatabases()),
-        std::ref(server.GetDatabasesLatch())
-    );
+    // std::thread statisticsThread(
+    //     CoreEngine::StatisticsScheduler::Start,
+    //     std::ref(serverRunning),
+    //     std::ref(server.GetDatabases()),
+    //     std::ref(server.GetDatabasesLatch())
+    // );
 
     static constexpr DataTypes::StringView CONFIG_FILE_PATH = "configuration.json";
     server.Initialize(CONFIG_FILE_PATH);
@@ -153,7 +153,7 @@ int main(){
     CoreEngine::StatisticsScheduler::Stop();
 
     connectionThread.join();
-    statisticsThread.join();
+    // statisticsThread.join();
     garbageCollectorThread.join();
 
     server.Shutdown();
@@ -228,8 +228,8 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             continue;
         }
 
-        CoreEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
         QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
+        CoreEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
     }
 
     const auto end = std::chrono::high_resolution_clock::now();

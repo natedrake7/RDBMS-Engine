@@ -254,53 +254,34 @@ namespace Tests{
 
     void ParseJson(){
         const CoreEngine::Memory::Allocator allocator;
+                // "scores": [85.5, 90.0, 78.0],
+  //       "nestedArray": [
+  //     "obj1"
+  // ]
+
+        //,
+        // "nullValue": null
         const auto json = R"(
             {
                 "name": "Alice",
                 "age": 30,
                 "isStudent": false,
-                "scores": [85.5, 90.0, 78.0],
                 "address": {
                     "street": "123 Main St",
                     "city": "Anytown",
                     "nestedObject": {
-                        "key": "value",
-                        "nestedArray": [
-                            "obj1"
-                        ]
+                        "key": "value"
                     }
-                },
-                "nullValue": null
+                }
             }
         )";
 
         Serialization::JsonParser parser(&allocator, json);
-        const auto result = parser.Parse();
+        const auto jsonBinary = parser.Parse();
+        const auto jsonEntry = jsonBinary[DataTypes::StringView("address.street")];
+        if (jsonEntry.Type() == Serialization::JsonType::Null)
+            return;
 
-        // Serialization::JsonWriter::Print(std::cout, result);
-
-        Serialization::JsonBuilder builder(&allocator);
-        builder.StartObject();
-        builder.Key("name");
-        auto str = DataTypes::String("Alice", &allocator);
-        builder.Value(Serialization::JsonValue(std::move(str)));
-        // builder.Key("age");
-        // builder.Value(Serialization::JsonValue(DataTypes::Decimal(30)));
-        builder.Key("isStudent");
-        builder.Value(Serialization::JsonValue(true));
-        builder.Key("scores");
-        builder.StartObject();
-        builder.Key("0");
-        builder.Value(Serialization::JsonValue(true));
-        builder.EndObject();
-        // builder.StartArray();
-        // builder.Value(Serialization::JsonValue(DataTypes::Decimal("85.5")));
-        // builder.Value(Serialization::JsonValue(DataTypes::Decimal("90.0")));
-        // builder.EndArray();
-        builder.EndObject();
-
-        const DataTypes::JsonBinary jsonBinary = builder.Build();
-        const auto jsonEntry = jsonBinary[DataTypes::StringView("scores.0")];
-        std::cout << jsonEntry.AsBool() << std::endl;
+        std::cout << jsonEntry.AsString() << std::endl;
     }
 }

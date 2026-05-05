@@ -2,6 +2,9 @@
 
 #include "../include/Serialization/JsonParser.h"
 
+#include "DataTypes/JsonBinary.h"
+#include "Serialization/JsonBuilder.h"
+
 namespace Serialization {
     JsonValue::Data::Data()
         : _bool(false){}
@@ -150,6 +153,8 @@ namespace Serialization {
             case JsonType::Array: return this->_data._array.Data();
             case JsonType::Object: return &this->_data._object;
         }
+
+        return nullptr;
     }
 
     void JsonParser::SkipWhitespace(){
@@ -175,23 +180,40 @@ namespace Serialization {
         return this->_src[this->_pos++];
     }
 
-    JsonValue JsonParser::ParseValue(){
+    void JsonParser::ParseValue(JsonBuilder& builder){
         this->SkipWhitespace();
         this->SkipComment();
 
         const auto character = this->Peek();
-        if (character == JSON_QUOTE)
-            return JsonValue(this->ParseString());
-        if (character == JSON_OPEN_BRACE)
-            return JsonValue(this->ParseObject());
-        if (character == JSON_OPEN_BRACKET)
-            return JsonValue(this->ParseArray());
-        if (character == JSON_TRUE_START || character == JSON_FALSE_START)
-            return JsonValue(this->ParseBool());
-        if (character == JSON_NULL_START)
-            return JsonValue(this->ParseNull());
-        if (character == JSON_MINUS || std::isdigit(character))
-            return JsonValue(this->ParseNumber());
+        if (character == JSON_QUOTE){
+            builder.Value(this->ParseString());
+            return;
+        }
+        if (character == JSON_OPEN_BRACE){
+            builder.StartObject();
+            this->ParseObject(builder);
+            builder.EndObject();
+            return;
+        }
+        if (character == JSON_OPEN_BRACKET){
+            builder.StartArray();
+            this->ParseArray(builder);
+            builder.EndArray();
+            return;
+        }
+        if (character == JSON_TRUE_START || character == JSON_FALSE_START){
+            this->ParseBool(builder);
+            return;
+        }
+        if (character == JSON_NULL_START){
+            this->ParseNull(builder);
+            return;
+        }
+        if (character == JSON_MINUS || std::isdigit(character)){
+            this->ParseNumber(builder);
+            return;
+        }
+
         throw std::runtime_error(std::string("Unexpected character: ") + character);
     }
 
@@ -231,7 +253,7 @@ namespace Serialization {
         return result;
     }
 
-    JsonNumber JsonParser::ParseNumber() {
+    void JsonParser::ParseNumber(JsonBuilder& builder) {
         const auto start = this->_pos;
 
         if (this->Peek() == JSON_MINUS)
@@ -257,36 +279,45 @@ namespace Serialization {
         }
 
         const auto view = DataTypes::StringView(this->_src.Data() + start, this->_pos - start);
-        return JsonNumber(view);
+        builder.Value(JsonNumber(view));
     }
 
-    JsonBool JsonParser::ParseBool(){
+    void JsonParser::ParseBool(JsonBuilder& builder){
         const char* p = this->_src.Data() + this->_pos;
-        if (std::memcmp(p, "true", 4) == 0)  { this->_pos += 4; return true; }
-        if (std::memcmp(p, "false", 5) == 0) { this->_pos += 5; return false; }
+        if (strncasecmp(p, "true", 4) == 0){
+            this->_pos += 4;
+            builder.Value(true);
+            return;
+        }
+
+        if (strncasecmp(p, "false", 5) == 0){
+            this->_pos += 5;
+            builder.Value(false);
+            return;
+        }
+
         throw std::runtime_error("JsonParser::ParseBool: Invalid boolean value. Error at position: " + std::to_string(this->_pos));
     }
 
-    JsonNull JsonParser::ParseNull(){
-        if (std::memcmp(this->_src.Data() + this->_pos, "null", 4) == 0) {
+    void JsonParser::ParseNull(JsonBuilder& builder){
+        if (strncasecmp(this->_src.Data() + this->_pos, "null", 4) == 0) {
             this->_pos += 4;
-            return nullptr;
+            builder.ValueNull();
+            return;
         }
         throw std::runtime_error("JsonParser::ParseNull: Invalid null value. Error at position: " + std::to_string(this->_pos));
     }
 
-    JsonArray JsonParser::ParseArray(){
+    void JsonParser::ParseArray(JsonBuilder& builder){
         this->Consume(); // opening [
-
-        JsonArray array(this->_allocator);
         this->SkipWhitespace();
         if (this->Peek() == JSON_CLOSE_BRACKET) {
             this->Consume();
-            return array;
+            return;
         }
 
         while (true) {
-            array.Push(this->ParseValue());
+            this->ParseValue(builder);
             this->SkipWhitespace();
             if (this->Peek() == JSON_CLOSE_BRACKET) {
                 this->Consume();
@@ -296,18 +327,15 @@ namespace Serialization {
                 throw std::runtime_error("JsonParser::ParseArray: Expected ',' in array. Error at position: " + std::to_string(this->_pos));
             this->Consume();
         }
-
-        return array;
     }
 
-    JsonObject JsonParser::ParseObject(){
+    void JsonParser::ParseObject(JsonBuilder& builder){
         this->Consume(); // opening {
 
-        JsonObject object;
         this->SkipWhitespace();
         if (this->Peek() == JSON_CLOSE_BRACE) {
             this->Consume();
-            return object;
+            return;
         }
 
         while (true) {
@@ -316,12 +344,13 @@ namespace Serialization {
             if (this->Peek() != JSON_QUOTE)
                 throw std::runtime_error("JsonParser::ParseObject: Expected string key. Error at position: " + std::to_string(this->_pos));
 
-            auto key = this->ParseString();
+            auto strView = this->ParseString().ToView();
+            builder.Key(strView);
             this->SkipWhitespace();
             if (this->Consume() != JSON_COLON)
                 throw std::runtime_error("JsonParser::ParseObject: Expected ':' in object. Error at position: " + std::to_string(this->_pos));
 
-            object[key] = this->ParseValue();
+            this->ParseValue(builder);
             this->SkipWhitespace();
 
             if (this->Peek() == JSON_CLOSE_BRACE) {
@@ -332,8 +361,6 @@ namespace Serialization {
                 throw std::runtime_error("JsonParser::ParseObject: Expected ',' in object. Error at position: " + std::to_string(this->_pos));
             this->Consume();
         }
-
-        return object;
     }
 
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const char* src)
@@ -345,15 +372,22 @@ namespace Serialization {
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const std::string& src)
         : _allocator(allocator), _src(src.c_str(), static_cast<Int>(src.size())), _pos(0){}
 
-    JsonParser::JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&& src)
-        : _allocator(allocator), _src(std::move(src)), _pos(0){}
+    JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::StringView& src)
+        : _allocator(allocator), _src(src), _pos(0){}
 
-    JsonValue JsonParser::Parse(){
-        auto val = this->ParseValue();
+    DataTypes::JsonBinary JsonParser::Parse(){
+        JsonBuilder builder(this->_allocator);
+        this->ParseValue(builder);
         this->SkipWhitespace();
+
         if (this->_pos != this->_src.Size())
             throw std::runtime_error("JsonParser::Parse: Unexpected trailing characters");
-        return val;
+
+        return builder.Build();
+    }
+
+    bool JsonParser::IsJson(const DataTypes::StringView& src){
+        return true;
     }
 
     // ── JsonWriter ────────────────────────────────────────────────────────────
@@ -378,6 +412,46 @@ namespace Serialization {
             }
         }
         os << JSON_QUOTE;
+    }
+
+    void JsonWriter::BuildJsonObject(JsonBuilder& builder, const JsonObject& object){
+        builder.StartObject();
+        for (const auto& [key, val] : object){
+            builder.Key(key.ToView());
+            BuildJsonBinary(builder, val);
+        }
+        builder.EndObject();
+    }
+
+    void JsonWriter::BuildJsonArray(JsonBuilder& builder, const JsonArray& array){
+        builder.StartArray();
+        for (Int i = 0; i < array.Size(); ++i){
+            BuildJsonBinary(builder, array[i]);
+        }
+        builder.EndArray();
+    }
+
+    void JsonWriter::BuildJsonBinary(JsonBuilder& builder, const JsonValue& value){
+        switch (value.Type()) {
+        case JsonType::Null:
+        case JsonType::Bool:
+        case JsonType::Number:
+        case JsonType::String:
+            builder.Value(value);
+            break;
+        case JsonType::Array:
+            JsonWriter::BuildJsonArray(builder, value.AsArray());
+            break;
+        case JsonType::Object:
+            JsonWriter::BuildJsonObject(builder, value.AsObject());
+            break;
+        }
+    }
+
+    DataTypes::JsonBinary JsonWriter::ToJsonBinary(const ::Memory::IAllocator* allocator, const JsonValue& value){
+        JsonBuilder builder(allocator);
+        JsonWriter::BuildJsonBinary(builder, value);
+        return builder.Build();
     }
 
     void JsonWriter::PrintValue(std::ostream& os, const JsonValue& value, const int indent) {

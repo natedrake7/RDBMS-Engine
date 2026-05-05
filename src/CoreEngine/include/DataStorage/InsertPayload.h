@@ -6,14 +6,12 @@
 #include "../../../Systemic/include/DataTypes/Decimal.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 
-namespace CoreEngine
-{
+namespace CoreEngine{
     class ExecutionContext;
     struct ScanState;
 }
 
-namespace Pages
-{
+namespace Pages{
     struct RawRowReference;
 }
 
@@ -31,6 +29,7 @@ namespace CoreEngine::StorageTypes {
 
         template <typename T>
         void CopyToBuffer(T value);
+        inline void CopyToBuffer(const Value& src);
         inline void CopyToBuffer(const DataTypes::String& src);
         inline void CopyToBuffer(const char* src, Int srcSize);
         inline void CopyToBuffer(const std::string& src);
@@ -44,6 +43,7 @@ namespace CoreEngine::StorageTypes {
         inline Int SetBigInt(const Value& value, Errors::RuntimeStatus& status);
         inline Int SetDecimal(const Value& value, const Column* column, Errors::RuntimeStatus& status);
         inline Int SetString(const Value& value, const Column* column, Errors::RuntimeStatus& status);
+        inline Int SetJson(const Value& value);
         inline Int SetBool(const Value& value, Errors::RuntimeStatus& status);
         inline Int SetDateTime(const Value& value);
         inline Int SetGuid(const Value& value);
@@ -94,6 +94,10 @@ namespace CoreEngine::StorageTypes {
     template <typename T>
     void InsertPayload::CopyToBuffer(T value){
         this->SetData(&value, sizeof(T));
+    }
+
+    void InsertPayload::CopyToBuffer(const Value& src){
+        this->SetData(src.Data(), src.Size());
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::String& src){
