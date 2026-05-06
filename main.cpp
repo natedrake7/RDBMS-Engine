@@ -102,6 +102,7 @@
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 
 //TODO use json accessors for updates as well.
+//TODO use binary search on B tree lower bound and upper bound to go to O(logn)
 
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
