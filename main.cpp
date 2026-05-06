@@ -101,6 +101,14 @@
 
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 
+//TODO use json accessors for updates as well.
+
+//CREATE DATABASE MoviesDB
+//USE MoviesDB
+//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT)
+//CREATE TABLE dbo.Movies(ID INT PRIMARY KEY IDENTITY(1,1), Data JSON)
+//INSERT INTO dbo.Movies(Data) VALUES('{"name": "kostas"}')
+
 int main(){
     DataTypes::Coercions::Initialize();
 

@@ -4,8 +4,8 @@
 #include <vector>
 
 #include "DataTypes.h"
-#include "JsonBinary.h"
 #include "StringView.h"
+#include "../Serialization/JsonParser.h"
 
 namespace Memory{
     class IAllocator;
@@ -35,13 +35,6 @@ class Value {
 
     static Value PerformBigIntSubtraction(const Value& lhs, const Value& rhs);
     static Value PerformDecimalSubtraction(const Value& lhs, const Value& rhs);
-
-    static std::tuple<bool, Value> PerformNullEqualityComparison(const Value& lhs, const Value& rhs);
-    static std::tuple<bool, Value> PerformNullGreaterComparison(const Value& lhs, const Value& rhs);
-    static std::tuple<bool, Value> PerformNullGreaterEqualComparison(const Value& lhs, const Value& rhs);
-    static std::tuple<bool, Value> PerformNullLessComparison(const Value& lhs, const Value& rhs);
-    static std::tuple<bool, Value> PerformNullLessEqualComparison(const Value& lhs, const Value& rhs);
-    static std::tuple<bool, Value> PerformNullInEqualityComparison(const Value& lhs, const Value& rhs);
 
     [[nodiscard]] long double InterpolateString() const;
 
@@ -73,6 +66,7 @@ class Value {
         Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const Serialization::JsonValue& data, const Memory::IAllocator* allocator, column_index_t index = 0);
 
         static Value FromExternalStorage(
             const object_t* data,
@@ -83,6 +77,7 @@ class Value {
         );
 
         static Value Null(column_index_t columnIndex = 0);
+        static Value Null(const Memory::IAllocator* allocator, column_index_t columnIndex = 0);
 
         [[nodiscard]] bool IsNull() const;
         [[nodiscard]] column_index_t GetColumnIndex() const;
@@ -119,13 +114,12 @@ class Value {
         [[nodiscard]] DataTypes::Guid AsGuid()const;
         [[nodiscard]] DataTypes::JsonBinary AsJson()const;
         [[nodiscard]] page_id_t AsLargeObjectPointer() const;
-        // [[nodiscard]] Pages::OverflowPointer AsOverflowPointer() const;
 
         void SetColumnIndex(column_index_t otherIndex);
         void SetType(DataType otherType);
         void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset);
 
-        static DataType PromoteType(DataType lhs, DataType rhs);
+        static inline DataType PromoteType(DataType lhs, DataType rhs);
         friend std::ostream& operator<<(std::ostream& os, const Value& field);
 
         Value& operator=(const Value& rhs);

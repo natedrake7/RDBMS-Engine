@@ -92,93 +92,6 @@ Value Value::PerformDecimalSubtraction(const Value& lhs, const Value& rhs){
     return Value(lhs.AsDecimal() - rhs.AsDecimal(), lhs.GetAllocator(), 0);
 }
 
-std::tuple<bool, Value> Value::PerformNullEqualityComparison(
-    const Value &lhs,
-    const Value &rhs
-){
-    if (lhs.IsNull())
-        return std::make_tuple(true, Value(rhs.IsNull(), lhs.GetAllocator(), 0));
-
-    if (rhs.IsNull())
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
-std::tuple<bool, Value> Value::PerformNullGreaterComparison(const Value& lhs, const Value& rhs){
-    const auto& isLeftNull = lhs.IsNull();
-    const auto& isRightNull = rhs.IsNull();
-
-    if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
-std::tuple<bool, Value> Value::PerformNullGreaterEqualComparison(const Value& lhs, const Value& rhs){
-    const auto& isLeftNull = lhs.IsNull();
-    const auto& isRightNull = rhs.IsNull();
-
-    if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
-std::tuple<bool, Value> Value::PerformNullLessComparison(const Value& lhs, const Value& rhs){
-    const auto& isLeftNull = lhs.IsNull();
-    const auto& isRightNull = rhs.IsNull();
-
-    if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
-std::tuple<bool, Value> Value::PerformNullLessEqualComparison(const Value& lhs, const Value& rhs){
-    const auto& isLeftNull = lhs.IsNull();
-    const auto& isRightNull = rhs.IsNull();
-
-    if (isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    if (isLeftNull && !isRightNull)
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    if (!isLeftNull && isRightNull)
-        return std::make_tuple(true, Value(false, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
-std::tuple<bool, Value> Value::PerformNullInEqualityComparison(const Value &lhs, const Value &rhs){
-    if (lhs.IsNull())
-        return std::make_tuple(true, Value(!rhs.IsNull(), lhs.GetAllocator(), 0));
-
-    if (rhs.IsNull())
-        return std::make_tuple(true, Value(true, lhs.GetAllocator(), 0));
-
-    return std::make_tuple(false, Value::Null());
-}
-
 long double Value::InterpolateString() const{
     const auto str = this->AsString();
 
@@ -198,8 +111,8 @@ long double Value::InterpolateString() const{
 }
 
 void Value::BinaryOperationException(const DataType lhs, const DataType rhs) {
-    const auto& leftStr = DataTypeToStringDictionary.Get(lhs);
-    const auto& rightStr = DataTypeToStringDictionary.Get(rhs);
+    const auto& leftStr = SqlTypesString[static_cast<Int>(lhs)];
+    const auto& rightStr = SqlTypesString[static_cast<Int>(rhs)];
 
     throw std::invalid_argument("Left Operand has type: "
         + std::string(leftStr.Data(), leftStr.Size())
@@ -262,7 +175,7 @@ Value::Value(const column_index_t index){
     this->data = nullptr;
     this->columnIndex = index;
     this->size = 0;
-    this->type = DataType::Unknown;
+    this->type = DataType::Null;
     this->_allocator = nullptr;
 }
 
@@ -540,6 +453,19 @@ Value::Value(
     this->type = DataType::Guid;
 }
 
+Value::Value(
+    const Serialization::JsonValue& data,
+    const Memory::IAllocator* allocator,
+    const column_index_t index
+){
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
+    std::memcpy(this->data, data.Data(), data.Size());
+    this->size = data.Size();
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = JsonToSqlTypes[static_cast<Int>(data.Type())];
+}
+
 Value Value::FromExternalStorage(
     const object_t* data,
     const Int size,
@@ -551,6 +477,10 @@ Value Value::FromExternalStorage(
 }
 
 Value Value::Null(const column_index_t columnIndex) { return Value(columnIndex); }
+
+Value Value::Null(const Memory::IAllocator* allocator, const column_index_t columnIndex){
+    return Value(columnIndex, allocator);
+}
 
 bool Value::IsNull() const { return this->data == nullptr; }
 
@@ -722,7 +652,7 @@ void Value::Deserialize(const std::vector<char> &buffer, UnsignedInt &offset){
 }
 
 DataType Value::PromoteType(const DataType lhs, const DataType rhs){
-    return  ColumnTypeRank.Get(lhs) > ColumnTypeRank.Get(rhs) ? lhs : rhs;
+    return lhs > rhs ? lhs : rhs;
 }
 
 std::ostream & operator<<(std::ostream& os, const Value &field){
@@ -806,7 +736,7 @@ Value operator+(const Value &lhs, const Value &rhs){
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
+    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -836,7 +766,7 @@ Value operator-(const Value &lhs, const Value &rhs){
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::Unknown:
+        case DataType::Null:
         default:
             Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -866,7 +796,7 @@ Value operator%(const Value &lhs, const Value &rhs){
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
+    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -892,7 +822,7 @@ Value operator*(const Value &lhs, const Value &rhs){
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
+    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -901,10 +831,6 @@ Value operator*(const Value &lhs, const Value &rhs){
 }
 
 Value operator<(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullLessComparison(lhs, rhs);
-    if (returnOutput)
-        return output;
-
     switch (Value::PromoteType(lhs.type, rhs.type)) {
     case DataType::TinyInt:
     case DataType::SmallInt:
@@ -921,8 +847,8 @@ Value operator<(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDateTime() < rhs.AsDateTime(), lhs.GetAllocator(), 0);
     case DataType::Guid:
         return Value(lhs.AsGuid() < rhs.AsGuid(), lhs.GetAllocator(), 0);
+    case DataType::Null:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -935,10 +861,6 @@ Value operator>(const Value &lhs, const Value &rhs){
 }
 
 Value operator<=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, value] = Value::PerformNullLessEqualComparison(lhs, rhs);
-    if (returnOutput)
-        return value;
-
     switch (Value::PromoteType(lhs.type, rhs.type)) {
     case DataType::TinyInt:
     case DataType::SmallInt:
@@ -955,8 +877,8 @@ Value operator<=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDateTime() <= rhs.AsDateTime(), lhs.GetAllocator(), 0);
     case DataType::Guid:
         return Value(lhs.AsGuid() <= rhs.AsGuid(), lhs.GetAllocator(), 0);
+    case DataType::Null:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -966,10 +888,6 @@ Value operator<=(const Value &lhs, const Value &rhs){
 
 
 Value operator>=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, value] = Value::PerformNullGreaterEqualComparison(lhs, rhs);
-    if (returnOutput)
-        return value;
-
     switch (Value::PromoteType(lhs.type, rhs.type)) {
     case DataType::TinyInt:
     case DataType::SmallInt:
@@ -989,8 +907,8 @@ Value operator>=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDateTime() >= rhs.AsDateTime(), lhs.GetAllocator(), 0);
     case DataType::Guid:
         return Value(lhs.AsGuid() >= rhs.AsGuid(), lhs.GetAllocator(), 0);
+    case DataType::Null:
     case DataType::RowIdentifier:
-    case DataType::Unknown:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -999,10 +917,6 @@ Value operator>=(const Value &lhs, const Value &rhs){
 }
 
 Value operator==(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullEqualityComparison(lhs, rhs);
-    if (returnOutput)
-        return output;
-
     switch (Value::PromoteType(lhs.type, rhs.type)) {
     case DataType::TinyInt:
     case DataType::SmallInt:
@@ -1022,8 +936,9 @@ Value operator==(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDateTime() == rhs.AsDateTime(), lhs.GetAllocator(), 0);
     case DataType::Guid:
         return Value(lhs.AsGuid() == rhs.AsGuid(), lhs.GetAllocator(), 0);
+    case DataType::Null:
+        return Value(lhs.IsNull() == rhs.IsNull(), lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
-    case DataType::Unknown:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -1032,10 +947,6 @@ Value operator==(const Value &lhs, const Value &rhs){
 }
 
 Value operator!=(const Value &lhs, const Value &rhs){
-    const auto& [returnOutput, output] = Value::PerformNullInEqualityComparison(lhs, rhs);
-    if (returnOutput)
-        return output;
-
     switch (Value::PromoteType(lhs.type, rhs.type)) {
     case DataType::TinyInt:
     case DataType::SmallInt:
@@ -1055,8 +966,9 @@ Value operator!=(const Value &lhs, const Value &rhs){
         return Value(lhs.AsDateTime() != rhs.AsDateTime(), lhs.GetAllocator(), 0);
     case DataType::Guid:
         return Value(lhs.AsGuid() != rhs.AsGuid(), lhs.GetAllocator(), 0);
+    case DataType::Null:
+        return Value(lhs.IsNull() != rhs.IsNull(), lhs.GetAllocator(), 0);
     case DataType::RowIdentifier:
-    case DataType::Unknown:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -1113,7 +1025,7 @@ long double Value::Interpolate() const{
     case DataType::Guid:
         return this->AsGuid().Interpolate();
     case DataType::RowIdentifier:
-    case DataType::Unknown:
+    case DataType::Null:
     default:
         throw std::runtime_error("Value::Interpolate() called with unknown type");
     }

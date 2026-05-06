@@ -57,8 +57,6 @@ namespace Serialization{
             JsonBool _bool;
             JsonNumber _number;
             JsonString _string;
-            JsonArray _array;
-            JsonObject _object;
 
             Data();
             ~Data();
@@ -80,8 +78,6 @@ namespace Serialization{
         explicit JsonValue(JsonBool value);
         explicit JsonValue(const JsonNumber& value);
         explicit JsonValue(JsonString&& value);
-        explicit JsonValue(JsonArray&& value);
-        explicit JsonValue(JsonObject&& value);
         explicit JsonValue(
             const ::Memory::IAllocator* allocator,
             const object_t* data, Int size,
@@ -93,8 +89,6 @@ namespace Serialization{
         [[nodiscard]] JsonBool          AsBool()   const { return this->_data._bool; }
         [[nodiscard]] const JsonNumber& AsNumber() const { return this->_data._number; }
         [[nodiscard]] const JsonString& AsString() const { return this->_data._string; }
-        [[nodiscard]] const JsonArray&  AsArray()  const { return this->_data._array; }
-        [[nodiscard]] const JsonObject& AsObject() const { return this->_data._object; }
 
         [[nodiscard]] bool IsNull()   const { return this->_type == JsonType::Null; }
         [[nodiscard]] bool IsBool()   const { return this->_type == JsonType::Bool; }
@@ -130,25 +124,9 @@ namespace Serialization{
             explicit JsonParser(const ::Memory::IAllocator* allocator, const char* src);
             explicit JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::String& src);
             explicit JsonParser(const ::Memory::IAllocator* allocator, const std::string& src);
-            explicit JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::StringView& src);
+            explicit JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&& src);
 
             DataTypes::JsonBinary Parse();
             static bool IsJson(const DataTypes::StringView& src);
     };
-
-    class JsonWriter {
-        static void PrintIndent(std::ostream& os, int indent);
-        static void PrintValue(std::ostream& os, const JsonValue& value, int indent);
-        static void PrintString(std::ostream& os, const JsonString& str);
-
-        static void BuildJsonObject(JsonBuilder& builder, const JsonObject& object);
-        static void BuildJsonArray(JsonBuilder& builder, const JsonArray& array);
-
-        static void BuildJsonBinary(JsonBuilder& builder, const JsonValue& value);
-
-    public:
-        static DataTypes::JsonBinary ToJsonBinary(const ::Memory::IAllocator* allocator, const JsonValue& value);
-        static void Print(std::ostream& os, const JsonValue& value, int indent = 0);
-    };
-
 }

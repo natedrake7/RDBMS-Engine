@@ -31,7 +31,7 @@ namespace DataTypes{
         StringView("off")
     };
 
-    static void ThrowException(DataType type);
+    static inline void ThrowException(DataType type, DataType toType);
 
     [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);

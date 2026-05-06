@@ -270,6 +270,9 @@ namespace DataStructures{
         [[nodiscard]] T* Front() { return this->_data; }
         [[nodiscard]] T* Back() { return this->_data + this->_size - 1; }
 
+        [[nodiscard]] const T* Front() const { return this->_data; }
+        [[nodiscard]] const T* Back() const { return this->_data + this->_size - 1; }
+
         //STL Compatibility
         using iterator = T*;
         using const_iterator = const T*;

@@ -11,7 +11,7 @@ class Variable {
 
   public:
     Variable() {
-      this->type = DataType::Unknown;
+      this->type = DataType::Null;
     }
 
     Variable(Value& value, const DataType& type, DataTypes::String& name)
@@ -26,7 +26,7 @@ class Variable {
       this->normalizedName = std::move(other.normalizedName);
 
       other.value = Value::Null();
-      other.type = DataType::Unknown;
+      other.type = DataType::Null;
       other.name = {};
       other.normalizedName = {};
     }
@@ -50,7 +50,7 @@ class Variable {
       other.value = Value::Null();
       other.name = {};
       other.normalizedName = {};
-      other.type = DataType::Unknown;
+      other.type = DataType::Null;
 
       return *this;
     }

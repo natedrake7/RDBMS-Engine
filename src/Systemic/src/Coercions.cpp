@@ -13,12 +13,16 @@ namespace DataTypes {
         return Coercions::TypeCoercionMatrix[static_cast<Int>(fromType)][static_cast<Int>(toType)];
     }
 
-    void Coercions::ThrowException(const DataType type) {
-        if (type == DataType::Unknown)
+    void Coercions::ThrowException(const DataType type, const DataType toType) {
+        if (type == DataType::Null)
             throw std::invalid_argument("Invalid Field Type");
 
-        const auto& typeName = DataTypeToStringDictionary.Get(type);
-        throw std::invalid_argument("Field type " + std::string(typeName.Data(), typeName.Size()) + " cannot be coerced to Bool");
+        const auto& typeName = SqlTypesString[static_cast<Int>(type)];
+        const auto& toTypeName = SqlTypesString[static_cast<Int>(toType)];
+        throw std::invalid_argument(
+            "Field type " + std::string(typeName.Data(), typeName.Size())
+            + " cannot be coerced to " + std::string(toTypeName.Data(), toTypeName.Size())
+        );
     }
 
     bool Coercions::ParseAsBoolFromString(const Value& value) {
@@ -342,7 +346,7 @@ namespace DataTypes {
         case DataType::Bool:
             return *reinterpret_cast<const bool*>(value.Data());
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::Bool);
         }
         return false;
     }
@@ -365,7 +369,7 @@ namespace DataTypes {
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::TinyInt);
         }
         return -1;
     }
@@ -388,7 +392,7 @@ namespace DataTypes {
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::SmallInt);
         }
         return -1;
     }
@@ -411,7 +415,7 @@ namespace DataTypes {
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::Int);
         }
         return -1;
     }
@@ -434,7 +438,7 @@ namespace DataTypes {
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::BigInt);
         }
         return -1;
     }
@@ -463,9 +467,9 @@ namespace DataTypes {
         case DataType::Guid:
             return value.AsGuid().ToString(value.GetAllocator());
         case DataType::RowIdentifier:
-        case DataType::Unknown:
+        case DataType::Null:
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::String);
         }
         return String(nullptr);
     }
@@ -475,18 +479,23 @@ namespace DataTypes {
         switch (valueType) {
         case DataType::String:
             return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
+        case DataType::Json:{
+            return JsonBinary(value.GetAllocator(), value.Data(), value.Size())
+                    .ToString()
+                    .ToView();
+        }
         case DataType::TinyInt:
         case DataType::SmallInt:
         case DataType::Int:
         case DataType::BigInt:
         case DataType::Decimal:
-        case DataType::Unknown:
+        case DataType::Null:
         case DataType::Bool:
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::String);
         }
         return StringView(nullptr);
     }
@@ -499,7 +508,7 @@ namespace DataTypes {
         case DataType::String:
             return Guid::Parse(value.AsStringView());
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::Guid);
         }
         return Guid::Empty();
     }
@@ -515,7 +524,7 @@ namespace DataTypes {
         case DataType::DateTime:
             return DateTime(*reinterpret_cast<const BigInt*>(value.Data()));
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::DateTime);
         }
         return DateTime::Now();
     }
@@ -540,9 +549,9 @@ namespace DataTypes {
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::Unknown:
+        case DataType::Null:
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::Decimal);
         }
         return Decimal();
     }
@@ -553,12 +562,12 @@ namespace DataTypes {
         case DataType::Json:
             return JsonBinary(value.GetAllocator(), value.Data(), value.Size());
         case DataType::String:{
-            const auto view = value.AsStringView();
-            Serialization::JsonParser parser(value.GetAllocator(), view);
+            auto view = value.AsStringView();
+            Serialization::JsonParser parser(value.GetAllocator(), std::move(view));
             return parser.Parse();
         }
         default:
-            Coercions::ThrowException(valueType);
+            Coercions::ThrowException(valueType, DataType::Json);
         }
 
         return JsonBinary(value.GetAllocator());

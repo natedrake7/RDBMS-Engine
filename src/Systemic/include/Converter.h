@@ -60,47 +60,19 @@ public:
         return !(value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max());
     }
 
-    static T Stoi(const std::u16string& input)
-    {
+    static bool TryStoi(const std::string& input) {
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        const std::wstring converted(input.begin(), input.end());
-
-        if (sizeof(T) > sizeof(int))
-        {
-            long long value = stoll(converted);
-
-            if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
-                throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
-
-            return static_cast<T>(value);
-        }
-
-        int value = stoi(converted);
-
-        if (value < std::numeric_limits<T>::min() || value > std::numeric_limits<T>::max())
-            throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
-
-        return static_cast<T>(value);
-    }
-
-    static bool TryStoi(const std::u16string& input) {
-        static_assert(std::is_integral_v<T>, "T must be integral type");
-
-        const std::wstring converted(input.begin(), input.end());
-
-        char* endPtr = nullptr;
         errno = 0;
-
+        char* endPtr = nullptr;
         if (sizeof(T) > sizeof(int))
         {
-            // strtoll(input.c_str(), &endPtr, 10);
+            strtoll(input.c_str(), &endPtr, 10);
 
             return errno != ERANGE;
         }
 
-        // strtol(input.c_str(), &endPtr, 10);
-
+        strtol(input.c_str(), &endPtr, 10);
         return errno != ERANGE;
     }
     

@@ -30,11 +30,11 @@ statement
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
 createUserStatement
-    : CREATE USER (username=IDENTIFIER) WITH PASSWORD (password=STRING) AND ROLE (role=IDENTIFIER)
+    : CREATE USER (username=identifier) WITH PASSWORD (password=STRING) AND ROLE (role=IDENTIFIER)
     ;
 
 grantRoleStatement
-    : GRANT (role=IDENTIFIER) TO (username=IDENTIFIER)
+    : GRANT (role=identifier) TO (username=identifier)
     ;
 
 ////////////////////////////////////////////////////////////
@@ -374,7 +374,7 @@ functionCall
     ;
 
 functionName
-    : IDENTIFIER
+    : identifier
     | LEFT  { _input->LA(1) == LAPRENT }?
     | RIGHT { _input->LA(1) == LAPRENT }?
     ;
@@ -402,7 +402,7 @@ setVariableStatement
     ;
 
 variableName
-    : '@' IDENTIFIER
+    : '@' identifier
     ;
 
 variableType
@@ -498,7 +498,19 @@ alias
 
 
 identifier
-    : ('[')? IDENTIFIER (']')?
+    : ('[')? (IDENTIFIER | reservedAsIdentifier) (']')?
+    ;
+
+reservedAsIdentifier
+    : USER | SELECT | FROM | WHERE | TABLE | INDEX | CREATE | DROP
+    | INSERT | DELETE | UPDATE | ON | DEFAULT | TO | TOP | DISTINCT
+    | WITH | PASSWORD | ROLE | GRANT | ORDER | BY | VALUES | INTO
+    | DATABASE | USE | SCHEMA | DECLARE | SET | ALTER | RENAME | ADD
+    | COLUMN | UNIQUE | PRIMARY | KEY | IDENTITY | CONSTRAINT | COUNT
+    | SUM | AVG | MIN | MAX | DESC | ASC | LEFT | RIGHT
+    | FULL | INNER | OUTER | JOIN | AS | SWITCH | CASE
+    | WHEN | THEN | IIF | BOOL | TINYINT | SMALLINT | INT | BIGINT
+    | DECIMAL | DATETIME | GUID | JSON | STRING_LITERAL
     ;
 ////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////
@@ -723,7 +735,6 @@ LAPRENT         : '(';
 RAPRENT         : ')';
 COMMA           : ',';
 IDENTIFIER      : [a-zA-Z_][a-zA-Z0-9_]*;
-// IDENTIFIER      : [a-z_][a-z0-9_]*;
 UNICODESTRING   : 'N''\'' ( ~['\\] | '\\' . )* '\'';
 STRING          : '\'' ( ~['\\] | '\\' . )* '\'';
 NUMBER          : [0-9]+;

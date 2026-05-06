@@ -3,17 +3,6 @@
 #include "DataTypes.h"
 #include "StringView.h"
 
-static constexpr ConstexprDictionary ColumnTypeRank{
-    Pair(DataType::String, 1),
-    Pair(DataType::Bool, 3),
-    Pair(DataType::TinyInt, 4),
-    Pair(DataType::SmallInt, 5),
-    Pair(DataType::Int, 6),
-    Pair(DataType::BigInt, 7),
-    Pair(DataType::Decimal, 8),
-    Pair(DataType::DateTime, 9),
-};
-
 static constexpr DataTypes::StringView TrueStrings[] = {
     DataTypes::StringView("true"),
     DataTypes::StringView("1")
@@ -50,17 +39,27 @@ static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseIn
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
-static constexpr ConstexprDictionary DataTypeToStringDictionary{
-    Pair(DataType::TinyInt, DataTypes::StringView("TinyInt")),
-    Pair(DataType::SmallInt, DataTypes::StringView("SmallInt")),
-    Pair(DataType::Int, DataTypes::StringView("Int")),
-    Pair(DataType::BigInt, DataTypes::StringView("BigInt")),
-    Pair(DataType::DateTime, DataTypes::StringView("DateTime")),
-    Pair(DataType::Bool, DataTypes::StringView("Bool")),
-    Pair(DataType::String, DataTypes::StringView("String")),
-    Pair(DataType::Decimal, DataTypes::StringView("Decimal")),
-    Pair(DataType::Guid, DataTypes::StringView("Guid")),
-    Pair(DataType::Json, DataTypes::StringView("Json")),
-    Pair(DataType::Unknown, DataTypes::StringView("Invalid"))
-    //all other types must have their size defined since it is not constant (e.g. string, decimal dont have fixed sizes)
+static constexpr DataTypes::StringView SqlTypesString[] = {
+    DataTypes::StringView(""),         // 0  - Unknown
+    DataTypes::StringView("String"),   // 1
+    DataTypes::StringView("Bool"),     // 2
+    DataTypes::StringView("TinyInt"),  // 3
+    DataTypes::StringView("SmallInt"), // 4
+    DataTypes::StringView("Int"),      // 5
+    DataTypes::StringView("BigInt"),   // 6
+    DataTypes::StringView("Decimal"),  // 7
+    DataTypes::StringView("DateTime"), // 8
+    DataTypes::StringView("Guid"),     // 9
+    DataTypes::StringView("Json"),     // 10
+    DataTypes::StringView("Null"),     // 11
+    DataTypes::StringView(""),         // 12 - RowIdentifier (not displayable)
+};
+
+static constexpr DataType JsonToSqlTypes[] = {
+    DataType::Null, //NULL
+    DataType::Bool,
+    DataType::Decimal,
+    DataType::String,
+    DataType::String, //Array
+    DataType::String, //Object
 };

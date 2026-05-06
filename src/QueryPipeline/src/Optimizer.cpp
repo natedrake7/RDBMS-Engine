@@ -406,11 +406,11 @@ namespace QueryPipeline {
 
     isEqualityJoin = !isEqualityJoin && (binaryExpr->operation == Expressions::BinaryOperator::Equal);
     info.leftColumnId = leftColumnExpr->columnId;
-    info.leftColumnIndex = leftColumnExpr->index;
+    info.leftColumnIndex = leftColumnExpr->columnIndex;
     info.leftTableId = leftColumnExpr->tableId;
 
     info.rightColumnId = rightColumnExpr->columnId;
-    info.rightColumnIndex = rightColumnExpr->index;
+    info.rightColumnIndex = rightColumnExpr->columnIndex;
     info.rightTableId = rightColumnExpr->tableId;
 
     info.expression = expression;

@@ -1,7 +1,5 @@
 ﻿#include <utility>
 
-#include "../include/Serialization/JsonParser.h"
-
 #include "DataTypes/JsonBinary.h"
 #include "Serialization/JsonBuilder.h"
 
@@ -21,13 +19,9 @@ namespace Serialization {
             this->_data._number = other._data._number;
             break;
         case JsonType::String:
-            this->_data._string = other._data._string;
-            break;
         case JsonType::Array:
-            this->_data._array = other._data._array;
-            break;
         case JsonType::Object:
-            this->_data._object = other._data._object;
+            this->_data._string = other._data._string;
             break;
         default:
             break;
@@ -44,13 +38,9 @@ namespace Serialization {
             this->_data._number = other._data._number;
             break;
         case JsonType::String:
-            this->_data._string = std::move(other._data._string);
-            break;
         case JsonType::Array:
-            this->_data._array = std::move(other._data._array);
-            break;
         case JsonType::Object:
-            new (&this->_data._object) JsonObject(std::move(other._data._object));
+            this->_data._string = std::move(other._data._string);
             break;
         default:
             break;
@@ -97,20 +87,11 @@ namespace Serialization {
         this->_data._string = std::move(value);
     }
 
-    JsonValue::JsonValue(JsonArray&& value) : _type(JsonType::Array) {
-        this->_data._array = std::move(value);
-    }
-
-    JsonValue::JsonValue(JsonObject&& value) : _type(JsonType::Object) {
-        new (&this->_data._object) JsonObject(std::move(value));
-    }
-
     JsonValue::JsonValue(
         const ::Memory::IAllocator* allocator,
         const object_t* data, const Int size,
         const JsonType type
-    )
-    {
+    ){
         this->_type = type;
         switch (type) {
         case JsonType::Bool:
@@ -120,6 +101,8 @@ namespace Serialization {
             this->_data._number = DataTypes::Decimal(data, size);
             break;
         case JsonType::String:
+        case JsonType::Array:
+        case JsonType::Object:
             this->_data._string = DataTypes::String(data, size, allocator);
             break;
         default:
@@ -134,24 +117,26 @@ namespace Serialization {
         case JsonType::Number:
             return this->_data._number.GetRawDataSize();
         case JsonType::String:
+        case JsonType::Array:
+        case JsonType::Object:
             return this->_data._string.Size();
         case JsonType::Null:
             return 0;
-        case JsonType::Array:
-            return this->_data._array.Size();
-        case JsonType::Object:
-            return static_cast<Int>(this->_data._object.size());
         }
     }
 
     const void* JsonValue::Data() const{
         switch (this->_type) {
-            case JsonType::Bool: return &this->_data._bool;
-            case JsonType::Number: return &this->_data._number.Data();
-            case JsonType::String: return this->_data._string.Data();
-            case JsonType::Null: return nullptr;
-            case JsonType::Array: return this->_data._array.Data();
-            case JsonType::Object: return &this->_data._object;
+        case JsonType::Bool:
+            return &this->_data._bool;
+        case JsonType::Number:
+            return this->_data._number.Data().Data();
+        case JsonType::String:
+        case JsonType::Array:
+        case JsonType::Object:
+            return this->_data._string.Data();
+        case JsonType::Null:
+            return nullptr;
         }
 
         return nullptr;
@@ -372,8 +357,8 @@ namespace Serialization {
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const std::string& src)
         : _allocator(allocator), _src(src.c_str(), static_cast<Int>(src.size())), _pos(0){}
 
-    JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::StringView& src)
-        : _allocator(allocator), _src(src), _pos(0){}
+    JsonParser::JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&&  src)
+        : _allocator(allocator), _src(std::move(src)), _pos(0){}
 
     DataTypes::JsonBinary JsonParser::Parse(){
         JsonBuilder builder(this->_allocator);
@@ -388,124 +373,5 @@ namespace Serialization {
 
     bool JsonParser::IsJson(const DataTypes::StringView& src){
         return true;
-    }
-
-    // ── JsonWriter ────────────────────────────────────────────────────────────
-
-    void JsonWriter::PrintIndent(std::ostream& os, const int indent) {
-        static constexpr char spaces[128] = "                                                                                                                               ";
-        const int n = indent * 4;
-        os.write(spaces, n < 128 ? n : 128);
-    }
-
-    void JsonWriter::PrintString(std::ostream& os, const JsonString& str) {
-        os << JSON_QUOTE;
-        for (Int i = 0; i < str.Size(); ++i) {
-            const auto character = str[i];
-            switch (character) {
-                case JSON_QUOTE:     os << "\\\""; break;
-                case JSON_BACKSLASH: os << "\\\\"; break;
-                case JSON_NEWLINE:   os << "\\n";  break;
-                case JSON_CR:        os << "\\r";  break;
-                case JSON_TAB:       os << "\\t";  break;
-                default:             os << character;      break;
-            }
-        }
-        os << JSON_QUOTE;
-    }
-
-    void JsonWriter::BuildJsonObject(JsonBuilder& builder, const JsonObject& object){
-        builder.StartObject();
-        for (const auto& [key, val] : object){
-            builder.Key(key.ToView());
-            BuildJsonBinary(builder, val);
-        }
-        builder.EndObject();
-    }
-
-    void JsonWriter::BuildJsonArray(JsonBuilder& builder, const JsonArray& array){
-        builder.StartArray();
-        for (Int i = 0; i < array.Size(); ++i){
-            BuildJsonBinary(builder, array[i]);
-        }
-        builder.EndArray();
-    }
-
-    void JsonWriter::BuildJsonBinary(JsonBuilder& builder, const JsonValue& value){
-        switch (value.Type()) {
-        case JsonType::Null:
-        case JsonType::Bool:
-        case JsonType::Number:
-        case JsonType::String:
-            builder.Value(value);
-            break;
-        case JsonType::Array:
-            JsonWriter::BuildJsonArray(builder, value.AsArray());
-            break;
-        case JsonType::Object:
-            JsonWriter::BuildJsonObject(builder, value.AsObject());
-            break;
-        }
-    }
-
-    DataTypes::JsonBinary JsonWriter::ToJsonBinary(const ::Memory::IAllocator* allocator, const JsonValue& value){
-        JsonBuilder builder(allocator);
-        JsonWriter::BuildJsonBinary(builder, value);
-        return builder.Build();
-    }
-
-    void JsonWriter::PrintValue(std::ostream& os, const JsonValue& value, const int indent) {
-        switch (value.Type()) {
-            case JsonType::Null:
-                os << "null";
-                break;
-            case JsonType::Bool:
-                os << (value.AsBool() ? "true" : "false");
-                break;
-            case JsonType::Number:
-                os << value.AsNumber();
-                break;
-            case JsonType::String:
-                PrintString(os, value.AsString());
-                break;
-            case JsonType::Array: {
-                const auto& arr = value.AsArray();
-                if (arr.Size() == 0) { os << "[]"; break; }
-                os << JSON_OPEN_BRACKET << JSON_NEWLINE;
-                for (Int i = 0; i < arr.Size(); ++i) {
-                    PrintIndent(os, indent + 1);
-                    PrintValue(os, arr[i], indent + 1);
-                    if (i < arr.Size() - 1) os << JSON_COMMA;
-                    os << JSON_NEWLINE;
-                }
-                PrintIndent(os, indent);
-                os << JSON_CLOSE_BRACKET;
-                break;
-            }
-            case JsonType::Object: {
-                const auto& obj = value.AsObject();
-                if (obj.empty()) { os << "{}"; break; }
-                os << JSON_OPEN_BRACE << JSON_NEWLINE;
-                Int i = 0;
-                const auto count = obj.size();
-                for (const auto& [key, val] : obj) {
-                    PrintIndent(os, indent + 1);
-                    PrintString(os, key);
-                    os << JSON_COLON << ' ';
-                    PrintValue(os, val, indent + 1);
-                    if (i < count - 1) os << JSON_COMMA;
-                    os << JSON_NEWLINE;
-                    ++i;
-                }
-                PrintIndent(os, indent);
-                os << JSON_CLOSE_BRACE;
-                break;
-            }
-        }
-    }
-
-    void JsonWriter::Print(std::ostream& os, const JsonValue& value, const int indent) {
-        PrintValue(os, value, indent);
-        os << JSON_NEWLINE;
     }
 }

@@ -5,6 +5,7 @@
 #include "../../../Systemic/include/DataTypes/DateTime.h"
 #include "../../../Systemic/include/DataTypes/Decimal.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
+#include "../../../Systemic/include/DataTypes/JsonBinary.h"
 
 namespace CoreEngine{
     class ExecutionContext;
@@ -29,7 +30,7 @@ namespace CoreEngine::StorageTypes {
 
         template <typename T>
         void CopyToBuffer(T value);
-        inline void CopyToBuffer(const Value& src);
+        inline void CopyToBuffer(const DataTypes::JsonBinary& src);
         inline void CopyToBuffer(const DataTypes::String& src);
         inline void CopyToBuffer(const char* src, Int srcSize);
         inline void CopyToBuffer(const std::string& src);
@@ -96,7 +97,7 @@ namespace CoreEngine::StorageTypes {
         this->SetData(&value, sizeof(T));
     }
 
-    void InsertPayload::CopyToBuffer(const Value& src){
+    void InsertPayload::CopyToBuffer(const DataTypes::JsonBinary& src){
         this->SetData(src.Data(), src.Size());
     }
 

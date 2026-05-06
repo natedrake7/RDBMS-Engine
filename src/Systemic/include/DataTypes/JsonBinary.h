@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "DataTypes.h"
+#include "String.h"
 #include "../Serialization/JsonParser.h"
 
 namespace Serialization{
@@ -12,39 +13,31 @@ namespace DataTypes{
         Scalar = 1
     };
 
-    enum class JsonKeyType : UnsignedTinyInt{
-        Key = 0,
-        Index = 1
-    };
+    // enum class JsonKeyType : UnsignedTinyInt{
+    //     Key = 0,
+    //     Index = 1
+    // };
 
-    struct JsonKey{
-        union Data{
-            String _key;
-            Int _arrayIndex;
-
-            Data();
-            ~Data();
-        } _data;
-
-        JsonKeyType _type;
-
-        void Copy(const JsonKey& other);
-        void Move(JsonKey&& other) noexcept;
-
-        JsonKey();
-        JsonKey(const JsonKey& other);
-        JsonKey& operator=(const JsonKey& other);
-
-        JsonKey(JsonKey&& other) noexcept;
-        JsonKey& operator=(JsonKey&& other) noexcept;
-    };
+    // struct JsonKey{
+    //     JsonKeyType _type;
+    //
+    //     void Copy(const JsonKey& other);
+    //     void Move(JsonKey&& other) noexcept;
+    //
+    //     JsonKey();
+    //     JsonKey(const JsonKey& other);
+    //     JsonKey& operator=(const JsonKey& other);
+    //
+    //     JsonKey(JsonKey&& other) noexcept;
+    //     JsonKey& operator=(JsonKey&& other) noexcept;
+    // };
 
     struct JsonPathStep{
-        JsonKey _key;
+        String _key;
         JsonAccessorType _accessorType;
 
         JsonPathStep();
-        JsonPathStep(JsonKey&& key, JsonAccessorType accessorType);
+        JsonPathStep(String&& key, JsonAccessorType accessorType);
         JsonPathStep(const JsonPathStep& other);
         JsonPathStep& operator=(const JsonPathStep& other);
         JsonPathStep(JsonPathStep&& other) noexcept;
@@ -66,6 +59,13 @@ namespace DataTypes{
             Int headerOffSet
         ) const;
 
+        void SerializeNode(String& str, Int headerOffset)const;
+        void SerializeValue(
+            String& result,
+            Int headerOffset,
+            const Serialization::JsonEntry& entry
+        )const;
+
     public:
         explicit JsonBinary(const ::Memory::IAllocator* allocator);
         explicit JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, Int size);
@@ -82,5 +82,12 @@ namespace DataTypes{
         void SetData(object_t* data, Int size);
 
         Serialization::JsonValue operator[](const StringView& key) const;
+        [[nodiscard]] Serialization::JsonValue Navigate(const DataStructures::PolymorphicArray<JsonPathStep>& pathSegments) const;
+
+        [[nodiscard]] String ToString() const;
+        [[nodiscard]] static String JsonObjectToString(
+            const Serialization::JsonValue& value,
+            const ::Memory::IAllocator* allocator
+        );
     };
 }

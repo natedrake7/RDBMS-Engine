@@ -81,6 +81,8 @@ namespace QueryPipeline {
 
         antlrcpp::Any visitIdentifier(SQLParser::IdentifierContext *context) override;
 
+        antlrcpp::Any visitReservedAsIdentifier(SQLParser::ReservedAsIdentifierContext* context) override;
+
         DataStructures::PolymorphicArray<Statements::ColumnName> GetColumnsList(SQLParser::ColumnListContext *context);
 
         antlrcpp::Any visitAlterTableStatement(SQLParser::AlterTableStatementContext *context) override;
@@ -178,6 +180,7 @@ namespace QueryPipeline {
         antlrcpp::Any visitJsonScalarAccessor(SQLParser::JsonScalarAccessorContext* context) override;
 
         antlrcpp::Any visitJsonKey(SQLParser::JsonKeyContext* context) override;
+
     };
 
     static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

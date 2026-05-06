@@ -183,9 +183,9 @@ namespace Expressions{
 
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
-        this->index = 0;
+        this->columnIndex = 0;
         this->size = 0;
-        this->returnType = DataType::Unknown;
+        this->returnType = DataType::Null;
         this->expressionType = ExpressionType::Column;
     }
 
@@ -193,16 +193,16 @@ namespace Expressions{
         : alias(std::move(name)), tableAlias(std::move(tableAlias)){
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
-        this->index = 0;
+        this->columnIndex = 0;
         this->size = 0;
-        this->returnType = DataType::Unknown;
+        this->returnType = DataType::Null;
         this->expressionType = ExpressionType::Column;
     }
 
     ColumnExpression::ColumnExpression(const column_index_t index){
-        this->index = index;
+        this->columnIndex = index;
         this->size = 0;
-        this->returnType = DataType::Unknown;
+        this->returnType = DataType::Null;
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
         this->expressionType = ExpressionType::Column;
@@ -211,16 +211,16 @@ namespace Expressions{
     Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
             case EvaluationContext::EvaluationContextType::SingleRow:
-              return context.row->PartialMaterialize(context.allocator, this->index);
+              return context.row->PartialMaterialize(context.allocator, this->columnIndex);
             case EvaluationContext::EvaluationContextType::MaterializedRow:
-              return context.materializedRow.GetColumnAt(this->index);
+              return context.materializedRow.GetColumnAt(this->columnIndex);
             case EvaluationContext::EvaluationContextType::Join: {
               const auto outerRow = context.outerRow->Materialize(context.allocator);
               const auto outerRowSize = outerRow.Data().Size();
 
-              return this->index < outerRowSize
-                       ? context.outerRow->PartialMaterialize(context.allocator, this->index)
-                       : context.innerRow->PartialMaterialize(context.allocator, this->index - outerRowSize);
+              return this->columnIndex < outerRowSize
+                       ? context.outerRow->PartialMaterialize(context.allocator, this->columnIndex)
+                       : context.innerRow->PartialMaterialize(context.allocator, this->columnIndex - outerRowSize);
         }
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
@@ -272,7 +272,7 @@ namespace Expressions{
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
-            case DataType::Unknown:
+            case DataType::Null:
             default:
               return false;
         }
@@ -294,7 +294,7 @@ namespace Expressions{
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
-            case DataType::Unknown:
+            case DataType::Null:
             default:
               return false;
         }
@@ -316,7 +316,7 @@ namespace Expressions{
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
-            case DataType::Unknown:
+            case DataType::Null:
             default:
               return false;
         }
@@ -343,7 +343,7 @@ namespace Expressions{
             case DataType::DateTime:
             case DataType::Guid:
             case DataType::RowIdentifier:
-            case DataType::Unknown:
+            case DataType::Null:
             default:
               return false;
         }
@@ -464,8 +464,7 @@ namespace Expressions{
         const DataType returnType,
         const Int index
     ) {
-        if (returnType == DataType::Unknown) {
-
+        if (returnType == DataType::Null) {
             errorMessage = errorMessage.ConcatInPlace(
                 "Function: ",
                 info.name,
@@ -478,16 +477,16 @@ namespace Expressions{
         }
 
         if (!DataTypes::Coercions::IsCoercionAllowed(returnType, expectedType, info.allowImplicitCast)) {
-            std::ostringstream os;
-
-            os  << "Function: "
-                << info.name
-                << " expects argument "
-                << std::to_string(index + 1)
-                << " to be of type: "
-                << DataTypeToStringDictionary.Get(expectedType).Data()
-                << ", but got type: "
-                << DataTypeToStringDictionary.Get(returnType).Data();
+            errorMessage = errorMessage.ConcatInPlace(
+                "Function: ",
+                info.name,
+                " expects argument ",
+                std::to_string(index + 1),
+                " to be of type: ",
+                SqlTypesString[static_cast<int>(expectedType)],
+                ", but got type: ",
+                SqlTypesString[static_cast<int>(returnType)]
+            );
             return false;
         }
 
@@ -495,13 +494,11 @@ namespace Expressions{
     }
 
     void FunctionExpression::ConstructInvalidCastMessage(DataTypes::String& errorMessage, const DataType fromType, const DataType toType) {
-        std::ostringstream os;
-
         errorMessage = errorMessage.ConcatInPlace(
             "Cannot cast safely type: ",
-            DataTypeToStringDictionary.Get(fromType),
+            SqlTypesString[static_cast<int>(fromType)],
             " to type: ",
-            DataTypeToStringDictionary.Get(toType)
+            SqlTypesString[static_cast<int>(toType)]
         );
     }
 
@@ -854,7 +851,7 @@ namespace Expressions{
     VariableExpression::VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator) {
         this->name = name;
         this->normalizedName = DataTypes::String::Normalize(this->name, allocator);
-        this->dataType = DataType::Unknown;
+        this->dataType = DataType::Null;
         this->expressionType = ExpressionType::Variable;
     }
 
@@ -864,16 +861,55 @@ namespace Expressions{
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }
 
+    Value JsonExpression::EvaluateJsonPath(const EvaluationContext &context, const Value& columnValue) const{
+        const auto jsonBinary = columnValue.AsJson();
+        const auto jsonValue = jsonBinary.Navigate(this->pathSegments);
+
+        const auto type = jsonValue.Type();
+        if (type == Serialization::JsonType::Array
+            || type == Serialization::JsonType::Object
+        ){
+            const auto str = DataTypes::JsonBinary::JsonObjectToString(jsonValue, context.allocator);
+            return Value(str, context.allocator);
+        }
+
+        return Value(jsonValue, context.allocator);
+    }
+
     JsonExpression::JsonExpression(ColumnExpression* columnPtr, const Memory::IAllocator* allocator)
-        :columnPtr(columnPtr), pathSegments(allocator), dataType(DataType::Unknown){
+        :columnPtr(columnPtr), pathSegments(allocator), type(DataType::Null){
         this->expressionType = ExpressionType::Json;
     }
 
     Value JsonExpression::Evaluate(const EvaluationContext& context) const{
+        switch (context.type) {
+        case EvaluationContext::EvaluationContextType::SingleRow:{
+            const auto columnValue = context.row->PartialMaterialize(context.allocator, this->columnPtr->columnIndex);
+            return this->EvaluateJsonPath(context, columnValue);
+        }
+        case EvaluationContext::EvaluationContextType::MaterializedRow:{
+            const auto columnValue = context.materializedRow.GetColumnAt(this->columnPtr->columnIndex);
+            return this->EvaluateJsonPath(context, columnValue);
+        }
+        case EvaluationContext::EvaluationContextType::Join: {
+            const auto outerRow = context.outerRow->Materialize(context.allocator);
+            const auto outerRowSize = outerRow.Data().Size();
+
+            const auto columnValue = this->columnPtr->columnIndex < outerRowSize
+                     ? context.outerRow->PartialMaterialize(context.allocator, this->columnPtr->columnIndex)
+                     : context.innerRow->PartialMaterialize(context.allocator, this->columnPtr->columnIndex - outerRowSize);
+            return this->EvaluateJsonPath(context, columnValue);
+        }
+        case EvaluationContext::EvaluationContextType::Constant:
+        case EvaluationContext::EvaluationContextType::Aggregate:
+        case EvaluationContext::EvaluationContextType::Window:
+            break;
+        }
+
         return Value::Null();
     }
 
     DataType JsonExpression::GetReturnType() const{
-        return DataType::Json;
+        return this->type;
     }
 }

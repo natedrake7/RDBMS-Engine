@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "../DataStructures/PolymorphicArray.h"
 #include "../DataTypes/DataTypes.h"
+#include "../Serialization/JsonParser.h"
 
 namespace Serialization{
     struct JsonHeader{
@@ -9,6 +10,19 @@ namespace Serialization{
         UnsignedTinyInt _type;
 
         static constexpr auto SIZE = sizeof(UnsignedInt) + sizeof(UnsignedSmallInt) + sizeof(UnsignedTinyInt);
+
+        [[nodiscard]] bool IsObject()const{
+            return static_cast<JsonType>(this->_type) == JsonType::Object;
+        }
+
+        [[nodiscard]] bool IsArray()const{
+            return static_cast<JsonType>(this->_type) == JsonType::Array;
+        }
+
+        [[nodiscard]] bool IsScalar()const{
+            const auto type = static_cast<JsonType>(this->_type);
+            return type != JsonType::Object && type != JsonType::Array;
+        }
     };
 
     struct JsonEntry{

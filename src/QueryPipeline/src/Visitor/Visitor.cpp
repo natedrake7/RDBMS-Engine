@@ -208,7 +208,7 @@ namespace QueryPipeline {
         }
 
         if (context->NULL_()){
-            auto value = Value::Null();
+            auto value = Value::Null(this->_compileContext->GetAllocator());
             return std::any(value);
         }
 
@@ -474,9 +474,24 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitIdentifier(SQLParser::IdentifierContext *context){
-        const auto value = context->IDENTIFIER()->getText();
-        auto castValue = DataTypes::String(value, this->_compileContext->GetAllocator());
-        return std::any(castValue);
+        if (context->IDENTIFIER()){
+            const auto value = context->IDENTIFIER()->getText();
+            auto castValue = DataTypes::String(value, this->_compileContext->GetAllocator());
+            return std::any(castValue);
+        }
+
+        if (context->reservedAsIdentifier())        {
+            const auto value = context->reservedAsIdentifier()->getText();
+            auto castValue = DataTypes::String(value, this->_compileContext->GetAllocator());
+            return std::any(castValue);
+        }
+
+        throw SyntaxError("Identifier was not specified", CreatePositionErrorMessage(context));
+    }
+
+    antlrcpp::Any SQLVisitorImplementation::visitReservedAsIdentifier(SQLParser::ReservedAsIdentifierContext* context){
+        auto value = context->getText();
+        return std::any(value);
     }
 
     DataStructures::PolymorphicArray<Statements::ColumnName> SQLVisitorImplementation::GetColumnsList(SQLParser::ColumnListContext *context){
@@ -640,12 +655,14 @@ namespace QueryPipeline {
             ? std::any_cast<DataType>(visit(context->variableType()))
             : statement->variable.GetValue().GetType();
 
+
         statement->variable.SetType(type);
         return std::any(statement);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitVariableName(SQLParser::VariableNameContext *context){
-        auto value = "@" + context->IDENTIFIER()->getText();
+        const auto str = std::any_cast<DataTypes::String>(visit(context->identifier()));
+        auto value = DataTypes::String::Concat(this->_compileContext->GetAllocator(), "@", str);
         return std::any(value);
     }
 
@@ -764,9 +781,8 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitFunctionName(SQLParser::FunctionNameContext *context){
-        if (context->IDENTIFIER()){
-            const auto str = context->IDENTIFIER()->getText();
-            auto value = DataTypes::String(str, this->_compileContext->GetAllocator());
+        if (context->identifier()){
+            auto value = std::any_cast<DataTypes::String>(visit(context->identifier()));
             return std::any(value);
         }
 

@@ -119,7 +119,7 @@ namespace Expressions {
             minArgs(0),
             maxArgs(0),
             expectedTypes(ExpectedTypesArray()),
-            returnType(DataType::Unknown),
+            returnType(DataType::Null),
             allowImplicitCast(false),
             additionalValidations(false){}
         constexpr ~FunctionInfo() = default;

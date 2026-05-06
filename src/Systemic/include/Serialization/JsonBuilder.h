@@ -19,6 +19,9 @@ namespace Serialization{
         }
 
         inline void Value(const void* data, Int size, JsonType type);
+
+        inline void SetObjectSize(Int size);
+
     public:
         explicit JsonBuilder(const ::Memory::IAllocator* allocator);
 
@@ -29,7 +32,6 @@ namespace Serialization{
         void EndArray();
 
         void Key(const DataTypes::StringView& key);
-        void Value(const JsonValue& value);
         void Value(const DataTypes::String& value);
         void Value(bool value);
         void Value(const DataTypes::Decimal& value);

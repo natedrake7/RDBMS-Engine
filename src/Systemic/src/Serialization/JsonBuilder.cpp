@@ -22,6 +22,24 @@ namespace Serialization{
             parent->_expectingKey = true;
     }
 
+    void JsonBuilder::SetObjectSize(const Int size){
+        if (this->_containers.Empty())
+            return;
+
+        auto* parent = this->_containers.Back();
+
+        if (parent->_type != JsonType::Object
+            && parent->_type != JsonType::Array
+        ) return;
+
+        if (parent->_type == JsonType::Object)
+            parent->_expectingKey = true;
+
+        auto* entry = parent->_entries.Back();
+        //it is the same as entryTable starts where value segment ends
+        entry->_valueSize = size;
+    }
+
     JsonBuilder::JsonBuilder(const Memory::IAllocator* allocator)
         : _buffer(allocator), _containers(allocator), _allocator(allocator) {}
 
@@ -50,34 +68,21 @@ namespace Serialization{
         auto* object = this->_containers.Back();
         this->_containers.Pop();
 
-        if (!this->_containers.Empty()){
-            auto* parent = this->_containers.Back();
-
-            if (
-                parent->_type == JsonType::Object
-                || parent->_type == JsonType::Array
-            ){
-                if (parent->_type == JsonType::Object)
-                    parent->_expectingKey = true;
-
-                auto* entry = parent->_entries.Back();
-                entry->_valueSize = object->_entries.Size();
-            }
-        }
-
         auto* header = reinterpret_cast<JsonHeader*>(this->_buffer.Data() + object->_headerPosition);
 
         header->_entryTablePosition = JsonBuilder::RelativeOffSet(this->_buffer.Size(), object->_headerPosition);
         header->_size = static_cast<UnsignedTinyInt>(object->_entries.Size());
+
+        const auto entryTableSize = object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE);
+
+        this->SetObjectSize(header->_entryTablePosition + entryTableSize);
 
         std::ranges::sort(object->_entries,
     [](const JsonEntry& a, const JsonEntry& b){
             return a._keyHash < b._keyHash;
         });
 
-        this->_buffer.MemoryCopy(object->_entries.Data(),  object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE));
-
-
+        this->_buffer.MemoryCopy(object->_entries.Data(),  entryTableSize);
     }
 
     void JsonBuilder::StartArray(){
@@ -107,7 +112,11 @@ namespace Serialization{
         header->_entryTablePosition = JsonBuilder::RelativeOffSet(this->_buffer.Size(), object->_headerPosition);
         header->_size = static_cast<UnsignedTinyInt>(object->_entries.Size());
 
-        this->_buffer.MemoryCopy(object->_entries.Data(),  object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE));
+        const auto entryTableSize = object->_entries.Size() * static_cast<Int>(JsonEntry::SIZE);
+
+        this->SetObjectSize(header->_entryTablePosition + entryTableSize);
+
+        this->_buffer.MemoryCopy(object->_entries.Data(),  entryTableSize);
 
         auto* parent = this->_containers.Back();
         parent->_expectingKey = true;
@@ -130,10 +139,6 @@ namespace Serialization{
 
         this->_buffer.MemoryCopy(key.Data(), size);
         object->_expectingKey = false;
-    }
-
-    void JsonBuilder::Value(const JsonValue& value){
-        // this->Value(value.Data(), value.Size(), value.Type());
     }
 
     void JsonBuilder::Value(const DataTypes::String& value){

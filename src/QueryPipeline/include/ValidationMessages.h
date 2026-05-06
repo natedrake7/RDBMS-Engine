@@ -78,9 +78,9 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid conversion from ",
-            DataTypeToStringDictionary.Get(fromType),
+            SqlTypesString[static_cast<Int>(fromType)],
             " to ",
-            DataTypeToStringDictionary.Get(toType)
+            SqlTypesString[static_cast<Int>(toType)]
         );
     }
 
@@ -222,16 +222,21 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid operation on datatypes: ",
-            DataTypeToStringDictionary.Get(leftType),
+            SqlTypesString[static_cast<Int>(leftType)],
             " and ",
-            DataTypeToStringDictionary.Get(rightType)
+            SqlTypesString[static_cast<Int>(rightType)]
         );
     }
 
     static constexpr DataTypes::StringView INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION = "Invalid number of arguments specified on branch expression";
 
     static DataTypes::String INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(const ::Memory::IAllocator* allocator, const DataType type){
-        return DataTypes::String::Concat(allocator, "Invalid expression type: ", DataTypeToStringDictionary.Get(type), " specified for branch expression");
+        return DataTypes::String::Concat(
+            allocator,
+            "Invalid expression type: ",
+            SqlTypesString[static_cast<Int>(type)],
+            " specified for branch expression"
+        );
     }
 
     static constexpr DataTypes::StringView INVALID_BRANCH_EXPRESSION_RESULT_TYPE = "Branching Expression Result types cannot be coerced to datatype";
@@ -291,5 +296,11 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(allocator, "Variable: ", variableName, " was not declared in this scope.");
     }
 
-    static DataTypes::StringView EMPTY_JSON_PATH = "JSON data access path cannot be empty.";
+    static constexpr DataTypes::StringView EMPTY_JSON_PATH = "JSON data access path cannot be empty.";
+
+    static DataTypes::String INVALID_JSON_PATH(const ::Memory::IAllocator* allocator, const DataTypes::StringView& path){
+        return DataTypes::String::Concat(allocator, "Invalid JSON data access path: ", path, ". Last access must always be scalar");
+    }
+
+    static constexpr DataTypes::StringView INVALID_JSON_ACCESSOR_TYPE = "Invalid json accessor type. Intermediate accessors must always be ->";
 }

@@ -64,7 +64,7 @@ namespace QueryPipeline::Statements {
 
             if (!res.IsOk()) return res;
 
-            if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
+            if (type != DataType::Null && !ValidateExpressionCoercionTypes(type, this->expression)) {
                 validationStatus.code = Errors::ValidationError::Error;
                 validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
@@ -75,7 +75,7 @@ namespace QueryPipeline::Statements {
                 return validationStatus;
             }
 
-            if (type == DataType::Unknown)
+            if (type == DataType::Null)
                 this->variable.SetType(this->expression->GetReturnType());
         }
 
@@ -104,7 +104,7 @@ namespace QueryPipeline::Statements {
 
             if (!res.IsOk()) return res;
 
-            if (type != DataType::Unknown && !ValidateExpressionCoercionTypes(type, this->expression)) {
+            if (type != DataType::Null && !ValidateExpressionCoercionTypes(type, this->expression)) {
                 validationStatus.code = Errors::ValidationError::Error;
                 validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
@@ -115,7 +115,7 @@ namespace QueryPipeline::Statements {
                 return validationStatus;
             }
 
-            if (type == DataType::Unknown)
+            if (type == DataType::Null)
                 this->variable.SetType(this->expression->GetReturnType());
         }
 
@@ -1032,8 +1032,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 columnName,
-                DataTypeToStringDictionary.Get(columnType),
-                DataTypeToStringDictionary.Get(valueType)
+                SqlTypesString[static_cast<Int>(columnType)],
+                SqlTypesString[static_cast<Int>(valueType)]
             )
         );
     }
@@ -1257,8 +1257,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 update->name.name,
-                DataTypeToStringDictionary.Get(update->name.returnType),
-                DataTypeToStringDictionary.Get(valueType)
+                SqlTypesString[static_cast<Int>(update->name.returnType)],
+                SqlTypesString[static_cast<Int>(valueType)]
             )
         );
     }
@@ -1506,7 +1506,7 @@ namespace QueryPipeline::Statements {
                 Messages::CANNOT_ALTER_COLUMN_TO_TYPE(
                         context.GetAllocator(),
                         alterColumn->name.name,
-                        DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType)),
+                        SqlTypesString[header.dataType],
                         alterColumn->type.name.ToView()
                 )
             );
@@ -1518,7 +1518,7 @@ namespace QueryPipeline::Statements {
                 Messages::CANNOT_ALTER_COLUMN_TO_NEW_SIZE(
                     context.GetAllocator(),
                     alterColumn->name.name,
-                    DataTypeToStringDictionary.Get(static_cast<DataType>(header.dataType)),
+                    SqlTypesString[header.dataType],
                     alterColumn->type.size
                 )
             );
@@ -1869,12 +1869,11 @@ namespace QueryPipeline::Statements {
         //validate children expressions and assign return types and ids to column expressions
         for (auto* childExpr : funcExpr->arguments) {
             auto childExpressionResult = CompileExpression(context, statementValidationScope, childExpr);
-
             if (!childExpressionResult.IsOk()) return childExpressionResult;
         }
 
         //validate number of arguments
-        DataTypes::String errorMessage;
+        DataTypes::String errorMessage(context.GetAllocator());
         if (!funcExpr->ValidateNumberOfArguments(errorMessage))
             return Errors::ValidationStatus::Error(std::move(errorMessage));
 
@@ -2110,6 +2109,25 @@ namespace QueryPipeline::Statements {
                 context.GetAllocator()
             );
 
+        for (auto i = 0; i < jsonExpr->pathSegments.Size(); i++){
+            const auto& segment = jsonExpr->pathSegments[i];
+            if (segment._accessorType == DataTypes::JsonAccessorType::Scalar
+                && i != jsonExpr->pathSegments.Size() - 1
+            ) return Errors::ValidationStatus::Error(
+            Messages::INVALID_JSON_ACCESSOR_TYPE,
+                    context.GetAllocator()
+                );
+        }
+
+        const auto& lastPathSegment = jsonExpr->pathSegments.Back();
+        if (lastPathSegment->_accessorType != DataTypes::JsonAccessorType::Scalar)
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_JSON_PATH(
+                    context.GetAllocator(),
+                    lastPathSegment->_key.ToView()
+                )
+            );
+
         //verify json validity maybe
 
         return Errors::ValidationStatus::Ok();
@@ -2126,6 +2144,25 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::EMPTY_JSON_PATH,
                 context.GetAllocator()
+            );
+
+        for (auto i = 0; i < jsonExpr->pathSegments.Size(); i++){
+            const auto& segment = jsonExpr->pathSegments[i];
+            if (segment._accessorType == DataTypes::JsonAccessorType::Scalar
+                && i != jsonExpr->pathSegments.Size() - 1
+                ) return Errors::ValidationStatus::Error(
+                Messages::INVALID_JSON_ACCESSOR_TYPE,
+                        context.GetAllocator()
+                    );
+        }
+
+        const auto& lastPathSegment = jsonExpr->pathSegments.Back();
+        if (lastPathSegment->_accessorType != DataTypes::JsonAccessorType::Scalar)
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_JSON_PATH(
+                    context.GetAllocator(),
+                    lastPathSegment->_key.ToView()
+                )
             );
 
         return Errors::ValidationStatus::Ok();
@@ -2163,7 +2200,7 @@ namespace QueryPipeline::Statements {
 
         column->columnId = columnHeader.id;
         column->returnType = static_cast<DataType>(columnHeader.dataType);
-        column->index = columnHeader.ordinalPosition;
+        column->columnIndex = columnHeader.ordinalPosition;
         if (column->name.Empty())
             column->name = columnHeader.name;
 
@@ -2197,7 +2234,7 @@ namespace QueryPipeline::Statements {
             column->tableId = columnHeader.tableId;
             column->columnId = columnHeader.id;
             column->returnType = static_cast<DataType>(columnHeader.dataType);
-            column->index = columnHeader.ordinalPosition;
+            column->columnIndex = columnHeader.ordinalPosition;
         }
 
         if (!columnExistsOnStatement) {
@@ -2347,7 +2384,7 @@ namespace QueryPipeline::Statements {
             columnExpression->name = header.name;
             columnExpression->columnId = header.id;
             columnExpression->tableId = header.tableId;
-            columnExpression->index = header.ordinalPosition;
+            columnExpression->columnIndex = header.ordinalPosition;
 
             const auto insertPos = *statementValidationScope.indexPos + header.ordinalPosition;
 
@@ -2373,6 +2410,7 @@ namespace QueryPipeline::Statements {
             case Expressions::ExpressionType::Column:
             case Expressions::ExpressionType::Constant:
             case Expressions::ExpressionType::Variable:
+            case Expressions::ExpressionType::Json:
                 break;
         }
     }
@@ -2535,7 +2573,7 @@ namespace QueryPipeline::Statements {
         const Dictionary<Int, column_index_t> &columnIndicesDictionary,
         Expressions::ColumnExpression *expression
     ) {
-        expression->index = columnIndicesDictionary.Get(expression->columnId);
+        expression->columnIndex = columnIndicesDictionary.Get(expression->columnId);
     }
 
     Errors::ValidationStatus CompilePostProjectionExpression(
@@ -2733,14 +2771,14 @@ namespace QueryPipeline::Statements {
         const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         Expressions::ColumnExpression *expression
     ) {
-        expression->index = columnIndicesDictionary.Get(expression->alias);
+        expression->columnIndex = columnIndicesDictionary.Get(expression->alias);
     }
 
     Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, const DataType type) {
       return Errors::ValidationStatus::Error(
         Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
             context._context.GetAllocator(),
-            DataTypeToStringDictionary.Get(type)
+            SqlTypesString[static_cast<Int>(type)]
         )
       );
     }

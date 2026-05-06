@@ -24,6 +24,14 @@ namespace QueryPipeline{
             jsonExpression->pathSegments.Push(std::move(pathSegment));
         }
 
+        if (jsonExpression->pathSegments.Empty())
+            throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
+
+        const auto& lastSegment = jsonExpression->pathSegments.Back();
+        //else by default it is Json
+        if (lastSegment->_accessorType == DataTypes::JsonAccessorType::Scalar)
+            jsonExpression->type = DataType::String;
+
         return std::any(jsonExpression);
     }
 
@@ -41,7 +49,7 @@ namespace QueryPipeline{
             throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
 
         auto step = DataTypes::JsonPathStep(
-            std::any_cast<DataTypes::JsonKey>(visit(context->jsonKey())),
+            std::any_cast<DataTypes::String>(visit(context->jsonKey())),
             DataTypes::JsonAccessorType::Json
         );
 
@@ -53,7 +61,7 @@ namespace QueryPipeline{
             throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
 
         auto step = DataTypes::JsonPathStep(
-           std::any_cast<DataTypes::JsonKey>(visit(context->jsonKey())),
+           std::any_cast<DataTypes::String>(visit(context->jsonKey())),
             DataTypes::JsonAccessorType::Scalar
         );
 
@@ -61,26 +69,21 @@ namespace QueryPipeline{
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitJsonKey(SQLParser::JsonKeyContext* context){
-        DataTypes::JsonKey key;
         if (context->STRING()) {
             const auto str = Functions::String::RemoveQuotesFromString(context->STRING()->getText());
-            key._type = DataTypes::JsonKeyType::Key;
-            key._data._key = DataTypes::String(str, this->_compileContext->GetAllocator());
-            return std::any(key);
+            return std::any(DataTypes::String(str, this->_compileContext->GetAllocator()));
         }
 
         if (context->identifier()) {
-             const auto str = context->identifier()->getText();
-            key._type = DataTypes::JsonKeyType::Key;
-            key._data._key = DataTypes::String(str, this->_compileContext->GetAllocator());
-            return std::any(key);
+            const auto str = context->identifier()->getText();
+            return std::any(DataTypes::String(str, this->_compileContext->GetAllocator()));
         }
 
         if (context->INT()){
             const auto str = context->INT()->getText();
-            key._type = DataTypes::JsonKeyType::Index;
-            key._data._arrayIndex = Converter<Int>::Stoi(str);
-            return std::any(key);
+            if (!Converter<Int>::TryStoi(str))
+                throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
+            return std::any(DataTypes::String(str, this->_compileContext->GetAllocator()));
         }
 
         throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));

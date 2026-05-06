@@ -9,6 +9,7 @@
 #include "DataStorage/Row.h"
 #include "Memory/IAllocator.h"
 #include "Pages/Additional/RawRowReference.h"
+#include "../../../Systemic/include/DataTypes/JsonBinary.h"
 
 namespace CoreEngine::StorageTypes{
     Int InsertPayload::SetTinyInt(const Value &value, Errors::RuntimeStatus& status){
@@ -130,9 +131,9 @@ namespace CoreEngine::StorageTypes{
     }
 
     Int InsertPayload::SetJson(const Value& value){
-        auto jsonBinary = value.AsJson();
-        this->CopyToBuffer(value);
-        return value.Size();
+        const auto jsonBinary = value.AsJson();
+        this->CopyToBuffer(jsonBinary);
+        return jsonBinary.Size();
     }
 
     Int InsertPayload::SetBool(const Value &value, Errors::RuntimeStatus& status){
@@ -187,7 +188,7 @@ namespace CoreEngine::StorageTypes{
         case DataType::Guid:
             return this->SetGuid(value);
         case DataType::RowIdentifier:
-        case DataType::Unknown:
+        case DataType::Null:
         default:
             throw std::runtime_error("Invalid Datatype for column");
         }

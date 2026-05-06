@@ -89,8 +89,6 @@ namespace Expressions{
         virtual ~Expression() = default;
         Expression();
 
-        void SetIndex(column_index_t index);
-
         [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
         [[nodiscard]] virtual DataType GetReturnType() const = 0;
 
@@ -120,6 +118,8 @@ namespace Expressions{
         [[nodiscard]] const BranchExpression* AsBranch()const;
         [[nodiscard]] const FunctionExpression* AsFunction()const;
         [[nodiscard]] const JsonExpression* AsJson()const;
+
+        void SetIndex(column_index_t index);
     };
 
     class ColumnExpression final : public Expression {
@@ -132,8 +132,6 @@ namespace Expressions{
 
         DataType returnType;
         block_size_t size;
-
-        column_index_t index;
 
         ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias);
         ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
@@ -290,10 +288,13 @@ namespace Expressions{
     };
 
     class JsonExpression final : public Expression {
+
+    [[nodiscard]] Value EvaluateJsonPath(const EvaluationContext &context, const Value& columnValue) const;
+
     public:
         ColumnExpression* columnPtr;
         DataStructures::PolymorphicArray<DataTypes::JsonPathStep> pathSegments;
-        DataType dataType;
+        DataType type;
 
         explicit JsonExpression(ColumnExpression* columnPtr, const ::Memory::IAllocator* allocator);
 

@@ -3,65 +3,37 @@
 #include "Serialization/JsonBuilder.h"
 
 namespace DataTypes{
-    JsonKey::Data::Data()
-        : _key(String::Null()){}
+    // JsonKey::JsonKey()
+    //     : _data(String::Null()), _type(JsonKeyType::Key){}
+    //
+    // JsonKey::JsonKey(const JsonKey& other){
+    //     this->_data = other._data;
+    // }
+    //
+    // JsonKey& JsonKey::operator=(const JsonKey& other){
+    //     if (this == &other)
+    //         return *this;
+    //
+    //     this->Copy(other);
+    //     return *this;
+    // }
+    //
+    // JsonKey::JsonKey(JsonKey&& other) noexcept{
+    //     this->Move(std::move(other));
+    // }
+    //
+    // JsonKey& JsonKey::operator=(JsonKey&& other) noexcept{
+    //     if (this == &other)
+    //         return *this;
+    //
+    //     this->Move(std::move(other));
+    //     return *this;
+    // }
 
-    JsonKey::Data::~Data(){}
+    JsonPathStep::JsonPathStep()
+        : _key(String::Null()), _accessorType(JsonAccessorType::Json){}
 
-    void JsonKey::Copy(const JsonKey& other){
-        this->_type = other._type;
-        switch (this->_type){
-        case JsonKeyType::Key:
-            this->_data._key = String(other._data._key);
-            break;
-        case JsonKeyType::Index:
-            this->_data._arrayIndex = other._data._arrayIndex;
-            break;
-        }
-    }
-
-    void JsonKey::Move(JsonKey&& other) noexcept{
-        this->_type = other._type;
-        switch (this->_type){
-        case JsonKeyType::Key:
-            this->_data._key = std::move(other._data._key);
-            break;
-        case JsonKeyType::Index:
-            this->_data._arrayIndex = other._data._arrayIndex;
-            break;
-        }
-    }
-
-    JsonKey::JsonKey()
-        : _data(Data()), _type(JsonKeyType::Key){}
-
-    JsonKey::JsonKey(const JsonKey& other){
-        this->Copy(other);
-    }
-
-    JsonKey& JsonKey::operator=(const JsonKey& other){
-        if (this == &other)
-            return *this;
-
-        this->Copy(other);
-        return *this;
-    }
-
-    JsonKey::JsonKey(JsonKey&& other) noexcept{
-        this->Move(std::move(other));
-    }
-
-    JsonKey& JsonKey::operator=(JsonKey&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        this->Move(std::move(other));
-        return *this;
-    }
-
-    JsonPathStep::JsonPathStep() = default;
-
-    JsonPathStep::JsonPathStep(JsonKey&& key, const JsonAccessorType accessorType)
+    JsonPathStep::JsonPathStep(String&& key, const JsonAccessorType accessorType)
         : _key(std::move(key)), _accessorType(accessorType){}
 
     JsonPathStep::JsonPathStep(const JsonPathStep& other){
@@ -147,6 +119,76 @@ namespace DataTypes{
         return nullptr; // Not found
     }
 
+    void JsonBinary::SerializeNode(String& str, const Int headerOffset)const{
+        auto* header = reinterpret_cast<const Serialization::JsonHeader*>(this->_data + headerOffset);
+        auto* entries = reinterpret_cast<const Serialization::JsonEntry*>(this->_data + headerOffset + header->_entryTablePosition);
+
+        if (header->IsObject()) {
+            str.Append('{');
+            for (UnsignedInt i = 0; i < header->_size; i++) {
+                const auto& entry = entries[i];
+                if (i > 0) str.Append(',');
+
+                // key
+                str.Append('"');
+                str.Append(
+                    reinterpret_cast<const char*>(this->_data + headerOffset + entry._keyOffset),
+                    entry._keySize
+                );
+                str.Append('"');
+                str.Append(':');
+
+                // value
+                this->SerializeValue(str, headerOffset, entry);
+            }
+            str.Append('}');
+            return;
+        }
+
+        if (header->IsArray()) {
+            str.Append('[');
+            for (UnsignedInt i = 0; i < header->_size; i++) {
+                if (i > 0) str.Append(',');
+                this->SerializeValue(str, headerOffset, entries[i]);
+            }
+            str.Append(']');
+        }
+    }
+
+    void JsonBinary::SerializeValue(
+        String& result,
+        const Int headerOffset,
+        const Serialization::JsonEntry& entry
+    ) const{
+        const auto type = static_cast<Serialization::JsonType>(entry._type);
+        const auto* valuePtr = this->_data + headerOffset + entry._valueOffset;
+
+        switch (type) {
+        case Serialization::JsonType::Null:
+            result.Append("null", 4);
+            break;
+        case Serialization::JsonType::Bool:
+            result.Append(*reinterpret_cast<const bool*>(valuePtr) ? "true" : "false");
+            break;
+        case Serialization::JsonType::String:
+            result.Append('"');
+            result.Append(reinterpret_cast<const char*>(valuePtr), entry._valueSize);
+            result.Append('"');
+            break;
+        case Serialization::JsonType::Number: {
+                const auto decimal = DataTypes::Decimal(valuePtr, entry._valueSize);
+                const auto str = decimal.ToString(this->_allocator);
+                result.Append(str.Data(), str.Size());
+                break;
+        }
+        case Serialization::JsonType::Object:
+        case Serialization::JsonType::Array:
+            // valueOffset points to the nested header — recurse
+            this->SerializeNode(result, headerOffset + entry._valueOffset);
+            break;
+        }
+    }
+
     JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator)
         : _allocator(allocator), _data(nullptr), _size(0){}
 
@@ -226,5 +268,55 @@ namespace DataTypes{
             entry->_valueSize,
             dataType
         );
+    }
+
+    Serialization::JsonValue JsonBinary::Navigate(
+        const DataStructures::PolymorphicArray<JsonPathStep>& pathSegments
+    ) const{
+        auto dataType = Serialization::JsonType::Object;
+        auto headerOffSet = 0;
+
+        const Serialization::JsonEntry* entry = nullptr;
+
+        const auto segmentsSize = pathSegments.Size();
+        for (int i = 0; i < segmentsSize; i++){
+            entry = this->FindEntry(pathSegments[i]._key.ToView(), headerOffSet);
+
+            if (entry == nullptr)
+                return Serialization::JsonValue();
+
+            dataType = static_cast<Serialization::JsonType>(entry->_type);
+
+            //less than array is primitive or null
+            if (dataType < Serialization::JsonType::Array)
+                continue;
+
+            if (i < segmentsSize - 1)
+                headerOffSet += entry->_valueOffset;
+        }
+
+        return Serialization::JsonValue(
+            this->_allocator,
+            this->_data + headerOffSet + entry->_valueOffset,
+            entry->_valueSize,
+            dataType
+        );
+    }
+
+    String JsonBinary::ToString() const{
+        if (this->_data == nullptr || this->_size == 0)
+            return String::Empty(this->_allocator);
+
+        String result(this->_allocator);
+        this->SerializeNode(result, 0);
+        return result;
+    }
+
+    String JsonBinary::JsonObjectToString(
+        const Serialization::JsonValue& value,
+        const ::Memory::IAllocator* allocator
+    ){
+        const JsonBinary jsonBinary(allocator, static_cast<const object_t*>(value.Data()), value.Size());
+        return jsonBinary.ToString();
     }
 }

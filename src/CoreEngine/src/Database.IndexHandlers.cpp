@@ -68,7 +68,7 @@ namespace CoreEngine {
 
         const bool isNonClusteredIndex = nonClusteredIndexId != -1;
 
-        const uint8_t indexId = isNonClusteredIndex
+        const auto indexId = isNonClusteredIndex
                                 ? nonClusteredIndexId
                                 : 0;
 
