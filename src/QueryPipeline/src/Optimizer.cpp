@@ -53,7 +53,7 @@ namespace QueryPipeline {
     this->end = otherEnd;
     this->startInclusive = includeStart;
     this->endInclusive = includeEnd;
-    this->hasRange = (this->start < this->end).AsBool();
+    this->hasRange = this->start < this->end;
   }
 
   bool SeekRange::HasStart() const{ return !this->start.IsNull(); }
@@ -213,7 +213,7 @@ namespace QueryPipeline {
     bool& canSeek,
     const bool inclusive
   ){
-    if ((predicateValue <= range.start).AsBool()
+    if (predicateValue <= range.start
       && !range.start.IsNull()
       && range.hasRange
     ) return;
@@ -230,7 +230,7 @@ namespace QueryPipeline {
     bool& canSeek,
     const bool inclusive
   ){
-    if ((predicateValue >= range.end).AsBool()
+    if (predicateValue >= range.end
       && !range.end.IsNull()
       && range.hasRange
     ) return;

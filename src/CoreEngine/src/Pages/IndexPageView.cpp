@@ -1,5 +1,6 @@
 ﻿#include "../../include/Pages/IndexPageView.h"
 
+#include <cassert>
 #include <cstring>
 #include "DataStorage/InsertPayload.h"
 #include "Pages/Additional/Frame.h"
@@ -65,6 +66,14 @@ namespace Pages{
         );
     }
 
+    key_size_t IndexPageView::GetKeySize(const page_offset_t offSet) const{
+        key_size_t size = 0;
+        for (int i = 0; i < this->framePtr->additionalHeader.indexHeaderPtr->SubKeys(); i++){
+            const auto keyDataSize = *reinterpret_cast<key_size_t*>(this->framePtr->data + offSet + size);
+            size += keyDataSize + sizeof(key_size_t);
+        }
+        return size;
+    }
     IndexPageView::IndexPageView() : PageView() {}
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
@@ -291,6 +300,44 @@ namespace Pages{
         return this->GetKeyByOffset(allocator, offSet);
     }
 
+    Comparators::Comparator IndexPageView::CompareKeyAtIndex(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto offSet = slot.GetOffset();
+
+        const auto numOfKeys = std::min(
+            static_cast<UnsignedTinyInt>(key.subKeys.Size()),
+            this->framePtr->additionalHeader.indexHeaderPtr->SubKeys()
+        );
+
+        auto* dataPtr = this->framePtr->data + offSet;
+
+        for (int i = 0; i < numOfKeys; i++){
+            const auto type = this->framePtr->additionalHeader.indexHeaderPtr->keyTypes[i];
+
+            const auto size = *reinterpret_cast<key_size_t*>(dataPtr);
+            auto* data = dataPtr + sizeof(key_size_t);
+
+            auto value = Value::FromMove(
+              data,
+              size,
+              type,
+              nullptr
+            );
+
+            const auto result = Comparators::Compare(
+                value,
+                key.subKeys[i].GetValue()
+            );
+
+            if (result != Comparators::Comparator::Equal)
+                return result;
+
+            dataPtr += size + sizeof(key_size_t);
+        }
+
+        return Comparators::Comparator::Equal;
+    }
+
     LeafNodeTuple IndexPageView::PeekLeafTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
@@ -299,6 +346,12 @@ namespace Pages{
 
         auto ref = RowReference(this->framePtr, allocator, indexPosition, key.size);
         return LeafNodeTuple(ref, key);
+    }
+
+    RowReference IndexPageView::PeekRowReference(const Memory::IAllocator* allocator, const Int indexPosition) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto keySize = this->GetKeySize(slot.GetOffset());
+        return RowReference(this->framePtr, allocator, indexPosition, keySize);
     }
 
     InternalNodeTuple IndexPageView::PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
@@ -368,39 +421,29 @@ namespace Pages{
         return tuple;
     }
 
-    void IndexPageView::AppendRowToBuffer(
-        const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<RowReference>* buffer,
-        const CoreEngine::Snapshot& snapshot,
-        const Int indexPosition
-    ) const{
-        Int outKeySize = 0;
-        const auto versionHeader = this->PeekVersionHeader(allocator, indexPosition, outKeySize);
-
-        if (!versionHeader.IsVisibleForTransaction(snapshot)) {
-            if (!versionHeader.HasOlderVersion())
-                return;
-
-            // buffer->emplace_back(
-            //     DatabaseEngine::VersionDatabase::Get()
-            //         .RetrieveRow(snapshot, versionHeader.olderVersionPointer, table)
-            // );
-            return;
-        }
-
-        buffer->Push(RowReference(this->framePtr, allocator, indexPosition, outKeySize));
-        // buffer->emplace_back(this->framePtr, indexPosition, outKeySize);
-    }
-
-    void IndexPageView::AppendRowToBuffer(
-        const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<RowReference>* buffer,
-        const Int indexPosition
-    ) const{
-        Int outKeySize = 0;
-        const auto versionHeader = this->PeekVersionHeader(allocator, indexPosition, outKeySize);
-        buffer->Push(RowReference(this->framePtr, allocator, indexPosition, outKeySize));
-    }
+    // void IndexPageView::AppendRowToBuffer(
+    //     const ::Memory::IAllocator* allocator,
+    //     DataStructures::PolymorphicArray<RowReference>* buffer,
+    //     const CoreEngine::Snapshot& snapshot,
+    //     const Int indexPosition
+    // ) const{
+    //     Int outKeySize = 0;
+    //     const auto versionHeader = this->PeekVersionHeader(allocator, indexPosition, outKeySize);
+    //
+    //     if (!versionHeader.IsVisibleForTransaction(snapshot)) {
+    //         if (!versionHeader.HasOlderVersion())
+    //             return;
+    //
+    //         // buffer->emplace_back(
+    //         //     DatabaseEngine::VersionDatabase::Get()
+    //         //         .RetrieveRow(snapshot, versionHeader.olderVersionPointer, table)
+    //         // );
+    //         return;
+    //     }
+    //
+    //     buffer->Push(RowReference(this->framePtr, allocator, indexPosition, outKeySize));
+    //     // buffer->emplace_back(this->framePtr, indexPosition, outKeySize);
+    // }
 
     void IndexPageView::RemoveKeyFromChild(const Memory::IAllocator* allocator, const Int indexPosition) const{
         auto slot = this->GetSlotDirectory(indexPosition);

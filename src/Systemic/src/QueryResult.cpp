@@ -195,7 +195,7 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
         return false;
 
     for (int i = 0; i < lhs.data.Size(); i++) {
-        if ((lhs.data[i] == rhs.data[i]).AsBool() == false)
+        if (lhs.data[i] != rhs.data[i])
             return false;
     }
 

@@ -50,24 +50,12 @@ namespace Indexing{
             const Pages::IndexPageView& newChild
         );
 
-        static Int LeafLowerBound(
+        static inline Int LeafLowerBound(
             const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
-        static Int LeafPartialLowerBound(
-            const ::Memory::IAllocator* allocator,
-            const Pages::IndexPageView& page,
-            const DataTypes::Indexing::Key& key
-        );
-
-        static Int InternalNodeLowerBound(
-            const ::Memory::IAllocator* allocator,
-            const Pages::IndexPageView& page,
-            const DataTypes::Indexing::Key& key
-        );
-        static Int InternalNodePartialLowerBound(
-            const ::Memory::IAllocator* allocator,
+        static inline Int InternalNodeLowerBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );

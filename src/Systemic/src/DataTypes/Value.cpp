@@ -8,6 +8,7 @@
 
 #include <stdexcept>
 
+#include "Comparators.h"
 #include "DataTypes/DateTime.h"
 #include "../../include/Memory/IAllocator.h"
 #include "DataTypes/DataTypes.StaticData.h"
@@ -121,6 +122,20 @@ void Value::BinaryOperationException(const DataType lhs, const DataType rhs) {
     );
 }
 
+Value::Value(
+    object_t* data,
+    const Int size,
+    const DataType type,
+    const Memory::IAllocator* allocator,
+    const column_index_t index
+){
+    this->data = data;
+    this->size = size;
+    this->type = type;
+    this->_allocator = allocator;
+    this->columnIndex = index;
+}
+
 Value::Value(const Value &copyVal){
     this->size = copyVal.size;
     this->type = copyVal.type;
@@ -180,7 +195,7 @@ Value::Value(const column_index_t index){
 }
 
 Value::Value(
-    const void *data,
+    const object_t* data,
     const Int size,
     const DataType type,
     const Memory::IAllocator* allocator,
@@ -195,113 +210,6 @@ Value::Value(
     this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(size));
     std::memcpy(this->data, data, size);
 }
-
-// Value::Value(
-//     const object_t* data,
-//     const Int size,
-//     const DataType type,
-//     const Memory::Allocator* allocator,
-//     const column_index_t index
-// ){
-//     this->data = static_cast<object_t*>(allocator->Allocate(size));
-//     std::memcpy(this->data, data, size);
-//
-//     this->_allocator = allocator;
-//     this->size = size;
-//     this->type = type;
-//     this->columnIndex = index;
-// }
-
-// Value::Value(const bool data, const column_index_t index){
-//     this->data = new object_t[sizeof(bool)];
-//     std::memcpy(this->data, &data, sizeof(bool));
-//
-//     this->size = sizeof(bool);
-//     this->columnIndex = index;
-//     this->type = DataType::Bool;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const TinyInt data, const column_index_t index){
-//     this->data = new object_t[sizeof(TinyInt)];
-//     std::memcpy(this->data, &data, sizeof(TinyInt));
-//
-//     this->size = sizeof(int8_t);
-//     this->columnIndex = index;
-//     this->type = DataType::TinyInt;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const SmallInt data, const column_index_t index){
-//     this->data = new object_t[sizeof(SmallInt)];
-//     std::memcpy(this->data, &data, sizeof(SmallInt));
-//
-//     this->size = sizeof(SmallInt);
-//     this->columnIndex = index;
-//     this->type = DataType::SmallInt;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const Int data, const column_index_t index){
-//     this->data = new object_t[sizeof(Int)];
-//     std::memcpy(this->data, &data, sizeof(Int));
-//
-//     this->size = sizeof(Int);
-//     this->columnIndex = index;
-//     this->type = DataType::Int;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const int64_t data, const column_index_t index){
-//     this->data = new object_t[sizeof(int64_t)];
-//     std::memcpy(this->data, &data, sizeof(int64_t));
-//
-//     this->size = sizeof(int64_t);
-//     this->columnIndex = index;
-//     this->type = DataType::BigInt;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const std::string &data, const column_index_t index){
-//     this->size = data.size();
-//     this->data = new object_t[this->size];
-//     std::memcpy(this->data, data.data(), this->size);
-//
-//     this->columnIndex = index;
-//     this->type = DataType::String;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const DataTypes::DateTime &data, const column_index_t index){
-//     this->data = new object_t[DataTypes::DateTime::Size()];
-//     const auto dt = data.GetUnixTimeStamp();
-//     std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
-//
-//     this->size = DataTypes::DateTime::Size();
-//     this->columnIndex = index;
-//     this->type = DataType::DateTime;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const DataTypes::Decimal &data, const column_index_t index){
-//     this->size = data.GetRawDataSize();
-//     this->data = new object_t[this->size];
-//
-//     std::memcpy(this->data, data.GetRawData(), this->size);
-//     this->columnIndex = index;
-//     this->type = DataType::Decimal;
-//     this->usesExternalStorage = false;
-// }
-//
-// Value::Value(const DataTypes::Guid &data, const column_index_t index){
-//     this->size = data.Size();
-//     this->data = new object_t[this->size];
-//     std::memcpy(this->data, data.GetData().data(), this->size);
-//
-//     this->columnIndex = index;
-//     this->type = DataType::Guid;
-//     this->usesExternalStorage = false;
-// }
 
 Value::Value(const bool data, const Memory::IAllocator* allocator, const column_index_t index){
     this->data = static_cast<object_t*>(allocator->AllocateRaw(sizeof(bool)));
@@ -464,6 +372,16 @@ Value::Value(
     this->_allocator = allocator;
     this->columnIndex = index;
     this->type = JsonToSqlTypes[static_cast<Int>(data.Type())];
+}
+
+Value Value::FromMove(
+    object_t* data,
+    const Int size,
+    const DataType type,
+    const Memory::IAllocator* allocator,
+    const column_index_t index
+){
+    return Value(data, size, type, allocator, index);
 }
 
 Value Value::FromExternalStorage(
@@ -830,150 +748,29 @@ Value operator*(const Value &lhs, const Value &rhs){
     return Value::Null();
 }
 
-Value operator<(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-        return Value(lhs.AsBigInt() < rhs.AsBigInt(), lhs.GetAllocator(), 0);
-    case DataType::Decimal:
-        return Value(lhs.AsDecimal() < rhs.AsDecimal(), lhs.GetAllocator(), 0);
-    case DataType::String:
-        return Value(lhs.AsStringView() < rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::Bool:
-        return Value(lhs.AsBool() < rhs.AsBool(), lhs.GetAllocator(), 0);
-    case DataType::DateTime:
-        return Value(lhs.AsDateTime() < rhs.AsDateTime(), lhs.GetAllocator(), 0);
-    case DataType::Guid:
-        return Value(lhs.AsGuid() < rhs.AsGuid(), lhs.GetAllocator(), 0);
-    case DataType::Null:
-    case DataType::RowIdentifier:
-    default:
-        Value::BinaryOperationException(lhs.type, rhs.type);
-    }
-
-    return Value::Null();
+bool operator<(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Less;
 }
 
-Value operator>(const Value &lhs, const Value &rhs){
-    return rhs < lhs;
+bool operator>(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Greater;
 }
 
-Value operator<=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt:
-        return Value(lhs.AsBigInt() <= rhs.AsBigInt(), lhs.GetAllocator(), 0);
-    case DataType::Decimal:
-        return Value(lhs.AsDecimal() <= rhs.AsDecimal(), lhs.GetAllocator(), 0);
-    case DataType::String:
-        return Value(lhs.AsStringView() <= rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::Bool:
-        return Value(lhs.AsBool() <= rhs.AsBool(), lhs.GetAllocator(), 0);
-    case DataType::DateTime:
-        return Value(lhs.AsDateTime() <= rhs.AsDateTime(), lhs.GetAllocator(), 0);
-    case DataType::Guid:
-        return Value(lhs.AsGuid() <= rhs.AsGuid(), lhs.GetAllocator(), 0);
-    case DataType::Null:
-    case DataType::RowIdentifier:
-    default:
-        Value::BinaryOperationException(lhs.type, rhs.type);
-    }
-
-    return Value::Null();
+bool operator<=(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) <= Comparators::Comparator::Equal;
 }
 
 
-Value operator>=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt: {
-        const auto left = lhs.AsBigInt();
-        const auto right = rhs.AsBigInt();
-        return Value(left >= right, lhs.GetAllocator(), 0);
-    }
-    case DataType::Decimal:
-        return Value(lhs.AsDecimal() >= rhs.AsDecimal(), lhs.GetAllocator(), 0);
-    case DataType::String:
-        return Value(lhs.AsStringView() >= rhs.AsStringView(), lhs.GetAllocator(), 0);
-    case DataType::Bool:
-        return Value(lhs.AsBool() >= rhs.AsBool(), lhs.GetAllocator(), 0);
-    case DataType::DateTime:
-        return Value(lhs.AsDateTime() >= rhs.AsDateTime(), lhs.GetAllocator(), 0);
-    case DataType::Guid:
-        return Value(lhs.AsGuid() >= rhs.AsGuid(), lhs.GetAllocator(), 0);
-    case DataType::Null:
-    case DataType::RowIdentifier:
-    default:
-        Value::BinaryOperationException(lhs.type, rhs.type);
-    }
-
-    return Value::Null();
+bool operator>=(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) >= Comparators::Comparator::Equal;
 }
 
-Value operator==(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() == rhs.AsBigInt(), lhs.GetAllocator(), 0);
-        DataTypes::Coercions::DeduceIntegerType(value);
-        return value;
-    }
-    case DataType::Decimal:
-        return Value(lhs.AsDecimal() == rhs.AsDecimal(), lhs.GetAllocator(), 0);
-    case DataType::String:
-        return Value(lhs.AsString() == rhs.AsString(), lhs.GetAllocator(), 0);
-    case DataType::Bool:
-        return Value(lhs.AsBool() == rhs.AsBool(), lhs.GetAllocator(), 0);
-    case DataType::DateTime:
-        return Value(lhs.AsDateTime() == rhs.AsDateTime(), lhs.GetAllocator(), 0);
-    case DataType::Guid:
-        return Value(lhs.AsGuid() == rhs.AsGuid(), lhs.GetAllocator(), 0);
-    case DataType::Null:
-        return Value(lhs.IsNull() == rhs.IsNull(), lhs.GetAllocator(), 0);
-    case DataType::RowIdentifier:
-    default:
-        Value::BinaryOperationException(lhs.type, rhs.type);
-    }
-
-    return Value::Null();
+bool operator==(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Equal;
 }
 
-Value operator!=(const Value &lhs, const Value &rhs){
-    switch (Value::PromoteType(lhs.type, rhs.type)) {
-    case DataType::TinyInt:
-    case DataType::SmallInt:
-    case DataType::Int:
-    case DataType::BigInt: {
-        auto value = Value(lhs.AsBigInt() != rhs.AsBigInt(), lhs.GetAllocator(), 0);
-        DataTypes::Coercions::DeduceIntegerType(value);
-        return value;
-    }
-    case DataType::Decimal:
-        return Value(lhs.AsDecimal() != rhs.AsDecimal(), lhs.GetAllocator(), 0);
-    case DataType::String:
-        return Value(lhs.AsString() != rhs.AsString(), lhs.GetAllocator(), 0);
-    case DataType::Bool:
-        return Value(lhs.AsBool() != rhs.AsBool(), lhs.GetAllocator(), 0);
-    case DataType::DateTime:
-        return Value(lhs.AsDateTime() != rhs.AsDateTime(), lhs.GetAllocator(), 0);
-    case DataType::Guid:
-        return Value(lhs.AsGuid() != rhs.AsGuid(), lhs.GetAllocator(), 0);
-    case DataType::Null:
-        return Value(lhs.IsNull() != rhs.IsNull(), lhs.GetAllocator(), 0);
-    case DataType::RowIdentifier:
-    default:
-        Value::BinaryOperationException(lhs.type, rhs.type);
-    }
-
-    return Value::Null();
+bool operator!=(const Value &lhs, const Value &rhs){
+    return Comparators::Compare(lhs, rhs) != Comparators::Comparator::Equal;
 }
 
 const Memory::IAllocator* Value::GetAllocator() const{ return this->_allocator;}

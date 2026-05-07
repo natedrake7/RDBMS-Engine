@@ -1,11 +1,7 @@
 ﻿#pragma once
+#include "../../Systemic/include/Comparators.h"
 #include "PageView.h"
 #include "Additional/IndexPageStructs.h"
-
-namespace DataStructures{
-    template<typename T>
-    class Array;
-}
 
 namespace Pages{
     class IndexPageView final : public PageView {
@@ -18,6 +14,8 @@ namespace Pages{
                 const ::Memory::IAllocator* allocator,
                 page_offset_t& offSet
             ) const;
+
+            [[nodiscard]] key_size_t GetKeySize(page_offset_t offSet)const;
 
         public:
             IndexPageView();
@@ -59,7 +57,13 @@ namespace Pages{
             void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
 
             DataTypes::Indexing::Key GetKeyByIndex(const ::Memory::IAllocator* allocator, Int indexPosition) const;
+
+            //always returns the result of the comparison of the page key against the provided key
+            Comparators::Comparator CompareKeyAtIndex(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+
             LeafNodeTuple PeekLeafTuple(const ::Memory::IAllocator* allocator,Int indexPosition) const;
+            RowReference PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
+
             InternalNodeTuple PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             CoreEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(
@@ -76,17 +80,12 @@ namespace Pages{
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition
             ) const;
-            void AppendRowToBuffer(
-                const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<RowReference>* buffer,
-                const CoreEngine::Snapshot& snapshot,
-                Int indexPosition
-            ) const;
-            void AppendRowToBuffer(
-                const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<RowReference>* buffer,
-                Int indexPosition
-            ) const;
+            // void AppendRowToBuffer(
+            //     const ::Memory::IAllocator* allocator,
+            //     DataStructures::PolymorphicArray<RowReference>* buffer,
+            //     const CoreEngine::Snapshot& snapshot,
+            //     Int indexPosition
+            // ) const;
             void RemoveKeyFromChild(
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition

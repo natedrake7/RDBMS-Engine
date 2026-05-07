@@ -52,7 +52,7 @@ namespace CoreEngine {
             currentBucketRows += freq;
             distinctCountPerBucket++;
 
-            if (currentBucketRows < rowsPerBucket && (value != lastValue).AsBool())
+            if (currentBucketRows < rowsPerBucket && value != lastValue)
                 continue;
 
             //insert
@@ -464,11 +464,11 @@ namespace CoreEngine {
         columnStatistics.distinctCount++; // In real scenario, use a hash set or similar structure
 
         // Update min
-        if (columnStatistics.min.IsNull() || (value < columnStatistics.min).AsBool())
+        if (columnStatistics.min.IsNull() || value < columnStatistics.min)
             columnStatistics.min = value;
 
         // Update max
-        if (columnStatistics.max.IsNull() || (value > columnStatistics.max).AsBool())
+        if (columnStatistics.max.IsNull() || value > columnStatistics.max)
             columnStatistics.max = value;
 
         BigInt frequency = 0;

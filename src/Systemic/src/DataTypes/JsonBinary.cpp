@@ -1,5 +1,6 @@
 ﻿#include "../../include/DataTypes/JsonBinary.h"
 
+#include "Comparators.h"
 #include "Serialization/JsonBuilder.h"
 
 namespace DataTypes{
@@ -70,7 +71,7 @@ namespace DataTypes{
         const Int headerOffSet
     ) const{
         const auto* keyData = reinterpret_cast<const char*>(this->_data + headerOffSet + entry._keyOffset);
-        return strncasecmp(keyData, key.Data(), entry._keySize) == 0;
+        return Comparators::CompareIgnoreOrdinalCase(keyData, key.Data(), entry._keySize) == Comparators::Comparator::Equal;
     }
 
     const Serialization::JsonEntry* JsonBinary::FindEntry(

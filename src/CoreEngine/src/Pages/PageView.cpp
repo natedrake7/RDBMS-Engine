@@ -493,7 +493,12 @@ namespace Pages{
                 continue;
             }
 
-            auto value = Value(this->framePtr->data + offSet, sizes[i], columns[i]->Type(), allocator);
+            auto value = Value(
+                static_cast<const object_t*>(this->framePtr->data + offSet),
+                sizes[i],
+                columns[i]->Type(),
+                allocator
+            );
             offSet += sizes[i];
 
             result.AddColumn(value);

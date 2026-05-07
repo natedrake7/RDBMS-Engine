@@ -30,7 +30,7 @@ namespace DataTypes::Indexing{
         const key_size_t keySize,
         const DataType keyType,
         const Memory::IAllocator* allocator
-    ) : value(keyValue, keySize, keyType, allocator), subKeys(allocator), size(keySize){}
+    ) : value(static_cast<const object_t*>(keyValue), keySize, keyType, allocator), subKeys(allocator), size(keySize){}
 
     Key::Key(const Value &field){
         this->value = field;
@@ -112,64 +112,33 @@ namespace DataTypes::Indexing{
         this->subKeys = otherKey->subKeys;
     }
 
-    // Key::Key(Key &&other) noexcept {
-    //     if (this == &other)
-    //         return;
-    //
-    //     this->size = other.size;
-    //
-    //     if(other.this->subKeys.empty()){
-    //         this->value = other.value;
-    //         other.value = Value(nullptr, 0);
-    //         return;
-    //     }
-    //
-    //     this->subKeys = other.subKeys;
-    //     this->indexKeyPosition = -1;
-    //     this->currentSearchKeyPosition = -1;
-    //
-    //     other.size = 0;
-    //     other.subKeys.clear();
-    // }
-
-    bool Key::operator==(const Key& otherKey) const
-    {
+    bool Key::operator==(const Key& otherKey) const{
         if(!this->subKeys.Empty())
             return this->CompareCompositeKeys(otherKey) == Key::ComparisonResult::Equal;
 
-        const auto result = this->value == otherKey.value;
-
-        return result.AsBool();
+        return this->value == otherKey.value;
     }
 
-    bool Key::operator>(const Key& otherKey) const
-    {
+    bool Key::operator>(const Key& otherKey) const{
         if(!this->subKeys.Empty())
             return this->CompareCompositeKeys(otherKey) > Key::ComparisonResult::Equal;
 
-        const auto result = this->value > otherKey.value;
-
-        return result.AsBool();
+        return this->value > otherKey.value;
     }
 
-    bool Key::operator<(const Key& otherKey) const
-    {
+    bool Key::operator<(const Key& otherKey) const{
         return !(*this >= otherKey);
     }
 
-    bool Key::operator<=(const Key& otherKey) const
-    {
+    bool Key::operator<=(const Key& otherKey) const{
         return !(*this > otherKey);
     }
 
-    bool Key::operator>=(const Key& otherKey) const
-    {
+    bool Key::operator>=(const Key& otherKey) const{
         if(!this->subKeys.Empty())
             return this->CompareCompositeKeys(otherKey) >= Key::ComparisonResult::Equal;
 
-        const auto result = this->value >= otherKey.value;
-
-        return result.AsBool();
+        return this->value >= otherKey.value;
     }
 
     bool Key::InClosedRange(const Key &minKey, const Key &maxKey) const { return minKey <= *this && maxKey >= *this; }
@@ -211,7 +180,9 @@ namespace DataTypes::Indexing{
     const Value & Key::GetValue() const { return this->value; }
 
     Key::ComparisonResult Key::CompareCompositeKeys(const Key& otherKey) const{
-        for (int i = 0; i < this->subKeys.Size(); i++){
+        const auto numOfKeys = std::min(this->subKeys.Size(), otherKey.subKeys.Size());
+
+        for (int i = 0; i < numOfKeys; i++){
             if (this->subKeys[i] == otherKey.subKeys[i])
                 continue;
 
@@ -297,15 +268,20 @@ namespace DataTypes::Indexing{
         const DataType type
     ) {
         key_size_t valueSize = 0;
-        memcpy(&valueSize, buffer + offset, sizeof(key_size_t));
+        std::memcpy(&valueSize, buffer + offset, sizeof(key_size_t));
         offset += sizeof(key_size_t);
 
-        auto* valueData = std::malloc(valueSize);
-        memcpy(valueData, buffer + offset, valueSize);
+        auto* data = static_cast<object_t*>(allocator->AllocateRaw(valueSize));
+
+        std::memcpy(data, buffer + offset, valueSize);
         offset += valueSize;
 
-        Value value(valueData, valueSize, type, allocator);
-        std::free(valueData);
+        auto value = Value::FromMove(
+            data,
+            valueSize,
+            type,
+            allocator
+        );
 
         return Key(value);
     }
@@ -315,7 +291,7 @@ namespace DataTypes::Indexing{
         const object_t* buffer,
         page_offset_t& offset,
         const UnsignedTinyInt& numberOfSubKeys,
-        const std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS>& keyTypes
+        const DataType* keyTypes
     ){
         DataStructures::PolymorphicArray<Key> subKeys(allocator);
         subKeys.Reserve(numberOfSubKeys);

@@ -17,9 +17,14 @@ namespace DataTypes {
     class Guid;
 }
 
-class Value {
+
+class Value{
+
+
     object_t* data;
+
     const Memory::IAllocator* _allocator;
+
     block_size_t size;
     column_index_t columnIndex;
     DataType type;
@@ -40,6 +45,14 @@ class Value {
 
     static void BinaryOperationException(DataType lhs, DataType rhs);
 
+    explicit Value(
+        object_t* data,
+        Int size,
+        DataType type,
+        const Memory::IAllocator* allocator,
+        column_index_t index = 0
+    );
+
     public:
         Value(const Value& copyVal);
         Value(Value&& other)noexcept;
@@ -47,7 +60,7 @@ class Value {
 
         explicit Value(column_index_t index = 0);
         explicit Value(
-            const void* data,
+            const object_t* data,
             Int size,
             DataType type,
             const Memory::IAllocator* allocator,
@@ -67,6 +80,14 @@ class Value {
         Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const Serialization::JsonValue& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+
+        static Value FromMove(
+            object_t*  data,
+            Int size,
+            DataType type,
+            const Memory::IAllocator* allocator,
+            column_index_t index = 0
+        );
 
         static Value FromExternalStorage(
             const object_t* data,
@@ -122,6 +143,7 @@ class Value {
         static inline DataType PromoteType(DataType lhs, DataType rhs);
         friend std::ostream& operator<<(std::ostream& os, const Value& field);
 
+
         Value& operator=(const Value& rhs);
         friend Value operator+(const Value& lhs, const Value& rhs);
         Value& operator+=(const Value& rhs);
@@ -129,12 +151,13 @@ class Value {
         friend Value operator/(const Value& lhs, const Value& rhs);
         friend Value operator%(const Value& lhs, const Value& rhs);
         friend Value operator*(const Value& lhs, const Value& rhs);
-        friend Value operator<(const Value& lhs, const Value& rhs);
-        friend Value operator>(const Value& lhs, const Value& rhs);
-        friend Value operator<=(const Value& lhs, const Value& rhs);
-        friend Value operator>=(const Value& lhs, const Value& rhs);
-        friend Value operator==(const Value& lhs, const Value& rhs);
-        friend Value operator!=(const Value& lhs, const Value& rhs);
+
+        friend bool operator<(const Value& lhs, const Value& rhs);
+        friend bool operator==(const Value& lhs, const Value& rhs);
+        friend bool operator>(const Value& lhs, const Value& rhs);
+        friend bool operator<=(const Value& lhs, const Value& rhs);
+        friend bool operator>=(const Value& lhs, const Value& rhs);
+        friend bool operator!=(const Value& lhs, const Value& rhs);
 
         [[nodiscard]] const Memory::IAllocator* GetAllocator() const;
 
@@ -147,6 +170,6 @@ class Value {
 
 struct ValueComparator {
     bool operator()(const Value& a, const Value& b) const {
-        return (a < b).AsBool();
+        return a < b;
     }
 };

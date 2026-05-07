@@ -10,7 +10,7 @@ namespace CoreEngine::StorageTypes{
 }
 
 namespace Pages{
-        struct IndexPageAdditionalHeader {
+    struct IndexPageAdditionalHeader {
 		static constexpr UnsignedTinyInt TREE_TYPE_BIT_POS = 0;
 		static constexpr UnsignedTinyInt IS_LEAF_BIT_POS = 2;
 		static constexpr UnsignedTinyInt IS_ROOT_BIT_POS = 3;
@@ -20,7 +20,7 @@ namespace Pages{
 		static constexpr UnsignedTinyInt TREE_TYPE_BIT_MASK = 0x03;        // 0000 0011
 		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_MASK = 0x07; //
 
-		std::array<DataType, Constants::MAX_NUMBER_OF_SUB_KEYS> keyTypes;
+        DataType keyTypes[Constants::MAX_NUMBER_OF_SUB_KEYS];
 		PackedByte flags;
 		page_id_t treeId;
 

@@ -91,6 +91,7 @@ add_library(Systemic SHARED
         src/Systemic/src/Serialization/JsonParser.cpp
         src/Systemic/src/Serialization/JsonBuilder.cpp
         src/Systemic/src/DataTypes/JsonBinary.cpp
+        src/Systemic/src/Comparators.cpp
 )
 
 target_include_directories(Systemic PUBLIC src/Systemic/include)

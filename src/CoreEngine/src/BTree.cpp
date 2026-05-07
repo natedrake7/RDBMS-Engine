@@ -25,7 +25,6 @@ namespace Indexing{
     ){
         newChild.SetRightSibling(child.RightSibling());
         newChild.SetLeftSibling(child.PageId());
-
         child.SetRightSibling(newChild.PageId());
     }
 
@@ -34,84 +33,56 @@ namespace Indexing{
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.Keys();
+        Int left = 0;
+        Int right = page.Keys();
 
-        for (Int i = 0; i < numberOfKeys; i++) {
-            const auto tupleKey = page.GetKeyByIndex(allocator, i);
+        while (left < right){
+            const Int mid = left + (right - left) / 2;
+            const auto tupleKey = page.GetKeyByIndex(allocator, mid);
 
-            if (tupleKey == key){
-                std::cout   << "Found duplicate key: "
-                            << key << " and: "
-                            << tupleKey << " at position " << i
-                            << " in page " << page.PageId()
-                            << std::endl;
-                return -1;
+            if (page.CompareKeyAtIndex(key, mid) == Comparators::Comparator::Less){
+                left = mid + 1;
+                continue;
             }
 
-            if (tupleKey > key)
-                return i;
+            right = mid;
         }
 
-        return numberOfKeys;
-    }
+        if (left < page.Keys()){
+            if (page.CompareKeyAtIndex(key, left) == Comparators::Comparator::Equal) {
+                const auto tupleKey = page.GetKeyByIndex(allocator, left);
+                std::cout
+                    << "Found duplicate key: "
+                    << key << " and: "
+                    << tupleKey
+                    << " at position " << left
+                    << " in page " << page.PageId()
+                    << std::endl;
 
-    Int BTree::LeafPartialLowerBound(
-        const ::Memory::IAllocator* allocator,
-        const Pages::IndexPageView& page,
-        const DataTypes::Indexing::Key& key
-    ){
-        const auto numberOfKeys = page.Keys();
-
-        for (Int i = 0; i < numberOfKeys; i++) {
-            const auto pageKey = page.GetKeyByIndex(allocator, i);
-
-            if (key <= pageKey)
-                return i;
+                return -1;
+            }
         }
 
-        return numberOfKeys;
+        return left;
     }
 
     Int BTree::InternalNodeLowerBound(
-        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
-        const auto numberOfKeys = page.Keys();
+        Int left = 0;
+        Int right = page.Keys();
 
-        for (Int i = 0; i < numberOfKeys; i++) {
-            const auto tupleKey = page.GetKeyByIndex(allocator, i + 1);
+        while (left < right) {
+            const Int mid = left + (right - left) / 2;
 
-            // if (tupleKey == key){
-            //     std::cout
-            //         << "Found duplicate key: "
-            //         << key << " and: " << tupleKey << " at position "
-            //         << i << " in page " << page.PageId() << std::endl;
-            //     return -1;
-            // }
-
-            if (tupleKey >= key)
-                return i;
+            if (page.CompareKeyAtIndex(key, mid + 1) == Comparators::Comparator::Less)
+                left = mid + 1;
+            else
+                right = mid;
         }
 
-        return numberOfKeys;
-    }
-
-    Int BTree::InternalNodePartialLowerBound(
-        const ::Memory::IAllocator* allocator,
-        const Pages::IndexPageView& page,
-        const DataTypes::Indexing::Key& key
-    ){
-        const auto numberOfKeys = page.Keys();
-
-        for (Int i = 0; i < numberOfKeys; i++) {
-            const auto pageKey = page.GetKeyByIndex(allocator, i + 1);
-
-            if (key <= pageKey)
-                return i;
-        }
-
-        return numberOfKeys;
+        return left;
     }
 
     Errors::RuntimeStatus BTree::CreateDuplicateKeyError(
@@ -288,7 +259,7 @@ namespace Indexing{
             if (parent.IsLeaf())
                 return BTree::InsertToNode(context, parent, tuple, indexPosition);
 
-            auto childIndex = BTree::InternalNodeLowerBound(context.GetAllocator(), parent, tuple.key);
+            auto childIndex = BTree::InternalNodeLowerBound(parent, tuple.key);
 
             auto childId = parent.GetChild(context.GetAllocator(), childIndex);
 
@@ -352,7 +323,7 @@ namespace Indexing{
             if (currentNode.IsLeaf())
                 return currentNode;
 
-            const auto index = BTree::InternalNodePartialLowerBound(allocator, currentNode, key);
+            const auto index = BTree::InternalNodeLowerBound(currentNode, key);
             const auto childId = currentNode.GetChild(allocator, index);
             currentNode = this->GetNode(childId);
         }
@@ -1060,14 +1031,17 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
-
-                if (key.InClosedRange(minKey, maxKey)){
-                    currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                const auto minKeyCompareResult = currentNode.CompareKeyAtIndex(minKey, i);
+                const auto maxKeyCompareResult = currentNode.CompareKeyAtIndex(maxKey, i);
+                if (
+                    minKeyCompareResult >= Comparators::Comparator::Equal
+                    && maxKeyCompareResult <= Comparators::Comparator::Equal
+                ){
+                    result->Push(currentNode.PeekRowReference(allocator, i));
                     continue;
                 }
 
-                if (maxKey < key)
+                if (maxKeyCompareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1100,16 +1074,23 @@ namespace Indexing{
             );
 
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
+                const auto minKeyCompareResult = currentNode.CompareKeyAtIndex(minKey, i);
+                const auto maxKeyCompareResult = currentNode.CompareKeyAtIndex(maxKey, i);
+                if (
+                    minKeyCompareResult >= Comparators::Comparator::Equal
+                    && maxKeyCompareResult <= Comparators::Comparator::Equal
+                ){
 
-                if (key.InClosedRange(minKey, maxKey)){
+                    auto row = currentNode.PeekRowReference(allocator, i);
                     evaluationContext.row = &row;
+
                     if (expression->Evaluate(evaluationContext).AsBool())
-                        currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                        result->Push(std::move(row));
+
                     continue;
                 }
 
-                if (maxKey < key)
+                if (maxKeyCompareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1134,16 +1115,13 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [tupleKey, row] = currentNode.PeekLeafTuple(allocator, i);
-
-                // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
-                // std::cout << "Row: " << row << std::endl;
-                if (key == tupleKey){
-                    currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                const auto compareResult = currentNode.CompareKeyAtIndex(key, i);
+                if (compareResult == Comparators::Comparator::Equal){
+                    result->Push(currentNode.PeekRowReference(allocator, i));
                     continue;
                 }
 
-                if (key < tupleKey)
+                if (compareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1176,18 +1154,16 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [tupleKey, row] = currentNode.PeekLeafTuple(allocator, i);
-
-                if (key == tupleKey ){
+                const auto compareResult = currentNode.CompareKeyAtIndex(key, i);
+                if (compareResult == Comparators::Comparator::Equal){
+                    auto row = currentNode.PeekRowReference(allocator, i);
                     evaluationContext.row = &row;
-
                     if (expression->Evaluate(evaluationContext).AsBool())
-                        currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
-
+                        result->Push(std::move(row));
                     continue;
                 }
 
-                if (key < tupleKey)
+                if (compareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1212,16 +1188,13 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [tupleKey, row] = currentNode.PeekLeafTuple(allocator, i);
-
-                // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
-                // std::cout << "Row: " << row << std::endl;
-                if (key == tupleKey ){
-                    currentNode.AppendRowToBuffer(allocator, result, i);
+                const auto compareResult = currentNode.CompareKeyAtIndex(key, i);
+                if (compareResult == Comparators::Comparator::Equal){
+                    result->Push(currentNode.PeekRowReference(allocator, i));
                     continue;
                 }
 
-                if (key < tupleKey)
+                if (compareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1252,19 +1225,19 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             for (Int i = 0; i < currentNode.Keys(); i++){
-                auto [tupleKey, row] = currentNode.PeekLeafTuple(allocator, i);
+                const auto compareResult = currentNode.CompareKeyAtIndex(key, i);
+                if (compareResult == Comparators::Comparator::Equal){
 
-                // std::cout << "Comparing keys: " << tupleKey << " and " << key << std::endl;
-                // std::cout << "Row: " << row << std::endl;
-                if (key == tupleKey ){
+                    auto row = currentNode.PeekRowReference(allocator, i);
                     evaluationContext.row = &row;
+
                     if (expression->Evaluate(evaluationContext).AsBool())
-                        currentNode.AppendRowToBuffer(allocator, result, i);
+                        result->Push(std::move(row));
 
                     continue;
                 }
 
-                if (key < tupleKey)
+                if (compareResult == Comparators::Comparator::Greater)
                     return;
             }
 
@@ -1319,7 +1292,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++)
-                currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                result->Push(currentNode.PeekRowReference(allocator, i));
 
             if(!currentNode.HasRightSibling()) {
                 state.canFetchMore = false;
@@ -1362,12 +1335,12 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode.Keys(); i++) {
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
+               auto row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = &row;
                 if (!expression->Evaluate(evaluationContext).AsBool())
                     continue;
 
-                currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                result->Push(std::move(row));
 
                 if (result->Size() == context.GetBatchSize()) {
                     state.lastFetchedKeyIndex = i;
@@ -1408,13 +1381,12 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
+                auto row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = &row;
                 if(!expression->Evaluate(evaluationContext).AsBool())
                     continue;
 
-                currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                result->Push(std::move(row));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1442,14 +1414,13 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
+                auto row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = &row;
 
                 if(!expression->Evaluate(evaluationContext).AsBool())
                     continue;
 
-                currentNode.AppendRowToBuffer(allocator, result, i);
+                result->Push(std::move(row));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1472,8 +1443,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-                auto [key, row] = currentNode.PeekLeafTuple(allocator, i);
-                currentNode.AppendRowToBuffer(allocator, result, i);
+                result->Push(currentNode.PeekRowReference(allocator, i));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1498,7 +1468,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-                currentNode.AppendRowToBuffer(allocator, result, context.GetSnapshot(), i);
+                result->Push(currentNode.PeekRowReference(allocator, i));
             }
 
             if(!currentNode.HasRightSibling())

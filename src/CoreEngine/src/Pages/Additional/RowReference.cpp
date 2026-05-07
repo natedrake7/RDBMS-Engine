@@ -28,43 +28,6 @@ namespace Pages{
         this->lazyState->isHeaderInitialized = false;
     }
 
-    // RowReference::RowReference(const RowReference& other){
-    //     this->pageView = PageView(other.pageView.GetFrame());
-    //     this->indexPosition = other.indexPosition;
-    //     this->keySize = other.keySize;
-    //     this->lazyState = nullptr;
-    //
-    //     if (other.lazyState != nullptr){
-    //         this->lazyState = new RowLazyState();
-    //          this->lazyState->header = other.lazyState->header;
-    //          this->lazyState->dataOffset = other.lazyState->dataOffset;
-    //          this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
-    //          this->lazyState->sizes = other.lazyState->sizes;
-    //          // this->lazyState->cache = other.lazyState->cache;
-    //    }
-    // }
-    //
-    // RowReference& RowReference::operator=(const RowReference& other){
-    //     if (this == &other)
-    //         return *this;
-    //
-    //     this->pageView = PageView(other.pageView.GetFrame());
-    //     this->indexPosition = other.indexPosition;
-    //     this->keySize = other.keySize;
-    //     this->lazyState = nullptr;
-    //
-    //     if (other.lazyState != nullptr){
-    //         this->lazyState = new RowLazyState();
-    //         // this->lazyState->header = other.lazyState->header;
-    //         this->lazyState->dataOffset = other.lazyState->dataOffset;
-    //         this->lazyState->isHeaderInitialized = other.lazyState->isHeaderInitialized;
-    //         this->lazyState->sizes = other.lazyState->sizes;
-    //         // this->lazyState->cache = other.lazyState->cache;
-    //     }
-    //
-    //     return *this;
-    // }
-
     RowReference::RowReference(RowReference&& other) noexcept{
         this->pageView = other.pageView;
         this->indexPosition = other.indexPosition;

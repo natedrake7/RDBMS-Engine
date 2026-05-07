@@ -372,19 +372,19 @@ namespace Expressions{
             case BinaryOperator::Modulo:
                 return this->left->Evaluate(context) % this->right->Evaluate(context);
             case BinaryOperator::Equal:
-                return this->left->Evaluate(context) == this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) == this->right->Evaluate(context), context.allocator);
             case BinaryOperator::EqualIgnoreOrdinalCase:
                 return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
             case BinaryOperator::NotEqual:
-                return this->left->Evaluate(context) != this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) != this->right->Evaluate(context), context.allocator);
             case BinaryOperator::Greater:
-                return this->left->Evaluate(context) > this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) > this->right->Evaluate(context), context.allocator);
             case BinaryOperator::GreaterEqual:
-                return this->left->Evaluate(context) >= this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) >= this->right->Evaluate(context), context.allocator);
             case BinaryOperator::Less:
-                return this->left->Evaluate(context) < this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) < this->right->Evaluate(context), context.allocator);
             case BinaryOperator::LessEqual:
-                return this->left->Evaluate(context) <= this->right->Evaluate(context);
+                return Value(this->left->Evaluate(context) <= this->right->Evaluate(context), context.allocator);
             default:
               throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
@@ -645,7 +645,7 @@ namespace Expressions{
         auto& firstArg = arguments[0];
         const auto& secondArg = arguments[1];
 
-        return (firstArg == secondArg).AsBool()
+        return firstArg == secondArg
                  ? Value::Null()
                  : firstArg;
     }
