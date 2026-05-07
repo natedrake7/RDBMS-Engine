@@ -369,7 +369,7 @@ namespace CoreEngine::StorageTypes{
 
         // Early exit if column is null
         if (this->header.nullBitMap.Get(columnOrdinal))
-            return Value::Null();
+            return Value::Null(nullptr);
 
         // Calculate offset to the target column's data
         // We only iterate up to and including the target column

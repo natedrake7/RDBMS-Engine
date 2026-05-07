@@ -136,6 +136,14 @@ Value::Value(
     this->columnIndex = index;
 }
 
+Value::Value(const column_index_t index){
+    this->data = nullptr;
+    this->_allocator = nullptr;
+    this->size = 0;
+    this->type = DataType::Null;
+    this->columnIndex = index;
+}
+
 Value::Value(const Value &copyVal){
     this->size = copyVal.size;
     this->type = copyVal.type;
@@ -186,12 +194,15 @@ Value & Value::operator=(Value &&other) noexcept{
 
 Value::~Value() = default;
 
-Value::Value(const column_index_t index){
+Value::Value(
+    const ::Memory::IAllocator* allocator,
+    const column_index_t index
+){
     this->data = nullptr;
     this->columnIndex = index;
     this->size = 0;
     this->type = DataType::Null;
-    this->_allocator = nullptr;
+    this->_allocator = allocator;
 }
 
 Value::Value(
@@ -394,10 +405,12 @@ Value Value::FromExternalStorage(
     return Value(data, size, type, allocator, index);
 }
 
-Value Value::Null(const column_index_t columnIndex) { return Value(columnIndex); }
+Value Value::Null(const column_index_t columnIndex){
+    return Value(columnIndex);
+}
 
 Value Value::Null(const Memory::IAllocator* allocator, const column_index_t columnIndex){
-    return Value(columnIndex, allocator);
+    return Value(allocator, columnIndex);
 }
 
 bool Value::IsNull() const { return this->data == nullptr; }
@@ -659,7 +672,7 @@ Value operator+(const Value &lhs, const Value &rhs){
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
 
-    return Value::Null();
+    return Value::Null(nullptr);
 }
 
 Value& Value::operator+=(const Value &rhs){
@@ -689,11 +702,11 @@ Value operator-(const Value &lhs, const Value &rhs){
             Value::BinaryOperationException(lhs.type, rhs.type);
     }
 
-    return Value::Null();
+    return Value::Null(nullptr);
 }
 
 Value operator/(const Value &lhs, const Value &rhs){
-    return Value::Null();
+    return Value::Null(nullptr);
 }
 
 Value operator%(const Value &lhs, const Value &rhs){
@@ -719,7 +732,7 @@ Value operator%(const Value &lhs, const Value &rhs){
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
 
-    return Value::Null();
+    return Value::Null(nullptr);
 }
 
 Value operator*(const Value &lhs, const Value &rhs){
@@ -745,7 +758,7 @@ Value operator*(const Value &lhs, const Value &rhs){
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
 
-    return Value::Null();
+    return Value::Null(nullptr);
 }
 
 bool operator<(const Value &lhs, const Value &rhs){

@@ -149,7 +149,7 @@ void QueryResult::Deserialize(const std::vector<char>& buffer, UnsignedInt& offs
     this->data.Reserve(dataSize);
 
     for (int i = 0; i < dataSize; i++) {
-        auto value = Value();
+        auto value = Value::Null(nullptr);
         value.Deserialize(buffer, offset);
         this->data.Push(std::move(value));
     }

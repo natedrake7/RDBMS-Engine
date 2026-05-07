@@ -20,10 +20,10 @@ namespace DataTypes::Indexing{
    QueryData::~QueryData() = default;
 
     Key::Key()
-        : value(Value::Null()), size(0){}
+        : value(Value::Null(nullptr)), size(0){}
 
     Key::Key(const Memory::IAllocator* allocator)
-        : value(Value::Null()), subKeys(allocator), size(0){}
+        : value(Value::Null(nullptr)), subKeys(allocator), size(0){}
 
     Key::Key(
         const void *keyValue,
@@ -32,17 +32,20 @@ namespace DataTypes::Indexing{
         const Memory::IAllocator* allocator
     ) : value(static_cast<const object_t*>(keyValue), keySize, keyType, allocator), subKeys(allocator), size(keySize){}
 
-    Key::Key(const Value &field){
+    Key::Key(const Value &field)
+        : value(nullptr){
         this->value = field;
         this->size = this->value.Size();
     }
 
-    Key::Key(Value &field) {
+    Key::Key(Value &field)
+        : value(nullptr){
         this->value = std::move(field);
         this->size = this->value.Size();
     }
 
-    Key::Key(const DataStructures::PolymorphicArray<Key>& subKeys){
+    Key::Key(const DataStructures::PolymorphicArray<Key>& subKeys)
+        : value(nullptr){
         this->size = 0;
 
         this->subKeys.TrySetAllocator(subKeys.GetAllocator());
@@ -52,14 +55,16 @@ namespace DataTypes::Indexing{
         }
     }
 
-    Key::Key(DataStructures::PolymorphicArray<Key>& subKeys){
+    Key::Key(DataStructures::PolymorphicArray<Key>& subKeys)
+        : value(nullptr){
         this->subKeys = std::move(subKeys);
         this->size = this->CalculateSize();
     }
 
     Key::~Key() = default;
 
-    Key::Key(const Key &otherKey){
+    Key::Key(const Key &otherKey)
+        : value(nullptr){
         this->size = otherKey.size;
 
         if(otherKey.subKeys.Empty()){
@@ -70,7 +75,8 @@ namespace DataTypes::Indexing{
         this->subKeys = otherKey.subKeys;
     }
 
-    Key::Key(Key&& otherKey) noexcept{
+    Key::Key(Key&& otherKey) noexcept
+        : value(nullptr){
         if (this == &otherKey)
             return;
 
@@ -101,7 +107,8 @@ namespace DataTypes::Indexing{
         return *this;
     }
 
-    Key::Key(const Key *&otherKey) {
+    Key::Key(const Key *&otherKey)
+        : value(nullptr){
         this->size = otherKey->size;
 
         if(otherKey->subKeys.Empty()){

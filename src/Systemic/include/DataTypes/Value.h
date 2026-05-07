@@ -19,8 +19,6 @@ namespace DataTypes {
 
 
 class Value{
-
-
     object_t* data;
 
     const Memory::IAllocator* _allocator;
@@ -54,11 +52,12 @@ class Value{
     );
 
     public:
+        Value(column_index_t index = 0);
         Value(const Value& copyVal);
         Value(Value&& other)noexcept;
         Value& operator=(Value&& other) noexcept;
 
-        explicit Value(column_index_t index = 0);
+        explicit Value(const ::Memory::IAllocator* allocator, column_index_t index = 0);
         explicit Value(
             const object_t* data,
             Int size,

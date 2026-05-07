@@ -228,25 +228,25 @@ namespace Expressions{
             break;
         }
 
-        return Value::Null();
+        return Value::Null(nullptr);
     }
 
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
     bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
 
-    ConstantExpression::ConstantExpression(const Value &value){
-        this->value = value;
+    ConstantExpression::ConstantExpression(const Value &value)
+        : value(value){
         this->expressionType = ExpressionType::Constant;
     }
 
-    ConstantExpression::ConstantExpression(Value &value) {
-        this->value = std::move(value);
+    ConstantExpression::ConstantExpression(Value &value)
+        : value(std::move(value)){
         this->expressionType = ExpressionType::Constant;
     }
 
-    ConstantExpression::ConstantExpression(Value&& value){
-        this->value = std::move(value);
+    ConstantExpression::ConstantExpression(Value&& value)
+        : value(std::move(value)){
         this->expressionType = ExpressionType::Constant;
     }
 
@@ -646,7 +646,7 @@ namespace Expressions{
         const auto& secondArg = arguments[1];
 
         return firstArg == secondArg
-                 ? Value::Null()
+                 ? Value::Null(nullptr)
                  : firstArg;
     }
 
@@ -906,7 +906,7 @@ namespace Expressions{
             break;
         }
 
-        return Value::Null();
+        return Value::Null(nullptr);
     }
 
     DataType JsonExpression::GetReturnType() const{

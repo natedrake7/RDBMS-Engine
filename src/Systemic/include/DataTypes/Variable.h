@@ -10,35 +10,33 @@ class Variable {
   DataTypes::String normalizedName;
 
   public:
-    Variable() {
-      this->type = DataType::Null;
-    }
+    Variable()
+        : value(nullptr), type(DataType::Null){}
 
     Variable(Value& value, const DataType& type, DataTypes::String& name)
       : value(std::move(value)), type(type), name(std::move(name)) {
       this->normalizedName = DataTypes::String::Normalize(this->name);
     }
 
-    Variable(Variable&& other)noexcept {
-      this->value = std::move(other.value);
-      this->type = other.type;
-      this->name = std::move(other.name);
-      this->normalizedName = std::move(other.normalizedName);
+    Variable(Variable&& other)noexcept
+    :   value(std::move(other.value)),
+        type(other.type),
+        name(std::move(other.name)),
+        normalizedName(std::move(other.normalizedName)){
 
-      other.value = Value::Null();
+      other.value = Value::Null(nullptr);
       other.type = DataType::Null;
-      other.name = {};
-      other.normalizedName = {};
+      other.name = DataTypes::String::Null();
+      other.normalizedName = DataTypes::String::Null();
     }
 
-    Variable(const Variable& other) {
-      this->value = other.value;
-      this->type = other.type;
-      this->name = other.name;
-      this->normalizedName = other.normalizedName;
-    }
+    Variable(const Variable& other)
+        :   value(other.value),
+            type(other.type),
+            name(other.name),
+            normalizedName(other.normalizedName){}
 
-    Variable& operator=(Variable&& other)noexcept {
+    Variable& operator=(Variable&& other)noexcept{
       if (this == &other)
         return *this;
 
@@ -47,9 +45,9 @@ class Variable {
       this->name = std::move(other.name);
       this->normalizedName = std::move(other.normalizedName);
 
-      other.value = Value::Null();
-      other.name = {};
-      other.normalizedName = {};
+      other.value = Value::Null(nullptr);
+      other.name = DataTypes::String::Null();
+      other.normalizedName = DataTypes::String::Null();
       other.type = DataType::Null;
 
       return *this;
