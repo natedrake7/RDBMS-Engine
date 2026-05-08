@@ -261,13 +261,13 @@ namespace Expressions{
 
     public:
         BranchType branchType;
-        std::vector<Expression*> branches;
-        std::vector<Expression*> results;
-        std::vector<Expression*> arguments;
+        DataStructures::PolymorphicArray<Expression*> branches;
+        DataStructures::PolymorphicArray<Expression*> results;
+        DataStructures::PolymorphicArray<Expression*> arguments;
 
         Expression* baseCase;
 
-        explicit BranchExpression(BranchType type);
+        explicit BranchExpression(BranchType type, const ::Memory::IAllocator* allocator);
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
         [[nodiscard]]DataType GetReturnType() const override;
 

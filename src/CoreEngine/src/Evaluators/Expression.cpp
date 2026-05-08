@@ -791,7 +791,7 @@ namespace Expressions{
     DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
 
     Value BranchExpression::EvaluateSwitch(const EvaluationContext &context) const{
-        for (int i = 0;i < this->branches.size(); i++) {
+        for (int i = 0;i < this->branches.Size(); i++) {
             if (this->branches[i]->Evaluate(context).AsBool())
                 return this->results[i]->Evaluate(context);
         }
@@ -805,9 +805,10 @@ namespace Expressions{
         return this->results[1]->Evaluate(context);
     }
 
-    BranchExpression::BranchExpression(const BranchType type) {
-        this->branchType = type;
-        this->baseCase = nullptr;
+    BranchExpression::BranchExpression(const BranchType type, const ::Memory::IAllocator* allocator)
+        :   branchType(type), branches(allocator),
+            results(allocator), arguments(allocator),
+            baseCase(nullptr) {
         this->expressionType = ExpressionType::Branch;
     }
 
@@ -840,9 +841,9 @@ namespace Expressions{
     bool BranchExpression::ValidateNumberOfArguments() const {
         switch (this->branchType) {
             case BranchType::Switch:
-              return this->branches.size() > 0 && this->branches.size() == this->results.size() && this->baseCase != nullptr;
+              return !this->branches.Empty() && this->branches.Size() == this->results.Size() && this->baseCase != nullptr;
             case BranchType::Ternary:
-              return this->branches.size() == 1 && this->results.size() == 2 && this->baseCase == nullptr;
+              return this->branches.Size() == 1 && this->results.Size() == 2 && this->baseCase == nullptr;
             default:
               throw std::runtime_error("Unknown expression branching type");
         }
@@ -865,9 +866,9 @@ namespace Expressions{
         const auto jsonBinary = columnValue.AsJson();
         const auto jsonValue = jsonBinary.Navigate(this->pathSegments);
 
-        const auto type = jsonValue.Type();
-        if (type == Serialization::JsonType::Array
-            || type == Serialization::JsonType::Object
+        const auto jsonType = jsonValue.Type();
+        if (jsonType == Serialization::JsonType::Array
+            || jsonType == Serialization::JsonType::Object
         ){
             const auto str = DataTypes::JsonBinary::JsonObjectToString(jsonValue, context.allocator);
             return Value(str, context.allocator);

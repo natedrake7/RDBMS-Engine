@@ -123,14 +123,14 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitSwitchExpression(SQLParser::SwitchExpressionContext *context) {
-        auto* expression = this->_compileContext->Allocate<Expressions::BranchExpression>(Expressions::BranchType::Switch);
+        auto* expression = this->_compileContext->Allocate<Expressions::BranchExpression>(Expressions::BranchType::Switch, this->_compileContext->GetAllocator());
 
         for (const auto& caseExpression : context->caseExpression()) {
             const auto& [branch] = std::any_cast<ExpressionWrapper>(visit(caseExpression->branch));
-            expression->branches.push_back(branch);
+            expression->branches.Push(branch);
 
             const auto& [result] = std::any_cast<ExpressionWrapper>(visit(caseExpression->result));
-            expression->results.push_back(result);
+            expression->results.Push(result);
         }
 
         const auto& [baseCase] = std::any_cast<ExpressionWrapper>(visit(context->baseCase));
@@ -140,20 +140,20 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitCaseExpression(SQLParser::CaseExpressionContext *context) {
-
+        return std::any(nullptr);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitTernaryExpression(SQLParser::TernaryExpressionContext *context){
-        auto* expression = this->_compileContext->Allocate<Expressions::BranchExpression>(Expressions::BranchType::Ternary);
+        auto* expression = this->_compileContext->Allocate<Expressions::BranchExpression>(Expressions::BranchType::Ternary, this->_compileContext->GetAllocator());
 
         const auto& [branch] = std::any_cast<ExpressionWrapper>(visit(context->branch));
-        expression->branches.push_back(branch);
+        expression->branches.Push(branch);
 
         const auto& [trueResult] = std::any_cast<ExpressionWrapper>(visit(context->trueResult));
-        expression->results.push_back(trueResult);
+        expression->results.Push(trueResult);
 
         const auto& [falseResult] = std::any_cast<ExpressionWrapper>(visit(context->falseResult));
-        expression->results.push_back(falseResult);
+        expression->results.Push(falseResult);
 
         return std::any(expression);
     }

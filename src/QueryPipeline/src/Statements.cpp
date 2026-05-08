@@ -2254,49 +2254,51 @@ namespace QueryPipeline::Statements {
 
     bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
         // If one side is a column expression, its type takes precedence
-        const auto* leftColumn = left->AsColumn();
-        const auto* rightColumn = right->AsColumn();
+        const auto leftType = left->GetReturnType();
+        const auto rightType = right->GetReturnType();
 
-        if (leftColumn == nullptr && rightColumn == nullptr)
-        return
-            DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), right->GetReturnType())
-            || DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), left->GetReturnType());
+        const auto isLeftColumn = left->IsColumn();
+        const auto isRightColumn = right->IsColumn();
 
-        if (leftColumn != nullptr && rightColumn == nullptr) {
-            const auto* constantExpr = right->AsConstant();
-
-            if (constantExpr != nullptr
-                && (constantExpr->value.IsNull()
-                    || DataTypes::Coercions::CanBeParsedToType(leftColumn->GetReturnType(), constantExpr->value)
-                )
-            ) return true;
-
-            return DataTypes::Coercions::IsCoercionAllowed(right->GetReturnType(), leftColumn->GetReturnType());
-        }
-
-        if (leftColumn == nullptr && rightColumn != nullptr) {
-            const auto* constantExpr = left->AsConstant();
-
-            if (constantExpr != nullptr
-                && DataTypes::Coercions::CanBeParsedToType(rightColumn->GetReturnType(), constantExpr->value)
-            ) return true;
-
-            return DataTypes::Coercions::IsCoercionAllowed(left->GetReturnType(), rightColumn->GetReturnType());
-        }
-
-        if (leftColumn != nullptr && rightColumn != nullptr)
+        if (isLeftColumn && right->IsConstant()) {
+            const auto* constant = right->AsConstant();
             return
-                DataTypes::Coercions::IsCoercionAllowed(leftColumn->GetReturnType(), rightColumn->GetReturnType())
-                || DataTypes::Coercions::IsCoercionAllowed(rightColumn->GetReturnType(), leftColumn->GetReturnType());
-        return true;
+                constant->value.IsNull() ||
+                DataTypes::Coercions::IsCoercionAllowed(
+                    rightType,
+                    leftType
+                ) ||
+                DataTypes::Coercions::CanBeParsedToType(
+                    leftType,
+                    constant->value
+                );
+        }
+
+        if (isRightColumn && left->IsConstant()) {
+            const auto* constant = left->AsConstant();
+
+            return
+                constant->value.IsNull() ||
+                DataTypes::Coercions::IsCoercionAllowed(
+                    leftType,
+                    rightType
+                ) ||
+                DataTypes::Coercions::CanBeParsedToType(
+                    rightType,
+                    constant->value
+                );
+        }
+
+        return
+            DataTypes::Coercions::IsCoercionAllowed(leftType, rightType)
+            || DataTypes::Coercions::IsCoercionAllowed(rightType, leftType);
     }
 
     bool ValidateExpressionCoercionTypes(const DataType type, const Expressions::Expression *expression) {
         if (expression->IsConstant()) {
             auto* constantExpr = expression->AsConstant();
 
-            if (
-                constantExpr->value.IsNull()
+            if (constantExpr->value.IsNull()
                 || DataTypes::Coercions::CanBeParsedToType(type, constantExpr->value)
             ) return true;
 
@@ -2469,8 +2471,12 @@ namespace QueryPipeline::Statements {
         EvaluateExpression(context, expression);
     }
 
-    void FoldExpression(const QueryContext& context, Expressions::BranchExpression *castExpr, Expressions::Expression *&expression){
-        for (int i = 0;i < castExpr->branches.size(); i++) {
+    void FoldExpression(
+        const QueryContext& context,
+        Expressions::BranchExpression *castExpr,
+        Expressions::Expression *&expression
+    ){
+        for (int i = 0;i < castExpr->branches.Size(); i++) {
             const auto* branch = castExpr->branches[i];
 
             if (!branch->IsConstant()) return;
