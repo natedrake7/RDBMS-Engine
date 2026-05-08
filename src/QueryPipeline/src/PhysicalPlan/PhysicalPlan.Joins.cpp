@@ -2,118 +2,113 @@
 #include "../../include/PhysicalPlan.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
-    const CoreEngine::ExecutionContext& context,
-    const ExecutionResult& leftResult
-  ) const{
-    auto result = ExecutionResult(context);
+    ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
+        const CoreEngine::ExecutionContext& context,
+        const ExecutionResult& leftResult
+    ) const {
+        auto result = ExecutionResult(context);
 
-    Expressions::EvaluationContext evaluationContext(
-        Expressions::EvaluationContext::EvaluationContextType::Join,
-        context
-    );
-    bool canFetchMore = true;
+        Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::Join,
+            context
+        );
 
-    while (canFetchMore){
-      auto rightResult = this->right->Execute(context);
-      canFetchMore = rightResult.canFetchMore;
+        bool canFetchMore = true;
 
-      for (auto& outerRow: leftResult.rows) {
-        for (auto& innerRow: rightResult.rows) {
+        while (canFetchMore) {
+            auto rightResult = this->right->Execute(context);
+            canFetchMore = rightResult.canFetchMore;
 
-          evaluationContext.outerRow = &outerRow;
-          evaluationContext.innerRow = &innerRow;
-          if (!this->expression->Evaluate(evaluationContext).AsBool())
-            continue;
+            for (const auto& outerRow: leftResult.rows) {
+                for (const auto& innerRow: rightResult.rows) {
+                    evaluationContext.row = &outerRow;
+                    evaluationContext.joinRow = &innerRow;
+                    if (!this->expression->Evaluate(evaluationContext).AsBool())
+                        continue;
 
-          // outerRow.Join(innerRow);
-          // result.rows.Push(outerRow);
+                    outerRow.Join(innerRow);
+                    result.rows.Push(outerRow);
+                }
+            }
         }
-      }
+
+        return result;
     }
 
-    return result;
-  }
+    PhysicalNestedLoopInnerJoin::PhysicalNestedLoopInnerJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* joinCondition
+    ) : left(left), right(right), expression(joinCondition) {}
 
-  PhysicalNestedLoopInnerJoin::PhysicalNestedLoopInnerJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression *joinCondition)
-    : left(left), right(right), expression(joinCondition){}
+    PhysicalNestedLoopInnerJoin::~PhysicalNestedLoopInnerJoin() = default;
 
-  PhysicalNestedLoopInnerJoin::~PhysicalNestedLoopInnerJoin() {
-    delete this->left;
-    delete this->right;
-  }
+    ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        const auto leftResult = this->left->Execute(context);
+        auto result = this->ExecuteBatchJoin(context, leftResult);
+        result.canFetchMore = leftResult.canFetchMore;
+        return result;
+    }
 
+    ExecutionResult PhysicalMergeInnerJoin::ExecuteBatchJoin(
+        const CoreEngine::ExecutionContext& context,
+        ExecutionResult& leftResult
+    ) const {
+        using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
 
-  ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const CoreEngine::ExecutionContext& context){
-    const auto leftResult = this->left->Execute(context);
-    auto result = this->ExecuteBatchJoin(context, leftResult);
-    result.canFetchMore = leftResult.canFetchMore;
-    return result;
-  }
+        auto result = ExecutionResult(context);
 
-  ExecutionResult PhysicalMergeInnerJoin::ExecuteBatchJoin(
-    const CoreEngine::ExecutionContext& context,
-    ExecutionResult& leftResult
-  ) const
-  {
-    using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
+        Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::Join,
+            context
+        );
 
-    auto result = ExecutionResult(context);
+        auto rightResult = this->right->Execute(context);
 
-    Expressions::EvaluationContext evaluationContext(
-      Expressions::EvaluationContext::EvaluationContextType::Join,
-      context
-    );
-
-    auto rightResult = this->right->Execute(context);
-
-    // Int leftIndex = 0;
-    // Int rightIndex = 0;
-    //
-    // const auto leftRowsCount = leftResult->rows.Size();
-    // const auto rightRowsCount = rightResult->rows.Size();
-    //
-    // const auto outerRowSize = leftResult->columns.Size();
-    //
-    // while (leftIndex < leftRowsCount){
-    //   auto& outerRow = leftResult->rows[leftIndex];
-    //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
-    //
-    //   while (rightIndex < rightRowsCount){
-    //     const auto& innerRow = rightResult->rows[rightIndex];
-    //
-    //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
-    //
-    //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
-    //
-    //     if (comparison == CompOperator::Less)
-    //       break;
-    //
-    //     if (comparison == CompOperator::Greater){
-    //       rightIndex++;
-    //       continue;
-    //     }
-    //
-    //     outerRow.Join(&innerRow);
-    //     result->rows.push_back(outerRow);
-    //
-    //     rightIndex++;
-    //   }
-    //
-    //   if (rightIndex >= rightRowsCount
-    //       && leftIndex < leftRowsCount
-    //       && rightResult->canFetchMore
-    //   ){
-    //     delete rightResult;
-    //     rightResult = this->right->Execute(properties);
-    //     rightIndex = 0;
-    //   }
-    //
-    //   leftIndex++;
-    // }
+        // Int leftIndex = 0;
+        // Int rightIndex = 0;
+        //
+        // const auto leftRowsCount = leftResult->rows.Size();
+        // const auto rightRowsCount = rightResult->rows.Size();
+        //
+        // const auto outerRowSize = leftResult->columns.Size();
+        //
+        // while (leftIndex < leftRowsCount){
+        //   auto& outerRow = leftResult->rows[leftIndex];
+        //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
+        //
+        //   while (rightIndex < rightRowsCount){
+        //     const auto& innerRow = rightResult->rows[rightIndex];
+        //
+        //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
+        //
+        //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+        //
+        //     if (comparison == CompOperator::Less)
+        //       break;
+        //
+        //     if (comparison == CompOperator::Greater){
+        //       rightIndex++;
+        //       continue;
+        //     }
+        //
+        //     outerRow.Join(&innerRow);
+        //     result->rows.push_back(outerRow);
+        //
+        //     rightIndex++;
+        //   }
+        //
+        //   if (rightIndex >= rightRowsCount
+        //       && leftIndex < leftRowsCount
+        //       && rightResult->canFetchMore
+        //   ){
+        //     delete rightResult;
+        //     rightResult = this->right->Execute(properties);
+        //     rightIndex = 0;
+        //   }
+        //
+        //   leftIndex++;
+        // }
     //
     // if (rightIndex < rightRowsCount){
     //   const auto& lastUsedRow = rightResult->rows[rightIndex];
@@ -123,100 +118,96 @@ namespace QueryPipeline::PhysicalPlan {
     // delete rightResult;
     // result->canFetchMore = leftResult->canFetchMore;
 
-    return result;
-  }
+        return result;
+    }
 
-  PhysicalMergeInnerJoin::PhysicalMergeInnerJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression* expression,
-    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
-    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
-  ) : left(left), right(right), expression(expression),
-      leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
+    PhysicalMergeInnerJoin::PhysicalMergeInnerJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* expression,
+        DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+        DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
+    ) : left(left), right(right), expression(expression),
+        leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
 
-  PhysicalMergeInnerJoin::~PhysicalMergeInnerJoin(){
-    delete this->left;
-    delete this->right;
-    delete this->expression;
-  }
+    PhysicalMergeInnerJoin::~PhysicalMergeInnerJoin() = default;
 
-  ExecutionResult PhysicalMergeInnerJoin::Execute(const CoreEngine::ExecutionContext& context){
-    auto leftResult = this->left->Execute(context);
-    auto result = this->ExecuteBatchJoin(context, leftResult);
+    ExecutionResult PhysicalMergeInnerJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        auto leftResult = this->left->Execute(context);
+        auto result = this->ExecuteBatchJoin(context, leftResult);
 
-    result.canFetchMore = leftResult.canFetchMore;
-    return result;
-  }
+        result.canFetchMore = leftResult.canFetchMore;
+        return result;
+    }
 
-  ExecutionResult PhysicalMergeLeftJoin::ExecuteBatchJoin(
-    const CoreEngine::ExecutionContext& context,
-    ExecutionResult& leftResult
-  ) const{
-    // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
-    //
-    // auto* result = new ExecutionResult();
-    //
-    // Expressions::EvaluationContext context(
-    //   Expressions::EvaluationContext::EvaluationContextType::Join,
-    //   properties.variables
-    // );
-    //
-    // auto* rightResult = this->right->Execute(properties);
-    //
-    // Int leftIndex = 0;
-    // Int rightIndex = 0;
-    //
-    // const auto leftRowsCount = leftResult->rows.size();
-    // const auto rightRowsCount = rightResult->rows.size();
-    //
-    // const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
-    //
-    // while (leftIndex < leftRowsCount){
-    //   auto& outerRow = leftResult->rows[leftIndex];
-    //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
-    //
-    //   bool hasMatch = false;
-    //
-    //   while (rightIndex < rightRowsCount){
-    //     auto& innerRow = rightResult->rows[rightIndex];
-    //
-    //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
-    //
-    //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
-    //
-    //     if (comparison == CompOperator::Less)
-    //       break;
-    //
-    //     if (comparison == CompOperator::Greater){
-    //       rightIndex++;
-    //       continue;
-    //     }
-    //
-    //     hasMatch = true;
-    //
-    //     outerRow.Join(&innerRow);
-    //     result.rows.push_back(outerRow);
-    //
-    //     rightIndex++;
-    //   }
-    //
-    //   if (rightIndex >= rightRowsCount
-    //       && leftIndex < leftRowsCount
-    //       && rightResult->canFetchMore
-    //   ){
-    //     delete rightResult;
-    //     rightResult = this->right->Execute(properties);
-    //     rightIndex = 0;
-    //   }
-    //
-    //   if (!hasMatch){
-    //     outerRow.LeftJoin(rightResult->columns);
-    //     result->rows.push_back(outerRow);
-    //   }
-    //
-    //   leftIndex++;
-    // }
+    ExecutionResult PhysicalMergeLeftJoin::ExecuteBatchJoin(
+        const CoreEngine::ExecutionContext& context,
+        ExecutionResult& leftResult
+    ) const {
+        // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
+        //
+        // auto* result = new ExecutionResult();
+        //
+        // Expressions::EvaluationContext context(
+        //   Expressions::EvaluationContext::EvaluationContextType::Join,
+        //   properties.variables
+        // );
+        //
+        // auto* rightResult = this->right->Execute(properties);
+        //
+        // Int leftIndex = 0;
+        // Int rightIndex = 0;
+        //
+        // const auto leftRowsCount = leftResult->rows.size();
+        // const auto rightRowsCount = rightResult->rows.size();
+        //
+        // const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
+        //
+        // while (leftIndex < leftRowsCount){
+        //   auto& outerRow = leftResult->rows[leftIndex];
+        //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
+        //
+        //   bool hasMatch = false;
+        //
+        //   while (rightIndex < rightRowsCount){
+        //     auto& innerRow = rightResult->rows[rightIndex];
+        //
+        //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
+        //
+        //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+        //
+        //     if (comparison == CompOperator::Less)
+        //       break;
+        //
+        //     if (comparison == CompOperator::Greater){
+        //       rightIndex++;
+        //       continue;
+        //     }
+        //
+        //     hasMatch = true;
+        //
+        //     outerRow.Join(&innerRow);
+        //     result.rows.push_back(outerRow);
+        //
+        //     rightIndex++;
+        //   }
+        //
+        //   if (rightIndex >= rightRowsCount
+        //       && leftIndex < leftRowsCount
+        //       && rightResult->canFetchMore
+        //   ){
+        //     delete rightResult;
+        //     rightResult = this->right->Execute(properties);
+        //     rightIndex = 0;
+        //   }
+        //
+        //   if (!hasMatch){
+        //     outerRow.LeftJoin(rightResult->columns);
+        //     result->rows.push_back(outerRow);
+        //   }
+        //
+        //   leftIndex++;
+        // }
     //
     // if (rightIndex < rightRowsCount){
     //   const auto& lastUsedRow = rightResult->rows[rightIndex];
@@ -225,85 +216,81 @@ namespace QueryPipeline::PhysicalPlan {
     //
     // delete rightResult;
     // result->canFetchMore = leftResult->canFetchMore;
-    //
-    // return result;
-  }
 
-  PhysicalMergeLeftJoin::PhysicalMergeLeftJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression* expression,
-    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
-    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
-    ): left(left), right(right), expression(expression),
-        leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
+        // return result;
+    }
 
-  PhysicalMergeLeftJoin::~PhysicalMergeLeftJoin(){
-    delete this->left;
-    delete this->right;
-    delete this->expression;
-  }
+    PhysicalMergeLeftJoin::PhysicalMergeLeftJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* expression,
+        DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+        DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
+    ) : left(left), right(right), expression(expression),
+        leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
 
-  ExecutionResult PhysicalMergeLeftJoin::Execute(const CoreEngine::ExecutionContext& context){
-    auto leftResult = this->left->Execute(context);
-    auto result = this->ExecuteBatchJoin(context, leftResult);
+    PhysicalMergeLeftJoin::~PhysicalMergeLeftJoin() = default;
 
-    result.canFetchMore = leftResult.canFetchMore;
-    return result;
-  }
+    ExecutionResult PhysicalMergeLeftJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        auto leftResult = this->left->Execute(context);
+        auto result = this->ExecuteBatchJoin(context, leftResult);
 
-  ExecutionResult PhysicalMergeFullJoin::ExecuteBatchJoin(
-    const CoreEngine::ExecutionContext& context,
-    ExecutionResult& leftResult
-  ) const{
-    // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
-    //
-    // auto* result = new ExecutionResult();
-    //
-    // Expressions::EvaluationContext context(
-    //   Expressions::EvaluationContext::EvaluationContextType::Join,
-    //   properties.variables
-    // );
-    //
-    // auto* rightResult = this->right->Execute(properties);
-    //
-    // Int leftIndex = 0;
-    // Int rightIndex = 0;
-    //
-    // const auto leftRowsCount = leftResult->rows.size();
-    // const auto rightRowsCount = rightResult->rows.size();
-    //
-    // const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
-    //
-    // while (leftIndex < leftRowsCount){
-    //   auto& outerRow = leftResult->rows[leftIndex];
-    //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
-    //
-    //   bool hasMatch = false;
-    //
-    //   while (rightIndex < rightRowsCount){
-    //     auto& innerRow = rightResult->rows[rightIndex];
-    //
-    //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
-    //
-    //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
-    //
-    //     if (comparison == CompOperator::Less)
-    //       break;
-    //
-    //     if (comparison == CompOperator::Greater){
-    //       innerRow.RightJoin(leftResult->columns);
-    //       result->rows.push_back(innerRow);
-    //       rightIndex++;
-    //       continue;
-    //     }
-    //
-    //     hasMatch = true;
-    //
-    //     outerRow.Join(&innerRow);
-    //     result->rows.push_back(outerRow);
-    //     rightIndex++;
-    //   }
+        result.canFetchMore = leftResult.canFetchMore;
+        return result;
+    }
+
+    ExecutionResult PhysicalMergeFullJoin::ExecuteBatchJoin(
+        const CoreEngine::ExecutionContext& context,
+        ExecutionResult& leftResult
+    ) const {
+        // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
+        //
+        // auto* result = new ExecutionResult();
+        //
+        // Expressions::EvaluationContext context(
+        //   Expressions::EvaluationContext::EvaluationContextType::Join,
+        //   properties.variables
+        // );
+        //
+        // auto* rightResult = this->right->Execute(properties);
+        //
+        // Int leftIndex = 0;
+        // Int rightIndex = 0;
+        //
+        // const auto leftRowsCount = leftResult->rows.size();
+        // const auto rightRowsCount = rightResult->rows.size();
+        //
+        // const auto outerRowSize = static_cast<Int>(leftResult->columns.size());
+        //
+        // while (leftIndex < leftRowsCount){
+        //   auto& outerRow = leftResult->rows[leftIndex];
+        //   const auto leftKey = DatabaseEngine::Database::CreateKey(this->leftKeyColumns, &outerRow);
+        //
+        //   bool hasMatch = false;
+        //
+        //   while (rightIndex < rightRowsCount){
+        //     auto& innerRow = rightResult->rows[rightIndex];
+        //
+        //     const auto rightKey = DatabaseEngine::Database::CreateKey(this->rightKeyColumns, &innerRow, outerRowSize);
+        //
+        //     const auto comparison = leftKey.CompareCompositeKeys(rightKey);
+        //
+        //     if (comparison == CompOperator::Less)
+        //       break;
+        //
+        //     if (comparison == CompOperator::Greater){
+        //       innerRow.RightJoin(leftResult->columns);
+        //       result->rows.push_back(innerRow);
+        //       rightIndex++;
+        //       continue;
+        //     }
+        //
+        //     hasMatch = true;
+        //
+        //     outerRow.Join(&innerRow);
+        //     result->rows.push_back(outerRow);
+        //     rightIndex++;
+        //   }
     //
     //   if (rightIndex >= rightRowsCount
     //       && leftIndex < leftRowsCount
@@ -329,151 +316,140 @@ namespace QueryPipeline::PhysicalPlan {
     //
     // delete rightResult;
     // result->canFetchMore = leftResult->canFetchMore;
-    //
-    // return result;
-  }
 
-  PhysicalMergeFullJoin::PhysicalMergeFullJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression* expression,
-    DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
-    DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
-  ): left(left), right(right), expression(expression),
-      leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)){}
+        // return result;
+    }
 
-  PhysicalMergeFullJoin::~PhysicalMergeFullJoin(){
-    delete this->left;
-    delete this->right;
-    delete this->expression;
-  }
+    PhysicalMergeFullJoin::PhysicalMergeFullJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* expression,
+        DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+        DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
+    ) : left(left), right(right), expression(expression),
+        leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
 
-  ExecutionResult PhysicalMergeFullJoin::Execute(const CoreEngine::ExecutionContext& context){
-    auto leftResult = this->left->Execute(context);
-    auto result = this->ExecuteBatchJoin(context, leftResult);
+    PhysicalMergeFullJoin::~PhysicalMergeFullJoin() = default;
 
-    result.canFetchMore = leftResult.canFetchMore;
-    return result;
-  }
+    ExecutionResult PhysicalMergeFullJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        auto leftResult = this->left->Execute(context);
+        auto result = this->ExecuteBatchJoin(context, leftResult);
 
-  PhysicalNestedLoopLeftJoin::PhysicalNestedLoopLeftJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression *expression)
-    : left(left), right(right), expression(expression){}
+        result.canFetchMore = leftResult.canFetchMore;
+        return result;
+    }
 
-  PhysicalNestedLoopLeftJoin::~PhysicalNestedLoopLeftJoin() {
-      delete this->left;
-      delete this->right;
-  }
+    PhysicalNestedLoopLeftJoin::PhysicalNestedLoopLeftJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* expression
+    ) : left(left), right(right), expression(expression) {}
 
-  ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const CoreEngine::ExecutionContext& context){
-      // auto* result = new ExecutionResult();
-      //
-      // auto* leftResult = this->left->Execute(properties);
-      // auto* rightResult = this->right->Execute(properties);
-      //
-      // Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
-      // //create new row
-      // for (auto& outerRow: leftResult->rows) {
-      //
-      //   bool hasMatched = false;
-      //   for (auto& innerRow: rightResult->rows) {
-      //
-      //     context.outerRow = &outerRow;
-      //     context.innerRow = &innerRow;
-      //
-      //     if (!this->expression->Evaluate(context).AsBool())
-      //       continue;
-      //
-      //     outerRow.Join(&innerRow);
-      //     result->rows.push_back(outerRow);
-      //     hasMatched = true;
-      //   }
-      //
-      //   if (!hasMatched){
-      //     outerRow.LeftJoin(rightResult->columns);
-      //     result->rows.push_back(outerRow);
-      //   }
-      // }
-      //
-      // result->columns.reserve(leftResult->columns.size() + rightResult->columns.size());
-      // result->columns.insert(result->columns.end(),
-      //                        std::make_move_iterator(leftResult->columns.begin()),
-      //                        std::make_move_iterator(leftResult->columns.end()));
-      // result->columns.insert(result->columns.end(),
-      //                        std::make_move_iterator(rightResult->columns.begin()),
-      //                        std::make_move_iterator(rightResult->columns.end()));
-      //
-      // delete leftResult;
-      // delete rightResult;
-      //
-      // return result;
-  }
+    PhysicalNestedLoopLeftJoin::~PhysicalNestedLoopLeftJoin() = default;
 
-  PhysicalNestedLoopFullJoin::PhysicalNestedLoopFullJoin(
-    ExecutionNode* left,
-    ExecutionNode* right,
-    Expressions::Expression *joinCondition)
-    : left(left), right(right), joinCondition(joinCondition){}
+    ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        // auto* result = new ExecutionResult();
+        //
+        // auto* leftResult = this->left->Execute(properties);
+        // auto* rightResult = this->right->Execute(properties);
+        //
+        // Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
+        // //create new row
+        // for (auto& outerRow: leftResult->rows) {
+        //
+        //   bool hasMatched = false;
+        //   for (auto& innerRow: rightResult->rows) {
+        //
+        //     context.outerRow = &outerRow;
+        //     context.innerRow = &innerRow;
+        //
+        //     if (!this->expression->Evaluate(context).AsBool())
+        //       continue;
+        //
+        //     outerRow.Join(&innerRow);
+        //     result->rows.push_back(outerRow);
+        //     hasMatched = true;
+        //   }
+        //
+        //   if (!hasMatched){
+        //     outerRow.LeftJoin(rightResult->columns);
+        //     result->rows.push_back(outerRow);
+        //   }
+        // }
+        //
+        // result->columns.reserve(leftResult->columns.size() + rightResult->columns.size());
+        // result->columns.insert(result->columns.end(),
+        //                        std::make_move_iterator(leftResult->columns.begin()),
+        //                        std::make_move_iterator(leftResult->columns.end()));
+        // result->columns.insert(result->columns.end(),
+        //                        std::make_move_iterator(rightResult->columns.begin()),
+        //                        std::make_move_iterator(rightResult->columns.end()));
+        //
+        // delete leftResult;
+        // delete rightResult;
+        //
+        // return result;
+    }
 
-  PhysicalNestedLoopFullJoin::~PhysicalNestedLoopFullJoin() {
-      delete this->left;
-      delete this->right;
-  }
+    PhysicalNestedLoopFullJoin::PhysicalNestedLoopFullJoin(
+        PlanNode* left,
+        PlanNode* right,
+        Expressions::Expression* joinCondition
+    ) : left(left), right(right), joinCondition(joinCondition) {}
 
-  ExecutionResult PhysicalNestedLoopFullJoin::Execute(const CoreEngine::ExecutionContext& context){
-      // auto* result = new ExecutionResult();
-      //
-      // auto* leftResult = this->left->Execute(properties);
-      // auto* rightResult = this->right->Execute(properties);
-      //
-      // DataStructures::PolymorphicArray leftMatched(leftResult->rows.size(), false);
-      // DataStructures::PolymorphicArray rightMatched(rightResult->rows.size(), false);
-      //
-      // Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
-      //
-      // for (int i = 0;i < leftResult->rows.size();i++) {
-      //   for (int j = 0;j < rightResult->rows.size();j++) {
-      //     auto& outerRow = leftResult->rows[i];
-      //     auto& innerRow = rightResult->rows[j];
-      //
-      //     context.outerRow = &outerRow;
-      //     context.innerRow = &innerRow;
-      //
-      //     if (!this->joinCondition->Evaluate(context).AsBool())
-      //       continue;
-      //
-      //     outerRow.Join(&innerRow);
-      //     result->rows.push_back(outerRow);
-      //     leftMatched[i] = true;
-      //     rightMatched[j] = true;
-      //   }
-      // }
-      //
-      // for (int i = 0;i < leftResult->rows.size();i++) {
-      //   if (leftMatched[i])
-      //     continue;
-      //
-      //   auto& outerRow = leftResult->rows[i];
-      //   outerRow.LeftJoin(rightResult->columns);
-      //   result->rows.push_back(outerRow);
-      // }
-      //
-      // for (int i = 0;i < rightResult->rows.size(); i++) {
-      //   if (rightMatched[i])
-      //     continue;
-      //
-      //   auto& innerRow = rightResult->rows[i];
-      //   innerRow.RightJoin(rightResult->columns);
-      //   result->rows.push_back(innerRow);
-      // }
-      //
-      //
-      // delete leftResult;
-      // delete rightResult;
-      //
-      // return result;
-  }
+    PhysicalNestedLoopFullJoin::~PhysicalNestedLoopFullJoin() = default;
 
+    ExecutionResult PhysicalNestedLoopFullJoin::Execute(const CoreEngine::ExecutionContext& context) {
+        // auto* result = new ExecutionResult();
+        //
+        // auto* leftResult = this->left->Execute(properties);
+        // auto* rightResult = this->right->Execute(properties);
+        //
+        // DataStructures::PolymorphicArray leftMatched(leftResult->rows.size(), false);
+        // DataStructures::PolymorphicArray rightMatched(rightResult->rows.size(), false);
+        //
+        // Expressions::EvaluationContext context(Expressions::EvaluationContext::EvaluationContextType::Join, properties.variables);
+        //
+        // for (int i = 0;i < leftResult->rows.size();i++) {
+        //   for (int j = 0;j < rightResult->rows.size();j++) {
+        //     auto& outerRow = leftResult->rows[i];
+        //     auto& innerRow = rightResult->rows[j];
+        //
+        //     context.outerRow = &outerRow;
+        //     context.innerRow = &innerRow;
+        //
+        //     if (!this->joinCondition->Evaluate(context).AsBool())
+        //       continue;
+        //
+        //     outerRow.Join(&innerRow);
+        //     result->rows.push_back(outerRow);
+        //     leftMatched[i] = true;
+        //     rightMatched[j] = true;
+        //   }
+        // }
+        //
+        // for (int i = 0;i < leftResult->rows.size();i++) {
+        //   if (leftMatched[i])
+        //     continue;
+        //
+        //   auto& outerRow = leftResult->rows[i];
+        //   outerRow.LeftJoin(rightResult->columns);
+        //   result->rows.push_back(outerRow);
+        // }
+        //
+        // for (int i = 0;i < rightResult->rows.size(); i++) {
+        //   if (rightMatched[i])
+        //     continue;
+        //
+        //   auto& innerRow = rightResult->rows[i];
+        //   innerRow.RightJoin(rightResult->columns);
+        //   result->rows.push_back(innerRow);
+        // }
+        //
+        //
+        // delete leftResult;
+        // delete rightResult;
+        //
+        // return result;
+    }
 }

@@ -18,7 +18,7 @@ namespace QueryPipeline{
     }
 
     namespace PhysicalPlan {
-        class ExecutionNode;
+        class PlanNode;
     }
 
     class LogicalPlan;
@@ -34,7 +34,7 @@ namespace QueryPipeline{
 
     struct QueryContext {
         CompileValidationScope _scope;
-        CompileContext _context;
+        CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
         bool hasMore;
@@ -58,7 +58,7 @@ namespace QueryPipeline{
         );
         static void Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query);
         static LogicalPlan* BuildLogicalPlan(QueryContext& result, Statements::Statement* statement);
-        static PhysicalPlan::ExecutionNode* BuildExecutionPlan(QueryContext& result, LogicalPlan* logicalPlan);
+        static PhysicalPlan::PlanNode* BuildExecutionPlan(QueryContext& result, LogicalPlan* logicalPlan);
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:

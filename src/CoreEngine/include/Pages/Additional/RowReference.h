@@ -22,14 +22,13 @@ namespace Pages{
 
     struct RowLazyState{
         CoreEngine::StorageTypes::RowHeader header;
+        DataStructures::PolymorphicArray<RowReference> joinedRows;
+        DataStructures::PolymorphicArray<block_size_t> sizes;
 
-        std::vector<Int> sizes;
         page_offset_t dataOffset;
+        UnsignedSmallInt numberOfColumns;
 
         bool isHeaderInitialized;
-
-        DataStructures::PolymorphicArray<RowReference> joinedRows;
-
         explicit RowLazyState(const ::Memory::IAllocator* allocator);
     };
 
@@ -49,7 +48,7 @@ namespace Pages{
         );
 
         RowReference(const RowReference& other) = delete;
-        RowReference& operator=(const RowReference& other) = delete;
+        RowReference& operator=(const RowReference& other);
 
         RowReference(RowReference&& other) noexcept;
         RowReference& operator=(RowReference&& other) noexcept;
@@ -60,6 +59,7 @@ namespace Pages{
         [[nodiscard]] Value PartialMaterialize(const Memory::IAllocator* allocator, column_index_t columnIndex)const;
         [[nodiscard]] Int Size()const;
 
+        void Join(RowReference& other) const;
         void Join(const RowReference& other) const;
     };
 }

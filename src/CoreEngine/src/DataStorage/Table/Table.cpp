@@ -530,7 +530,7 @@ namespace CoreEngine::StorageTypes {
     void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
         for (const auto* column : this->_columns)
           array->Push(column);
-      }
+    }
 
     void Table::HeapScan(
       const ExecutionContext& executionContext,

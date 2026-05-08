@@ -204,7 +204,7 @@ namespace Network {
   QueryPipeline::Cursor* Server::CreateCursor(
     const DataTypes::Guid &id,
     CoreEngine::ExecutionContext& context,
-    QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
+    QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
   ) const {
     return this->sessionManager.CreateCursor(id, context, physicalPlan);
   }

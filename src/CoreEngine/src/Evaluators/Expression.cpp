@@ -5,8 +5,6 @@
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../include/DataStorage/Row.h"
-#include <sstream>
-
 #include "Plugin.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
@@ -64,8 +62,6 @@ namespace Expressions{
         this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
@@ -76,8 +72,6 @@ namespace Expressions{
         this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
@@ -88,8 +82,6 @@ namespace Expressions{
         this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->row = nullptr;
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
@@ -100,8 +92,6 @@ namespace Expressions{
         this->row = row;
         this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
     }
 
     // EvaluationContext::EvaluationContext(
@@ -123,22 +113,44 @@ namespace Expressions{
         this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->materializedRow = row;
-        this->outerRow = nullptr;
-        this->innerRow = nullptr;
         this->row = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
+        const Pages::RowReference* row,
+        const Pages::RowReference* joinRow,
+        const CoreEngine::ExecutionContext& executionContext
+    ) :     row(row), joinRow(joinRow),
+            allocator(executionContext.GetAllocator()),
+            variables(executionContext.GetVariables()),
+            type(EvaluationContextType::Join){}
+
+    EvaluationContext EvaluationContext::CreateJoinContext(
         const Pages::RowReference* outerRow,
         const Pages::RowReference* innerRow,
         const CoreEngine::ExecutionContext& executionContext
     ){
-        this->type = EvaluationContextType::Join;
-        this->allocator = executionContext.GetAllocator();
-        this->variables = executionContext.GetVariables();
-        this->row = nullptr;
-        this->outerRow = outerRow;
-        this->innerRow = innerRow;
+        return EvaluationContext(outerRow, innerRow, executionContext);
+    }
+
+    Value Expression::EvaluateJoin(const EvaluationContext& context) const{
+        auto previousColumns = context.row->lazyState->numberOfColumns;
+        if (this->columnIndex < previousColumns)
+            return context.row->PartialMaterialize(context.allocator, this->columnIndex);
+
+        for (const auto& joinedRow : context.row->lazyState->joinedRows) {
+            const auto joinRowColumns = joinedRow.lazyState->numberOfColumns;
+
+            if (this->columnIndex < previousColumns + joinRowColumns)
+                return joinedRow.PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
+
+            previousColumns += joinRowColumns;
+        }
+
+        if (this->columnIndex < previousColumns + context.joinRow->lazyState->numberOfColumns)
+            return context.joinRow->PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
+
+        return Value::Null();
     }
 
     Expression::Expression(){
@@ -146,36 +158,52 @@ namespace Expressions{
         this->columnIndex = 0;
     }
 
-    void Expression::SetIndex(const column_index_t index){
-        this->columnIndex = index;
-    }
-
     bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
+
     bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
+
     bool Expression::IsConstant() const{ return this->expressionType == ExpressionType::Constant; }
     bool Expression::IsVariable() const{ return this->expressionType == ExpressionType::Variable; }
     bool Expression::IsColumn() const{ return this->expressionType == ExpressionType::Column; }
     bool Expression::IsFunction() const{ return this->expressionType == ExpressionType::Function; }
     bool Expression::IsBranch() const{ return this->expressionType == ExpressionType::Branch; }
     bool Expression::IsJson() const{ return this->expressionType == ExpressionType::Json; }
-
     BinaryExpression * Expression::AsBinary(){ return static_cast<BinaryExpression*>(this); }
     LogicalExpression * Expression::AsLogical(){ return static_cast<LogicalExpression*>(this); }
+
     ColumnExpression * Expression::AsColumn(){ return static_cast<ColumnExpression*>(this); }
     VariableExpression * Expression::AsVariable(){ return static_cast<VariableExpression*>(this); }
     ConstantExpression * Expression::AsConstant(){ return static_cast<ConstantExpression*>(this); }
     BranchExpression * Expression::AsBranch(){ return static_cast<BranchExpression*>(this); }
     FunctionExpression * Expression::AsFunction(){ return static_cast<FunctionExpression*>(this); }
     JsonExpression* Expression::AsJson(){ return static_cast<JsonExpression*>(this); }
-
     const BinaryExpression * Expression::AsBinary() const{ return static_cast<const BinaryExpression*>(this); }
     const LogicalExpression * Expression::AsLogical() const{ return static_cast<const LogicalExpression*>(this); }
+
     const ColumnExpression * Expression::AsColumn() const{ return static_cast<const ColumnExpression*>(this); }
     const VariableExpression * Expression::AsVariable() const{ return static_cast<const VariableExpression*>(this); }
     const ConstantExpression * Expression::AsConstant() const{ return static_cast<const ConstantExpression*>(this); }
     const BranchExpression * Expression::AsBranch() const{ return static_cast<const BranchExpression*>(this); }
     const FunctionExpression * Expression::AsFunction() const{ return static_cast<const FunctionExpression*>(this); }
     const JsonExpression* Expression::AsJson() const{ return static_cast<const JsonExpression*>(this); }
+    void Expression::SetIndex(const column_index_t index){ this->columnIndex = index; }
+
+    Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
+        auto previousColumns = context.row->lazyState->numberOfColumns;
+        if (this->columnIndex < previousColumns)
+            return context.row->PartialMaterialize(context.allocator, this->columnIndex);
+
+        for (const auto& joinedRow : context.row->lazyState->joinedRows) {
+            const auto joinRowColumns = joinedRow.lazyState->numberOfColumns;
+
+            if (this->columnIndex < previousColumns + joinRowColumns)
+                return joinedRow.PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
+
+            previousColumns += joinRowColumns;
+        }
+
+        return Value::Null();
+    }
 
     ColumnExpression::ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias){
         this->alias = name;
@@ -210,25 +238,19 @@ namespace Expressions{
 
     Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
-            case EvaluationContext::EvaluationContextType::SingleRow:
-              return context.row->PartialMaterialize(context.allocator, this->columnIndex);
-            case EvaluationContext::EvaluationContextType::MaterializedRow:
-              return context.materializedRow.GetColumnAt(this->columnIndex);
-            case EvaluationContext::EvaluationContextType::Join: {
-              const auto outerRow = context.outerRow->Materialize(context.allocator);
-              const auto outerRowSize = outerRow.Data().Size();
-
-              return this->columnIndex < outerRowSize
-                       ? context.outerRow->PartialMaterialize(context.allocator, this->columnIndex)
-                       : context.innerRow->PartialMaterialize(context.allocator, this->columnIndex - outerRowSize);
-        }
+        case EvaluationContext::EvaluationContextType::SingleRow:
+            return this->EvaluateSingleRow(context);
+        case EvaluationContext::EvaluationContextType::MaterializedRow:
+            return context.materializedRow.GetColumnAt(this->columnIndex);
+        case EvaluationContext::EvaluationContextType::Join:
+            return this->EvaluateJoin(context);
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
         case EvaluationContext::EvaluationContextType::Window:
             break;
         }
 
-        return Value::Null(nullptr);
+        return Value::Null();
     }
 
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
@@ -261,20 +283,20 @@ namespace Expressions{
         const auto rightType = this->right->GetReturnType();
 
         switch (Value::PromoteType(leftType, rightType)) {
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::Decimal:
-            case DataType::String:
-            case DataType::Bool:
-              return true;
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            case DataType::Null:
-            default:
-              return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::String:
+        case DataType::Bool:
+            return true;
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Null:
+        default:
+            return false;
         }
     }
 
@@ -283,20 +305,20 @@ namespace Expressions{
         const auto rightType = this->right->GetReturnType();
 
         switch (Value::PromoteType(leftType, rightType)) {
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::Decimal:
-            case DataType::Bool:
-              return true;
-            case DataType::String:
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            case DataType::Null:
-            default:
-              return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Bool:
+            return true;
+        case DataType::String:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Null:
+        default:
+            return false;
         }
     }
 
@@ -305,20 +327,20 @@ namespace Expressions{
         const auto rightType = this->right->GetReturnType();
 
         switch (Value::PromoteType(leftType, rightType)) {
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::Decimal:
-            case DataType::Bool:
-              return true;
-            case DataType::String:
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            case DataType::Null:
-            default:
-              return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Bool:
+            return true;
+        case DataType::String:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Null:
+        default:
+            return false;
         }
     }
 
@@ -332,20 +354,20 @@ namespace Expressions{
         const auto rightType = this->right->GetReturnType();
 
         switch (Value::PromoteType(leftType, rightType)) {
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::Bool:
-            case DataType::Decimal:
-              return true;
-            case DataType::String:
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::RowIdentifier:
-            case DataType::Null:
-            default:
-              return false;
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Bool:
+        case DataType::Decimal:
+            return true;
+        case DataType::String:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Null:
+        default:
+            return false;
         }
     }
 
@@ -361,81 +383,81 @@ namespace Expressions{
     //TODO Implement field logical operations.
     Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
         switch (this->operation) {
-            case BinaryOperator::Add:
-                return this->left->Evaluate(context) + this->right->Evaluate(context);
-            case BinaryOperator::Subtract:
-                return this->left->Evaluate(context) - this->right->Evaluate(context);
-            case BinaryOperator::Multiply:
-                return this->left->Evaluate(context) * this->right->Evaluate(context);
-            case BinaryOperator::Divide:
-                return this->left->Evaluate(context) / this->right->Evaluate(context);
-            case BinaryOperator::Modulo:
-                return this->left->Evaluate(context) % this->right->Evaluate(context);
-            case BinaryOperator::Equal:
-                return Value(this->left->Evaluate(context) == this->right->Evaluate(context), context.allocator);
-            case BinaryOperator::EqualIgnoreOrdinalCase:
-                return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
-            case BinaryOperator::NotEqual:
-                return Value(this->left->Evaluate(context) != this->right->Evaluate(context), context.allocator);
-            case BinaryOperator::Greater:
-                return Value(this->left->Evaluate(context) > this->right->Evaluate(context), context.allocator);
-            case BinaryOperator::GreaterEqual:
-                return Value(this->left->Evaluate(context) >= this->right->Evaluate(context), context.allocator);
-            case BinaryOperator::Less:
-                return Value(this->left->Evaluate(context) < this->right->Evaluate(context), context.allocator);
-            case BinaryOperator::LessEqual:
-                return Value(this->left->Evaluate(context) <= this->right->Evaluate(context), context.allocator);
-            default:
-              throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+        case BinaryOperator::Add:
+            return this->left->Evaluate(context) + this->right->Evaluate(context);
+        case BinaryOperator::Subtract:
+            return this->left->Evaluate(context) - this->right->Evaluate(context);
+        case BinaryOperator::Multiply:
+            return this->left->Evaluate(context) * this->right->Evaluate(context);
+        case BinaryOperator::Divide:
+            return this->left->Evaluate(context) / this->right->Evaluate(context);
+        case BinaryOperator::Modulo:
+            return this->left->Evaluate(context) % this->right->Evaluate(context);
+        case BinaryOperator::Equal:
+            return Value(this->left->Evaluate(context) == this->right->Evaluate(context), context.allocator);
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+            return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
+        case BinaryOperator::NotEqual:
+            return Value(this->left->Evaluate(context) != this->right->Evaluate(context), context.allocator);
+        case BinaryOperator::Greater:
+            return Value(this->left->Evaluate(context) > this->right->Evaluate(context), context.allocator);
+        case BinaryOperator::GreaterEqual:
+            return Value(this->left->Evaluate(context) >= this->right->Evaluate(context), context.allocator);
+        case BinaryOperator::Less:
+            return Value(this->left->Evaluate(context) < this->right->Evaluate(context), context.allocator);
+        case BinaryOperator::LessEqual:
+            return Value(this->left->Evaluate(context) <= this->right->Evaluate(context), context.allocator);
+        default:
+            throw std::runtime_error("BinaryExpression::Evaluate: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
     }
 
     DataType BinaryExpression::GetReturnType() const{
         switch (this->operation) {
-            case BinaryOperator::Add:
-            case BinaryOperator::Subtract:
-            case BinaryOperator::Multiply:
-            case BinaryOperator::Divide:
-            case BinaryOperator::Modulo: {
-                const auto& leftType = this->left->GetReturnType();
-                const auto& rightType = this->right->GetReturnType();
-                return Value::PromoteType(leftType, rightType);
-            }
-            case BinaryOperator::Equal:
-            case BinaryOperator::EqualIgnoreOrdinalCase:
-            case BinaryOperator::NotEqual:
-            case BinaryOperator::Greater:
-            case BinaryOperator::GreaterEqual:
-            case BinaryOperator::Less:
-            case BinaryOperator::LessEqual:
-              return DataType::Bool;
-            default:
-              throw std::runtime_error("Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Modulo: {
+            const auto& leftType = this->left->GetReturnType();
+            const auto& rightType = this->right->GetReturnType();
+            return Value::PromoteType(leftType, rightType);
+        }
+        case BinaryOperator::Equal:
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+        case BinaryOperator::NotEqual:
+        case BinaryOperator::Greater:
+        case BinaryOperator::GreaterEqual:
+        case BinaryOperator::Less:
+        case BinaryOperator::LessEqual:
+            return DataType::Bool;
+        default:
+            throw std::runtime_error("BinaryExpression::GetReturnType: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
     }
 
     bool BinaryExpression::ValidateOperation() const {
         switch (this->operation) {
-            case BinaryOperator::Add:
-                return this->ValidateAddition();
-            case BinaryOperator::Subtract:
-                return this->ValidateSubtraction();
-            case BinaryOperator::Multiply:
-                return this->ValidateMultiplication();
-            case BinaryOperator::Divide:
-                return this->ValidateDivision();
-            case BinaryOperator::Modulo:
-                return this->ValidateModulo();
-            case BinaryOperator::Equal:
-            case BinaryOperator::EqualIgnoreOrdinalCase:
-            case BinaryOperator::NotEqual:
-            case BinaryOperator::Greater:
-            case BinaryOperator::GreaterEqual:
-            case BinaryOperator::Less:
-            case BinaryOperator::LessEqual:
-                return true;
-            default:
-                throw std::runtime_error("Unknown operator" + std::to_string(static_cast<Int>(this->operation)));
+        case BinaryOperator::Add:
+            return this->ValidateAddition();
+        case BinaryOperator::Subtract:
+            return this->ValidateSubtraction();
+        case BinaryOperator::Multiply:
+            return this->ValidateMultiplication();
+        case BinaryOperator::Divide:
+            return this->ValidateDivision();
+        case BinaryOperator::Modulo:
+            return this->ValidateModulo();
+        case BinaryOperator::Equal:
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+        case BinaryOperator::NotEqual:
+        case BinaryOperator::Greater:
+        case BinaryOperator::GreaterEqual:
+        case BinaryOperator::Less:
+        case BinaryOperator::LessEqual:
+            return true;
+        default:
+            throw std::runtime_error("BinaryExpression::ValidateOperation: Unknown operator" + std::to_string(static_cast<Int>(this->operation)));
         }
     }
 
@@ -443,16 +465,16 @@ namespace Expressions{
         const auto& expectedType = info.expectedTypes.First();
 
         for (int i = 0;i < this->arguments.Size(); i++)
-          if (!FunctionExpression::ValidateReturnType(info, errorMessage, expectedType, this->arguments[i]->GetReturnType(), i))
-            return false;
+            if (!FunctionExpression::ValidateReturnType(info, errorMessage, expectedType, this->arguments[i]->GetReturnType(), i))
+                return false;
 
         return true;
     }
 
     bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, DataTypes::String& errorMessage) const{
         for (int i = 0;i < this->arguments.Size(); i++)
-          if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
-            return false;
+            if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
+                return false;
 
         return true;
     }
@@ -473,7 +495,7 @@ namespace Expressions{
                 " with invalid type"
             );
 
-          return false;
+            return false;
         }
 
         if (!DataTypes::Coercions::IsCoercionAllowed(returnType, expectedType, info.allowImplicitCast)) {
@@ -535,7 +557,7 @@ namespace Expressions{
         Value value(DataTypes::String::Null(), context.allocator, 0);
 
         for (const auto& argument : arguments)
-          value += Value(argument.AsString(), context.allocator, 0);
+            value += Value(argument.AsString(), context.allocator, 0);
 
         return value;
     }
@@ -576,8 +598,8 @@ namespace Expressions{
         const auto& str = arguments[1].AsStringView();
 
         const int pos = (arguments.Size() > 2)
-                          ? arguments[2].AsInt()
-                          : 0;
+                            ? arguments[2].AsInt()
+                            : 0;
 
         return Value(DataTypes::String::CharIndex(subStr, str, pos), context.allocator, 0);
     }
@@ -646,8 +668,8 @@ namespace Expressions{
         const auto& secondArg = arguments[1];
 
         return firstArg == secondArg
-                 ? Value::Null(nullptr)
-                 : firstArg;
+                   ? Value::Null(nullptr)
+                   : firstArg;
     }
 
     bool FunctionExpression::ValidateNullIf(
@@ -658,8 +680,8 @@ namespace Expressions{
         const auto& secondArgumentType = arguments[1]->GetReturnType();
 
         const auto promotedType = Value::PromoteType(
-          firstArgumentType,
-          secondArgumentType
+            firstArgumentType,
+            secondArgumentType
         );
 
         if (!DataTypes::Coercions::IsCoercionAllowed(firstArgumentType, promotedType)) {
@@ -677,8 +699,8 @@ namespace Expressions{
 
     Value FunctionExpression::Coalesce(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments) {
         for (auto& argument : arguments) {
-          if (!argument.IsNull())
-            return argument;
+            if (!argument.IsNull())
+                return argument;
         }
 
         return arguments[0];
@@ -718,19 +740,19 @@ namespace Expressions{
                 ,(info.maxArgs == UNLIMITED_ARGS ? "unlimited" : std::to_string(info.maxArgs))
                 , " but " , std::to_string(argSize) , " were given"
             );
-          return false;
+            return false;
         }
 
         const auto argResult =
-          (info.maxArgs == UNLIMITED_ARGS)
-            ? this->ValidateUnlimitedArgumentTypes(info, errorMessage)
-            : this->ValidateArgumentTypes(info, errorMessage);
+            (info.maxArgs == UNLIMITED_ARGS)
+                ? this->ValidateUnlimitedArgumentTypes(info, errorMessage)
+                : this->ValidateArgumentTypes(info, errorMessage);
 
         if (!argResult)
-          return false;
+            return false;
 
         if (info.additionalValidations)
-          return PerformAdditionalValidations(errorMessage);
+            return PerformAdditionalValidations(errorMessage);
 
         return true;
     }
@@ -768,23 +790,20 @@ namespace Expressions{
     bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
 
     Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
-
         switch (this->logicalType) {
-            case LogicalType::And:{
-              const auto leftValue = this->left->Evaluate(context);
-              const auto rightValue = this->right->Evaluate(context);
-
-              return Value(leftValue.AsBool() && rightValue.AsBool(), context.allocator, 0);
-            }
-            case LogicalType::Or:{
-              const auto leftValue = this->left->Evaluate(context);
-              const auto rightValue = this->right->Evaluate(context);
-
-              return Value(leftValue.AsBool() || rightValue.AsBool(), context.allocator, 0);
-            }
-            case LogicalType::Invalid:
-            default:
-              throw std::runtime_error("Unknown predicate" + std::to_string(static_cast<int>(this->logicalType)));
+        case LogicalType::And: {
+            const auto leftValue = this->left->Evaluate(context);
+            const auto rightValue = this->right->Evaluate(context);
+            return Value(leftValue.AsBool() && rightValue.AsBool(), context.allocator, 0);
+        }
+        case LogicalType::Or: {
+            const auto leftValue = this->left->Evaluate(context);
+            const auto rightValue = this->right->Evaluate(context);
+            return Value(leftValue.AsBool() || rightValue.AsBool(), context.allocator, 0);
+        }
+        case LogicalType::Invalid:
+        default:
+            throw std::runtime_error("LogicalExpression::Evaluate: Unknown predicate" + std::to_string(static_cast<Int>(this->logicalType)));
         }
     }
 
@@ -814,12 +833,12 @@ namespace Expressions{
 
     Value BranchExpression::Evaluate(const EvaluationContext &context) const {
         switch (this->branchType) {
-            case BranchType::Switch:
-              return this->EvaluateSwitch(context);
-            case BranchType::Ternary:
-              return this->EvaluateTernary(context);
-            default:
-              throw std::runtime_error("Unknown expression branching type");
+        case BranchType::Switch:
+            return this->EvaluateSwitch(context);
+        case BranchType::Ternary:
+            return this->EvaluateTernary(context);
+        default:
+            throw std::runtime_error("BranchExpression::Evaluate: Unknown expression branching type");
         }
     }
 
@@ -840,12 +859,12 @@ namespace Expressions{
 
     bool BranchExpression::ValidateNumberOfArguments() const {
         switch (this->branchType) {
-            case BranchType::Switch:
-              return !this->branches.Empty() && this->branches.Size() == this->results.Size() && this->baseCase != nullptr;
-            case BranchType::Ternary:
-              return this->branches.Size() == 1 && this->results.Size() == 2 && this->baseCase == nullptr;
-            default:
-              throw std::runtime_error("Unknown expression branching type");
+        case BranchType::Switch:
+            return !this->branches.Empty() && this->branches.Size() == this->results.Size() && this->baseCase != nullptr;
+        case BranchType::Ternary:
+            return this->branches.Size() == 1 && this->results.Size() == 2 && this->baseCase == nullptr;
+        default:
+            throw std::runtime_error("BranchExpression::ValidateNumberOfArguments: Unknown expression branching type");
         }
     }
 
@@ -884,23 +903,16 @@ namespace Expressions{
 
     Value JsonExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
-        case EvaluationContext::EvaluationContextType::SingleRow:{
+        case EvaluationContext::EvaluationContextType::SingleRow: {
             const auto columnValue = context.row->PartialMaterialize(context.allocator, this->columnPtr->columnIndex);
             return this->EvaluateJsonPath(context, columnValue);
         }
-        case EvaluationContext::EvaluationContextType::MaterializedRow:{
+        case EvaluationContext::EvaluationContextType::MaterializedRow: {
             const auto columnValue = context.materializedRow.GetColumnAt(this->columnPtr->columnIndex);
             return this->EvaluateJsonPath(context, columnValue);
         }
-        case EvaluationContext::EvaluationContextType::Join: {
-            const auto outerRow = context.outerRow->Materialize(context.allocator);
-            const auto outerRowSize = outerRow.Data().Size();
-
-            const auto columnValue = this->columnPtr->columnIndex < outerRowSize
-                     ? context.outerRow->PartialMaterialize(context.allocator, this->columnPtr->columnIndex)
-                     : context.innerRow->PartialMaterialize(context.allocator, this->columnPtr->columnIndex - outerRowSize);
-            return this->EvaluateJsonPath(context, columnValue);
-        }
+        case EvaluationContext::EvaluationContextType::Join:
+            return this->EvaluateJsonPath(context, this->EvaluateJoin(context));
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
         case EvaluationContext::EvaluationContextType::Window:

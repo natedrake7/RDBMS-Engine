@@ -9,12 +9,12 @@
 #include "../../Systemic/include/Headers.h"
 
 namespace QueryPipeline::Statements {
-  struct JoinStatement;
-  struct SelectStatement;
+    struct JoinStatement;
+    struct SelectStatement;
 }
 
 namespace Headers {
-  struct IndexColumnsHeader;
+    struct IndexColumnsHeader;
 }
 
 namespace QueryPipeline {
@@ -22,283 +22,296 @@ namespace QueryPipeline {
     class CompileContext;
 
     namespace PipelineConstants {
-    enum class JoinAlgorithm : UnsignedTinyInt;
-  }
+        enum class JoinAlgorithm : UnsignedTinyInt;
+    }
 
-  class LogicalTableScan;
+    class LogicalTableScan;
 }
 
 namespace Expressions {
-  class BinaryExpression;
-  class LogicalExpression;
-  class Expression;
+    class BinaryExpression;
+    class LogicalExpression;
+    class Expression;
 }
 
 namespace QueryPipeline {
-  struct JoinConditionInfo{
-    Int leftTableId;
-    Int leftColumnId;
-    column_index_t leftColumnIndex;
+    struct JoinConditionInfo {
+        Int leftTableId;
+        Int leftColumnId;
+        column_index_t leftColumnIndex;
 
-    Int rightTableId;
-    Int rightColumnId;
-    column_index_t rightColumnIndex;
+        Int rightTableId;
+        Int rightColumnId;
+        column_index_t rightColumnIndex;
 
-    bool isEqualityJoin;
-    Expressions::Expression* expression;
-  };
+        bool isEqualityJoin;
+        Expressions::Expression* expression;
+    };
 
-  struct JoinAlgorithmAnalysisResult{
-    PipelineConstants::JoinAlgorithm algorithm;
+    struct JoinAlgorithmAnalysisResult {
+        PipelineConstants::JoinAlgorithm algorithm;
 
-    DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
-    DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
+        DataStructures::PolymorphicArray<column_index_t> leftKeyColumns;
+        DataStructures::PolymorphicArray<column_index_t> rightKeyColumns;
 
-    Expressions::Expression* remainingPredicate;
+        Expressions::Expression* remainingPredicate;
 
-    JoinAlgorithmAnalysisResult();
-    explicit JoinAlgorithmAnalysisResult(const PipelineConstants::JoinAlgorithm& algorithm);
-    JoinAlgorithmAnalysisResult(
-      const PipelineConstants::JoinAlgorithm& algorithm,
-      Expressions::Expression* expression,
-      DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
-      DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
-    );
-  };
+        JoinAlgorithmAnalysisResult();
+        explicit JoinAlgorithmAnalysisResult(const PipelineConstants::JoinAlgorithm& algorithm);
+        explicit JoinAlgorithmAnalysisResult(
+            const PipelineConstants::JoinAlgorithm& algorithm,
+            Expressions::Expression* expression
+        );
+        JoinAlgorithmAnalysisResult(
+            const PipelineConstants::JoinAlgorithm& algorithm,
+            Expressions::Expression* expression,
+            DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
+            DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
+        );
+    };
 
-  struct JoinAlgorithmInfo{
-    DataStructures::PolymorphicArray<JoinConditionInfo> joinConditions;
-    Expressions::Expression* remainingPredicate;
-  };
+    struct JoinAlgorithmInfo {
+        DataStructures::PolymorphicArray<JoinConditionInfo> joinConditions;
+        Expressions::Expression* remainingPredicate;
+    };
 
-  struct Range{
-    DataTypes::Indexing::Key start;
-    DataTypes::Indexing::Key end;
+    struct Range {
+        DataTypes::Indexing::Key start;
+        DataTypes::Indexing::Key end;
 
-    bool hasRange;
-    bool canSeek;
-    Expressions::Expression* remainingPredicate;
+        bool hasRange;
+        bool canSeek;
+        Expressions::Expression* remainingPredicate;
 
-    Range();
-  };
+        Range();
+    };
 
-  struct SeekRange {
-    Value start;
-    Value end;
+    struct SeekRange {
+        Value start;
+        Value end;
 
-    bool startInclusive;
-    bool endInclusive;
-    bool hasRange;
+        bool startInclusive;
+        bool endInclusive;
+        bool hasRange;
 
-    SeekRange();
-    SeekRange(
-      const Value& otherStart,
-      const Value& otherEnd,
-      bool includeStart,
-      bool includeEnd
-    );
+        SeekRange();
+        SeekRange(
+            const Value& otherStart,
+            const Value& otherEnd,
+            bool includeStart,
+            bool includeEnd
+        );
 
-    [[nodiscard]] bool HasStart() const;
-    [[nodiscard]] bool HasEnd() const;
-  };
+        [[nodiscard]] bool HasStart() const;
+        [[nodiscard]] bool HasEnd() const;
+    };
 
-  struct IndexSeekColumnAnalysisResults {
-    bool canIndexSeek;
-    bool needsParameterBinding;
-    Int columnId;
-    SeekRange range;
+    struct IndexSeekColumnAnalysisResults {
+        bool canIndexSeek;
+        bool needsParameterBinding;
+        Int columnId;
+        SeekRange range;
 
-    Expressions::Expression* expression;
+        Expressions::Expression* expression;
 
-    IndexSeekColumnAnalysisResults();
-    explicit IndexSeekColumnAnalysisResults(Expressions::Expression* otherExpr);
-  };
+        IndexSeekColumnAnalysisResults();
+        explicit IndexSeekColumnAnalysisResults(Expressions::Expression* otherExpr);
+    };
 
-  struct IndexSeekAnalysisResult{
-    DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeResults;
-    DataStructures::PolymorphicArray<Expressions::Expression*> conjunctions;
-  };
+    struct IndexSeekAnalysisResult {
+        DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeResults;
+        DataStructures::PolymorphicArray<Expressions::Expression*> conjunctions;
+    };
 
-  struct IndexCandidate{
-    Headers::IndexHeader* header;
-    DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeInfo;
-    DataStructures::PolymorphicArray<Expressions::Expression*>* conjunctions;
-    double estimatedCost;
-    int matchingColumns;
+    struct IndexCandidate {
+        Headers::IndexHeader* header;
+        DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> analyzeInfo;
+        DataStructures::PolymorphicArray<Expressions::Expression*>* conjunctions;
+        double estimatedCost;
+        int matchingColumns;
 
-    bool operator()(const IndexCandidate& lhs, const IndexCandidate& rhs) const{
-      if (lhs.matchingColumns != rhs.matchingColumns)
-        return lhs.matchingColumns > rhs.matchingColumns;
+        bool operator()(const IndexCandidate& lhs, const IndexCandidate& rhs) const {
+            if (lhs.matchingColumns != rhs.matchingColumns)
+                return lhs.matchingColumns > rhs.matchingColumns;
 
-      if (std::abs(lhs.estimatedCost - rhs.estimatedCost) > 0.01)
-        return lhs.estimatedCost < rhs.estimatedCost;
+            if (std::abs(lhs.estimatedCost - rhs.estimatedCost) > 0.01)
+                return lhs.estimatedCost < rhs.estimatedCost;
 
-      return lhs.header->isClustered && !rhs.header->isClustered;
-    }
-  };
+            return lhs.header->isClustered && !rhs.header->isClustered;
+        }
+    };
 
-  struct JoinOrderAnalyzeResult{
-    DataStructures::PolymorphicArray<table_id_t> order;
-    DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
-    bool isReordered;
+    struct JoinOrderAnalyzeResult {
+        DataStructures::PolymorphicArray<table_id_t> order;
+        DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
+        bool isReordered;
 
-    JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator);
-  };
+        JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator);
+    };
 
-  struct JoinOrderAnalyzeInfo{
-    table_id_t tableId;
-    int64_t rowCount;
-    bool hasIndex;
+    struct JoinOrderAnalyzeInfo {
+        table_id_t tableId;
+        int64_t rowCount;
+        bool hasIndex;
 
-    Statements::JoinStatement* joinStatement;
+        Statements::JoinStatement* joinStatement;
 
-    JoinOrderAnalyzeInfo(){
-      this->tableId = INVALID_TABLE_ID;
-      this->rowCount = 0;
-      this->hasIndex = false;
-      this->joinStatement = nullptr;
-    }
+        JoinOrderAnalyzeInfo() {
+            this->tableId = INVALID_TABLE_ID;
+            this->rowCount = 0;
+            this->hasIndex = false;
+            this->joinStatement = nullptr;
+        }
 
-    JoinOrderAnalyzeInfo(
-      const table_id_t tableId,
-      const BigInt rowCount,
-      const bool hasIndex
-    ){
-      this->tableId = tableId;
-      this->rowCount = rowCount;
-      this->hasIndex = hasIndex;
-      this->joinStatement = nullptr;
-    }
+        JoinOrderAnalyzeInfo(
+            const table_id_t tableId,
+            const BigInt rowCount,
+            const bool hasIndex
+        ) {
+            this->tableId = tableId;
+            this->rowCount = rowCount;
+            this->hasIndex = hasIndex;
+            this->joinStatement = nullptr;
+        }
 
-    JoinOrderAnalyzeInfo(
-      const table_id_t tableId,
-      const BigInt rowCount,
-      const bool hasIndex,
-      Statements::JoinStatement* joinStatement
-    ){
-      this->tableId = tableId;
-      this->rowCount = rowCount;
-      this->hasIndex = hasIndex;
-      this->joinStatement = joinStatement;
-    }
+        JoinOrderAnalyzeInfo(
+            const table_id_t tableId,
+            const BigInt rowCount,
+            const bool hasIndex,
+            Statements::JoinStatement* joinStatement
+        ) {
+            this->tableId = tableId;
+            this->rowCount = rowCount;
+            this->hasIndex = hasIndex;
+            this->joinStatement = joinStatement;
+        }
 
-    bool operator()(const JoinOrderAnalyzeInfo& lhs, const JoinOrderAnalyzeInfo& rhs) const{
-      if (lhs.hasIndex != rhs.hasIndex)
-        return lhs.hasIndex;
+        bool operator()(const JoinOrderAnalyzeInfo& lhs, const JoinOrderAnalyzeInfo& rhs) const {
+            if (lhs.hasIndex != rhs.hasIndex)
+                return lhs.hasIndex;
 
-      return lhs.rowCount < rhs.rowCount;
-    }
-  };
+            return lhs.rowCount < rhs.rowCount;
+        }
+    };
 
-  struct PredicatePushDownResult{
-    Dictionary<table_id_t, Expressions::Expression*> tablePredicatesDictionary;
-    Expressions::Expression* remainingPredicate;
+    struct PredicatePushDownResult {
+        Dictionary<table_id_t, Expressions::Expression*> tablePredicatesDictionary;
+        Expressions::Expression* remainingPredicate;
 
-    PredicatePushDownResult(){
-      this->remainingPredicate = nullptr;
-    }
+        PredicatePushDownResult() {
+            this->remainingPredicate = nullptr;
+        }
 
-    Expressions::Expression* PushDownFilter(const table_id_t tableId) const{
-      Expressions::Expression* filter = nullptr;
-      this->tablePredicatesDictionary.TryGetValue(tableId, filter);
-      return filter;
-    }
-  };
+        Expressions::Expression* PushDownFilter(const table_id_t tableId) const {
+            Expressions::Expression* filter = nullptr;
+            this->tablePredicatesDictionary.TryGetValue(tableId, filter);
+            return filter;
+        }
+    };
 
-  class Optimizer final{
-      QueryContext* context;
+    class Optimizer final {
+        QueryContext* context;
 
-      static void SplitConjunctions(
-        Expressions::Expression* expression,
-        DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
-      );
+        JoinAlgorithmAnalysisResult ReturnNestedLoopJoinAlgorithm(
+            DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo
+        ) const;
 
-      static void GetInvolvedTables(
-        const Expressions::Expression* expression,
-        HashSet<table_id_t>& involvedTables
-      );
+        void RebuildPredicate(
+            Expressions::Expression*& expression,
+            DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo
+        ) const;
 
-      DataStructures::PolymorphicArray<table_id_t> GetInvolvedTables(const Expressions::Expression* expression) const;
+        static void SplitConjunctions(
+            Expressions::Expression* expression,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
+        );
 
-      void CombineExpressionsWithAnd(
-        Expressions::Expression*& baseExpression,
-        Expressions::Expression* newExpression
-      ) const;
+        static void GetInvolvedTables(
+            const Expressions::Expression* expression,
+            HashSet<table_id_t>& involvedTables
+        );
 
-      void ProcessPredicate(
-        Expressions::Expression* baseExpression,
-        Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
-        Expressions::Expression*& remainingPredicate
-      ) const;
+        DataStructures::PolymorphicArray<table_id_t> GetInvolvedTables(const Expressions::Expression* expression) const;
 
-      static void AnalyzeTableScan(
-        Expressions::Expression* baseExpression,
-        const Expressions::BinaryExpression* expression,
-        Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>>& columnPredicatesDictionary
-      );
+        void CombineExpressionsWithAnd(
+            Expressions::Expression*& baseExpression,
+            Expressions::Expression* newExpression
+        ) const;
 
-      static void DetermineCanSeekOnEquality(
-        const Value& predicateValue,
-        SeekRange& range,
-        bool& canSeek
-      );
+        void ProcessPredicate(
+            Expressions::Expression* baseExpression,
+            Dictionary<table_id_t, Expressions::Expression*>& tablePredicatesDictionary,
+            Expressions::Expression*& remainingPredicate
+        ) const;
 
-      static void DetermineCanSeekOnGreaterThan(
-        const Value& predicateValue,
-        SeekRange& range,
-        bool& canSeek,
-        bool inclusive
-      );
+        static void AnalyzeTableScan(
+            Expressions::Expression* baseExpression,
+            const Expressions::BinaryExpression* expression,
+            Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>>& columnPredicatesDictionary
+        );
 
-      static void DetermineCanSeekOnLessThan(
-        const Value& predicateValue,
-        SeekRange& range,
-        bool& canSeek,
-        bool inclusive
-      );
+        static void DetermineCanSeekOnEquality(
+            const Value& predicateValue,
+            SeekRange& range,
+            bool& canSeek
+        );
 
-      static void DetermineSeekRange(
-        const Expressions::BinaryExpression* expression,
-        const Value& predicateValue,
-        SeekRange& range,
-        bool& canSeek
-      );
+        static void DetermineCanSeekOnGreaterThan(
+            const Value& predicateValue,
+            SeekRange& range,
+            bool& canSeek,
+            bool inclusive
+        );
 
-      static void AnalyzeTableScan(
-        IndexSeekColumnAnalysisResults& analyzeResult,
-        Expressions::BinaryExpression* binaryExpr,
-        const Expressions::ColumnExpression* columnExpr,
-        Expressions::Expression* otherExpression
-      );
+        static void DetermineCanSeekOnLessThan(
+            const Value& predicateValue,
+            SeekRange& range,
+            bool& canSeek,
+            bool inclusive
+        );
 
-      static DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
-        const Headers::IndexHeader& index,
-        const DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
-      );
+        static void DetermineSeekRange(
+            const Expressions::BinaryExpression* expression,
+            const Value& predicateValue,
+            SeekRange& range,
+            bool& canSeek
+        );
 
-      Range BuildSeekKeys(
-        const DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults>& analyzeResults,
-        DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
-      );
+        static void AnalyzeTableScan(
+            IndexSeekColumnAnalysisResults& analyzeResult,
+            Expressions::BinaryExpression* binaryExpr,
+            const Expressions::ColumnExpression* columnExpr,
+            Expressions::Expression* otherExpression
+        );
 
-      static void ProcessJoinCondition(
-        Expressions::Expression* expression,
-        DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
-        bool& isEqualityJoin
-      );
+        static DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> AnalyzeTableScan(
+            const Headers::IndexHeader& index,
+            const DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
+        );
 
-      [[nodiscard]] DataStructures::PolymorphicArray<Int> CheckPredicatesSorting(
-        const Headers::TableStatistics& tableStats,
-        const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
-      ) const;
+        Range BuildSeekKeys(
+            const DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults>& analyzeResults,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
+        );
 
-      JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
-        const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
-        const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
-        const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
-        Int leftTableId,
-        Int rightTableId
-      ) const;
+        static void ProcessJoinCondition(
+            Expressions::Expression* expression,
+            DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
+            bool& isEqualityJoin
+        );
+
+        [[nodiscard]] DataStructures::PolymorphicArray<Int> CheckPredicatesSorting(
+            const Headers::TableStatistics& tableStats,
+            const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
+        ) const;
+
+        JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
+            const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
+            const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
+            const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
+            Int leftTableId,
+            Int rightTableId
+        ) const;
 
     public:
         explicit Optimizer(QueryContext& context);
@@ -318,9 +331,6 @@ namespace QueryPipeline {
             Int leftTableId,
             Int rightTableId,
             Expressions::Expression* joinCondition
-        );
-  };
-
-
-
+        ) const;
+    };
 }

@@ -4,7 +4,9 @@
 
 namespace Pages{
     RowLazyState::RowLazyState(const Memory::IAllocator* allocator)
-        : dataOffset(0), isHeaderInitialized(false), joinedRows(allocator){}
+        :   joinedRows(allocator), sizes(allocator),
+            dataOffset(0),
+            isHeaderInitialized(false){}
 
    RowReference::RowReference(){
         this->pageView = nullptr;
@@ -26,6 +28,19 @@ namespace Pages{
         this->lazyState = allocator->Allocate<RowLazyState>(allocator);
         this->lazyState->dataOffset = 0;
         this->lazyState->isHeaderInitialized = false;
+        this->lazyState->numberOfColumns = framePtr->table->GetNumberOfColumns();
+    }
+
+    //shares lazy state as it points to the same row
+    RowReference& RowReference::operator=(const RowReference& other){
+        if (this == &other)
+            return *this;
+
+        this->pageView = other.pageView;
+        this->indexPosition = other.indexPosition;
+        this->keySize = other.keySize;
+        this->lazyState = other.lazyState;
+        return *this;
     }
 
     RowReference::RowReference(RowReference&& other) noexcept{
@@ -76,7 +91,11 @@ namespace Pages{
        return pageSlot.GetSize();
     }
 
+    void RowReference::Join(RowReference& other) const{
+       this->lazyState->joinedRows.Push(std::move(other));
+    }
+
     void RowReference::Join(const RowReference& other) const{
-       // this->lazyState->joinedRows.Push(other);
+        this->lazyState->joinedRows.Push(other);
     }
 }

@@ -88,7 +88,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * DeclareVariableStatement::ToLogical(QueryContext& context) {
-        return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
+        return context._compileContext.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
     }
 
     SetVariableStatement::SetVariableStatement() {
@@ -128,7 +128,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SetVariableStatement::ToLogical(QueryContext& context) {
-    return context._context.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
+    return context._compileContext.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
   }
 
   Errors::ValidationStatus CreateUserStatement::CompileDerived(QueryContext& context){
@@ -151,7 +151,7 @@ namespace QueryPipeline::Statements {
   }
 
     LogicalPlan* CreateUserStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
+        return context._compileContext.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
     }
 
     Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
@@ -167,7 +167,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * GrantRoleStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
+        return context._compileContext.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
     }
 
     Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
@@ -191,7 +191,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * DeleteStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalDelete>(this->table, this->where.expression);
+        return context._compileContext.Allocate<LogicalDelete>(this->table, this->where.expression);
     }
 
     JoinStatement::JoinStatement() {
@@ -229,7 +229,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * JoinStatement::ToLogical(QueryContext& context){
-    return context._context.Allocate<LogicalTableScan>(this->table, nullptr);
+    return context._compileContext.Allocate<LogicalTableScan>(this->table, nullptr);
   }
 
   constexpr Security::Permission JoinStatement::RequiredPermissions() const{
@@ -571,7 +571,7 @@ namespace QueryPipeline::Statements {
             ? DataTypes::String::Null()
             : this->constraint->name;
 
-        return context._context.Allocate<LogicalTableCreate>(
+        return context._compileContext.Allocate<LogicalTableCreate>(
             this->sessionId,
             this->table,
             this->columns,
@@ -735,7 +735,7 @@ namespace QueryPipeline::Statements {
         DataSource* table,
         const PredicatePushDownResult& predicatesResult
     ){
-        return context._context.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->tableId));
+        return context._compileContext.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->tableId));
     }
 
     LogicalPlan* SelectStatement::BuildJoinsPlan(
@@ -748,7 +748,8 @@ namespace QueryPipeline::Statements {
 
         for (const auto& join : joinReorderResult.orderedJoins){
             auto* right = SelectStatement::BuildTableScanPlan(context, join->table, predicatesResult);
-            current = new LogicalJoin(
+
+            current = context._compileContext.Allocate<LogicalJoin>(
                 current,
                 right,
                 join->expression,
@@ -837,7 +838,7 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan * SelectStatement::ToLogical(QueryContext& context){
         if (this->IsConstant())
-            return context._context.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
+            return context._compileContext.Allocate<LogicalProject>(nullptr, this->results, this->columnHeaders);
 
         const Optimizer optimizer(context);
         const auto joinReorderResult = optimizer.DetermineJoinOrder(this);
@@ -852,19 +853,19 @@ namespace QueryPipeline::Statements {
         auto* current = this->BuildJoinsPlan(context, joinReorderResult, predicatesResult);
 
         if (predicatesResult.remainingPredicate != nullptr)
-            current = context._context.Allocate<LogicalFilter>(current, predicatesResult.remainingPredicate);
+            current = context._compileContext.Allocate<LogicalFilter>(current, predicatesResult.remainingPredicate);
 
         const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
 
-        current = context._context.Allocate<LogicalProject>(current, this->results, this->columnHeaders);
+        current = context._compileContext.Allocate<LogicalProject>(current, this->results, this->columnHeaders);
 
         this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
 
         if (this->distinct)
-            current = context._context.Allocate<LogicalDistinct>(current);
+            current = context._compileContext.Allocate<LogicalDistinct>(current);
 
         if (this->HasTopStatement())
-            current = context._context.Allocate<LogicalTop>(current, this->top);
+            current = context._compileContext.Allocate<LogicalTop>(current, this->top);
 
         return current;
     }
@@ -884,7 +885,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan* CreateDbStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
+        return context._compileContext.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
     }
 
     Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
@@ -940,7 +941,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * UseDatabaseStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
+        return context._compileContext.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
     }
 
     InsertStatement::~InsertStatement() = default;
@@ -968,11 +969,11 @@ namespace QueryPipeline::Statements {
                 data,
                 defaultValue.value.Size(),
                 static_cast<DataType>(header.dataType),
-                context._context.GetAllocator(),
+                context._compileContext.GetAllocator(),
                 0
             );
 
-            insertColumns.Push(context._context.Allocate<Expressions::ConstantExpression>(value));
+            insertColumns.Push(context._compileContext.Allocate<Expressions::ConstantExpression>(value));
         }
     }
 
@@ -1188,7 +1189,7 @@ namespace QueryPipeline::Statements {
             ? this->selectStatement->ToLogical(context)
             : nullptr;
 
-        return context._context.Allocate<LogicalInsert>(
+        return context._compileContext.Allocate<LogicalInsert>(
             this->table,
             this->values,
             logicalSelect,
@@ -1211,7 +1212,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * CreateSchemaStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalSchemaCreate>(
+        return context._compileContext.Allocate<LogicalSchemaCreate>(
             this->sessionId,
             this->databaseId,
             this->name
@@ -1331,7 +1332,7 @@ namespace QueryPipeline::Statements {
         for (const auto& update : this->updates)
             expressions.Push(update->value);
 
-        return context._context.Allocate<LogicalUpdate>(
+        return context._compileContext.Allocate<LogicalUpdate>(
             this->table,
             expressions,
             this->where.expression
@@ -1389,7 +1390,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan* CreateIndexStatement::ToLogical(QueryContext& context){
-        return context._context.Allocate<LogicalIndexCreate>(
+        return context._compileContext.Allocate<LogicalIndexCreate>(
             this->sessionId,
             this->table,
             this->name,
@@ -1634,28 +1635,28 @@ namespace QueryPipeline::Statements {
     LogicalPlan * AlterTableStatement::ToLogical(QueryContext& context){
         switch (this->type) {
         case Constants::AlterTableType::AddColumn:
-            return context._context.Allocate<LogicalAlterTable>(
+            return context._compileContext.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.newColumn
             );
         case Constants::AlterTableType::AlterColumn:
-            return context._context.Allocate<LogicalAlterTable>(
+            return context._compileContext.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.alterColumn
             );
         case Constants::AlterTableType::RenameColumn:
-            return context._context.Allocate<LogicalAlterTable>(
+            return context._compileContext.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
                 this->column.renameColumn
             );
         case Constants::AlterTableType::DropColumn:
-            return context._context.Allocate<LogicalAlterTable>(
+            return context._compileContext.Allocate<LogicalAlterTable>(
                 this->sessionId,
                 this->table,
                 this->type,
@@ -2008,6 +2009,7 @@ namespace QueryPipeline::Statements {
     ){
         //if wildcard ensure statement is of select statement type
         if (column->alias.ToView() == WILDCARD) {
+
             auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope.statement);
 
             if (selectStatement == nullptr)
@@ -2378,7 +2380,7 @@ namespace QueryPipeline::Statements {
         results.Insert(nullptr, *statementValidationScope.indexPos, columnsDict.size());
         // results.resize(results.size() + columnsDict.size());
         for (const auto &header: columnsDict | std::views::values) {
-            auto* columnExpression = context._context.Allocate<Expressions::ColumnExpression>(
+            auto* columnExpression = context._compileContext.Allocate<Expressions::ColumnExpression>(
                 header.name,
                 tableAlias
             );
@@ -2498,12 +2500,12 @@ namespace QueryPipeline::Statements {
 
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
         auto value = expression->Evaluate(Expressions::EvaluationContext(context.GetAllocator()));
-        expression = context._context.Allocate<Expressions::ConstantExpression>(value);
+        expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 
     void AssignConstantToExpression(const QueryContext& context, Expressions::Expression *&expression) {
-        auto value = Value(true, context._context.GetAllocator(), 0);
-        expression = context._context.Allocate<Expressions::ConstantExpression>(value);
+        auto value = Value(true, context._compileContext.GetAllocator(), 0);
+        expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 
     void AssignColumnIndicesToExpression(
@@ -2783,7 +2785,7 @@ namespace QueryPipeline::Statements {
     Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, const DataType type) {
       return Errors::ValidationStatus::Error(
         Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
-            context._context.GetAllocator(),
+            context._compileContext.GetAllocator(),
             SqlTypesString[static_cast<Int>(type)]
         )
       );

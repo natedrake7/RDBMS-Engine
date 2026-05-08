@@ -4,7 +4,7 @@ namespace QueryPipeline {
     Cursor::Cursor(
         const PipelineConstants::cursor_id_t cursorId,
         CoreEngine::ExecutionContext& executionContext,
-        PhysicalPlan::ExecutionNode *plan
+        PhysicalPlan::PlanNode *plan
     ) : id(cursorId), executionContext(std::move(executionContext)), canFetchMore(true), plan(plan) {}
 
     Cursor::~Cursor(){ delete this->plan; }

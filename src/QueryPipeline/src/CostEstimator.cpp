@@ -224,7 +224,7 @@ namespace QueryPipeline{
     ){
         static const auto& catalog = CoreEngine::SystemCatalog::Get();
         const auto histograms = catalog.SelectColumnHistogramsByColumnId(
-            context->_context.GetAllocator(),
+            context->_compileContext.GetAllocator(),
             tableStats.tableId,
             columnStats.columnId
         );

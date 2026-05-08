@@ -416,13 +416,13 @@ namespace Pages{
         return this->framePtr->latch;
     }
 
-    void PageView::InitializeRowReferenceCache(const RowReference* rowPtr, const Int numberOfColumns)const{
+    void PageView::InitializeRowReferenceCache(const RowReference* rowPtr)const{
         const auto slot = this->GetSlotDirectory(rowPtr->indexPosition);
 
         page_offset_t offSet = rowPtr->keySize + slot.GetOffset() + Constants::ROW_VERSION_HEADER_SIZE;
+        const auto numberOfColumns = rowPtr->lazyState->numberOfColumns;
 
         rowPtr->lazyState->isHeaderInitialized = true;
-        rowPtr->lazyState->header = CoreEngine::StorageTypes::RowHeader();
 
         const auto bitmapsSize = ByteMaps::BitMap::HeapSize(numberOfColumns);
         rowPtr->lazyState->header.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
@@ -431,8 +431,7 @@ namespace Pages{
         offSet += bitmapsSize;
         rowPtr->lazyState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-
-        rowPtr->lazyState->sizes.resize(numberOfColumns, 0);
+        rowPtr->lazyState->sizes.Resize(numberOfColumns);
 
         for (int i = 0; i < numberOfColumns; i++){
             if (rowPtr->lazyState->header.nullBitMap.Get(i))
@@ -513,9 +512,8 @@ namespace Pages{
         const column_index_t columnIndex
     ) const{
         const auto& columns = this->framePtr->table->GetColumns();
-
         if (!rowPtr->lazyState->isHeaderInitialized)
-            this->InitializeRowReferenceCache(rowPtr, columns.Size());
+            this->InitializeRowReferenceCache(rowPtr);
 
         block_size_t offSet = rowPtr->lazyState->dataOffset;
         for (int i = 0; i < columnIndex; i++){
@@ -526,7 +524,7 @@ namespace Pages{
         }
 
         if (rowPtr->lazyState->header.nullBitMap.Get(columnIndex))
-            return Value::Null();
+            return Value::Null(allocator);
 
         return Value::FromExternalStorage(
             this->framePtr->data + offSet,

@@ -98,7 +98,7 @@ namespace DataStructures{
         void Push(T&& value){
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
-                this->Resize(newCapacity);
+                this->Reserve(newCapacity);
             }
 
             this->_data[this->_size++] = std::move(value);
@@ -107,42 +107,43 @@ namespace DataStructures{
         void Push(const T& value){
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
-                this->Resize(newCapacity);
+                this->Reserve(newCapacity);
             }
 
             this->_data[this->_size++] = value;
         }
 
         void Insert(const T& value, const Int index){
-            if (index != 0 && index >= this->_size)
+            if (index != 0 && index > this->_size)
                 throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
 
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0)
                     ? 1
                     : this->_capacity * 2;
-                this->Resize(newCapacity);
+                this->Reserve(newCapacity);
             }
 
             for (Int i = this->_size - 1; i >= index; --i)
                 this->_data[i + 1] = std::move(this->_data[i]);
 
             this->_data[index] = value;
+            ++this->_size;
         }
 
         void Insert(const T& value, const Int index, const Int count){
-            if (index != 0 && index >= this->_size)
+            if (index != 0 && index > this->_size)
                 throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
 
             if (this->_size + count >= this->_capacity){
                 if (this->_capacity == 0)
-                    this->Resize(count);
+                    this->Reserve(count);
                 else{
                     auto newCapacity = this->_capacity * 2;
                     while (newCapacity < this->_size + count)
                         newCapacity *= 2;
 
-                    this->Resize(newCapacity);
+                    this->Reserve(newCapacity);
                 }
             }
             for (Int i = this->_size - 1; i >= index; --i)
@@ -159,7 +160,7 @@ namespace DataStructures{
             if (this->_size + size > this->_capacity){
                 auto newCapacity = (this->_capacity == 0) ? size : this->_capacity * 2;
                 while (newCapacity < this->_size + size) newCapacity *= 2;
-                Resize(newCapacity);
+                this->Reserve(newCapacity);
             }
             std::memcpy(this->_data + this->_size, src, size);
             this->_size += size;
@@ -174,6 +175,7 @@ namespace DataStructures{
 
             this->_data = newData;
             this->_capacity = newCapacity;
+            this->_size = newCapacity;
         }
 
         void Reserve(Int newCapacity){
@@ -182,6 +184,7 @@ namespace DataStructures{
 
             T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
+
             this->_data = newData;
             this->_capacity = newCapacity;
         }
@@ -288,7 +291,7 @@ namespace DataStructures{
 
         iterator erase(iterator pos){
             if (pos < this->begin() || pos >= this->end())
-                throw std::out_of_range("Iterator out of range.");
+                throw std::out_of_range("DataStructures:PolymorphicArray:erase: Iterator out of range.");
 
             Int index = pos - this->begin();
             this->Remove(index);

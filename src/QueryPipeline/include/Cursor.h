@@ -10,13 +10,13 @@ namespace QueryPipeline {
 
     bool canFetchMore;
 
-    PhysicalPlan::ExecutionNode* plan;
+    PhysicalPlan::PlanNode* plan;
 
   public:
     Cursor(
       PipelineConstants::cursor_id_t cursorId,
       CoreEngine::ExecutionContext& executionContext,
-      PhysicalPlan::ExecutionNode* plan
+      PhysicalPlan::PlanNode* plan
     );
     ~Cursor();
 

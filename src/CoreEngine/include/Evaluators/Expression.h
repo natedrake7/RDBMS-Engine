@@ -48,8 +48,7 @@ namespace Expressions{
         QueryResult materializedRow;
 
         const Pages::RowReference* row;
-        const Pages::RowReference* outerRow;
-        const Pages::RowReference* innerRow;
+        const Pages::RowReference* joinRow;
 
         const Memory::IAllocator* allocator;
         const Dictionary<DataTypes::String, Variable>* variables;
@@ -73,7 +72,12 @@ namespace Expressions{
             const QueryResult& row,
             const CoreEngine::ExecutionContext& executionContext
         );
-        EvaluationContext(
+        explicit EvaluationContext(
+            const Pages::RowReference* row,
+            const Pages::RowReference* joinRow,
+            const CoreEngine::ExecutionContext& executionContext
+        );
+        static EvaluationContext CreateJoinContext(
             const Pages::RowReference* outerRow,
             const Pages::RowReference* innerRow,
             const CoreEngine::ExecutionContext& executionContext
@@ -81,6 +85,9 @@ namespace Expressions{
     };
 
     class Expression {
+    protected:
+        Value EvaluateJoin(const EvaluationContext& context) const;
+
     public:
         DataTypes::String name;
         column_index_t columnIndex;
@@ -123,6 +130,7 @@ namespace Expressions{
     };
 
     class ColumnExpression final : public Expression {
+        Value EvaluateSingleRow(const EvaluationContext& context)const;
     public:
         DataTypes::String alias;
         DataTypes::String tableAlias;

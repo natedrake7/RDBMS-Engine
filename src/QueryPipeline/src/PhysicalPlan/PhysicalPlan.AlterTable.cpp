@@ -2,7 +2,6 @@
 #include "../../../CoreEngine/include/SystemDatabases/CatalogSchema.h"
 #include "../../include/PhysicalPlan.h"
 #include "../../../Server/include/Server.h"
-#include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../../CoreEngine/include/DataStorage/Table.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
@@ -10,7 +9,7 @@
 namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::NewColumn *column)
-    : ExecutionNode(sessionId), table(table), column(column){}
+    : PlanNode(sessionId), table(table), column(column){}
 
   PhysicalAddColumn::~PhysicalAddColumn() = default;
 
@@ -85,7 +84,7 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
-    : ExecutionNode(sessionId), table(table), column(column){}
+    : PlanNode(sessionId), table(table), column(column){}
 
   PhysicalDropColumn::~PhysicalDropColumn() = default;
 
@@ -111,7 +110,7 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::RenameColumn *column)
-  : ExecutionNode(sessionId), table(table), column(column){}
+  : PlanNode(sessionId), table(table), column(column){}
 
   PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
@@ -144,7 +143,7 @@ namespace QueryPipeline::PhysicalPlan{
   }
 
   PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::AlterColumn *column)
-    : ExecutionNode(sessionId), table(table), column(column){}
+    : PlanNode(sessionId), table(table), column(column){}
 
   PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 

@@ -103,12 +103,14 @@
 
 //TODO use json accessors for updates as well.
 //TODO use binary search on B tree lower bound and upper bound to go to O(logn)
+//TODO add CAST, TRYCAST
 
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
 //CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT)
 //CREATE TABLE dbo.Movies(ID INT PRIMARY KEY IDENTITY(1,1), Data JSON)
 //INSERT INTO dbo.Movies(Data) VALUES('{"name": "kostas"}')
+//SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st inner join dbo.sys_databases AS sd ON sd.database_id = st.database_id
 
 int main(){
     DataTypes::Coercions::Initialize();

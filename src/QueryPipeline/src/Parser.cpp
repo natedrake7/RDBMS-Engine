@@ -95,8 +95,8 @@ namespace QueryPipeline{
     Parser::Parser() = default;
 
     QueryContext::QueryContext()
-        : status(this->_context.GetAllocator()), hasMore(false){
-        this->cursors.SetAllocator(this->_context.GetAllocator());
+        : status(this->_compileContext.GetAllocator()), hasMore(false){
+        this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
      void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables){
@@ -105,13 +105,13 @@ namespace QueryPipeline{
     }
 
      const ::Memory::IAllocator* QueryContext::GetAllocator() const{
-        return this->_context.GetAllocator();
+        return this->_compileContext.GetAllocator();
      }
 
      QueryContext::QueryContext(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
-        this->cursors.SetAllocator(this->_context.GetAllocator());
+        this->cursors.SetAllocator(this->_compileContext.GetAllocator());
         // this->columns.SetAllocator(this->_context.GetAllocator());
         // this->rows.SetAllocator(this->_context.GetAllocator());
     }
@@ -189,10 +189,10 @@ namespace QueryPipeline{
         // Start parsing, typically using the start rule of the grammar
         try {
             auto* tree = parser.sqlStatement();
-            SQLVisitorImplementation visitor(result._context);
+            SQLVisitorImplementation visitor(result._compileContext);
 
             const auto response = visitor.visit(tree);
-            CreateStatements(result._context, response, sessionId);
+            CreateStatements(result._compileContext, response, sessionId);
         }
         catch (const std::exception& e) {
             // Parser::ClearQuery(statements);
@@ -222,7 +222,7 @@ namespace QueryPipeline{
         return logicalPlan;
     }
 
-    PhysicalPlan::ExecutionNode* Parser::BuildExecutionPlan(QueryContext &result, LogicalPlan *logicalPlan) {
+    PhysicalPlan::PlanNode* Parser::BuildExecutionPlan(QueryContext &result, LogicalPlan *logicalPlan) {
         auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
             static constexpr DataTypes::StringView errorMsg = "Unexpected error occurred during physical plan build";
@@ -252,7 +252,7 @@ namespace QueryPipeline{
         if (queryContext.status.hasError)
             return queryContext;
 
-        const auto* statements = queryContext._context.GetStatements();
+        const auto* statements = queryContext._compileContext.GetStatements();
         queryContext.cursors.Reserve(statements->Size());
         for (auto* statement: *statements) {
             auto* logicalPlan = Parser::BuildLogicalPlan(queryContext, statement);

@@ -122,7 +122,7 @@ namespace Pages{
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 
-        void InitializeRowReferenceCache(const RowReference* rowPtr, Int numberOfColumns)const;
+        void InitializeRowReferenceCache(const RowReference* rowPtr)const;
         [[nodiscard]] QueryResult MaterializeRow(
             const Memory::IAllocator* allocator,
             Int indexPosition,

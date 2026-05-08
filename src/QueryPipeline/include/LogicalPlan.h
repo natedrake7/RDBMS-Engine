@@ -13,7 +13,7 @@ namespace QueryPipeline {
       explicit LogicalPlan(const DataTypes::Guid& sessionId);
       LogicalPlan();
       virtual ~LogicalPlan();
-      virtual PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context) = 0;
+      virtual PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) = 0;
   };
 
   class LogicalDeclareVariable final : public LogicalPlan {
@@ -22,7 +22,7 @@ namespace QueryPipeline {
       Expressions::Expression* expression;
 
       LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
-      PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
+      PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 
   class LogicalCreateUser final : public LogicalPlan {
@@ -38,7 +38,7 @@ namespace QueryPipeline {
       DataTypes::String& role
     );
     ~LogicalCreateUser()override;
-    PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
+    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 
   class LogicalGrantRole final: public LogicalPlan {
@@ -48,7 +48,7 @@ namespace QueryPipeline {
 
     explicit LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String & username, DataTypes::String & role);
     ~LogicalGrantRole()override = default;
-    PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
+    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 
   class LogicalCreateDatabase final : public LogicalPlan {
@@ -91,14 +91,14 @@ namespace QueryPipeline {
         Statements::DataSource* table,
         Expressions::Expression* expression
       );
-      PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context) override;
+      PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
   };
 
   class LogicalJoin final : public LogicalPlan {
-    PhysicalPlan::ExecutionNode* CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::ExecutionNode* CreateLeftJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::ExecutionNode* CreateRightJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::ExecutionNode* CreateFullJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::PlanNode* CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::PlanNode* CreateLeftJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::PlanNode* CreateRightJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
+    PhysicalPlan::PlanNode* CreateFullJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
 
     public:
       Int leftTableId;
@@ -119,7 +119,7 @@ namespace QueryPipeline {
 
     ~LogicalJoin() override;
 
-    PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
+    PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
   class LogicalFilter final : public LogicalPlan {
@@ -140,7 +140,7 @@ namespace QueryPipeline {
         LogicalPlan* child,
         DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
       );
-      PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
+      PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
   class LogicalTop final : public LogicalPlan {
@@ -193,7 +193,7 @@ namespace QueryPipeline {
     Statements::DataSource* table;
     Expressions::Expression* expression;
     explicit LogicalDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
+    PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
     class LogicalUpdate final : public LogicalPlan {
@@ -207,7 +207,7 @@ namespace QueryPipeline {
           DataStructures::PolymorphicArray<Expressions::Expression*>& updates,
           Expressions::Expression* expression
         );
-        PhysicalPlan::ExecutionNode* ToPhysical(QueryContext& context)override;
+        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalTableCreate final : public LogicalPlan {
@@ -238,7 +238,7 @@ namespace QueryPipeline {
       DataTypes::String& constraintName,
       DataStructures::PolymorphicArray<column_index_t>& columns
     );
-    PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
+    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 
   class LogicalAlterTable final : public LogicalPlan {
@@ -281,7 +281,7 @@ namespace QueryPipeline {
         Statements::DropColumn* column
       );
 
-      PhysicalPlan::ExecutionNode * ToPhysical(QueryContext& context) override;
+      PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 }
 

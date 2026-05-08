@@ -16,11 +16,6 @@
 #include "SystemDatabases/TemporaryDatabase.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  // ExecutionResult::ExecutionResult(){
-  //   this->status.code = Errors::RuntimeError::Ok;
-  //   this->canFetchMore = false;
-  // }
-
   ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
       : status(context.GetAllocator()){
       this->canFetchMore = false;
@@ -72,14 +67,14 @@ namespace QueryPipeline::PhysicalPlan {
     return this->status.code == Errors::RuntimeError::Ok;
   }
 
-  ExecutionNode::ExecutionNode() {
+  PlanNode::PlanNode() {
     this->catalog = &CoreEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
     this->session = nullptr;
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
-  ExecutionNode::ExecutionNode(const DataTypes::Guid &currentSessionId){
+  PlanNode::PlanNode(const DataTypes::Guid &currentSessionId){
     this->sessionId = currentSessionId;
     this->catalog = &CoreEngine::SystemCatalog::Get();
     this->server = &Network::Server::Get();
@@ -87,11 +82,11 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
-  void ExecutionNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows){
+  void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows){
 
   }
 
-  void ExecutionNode::InsertPostProjectionResultsToTemporaryDatabase(
+  void PlanNode::InsertPostProjectionResultsToTemporaryDatabase(
     const CoreEngine::ExecutionContext& context,
     ExecutionResult& result,
     DataTypes::RowIdentifier& firstRowId
@@ -111,7 +106,7 @@ namespace QueryPipeline::PhysicalPlan {
     firstRowId = result.status.rowId;
   }
 
-  ExecutionResult ExecutionNode::StreamFromTemporaryDatabase(
+  ExecutionResult PlanNode::StreamFromTemporaryDatabase(
     const CoreEngine::ExecutionContext& context,
     CoreEngine::ScanState& state
   ) const
@@ -137,12 +132,12 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  void ExecutionNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
+  void PlanNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
 
-  bool ExecutionNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
+  bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
-    : ExecutionNode(currentSessionId), variable(std::move(variable)), expression(expression){}
+    : PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
   ExecutionResult PhysicalDeclareVariable::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
@@ -189,7 +184,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
-    : ExecutionNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
+    : PlanNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
   ExecutionResult PhysicalGrantRole::Execute(const CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
@@ -209,7 +204,7 @@ namespace QueryPipeline::PhysicalPlan {
     return result;
   }
 
-  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : ExecutionNode(sessionId), dbName(std::move(name)){}
+  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
 
   ExecutionResult PhysicalCreateDatabase::Execute(const CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
@@ -259,7 +254,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
 PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
-  : ExecutionNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
+  : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult PhysicalSchemaCreate::Execute(const CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
@@ -402,7 +397,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     auto result = this->child->Execute(context);
 
     for (const auto& expression : this->resultExpressions)
-      result.displayColumnNames.Push(expression->name);
+        result.displayColumnNames.Push(expression->name);
 
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,
@@ -452,7 +447,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     PhysicalProject:: PhysicalProject(
-        ExecutionNode *child,
+        PlanNode *child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
         DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders)
         : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
@@ -469,7 +464,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         this->child->UpdateScanState(rowId);
     }
 
-    PhysicalFilter::PhysicalFilter(ExecutionNode *child, Expressions::Expression* filter)
+    PhysicalFilter::PhysicalFilter(PlanNode *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
 
     PhysicalFilter::~PhysicalFilter() = default;
@@ -504,7 +499,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         this->child->UpdateScanState(rowId);
     }
 
-    PhysicalTop::PhysicalTop(ExecutionNode* child, const BigInt top)
+    PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
         : top(top), child(child){}
 
     PhysicalTop::~PhysicalTop() = default;
@@ -524,7 +519,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         this->child->UpdateScanState(rowId);
     }
 
-    PhysicalDistinct::PhysicalDistinct(ExecutionNode *child)
+    PhysicalDistinct::PhysicalDistinct(PlanNode *child)
         : child(child){}
 
     PhysicalDistinct::~PhysicalDistinct() = default;
@@ -640,7 +635,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     PhysicalInsert::PhysicalInsert(
         Statements::DataSource* table,
         DataStructures::PolymorphicArray<Statements::Inserts> &fields,
-        ExecutionNode* child,
+        PlanNode* child,
         DataStructures::PolymorphicArray<column_index_t>& columnsIndices
     ): table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
@@ -771,7 +766,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
       const Headers::Index& primaryKey,
       DataTypes::String& constraintName
-    ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)),
+    ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
       columns(std::move(columns)), primaryKey(primaryKey) {}
 
   PhysicalTableCreate::~PhysicalTableCreate() = default;
@@ -945,7 +940,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
   }
 
   PhysicalOrderBy::PhysicalOrderBy(
-      ExecutionNode *child,
+      PlanNode *child,
       DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
   )   : child(child)
    , expressions(std::move(expressions))
@@ -1037,7 +1032,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         Statements::DataSource *table,
         DataTypes::String& constraintName,
         DataStructures::PolymorphicArray<column_index_t> &columns
-    ): ExecutionNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+    ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
     ExecutionResult PhysicalIndexCreate::Execute(const CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);

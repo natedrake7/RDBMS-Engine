@@ -80,7 +80,7 @@ namespace Network {
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
       const DataTypes::Guid &id,
       CoreEngine::ExecutionContext& context,
-      QueryPipeline::PhysicalPlan::ExecutionNode *physicalPlan
+      QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 
