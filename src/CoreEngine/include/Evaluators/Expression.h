@@ -22,7 +22,7 @@ namespace Memory{
 }
 
 namespace Pages{
-    struct RowReference;
+    struct RowView;
 }
 
 namespace Expressions{
@@ -47,8 +47,8 @@ namespace Expressions{
 
         QueryResult materializedRow;
 
-        const Pages::RowReference* row;
-        const Pages::RowReference* joinRow;
+        const Pages::RowView* row;
+        const Pages::RowView* joinRow;
 
         const Memory::IAllocator* allocator;
         const Dictionary<DataTypes::String, Variable>* variables;
@@ -65,7 +65,7 @@ namespace Expressions{
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
-            const Pages::RowReference* row,
+            const Pages::RowView* row,
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
@@ -73,13 +73,13 @@ namespace Expressions{
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
-            const Pages::RowReference* row,
-            const Pages::RowReference* joinRow,
+            const Pages::RowView* row,
+            const Pages::RowView* joinRow,
             const CoreEngine::ExecutionContext& executionContext
         );
         static EvaluationContext CreateJoinContext(
-            const Pages::RowReference* outerRow,
-            const Pages::RowReference* innerRow,
+            const Pages::RowView* outerRow,
+            const Pages::RowView* innerRow,
             const CoreEngine::ExecutionContext& executionContext
         );
     };
@@ -125,6 +125,8 @@ namespace Expressions{
         [[nodiscard]] const BranchExpression* AsBranch()const;
         [[nodiscard]] const FunctionExpression* AsFunction()const;
         [[nodiscard]] const JsonExpression* AsJson()const;
+
+        [[nodiscard]] bool IsColumnType()const;
 
         void SetIndex(column_index_t index);
     };

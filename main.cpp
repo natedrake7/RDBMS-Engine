@@ -110,7 +110,10 @@
 //CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT)
 //CREATE TABLE dbo.Movies(ID INT PRIMARY KEY IDENTITY(1,1), Data JSON)
 //INSERT INTO dbo.Movies(Data) VALUES('{"name": "kostas"}')
+//INSERT INTO dbo.Actors(Name, Age) VALUES('Kostas', 200)
+//SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies AS M ON M.data->>name = A.Name
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st inner join dbo.sys_databases AS sd ON sd.database_id = st.database_id
+//SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st left join dbo.sys_databases AS sd ON sd.database_id = 1
 
 int main(){
     DataTypes::Coercions::Initialize();

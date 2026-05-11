@@ -58,7 +58,7 @@ set(ANTLR_SRC
     ${GENERATED_DIR}/SQLLexer.cpp
     ${GENERATED_DIR}/SQLBaseVisitor.cpp
     ${GENERATED_DIR}/SQLVisitor.cpp
-        src/CoreEngine/include/Pages/Additional/RowReference.h
+        src/CoreEngine/include/Pages/Additional/RowView.h
 )
 
 # Mark generated sources so CMake knows they will be created by the build process
@@ -179,7 +179,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/HeaderPageView.cpp
         src/CoreEngine/src/Pages/Additional/SlotDirectory.cpp
         src/CoreEngine/src/Pages/Additional/Frame.cpp
-        src/CoreEngine/src/Pages/Additional/RowReference.cpp
+        src/CoreEngine/src/Pages/Additional/RowView.cpp
         src/CoreEngine/src/Pages/Additional/IndexPageStructs.cpp
         src/CoreEngine/src/Pages/LargeObjectView.cpp
         src/CoreEngine/src/Pages/OverflowPageView.cpp

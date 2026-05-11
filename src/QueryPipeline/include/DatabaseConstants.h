@@ -24,6 +24,7 @@ namespace QueryPipeline::PipelineConstants {
         NestedLoopJoin = 0,
         HashJoin = 1,
         MergeJoin = 2,
+        CrossJoin = 3
     };
 
     static constexpr ConstexprDictionary<DataTypes::StringView, JoinType, 4> JoinTypeDictionary{

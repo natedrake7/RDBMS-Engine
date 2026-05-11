@@ -81,6 +81,10 @@ namespace QueryPipeline {
     ) const{
         Expressions::Expression* baseExpression = nullptr;
         this->RebuildPredicate(baseExpression, conditionsInfo);
+
+        if (baseExpression == nullptr)
+            return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::CrossJoin, baseExpression);
+
         return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin, baseExpression);
     }
 
@@ -116,25 +120,33 @@ namespace QueryPipeline {
     }
 
     void Optimizer::GetInvolvedTables(const Expressions::Expression* expression, HashSet<table_id_t>& involvedTables){
-        if (expression->IsBinary()){
-            const auto* binaryExpr = expression->AsBinary();
-            Optimizer::GetInvolvedTables(binaryExpr->left, involvedTables);
-            Optimizer::GetInvolvedTables(binaryExpr->right, involvedTables);
-            return;
+        switch (expression->expressionType){
+            case Expressions::ExpressionType::Binary:{
+                const auto* binaryExpr = expression->AsBinary();
+                Optimizer::GetInvolvedTables(binaryExpr->left, involvedTables);
+                Optimizer::GetInvolvedTables(binaryExpr->right, involvedTables);
+                break;
+            }
+            case Expressions::ExpressionType::Logical:{
+                const auto* logicalExpr = expression->AsLogical();
+                Optimizer::GetInvolvedTables(logicalExpr->left, involvedTables);
+                Optimizer::GetInvolvedTables(logicalExpr->right, involvedTables);
+                break;
+            }
+            case Expressions::ExpressionType::Column:{
+                const auto* columnExpr = expression->AsColumn();
+                involvedTables.Add(columnExpr->tableId);
+                break;
+            }
+            case Expressions::ExpressionType::Json:{
+                const auto* jsonExpr = expression->AsJson();
+                const auto* columnExpr = jsonExpr->columnPtr->AsColumn();
+                involvedTables.Add(columnExpr->tableId);
+                break;
+            }
+            default:
+                break;
         }
-
-        if (expression->IsLogical()){
-            const auto* logicalExpr = expression->AsLogical();
-            Optimizer::GetInvolvedTables(logicalExpr->left, involvedTables);
-            Optimizer::GetInvolvedTables(logicalExpr->right, involvedTables);
-            return;
-        }
-
-        if (!expression->IsColumn())
-            return;
-
-        const auto* columnExpr = expression->AsColumn();
-        involvedTables.Add(columnExpr->tableId);
     }
 
     DataStructures::PolymorphicArray<table_id_t> Optimizer::GetInvolvedTables(const Expressions::Expression* expression) const{
@@ -400,6 +412,54 @@ namespace QueryPipeline {
         return range;
     }
 
+    void Optimizer::ProcessBinaryOperationJoinLeftCondition(
+        Expressions::Expression* expression,
+        JoinConditionInfo& info
+    ){
+        switch (expression->expressionType){
+        case Expressions::ExpressionType::Column:{
+                const auto* columnExpr = expression->AsColumn();
+                info.leftColumnId = columnExpr->columnId;
+                info.leftColumnIndex = columnExpr->columnIndex;
+                info.leftTableId = columnExpr->tableId;
+                break;
+        }
+        case Expressions::ExpressionType::Json:{
+                const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
+                info.leftColumnId = columnExpr->columnId;
+                info.leftColumnIndex = columnExpr->columnIndex;
+                info.leftTableId = columnExpr->tableId;
+                break;
+        }
+        default:
+            break;
+        }
+    }
+
+    void Optimizer::ProcessBinaryOperationJoinRightCondition(
+        Expressions::Expression* expression,
+        JoinConditionInfo& info
+    ){
+        switch (expression->expressionType){
+        case Expressions::ExpressionType::Column:{
+                const auto* columnExpr = expression->AsColumn();
+                info.rightColumnId = columnExpr->columnId;
+                info.rightColumnIndex = columnExpr->columnIndex;
+                info.rightTableId = columnExpr->tableId;
+                break;
+        }
+        case Expressions::ExpressionType::Json:{
+                const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
+                info.rightColumnId = columnExpr->columnId;
+                info.rightColumnIndex = columnExpr->columnIndex;
+                info.rightTableId = columnExpr->tableId;
+                break;
+        }
+        default:
+            break;
+        }
+    }
+
     void Optimizer::ProcessJoinCondition(
         Expressions::Expression* expression,
         DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
@@ -409,23 +469,15 @@ namespace QueryPipeline {
             return;
 
         const auto* binaryExpr = expression->AsBinary();
-        if (!binaryExpr->left->IsColumn() || !binaryExpr->right->IsColumn())
+        if (!binaryExpr->left->IsColumnType() || !binaryExpr->right->IsColumnType())
             return;
 
         JoinConditionInfo info;
 
-        const auto* leftColumnExpr = binaryExpr->left->AsColumn();
-        const auto* rightColumnExpr = binaryExpr->right->AsColumn();
+        Optimizer::ProcessBinaryOperationJoinLeftCondition(binaryExpr->left, info);
+        Optimizer::ProcessBinaryOperationJoinRightCondition(binaryExpr->right, info);
 
         isEqualityJoin = !isEqualityJoin && (binaryExpr->operation == Expressions::BinaryOperator::Equal);
-        info.leftColumnId = leftColumnExpr->columnId;
-        info.leftColumnIndex = leftColumnExpr->columnIndex;
-        info.leftTableId = leftColumnExpr->tableId;
-
-        info.rightColumnId = rightColumnExpr->columnId;
-        info.rightColumnIndex = rightColumnExpr->columnIndex;
-        info.rightTableId = rightColumnExpr->tableId;
-
         info.expression = expression;
 
         conditionsInfo.Push(info);
@@ -711,7 +763,7 @@ namespace QueryPipeline {
             Optimizer::ProcessJoinCondition(conjunction, conditionsInfo, isEqualityJoin);
 
         if (!isEqualityJoin)
-            return JoinAlgorithmAnalysisResult(PipelineConstants::JoinAlgorithm::NestedLoopJoin);
+            return this->ReturnNestedLoopJoinAlgorithm(conditionsInfo);
 
         if (leftInfo.rowCount < PipelineConstants::SMALL_TABLE
             && rightInfo.rowCount < PipelineConstants::SMALL_TABLE

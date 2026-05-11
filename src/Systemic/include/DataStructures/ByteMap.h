@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include <fstream>
-#include "DataTypes/DataTypes.h"
+#include "../DataTypes/DataTypes.h"
 
 namespace ByteMaps {
 

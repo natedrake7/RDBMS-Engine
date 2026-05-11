@@ -50,6 +50,10 @@ namespace Indexing{
             const Pages::IndexPageView& newChild
         );
 
+        static inline Int ScanLeafLowerBound(
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key
+        );
         static inline Int LeafLowerBound(
             const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
@@ -217,38 +221,38 @@ namespace Indexing{
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowView*>* result
         )const;
 
         void IndexSeekRange(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowView*>* result
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowView*>* result
         )const;
         void SystemIndexSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             const Expressions::Expression* expression
         )const;
 
@@ -256,34 +260,34 @@ namespace Indexing{
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             CoreEngine::IndexState& state
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             CoreEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowView*>* result
         )const;
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result,
+            DataStructures::PolymorphicArray<Pages::RowView*>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::PolymorphicArray<Pages::RowReference>* result
+            DataStructures::PolymorphicArray<Pages::RowView*>* result
         )const;
         void IndexScan(
             DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result,

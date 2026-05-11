@@ -79,7 +79,7 @@ namespace CoreEngine{
                 StorageTypes::RowVersionPointer& rowPointer,
                 const StorageTypes::Table* table
             );
-            Pages::RowReference RetrieveRowReference(
+            Pages::RowView* RetrieveRowReference(
                 const ::Memory::IAllocator* allocator,
                 const Snapshot& snapshot,
                 const StorageTypes::RowVersionPointer& rowPointer,

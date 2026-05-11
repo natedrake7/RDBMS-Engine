@@ -294,7 +294,7 @@ namespace CoreEngine {
         return status;
     }
 
-    Pages::RowReference VersionDatabase::RetrieveRowReference(
+    Pages::RowView* VersionDatabase::RetrieveRowReference(
         const ::Memory::IAllocator* allocator,
         const Snapshot& snapshot,
         const StorageTypes::RowVersionPointer &rowPointer,

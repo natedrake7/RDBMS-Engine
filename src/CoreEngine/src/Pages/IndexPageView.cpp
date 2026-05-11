@@ -344,14 +344,14 @@ namespace Pages{
         auto offset = slot.GetOffset();
         auto key = this->GetKeyByOffset(allocator, offset);
 
-        auto ref = RowReference(this->framePtr, allocator, indexPosition, key.size);
+        auto ref = RowView(this->framePtr, allocator, indexPosition, key.size);
         return LeafNodeTuple(ref, key);
     }
 
-    RowReference IndexPageView::PeekRowReference(const Memory::IAllocator* allocator, const Int indexPosition) const{
+    RowView* IndexPageView::PeekRowReference(const Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto keySize = this->GetKeySize(slot.GetOffset());
-        return RowReference(this->framePtr, allocator, indexPosition, keySize);
+        return allocator->Allocate<RowView>(this->framePtr, allocator, indexPosition, keySize);
     }
 
     InternalNodeTuple IndexPageView::PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{

@@ -63,8 +63,8 @@ namespace CoreEngine::StorageTypes
 
         explicit RowHeader();
         explicit RowHeader(const ::Memory::IAllocator* allocator, Int bitMapsSize);
-        // RowHeader& operator=(const RowHeader& otherHeader);
-        // RowHeader(const RowHeader& otherHeader);
+        RowHeader(const RowHeader& otherHeader);
+        RowHeader& operator=(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;
         RowHeader& operator=(RowHeader&& otherHeader) noexcept;
 

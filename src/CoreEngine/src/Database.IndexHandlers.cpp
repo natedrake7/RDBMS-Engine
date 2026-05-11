@@ -26,7 +26,7 @@ namespace CoreEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const ExecutionContext& context,
         const std::vector<column_index_t>& indexedColumns,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView& rowPtr,
         const Int offSet
     ){
 
@@ -42,7 +42,7 @@ namespace CoreEngine {
     DataTypes::Indexing::Key Database::CreateKey(
         const ExecutionContext& context,
         const std::vector<column_index_t> &indexedColumns,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView& rowPtr,
         const DataTypes::RowIdentifier &rowId
     ){
         DataTypes::Indexing::Key key;

@@ -13,7 +13,7 @@ namespace CoreEngine{
 }
 
 namespace Pages{
-    struct RowReference;
+    struct RowView;
 }
 
 class GroupCondition;
@@ -47,11 +47,11 @@ struct MergeElement{
 
 class SortingFunctions{
          [[nodiscard]] static std::string CreateGroupByKey(
-           const Pages::RowReference& row,
+           const Pages::RowView& row,
            const std::vector<GroupCondition> &sortConditions
           );
          static long double ApplyAggregateFunctionToGroup(
-           const std::vector<Pages::RowReference>& rowGroup,
+           const std::vector<Pages::RowView>& rowGroup,
            const GroupCondition& condition
           );
 
@@ -64,14 +64,14 @@ class SortingFunctions{
           );
          [[nodiscard]] static bool CompareRowsAscending(
             const CoreEngine::ExecutionContext& context,
-            const Pages::RowReference& firstRow,
-            const Pages::RowReference& secondRow,
+            const Pages::RowView& firstRow,
+            const Pages::RowView& secondRow,
             const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
             const CoreEngine::ExecutionContext& context,
-            const Pages::RowReference& firstRow,
-            const Pages::RowReference& secondRow,
+            const Pages::RowView& firstRow,
+            const Pages::RowView& secondRow,
             const column_index_t& columnIndex
           );
          static void OrderBy(
@@ -80,7 +80,7 @@ class SortingFunctions{
             const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(
-           const std::vector<Pages::RowReference>& rows,
+           const std::vector<Pages::RowView>& rows,
            const std::vector<GroupCondition>& sortConditions
           );
 };

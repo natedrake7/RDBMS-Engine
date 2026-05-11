@@ -62,7 +62,7 @@ namespace Pages{
             Comparators::Comparator CompareKeyAtIndex(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
             LeafNodeTuple PeekLeafTuple(const ::Memory::IAllocator* allocator,Int indexPosition) const;
-            RowReference PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
+            RowView* PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             InternalNodeTuple PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 

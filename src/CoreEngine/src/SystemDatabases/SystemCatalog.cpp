@@ -298,8 +298,8 @@ namespace CoreEngine {
         this->masterDb->UpdateIdentityManagersIds(baseContext.GetAllocator());
     }
 
-  Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr){
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::DatabaseHeader{
@@ -313,11 +313,11 @@ namespace CoreEngine {
 
   Headers::DatabaseHeader SystemCatalog::ToDatabaseHeader(
     const ::Memory::IAllocator* allocator,
-    const Pages::RowReference& rowPtr,
+    const Pages::RowView* rowPtr,
     DataStructures::PolymorphicArray<Headers::TableHeader>& dbTables,
     DataStructures::PolymorphicArray<Headers::SchemaHeader>& schemas
   ) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
    return  Headers::DatabaseHeader{
@@ -340,8 +340,8 @@ namespace CoreEngine {
     };
 }
 
-    Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
-        const auto materializedRow = rowPtr.Materialize(allocator);
+    Headers::SchemaHeader SystemCatalog::ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr){
+        const auto materializedRow = rowPtr->Materialize(allocator);
         const auto& data = materializedRow.Data();
 
         auto header = Headers::SchemaHeader(
@@ -357,8 +357,8 @@ namespace CoreEngine {
         return header;
     }
 
-    Headers::TableHeader SystemCatalog::ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-        const auto materializedRow = rowPtr.Materialize(allocator);
+    Headers::TableHeader SystemCatalog::ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+        const auto materializedRow = rowPtr->Materialize(allocator);
         const auto& data = materializedRow.Data();
 
         auto header = Headers::TableHeader();
@@ -376,8 +376,8 @@ namespace CoreEngine {
         return header;
     }
 
-  Headers::ColumnHeader SystemCatalog::ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-      const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::ColumnHeader SystemCatalog::ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+      const auto materializedRow = rowPtr->Materialize(allocator);
       const auto& data = materializedRow.Data();
 
       return Headers::ColumnHeader{
@@ -408,8 +408,8 @@ namespace CoreEngine {
       };
   }
 
-  Headers::IndexHeader SystemCatalog::ToIndexHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-      const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::IndexHeader SystemCatalog::ToIndexHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+      const auto materializedRow = rowPtr->Materialize(allocator);
       const auto& data = materializedRow.Data();
 
       return Headers::IndexHeader{
@@ -431,8 +431,8 @@ namespace CoreEngine {
     };
   }
 
-  Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::IndexColumnsHeader{
@@ -451,8 +451,8 @@ namespace CoreEngine {
     };
   }
 
-  Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::IdentityColumnsHeader(
@@ -476,11 +476,11 @@ namespace CoreEngine {
 
   Headers::ConstraintsHeader SystemCatalog::ToConstraintsHeader(
     const ::Memory::IAllocator* allocator,
-    const Pages::RowReference& rowPtr,
+    const Pages::RowView* rowPtr,
     DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader> &constraintColumns,
     Headers::IndexHeader &indexHeader
   ) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsHeader{
@@ -505,8 +505,8 @@ namespace CoreEngine {
     };
   }
 
-  Headers::ConstraintsColumnsHeader SystemCatalog::ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr){
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::ConstraintsColumnsHeader SystemCatalog::ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr){
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsColumnsHeader{
@@ -524,8 +524,8 @@ namespace CoreEngine {
     };
   }
 
-  Headers::DefaultValuesHeader SystemCatalog::ToDefaultValuesHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::DefaultValuesHeader SystemCatalog::ToDefaultValuesHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return Headers::DefaultValuesHeader{
@@ -542,8 +542,8 @@ namespace CoreEngine {
     };
   }
 
-  Headers::TableStatistics SystemCatalog::ToTableStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-    const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::TableStatistics SystemCatalog::ToTableStatistics(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+    const auto materializedRow = rowPtr->Materialize(allocator);
     const auto& data = materializedRow.Data();
 
     return {
@@ -557,10 +557,10 @@ namespace CoreEngine {
 
     Headers::ColumnStatistics SystemCatalog::ToColumnStatistics(
         const ::Memory::IAllocator* allocator,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const DataType columnType
     ) {
-        const auto materializedRow = rowPtr.Materialize(allocator);
+        const auto materializedRow = rowPtr->Materialize(allocator);
         const auto& data = materializedRow.Data();
 
         return Headers::ColumnStatistics{
@@ -584,10 +584,10 @@ namespace CoreEngine {
 
     Headers::ColumnHistograms SystemCatalog::ToColumnHistograms(
         const ::Memory::IAllocator* allocator,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const DataType columnType
     ) {
-        const auto materializedRow = rowPtr.Materialize(allocator);
+        const auto materializedRow = rowPtr->Materialize(allocator);
         const auto& data = materializedRow.Data();
 
         return Headers::ColumnHistograms{
@@ -610,8 +610,8 @@ namespace CoreEngine {
         };
     }
 
-  Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr) {
-   const auto materializedRow = rowPtr.Materialize(allocator);
+  Headers::IndexStatistics SystemCatalog::ToIndexStatistics(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr) {
+   const auto materializedRow = rowPtr->Materialize(allocator);
    const auto& data = materializedRow.Data();
 
    return {
@@ -1323,7 +1323,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     }
 
     DataStructures::PolymorphicArray<Security::Role> SystemCatalog::SelectRoles(const ::Memory::IAllocator* allocator) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator);
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
         table->SystemClusteredIndexScan(allocator, &rows, nullptr);
@@ -1331,7 +1331,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         DataStructures::PolymorphicArray<Security::Role> roles(allocator, rows.Size());
 
         for (const auto& row : rows) {
-            const auto materializedRow = row.Materialize(allocator);
+            const auto materializedRow = row->Materialize(allocator);
             const auto& data = materializedRow.Data();
 
             const auto view = data[static_cast<column_index_t>(SysRoles::RoleName)].AsStringView();
@@ -1350,7 +1350,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     }
 
     DataStructures::PolymorphicArray<Security::User> SystemCatalog::SelectUsers(const ::Memory::IAllocator* allocator) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator);
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
         table->SystemClusteredIndexScan(allocator, &rows, nullptr);
@@ -1358,7 +1358,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         DataStructures::PolymorphicArray<Security::User> users(allocator, rows.Size());
 
         for (const auto& row : rows) {
-            const auto materializedRow = row.Materialize(allocator);
+            const auto materializedRow = row->Materialize(allocator);
             const auto& data = materializedRow.Data();
 
             const auto view = data[static_cast<column_index_t>(SysUsers::UserName)].AsStringView();
@@ -1381,7 +1381,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
  bool SystemCatalog::DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const{
       auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-      DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
+      DataStructures::PolymorphicArray<Pages::RowView*> selectedDatabases(allocator);
 
       auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
       auto constantExpr = Expressions::ConstantExpression(Value(dbName, allocator, static_cast<column_index_t>(SysDatabases::Name)));
@@ -1404,7 +1404,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         );
 
         auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedDatabases(allocator);
 
         sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
@@ -1415,7 +1415,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 
 Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAllocator* allocator, const Int databaseId) const{
   auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
-  DataStructures::PolymorphicArray<Pages::RowReference> selectedDatabases(allocator);
+  DataStructures::PolymorphicArray<Pages::RowView*> selectedDatabases(allocator);
 
   DataTypes::Indexing::Key key(allocator);
   key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
@@ -1430,7 +1430,7 @@ Headers::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAlloc
 
 DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int databaseId) const{
      auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
-     DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 2);
+     DataStructures::PolymorphicArray<Pages::RowView*> selectedSchemas(allocator, 2);
 
     DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
@@ -1464,7 +1464,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const DataTypes::StringView& schema,
         int* schemaId
 ) const{
-    DataStructures::PolymorphicArray<Pages::RowReference> selectedSchemas(allocator, 1);
+    DataStructures::PolymorphicArray<Pages::RowView*> selectedSchemas(allocator, 1);
 
     auto* sysSchemas = this->masterDb->OpenTable(CatalogTables::SysSchemas);
 
@@ -1474,7 +1474,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     sysSchemas->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
 
     for (const auto& row : selectedSchemas){
-      const auto materializedRow = row.Materialize(allocator);
+      const auto materializedRow = row->Materialize(allocator);
       const auto currentSchemaName = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::Name));
 
       const auto schemaNameView = currentSchemaName.AsStringView();
@@ -1501,7 +1501,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int databaseId
     ) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedTables(allocator, 10);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedTables(allocator, 10);
 
         auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
@@ -1546,7 +1546,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.Empty())
       return {};
 
-    DataStructures::PolymorphicArray<Pages::RowReference> selectedTables(allocator);
+    DataStructures::PolymorphicArray<Pages::RowView*> selectedTables(allocator);
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
     auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
@@ -1576,7 +1576,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedConstraints(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedConstraints(allocator);
         auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
 
         DataTypes::Indexing::Key key(allocator);
@@ -1589,7 +1589,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         DataStructures::PolymorphicArray<Headers::ConstraintsHeader> selectedConstraintsHeader(allocator, selectedConstraints.Size());
 
         for (const auto& row : selectedConstraints) {
-            const auto materializedRow = row.Materialize(allocator);
+            const auto materializedRow = row->Materialize(allocator);
             const auto& data = materializedRow.Data();
 
             auto constraintColumns = this->SelectConstraintColumnsByConstraintId(allocator, data[0].AsInt());
@@ -1613,7 +1613,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId,
         const Int columnId
     ) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 1);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedColumns(allocator, 1);
         auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
         DataTypes::Indexing::Key key(allocator);
@@ -1632,7 +1632,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedColumns(allocator, 10);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedColumns(allocator, 10);
         auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
 
         DataTypes::Indexing::Key key(allocator);
@@ -1673,7 +1673,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
        const Int tableId
     ) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedIndexes(allocator);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
@@ -1694,7 +1694,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
     Headers::IndexHeader SystemCatalog::SelectIndexById(const ::Memory::IAllocator* allocator, const Int indexId) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
-        DataStructures::PolymorphicArray<Pages::RowReference> selectedIndexes(allocator, 1);
+        DataStructures::PolymorphicArray<Pages::RowView*> selectedIndexes(allocator, 1);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
@@ -1718,7 +1718,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Int indexId
     ) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&indexId, sizeof(indexId), DataType::Int, allocator));
@@ -1759,7 +1759,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
        const Int tableId
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 10);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, 10);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
@@ -1799,7 +1799,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Int constraintId
     ) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 2);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, 2);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&constraintId, sizeof(constraintId), DataType::Int, allocator));
@@ -1839,7 +1839,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Int columnId
     ) const{
         auto* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, 1);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
@@ -1856,7 +1856,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId
     ) const{
         auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, 1);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
@@ -1874,7 +1874,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const DataType columnType
     ) const{
         auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, 1);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, 1);
 
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
@@ -1899,7 +1899,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&columnId, sizeof(columnId), DataType::Int, allocator));
 
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
         for (const auto& row : rows)
@@ -1918,7 +1918,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         DataTypes::Indexing::Key key(allocator);
         key.InsertKey(DataTypes::Indexing::Key(&tableId, sizeof(tableId), DataType::Int, allocator));
 
-        DataStructures::PolymorphicArray<Pages::RowReference> rows(allocator);
+        DataStructures::PolymorphicArray<Pages::RowView*> rows(allocator);
         table->SystemClusteredIndexSeek(allocator, &rows, key, nullptr);
 
         for (const auto& row : rows)

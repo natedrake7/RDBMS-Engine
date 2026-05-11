@@ -82,7 +82,7 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = INVALID_TABLE_ID;
   }
 
-  void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows){
+  void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowView>& rows){
 
   }
 
@@ -125,9 +125,8 @@ namespace QueryPipeline::PhysicalPlan {
 
     result.results.Reserve(result.rows.Size());
 
-    for (const auto& row: result.rows){
-      result.results.Push(row.Materialize(context.GetAllocator()));
-    }
+    for (const auto& row: result.rows)
+      result.results.Push(row->Materialize(context.GetAllocator()));
 
     return result;
   }
@@ -409,7 +408,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
       QueryResult resultRow(context.GetAllocator());
 
       for (const auto& expression : this->resultExpressions) {
-        evaluationContext.row = &row;
+        evaluationContext.row = row;
         resultRow.AddColumn(expression->Evaluate(evaluationContext));
       }
 
@@ -481,14 +480,16 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             context
         );
 
-        DataStructures::PolymorphicArray<Pages::RowReference> filteredRows(context.GetAllocator(), result.rows.Size() / 2);
+        DataStructures::PolymorphicArray<Pages::RowView*> filteredRows(
+            context.GetAllocator(),
+            result.rows.Size() / 2
+        );
         for (auto& row : result.rows) {
-            evaluationContext.row = &row;
-
+            evaluationContext.row = row;
             if (!this->filter->Evaluate(evaluationContext).AsBool())
                 continue;
 
-            filteredRows.Push(std::move(row));
+            filteredRows.Push(row);
         }
 
         result.rows = std::move(filteredRows);

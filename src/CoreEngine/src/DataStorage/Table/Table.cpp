@@ -440,7 +440,7 @@ namespace CoreEngine::StorageTypes {
       }
 
     void Table::DeleteLargeObjectFromPage(
-        Pages::RowReference& rowPtr,
+        Pages::RowView& rowPtr,
         const HashSet<column_index_t>& updatedColumns
     ){
       const auto& filename = this->database->GetFileName();
@@ -491,7 +491,7 @@ namespace CoreEngine::StorageTypes {
       // }
     }
 
-    void Table::DeleteOverflowedRowsFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t> & updatedColumns)const{
+    void Table::DeleteOverflowedRowsFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t> & updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
       // auto* rowHeader = row->GetHeader();
@@ -534,7 +534,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::HeapScan(
       const ExecutionContext& executionContext,
-      DataStructures::PolymorphicArray<Pages::RowReference> *result,
+      DataStructures::PolymorphicArray<Pages::RowView*> *result,
       ScanState& state
     )const{
         if(this->header.allocationPageId == INVALID_PAGE_ID)
@@ -579,9 +579,9 @@ namespace CoreEngine::StorageTypes {
             state.lastFetchedRowId.pageId = extentPageId;
 
             for (int i = state.GetNextKeyIndex(); i < page.PageSize(); i++) {
-              auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
+              auto* rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
 
-              result->Push(std::move(rowPtr));
+              result->Push(rowPtr);
 
               state.lastFetchedRowId.indexId = i;
 
@@ -598,7 +598,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::TemporaryDatabaseHeapScan(
-        DataStructures::PolymorphicArray<Pages::RowReference> *result,
+        DataStructures::PolymorphicArray<Pages::RowView*> *result,
         ScanState& state,
         const Int batchSize
     ) const{
@@ -805,9 +805,9 @@ namespace CoreEngine::StorageTypes {
                     continue;
 
                 for (int i = 0; i < page.PageSize(); i++) {
-                    auto row = page.PeekRow(executionContext.GetAllocator(), i, 0);
+                    auto* row = page.PeekRow(executionContext.GetAllocator(), i, 0);
 
-                    evaluationContext.row = &row;
+                    evaluationContext.row = row;
                     const auto value = expression->Evaluate(evaluationContext);
                     if(!value.AsBool()) continue;
 
@@ -868,7 +868,7 @@ namespace CoreEngine::StorageTypes {
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
-                    evaluationContext.row = &rowPtr;
+                    evaluationContext.row = rowPtr;
 
                     const auto value = expression->Evaluate(evaluationContext);
                     if(!value.AsBool())
@@ -1040,7 +1040,7 @@ namespace CoreEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    int Table::HandleRowOverflow(Pages::RowReference& rowPtr) const{
+    int Table::HandleRowOverflow(Pages::RowView& rowPtr) const{
       // auto largestBlock = row->FindLargestVariableLengthColumn();
 
       // if(largestBlock.IsNull())
@@ -1063,7 +1063,7 @@ namespace CoreEngine::StorageTypes {
       // return largestBlock.Size();
     }
 
-      int Table::HandleRowOverflow(Pages::RowReference& rowPtr, const Column *column)const{
+      int Table::HandleRowOverflow(Pages::RowView& rowPtr, const Column *column)const{
         // auto& data = row->GetData();
         //
         // if(data.size() < column->OrdinalPosition())
@@ -1093,7 +1093,7 @@ namespace CoreEngine::StorageTypes {
     //Handle overflow too dynamically probably during row insert
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Value>& updates
     ){
@@ -1103,12 +1103,12 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
 
-        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
 
         const auto* allocator = context.GetAllocator();
         this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(allocator);
+        auto materializedRow = rowPtr->Materialize(allocator);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
@@ -1132,25 +1132,25 @@ namespace CoreEngine::StorageTypes {
               return insertResult;
 
           //install forward referencing ptr to older row pos
-          page->SetForwardPointer(rowPtr.indexPosition, insertResult.rowId);
+          page->SetForwardPointer(rowPtr->indexPosition, insertResult.rowId);
           return insertResult;
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ){
 
-        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
 
         const auto* allocator = context.GetAllocator();
         this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(allocator);
+        auto materializedRow = rowPtr->Materialize(allocator);
 
-        const Expressions::EvaluationContext evaluationContext(&rowPtr, context);
+        const Expressions::EvaluationContext evaluationContext(rowPtr, context);
         for (const auto* updateExpr : updates) {
             auto updatedValue = updateExpr->Evaluate(evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
@@ -1179,14 +1179,14 @@ namespace CoreEngine::StorageTypes {
             return insertResult;
 
         //install forward referencing ptr to older row pos
-        page->SetForwardPointer(rowPtr.indexPosition, insertResult.rowId);
+        page->SetForwardPointer(rowPtr->indexPosition, insertResult.rowId);
 
         return insertResult;
     }
 
     Errors::RuntimeStatus Table::SystemUpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const ::Memory::IAllocator* allocator,
         const DataStructures::PolymorphicArray<Value>& updates
     ) const{
@@ -1196,10 +1196,10 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
 
-        const auto rowRawData = page->RowRawData(rowPtr.indexPosition, rowPtr.lazyState->dataOffset);
+        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
         this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = rowPtr.Materialize(allocator);
+        auto materializedRow = rowPtr->Materialize(allocator);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
@@ -1397,13 +1397,13 @@ namespace CoreEngine::StorageTypes {
     void Table::HandleAddColumn(
         const ExecutionContext& executionContext,
         const Pages::PageView* page,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView* rowPtr,
         const column_index_t index,
         const Value &defaultValue
     ) const{
         const auto* allocator = executionContext.GetAllocator();
 
-        auto materializedRow = rowPtr.Materialize(allocator);
+        auto materializedRow = rowPtr->Materialize(allocator);
         materializedRow.AddColumn(defaultValue, index);
 
         Errors::RuntimeStatus status;

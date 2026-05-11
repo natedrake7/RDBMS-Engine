@@ -11,12 +11,12 @@
 #include "../../QueryPipeline/include/Statements.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
-#include "Pages/Additional/RowReference.h"
+#include "Pages/Additional/RowView.h"
 
 bool SortingFunctions::CompareRowsAscending(
     const CoreEngine::ExecutionContext& context,
-    const Pages::RowReference& firstRow,
-    const Pages::RowReference& secondRow,
+    const Pages::RowView& firstRow,
+    const Pages::RowView& secondRow,
     const column_index_t& columnIndex
 ){
     return firstRow.PartialMaterialize(context.GetAllocator(), columnIndex) < secondRow.PartialMaterialize(context.GetAllocator(), columnIndex);
@@ -24,8 +24,8 @@ bool SortingFunctions::CompareRowsAscending(
 
 bool SortingFunctions::CompareRowsDescending(
      const CoreEngine::ExecutionContext& context,
-    const Pages::RowReference& firstRow,
-    const Pages::RowReference& secondRow,
+    const Pages::RowView& firstRow,
+    const Pages::RowView& secondRow,
     const column_index_t &columnIndex
 ){
     return !SortingFunctions::CompareRowsAscending(context, firstRow, secondRow, columnIndex);
@@ -155,11 +155,11 @@ void SortingFunctions::OrderBy(
 }
 
 std::unordered_map<std::string, AggregateResults> SortingFunctions::GroupBy(
-    const std::vector<Pages::RowReference> &rows,
+    const std::vector<Pages::RowView> &rows,
     const std::vector<GroupCondition> &sortConditions
 ){
     std::unordered_map<std::string, AggregateResults> groupedResults;
-    std::unordered_map<std::string, std::vector<Pages::RowReference>> groupedRows;
+    std::unordered_map<std::string, std::vector<Pages::RowView>> groupedRows;
 
     //add any aggregate function execution asWell by condition
     //also store the keys of the groupBy used in order to prin them.
@@ -222,7 +222,7 @@ bool MergeComparator::HasProperties() const{
     return this->context != nullptr;
 }
 
-std::string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, const std::vector<GroupCondition> &sortConditions)
+std::string SortingFunctions::CreateGroupByKey(const Pages::RowView& row, const std::vector<GroupCondition> &sortConditions)
 {
     std::string hashKey;
     for(const auto& condition : sortConditions){
@@ -233,7 +233,7 @@ std::string SortingFunctions::CreateGroupByKey(const Pages::RowReference& row, c
     return hashKey;
 }
 
-long double SortingFunctions::ApplyAggregateFunctionToGroup(const std::vector<Pages::RowReference> &rowGroup, const GroupCondition &condition)
+long double SortingFunctions::ApplyAggregateFunctionToGroup(const std::vector<Pages::RowView> &rowGroup, const GroupCondition &condition)
 {
     switch (condition.GetAggregateFunction())
     {

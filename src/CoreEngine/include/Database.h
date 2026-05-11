@@ -135,14 +135,14 @@ public:
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const ExecutionContext& context,
         const std::vector<column_index_t>& indexedColumns,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView& rowPtr,
         Int offSet
     );
 
     [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
         const ExecutionContext& context,
         const std::vector<column_index_t>& indexedColumns,
-        const Pages::RowReference& rowPtr,
+        const Pages::RowView& rowPtr,
         const DataTypes::RowIdentifier& rowId
     );
 

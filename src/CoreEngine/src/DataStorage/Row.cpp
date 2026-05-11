@@ -34,26 +34,26 @@ namespace CoreEngine::StorageTypes {
         this->overflowBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
     }
 
-    // RowHeader & RowHeader::operator=(const RowHeader &otherHeader){
-    //     if (this == &otherHeader)
-    //         return *this;
-    //
-    //     this->nullBitMap = ByteMaps::BitMap(otherHeader.nullBitMap);
-    //     this->largeObjectBitMap = ByteMaps::BitMap(otherHeader.largeObjectBitMap);
-    //     this->overflowBitMap = ByteMaps::BitMap(otherHeader.overflowBitMap);
-    //
-    //     this->version = otherHeader.version;
-    //
-    //     return *this;
-    // }
-    //
-    // RowHeader::RowHeader(const RowHeader& otherHeader){
-    //     this->version = otherHeader.version;
-    //
-    //     this->nullBitMap = otherHeader.nullBitMap;
-    //     this->largeObjectBitMap = otherHeader.largeObjectBitMap;
-    //     this->overflowBitMap = otherHeader.overflowBitMap;
-    // }
+    RowHeader & RowHeader::operator=(const RowHeader &otherHeader){
+        if (this == &otherHeader)
+            return *this;
+
+        this->nullBitMap = otherHeader.nullBitMap;
+        this->largeObjectBitMap = otherHeader.largeObjectBitMap;
+        this->overflowBitMap = otherHeader.overflowBitMap;
+
+        this->version = otherHeader.version;
+
+        return *this;
+    }
+
+    RowHeader::RowHeader(const RowHeader& otherHeader){
+        this->version = otherHeader.version;
+
+        this->nullBitMap = otherHeader.nullBitMap;
+        this->largeObjectBitMap = otherHeader.largeObjectBitMap;
+        this->overflowBitMap = otherHeader.overflowBitMap;
+    }
 
     RowHeader::RowHeader(RowHeader&& otherHeader) noexcept{
         this->version = otherHeader.version;

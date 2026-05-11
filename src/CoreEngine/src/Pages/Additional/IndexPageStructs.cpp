@@ -97,7 +97,7 @@ namespace Pages{
     //     this->row = other.row;
     // }
 
-    LeafNodeTuple::LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key){
+    LeafNodeTuple::LeafNodeTuple(RowView& row, DataTypes::Indexing::Key& key){
         this->key = std::move(key);
         this->row = std::move(row);
     }

@@ -9,7 +9,7 @@
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "DataTypes/DateTime.h"
-#include "Pages/Additional/RowReference.h"
+#include "Pages/Additional/RowView.h"
 
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include "DataTypes/DataTypes.StaticData.h"
@@ -62,6 +62,7 @@ namespace Expressions{
         this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
+        this->joinRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
@@ -72,6 +73,7 @@ namespace Expressions{
         this->allocator = allocator;
         this->variables = nullptr;
         this->row = nullptr;
+        this->joinRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
@@ -82,28 +84,19 @@ namespace Expressions{
         this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
         this->row = nullptr;
+        this->joinRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
-      const Pages::RowReference* row,
+      const Pages::RowView* row,
       const CoreEngine::ExecutionContext& executionContext
     ){
         this->type = EvaluationContextType::SingleRow;
         this->row = row;
+        this->joinRow = nullptr;
         this->allocator = executionContext.GetAllocator();
         this->variables = executionContext.GetVariables();
     }
-
-    // EvaluationContext::EvaluationContext(
-    //     const Pages::RowReference* row,
-    //     const DatabaseEngine::ExecutionProperties& properties
-    // ){
-    //     this->type = EvaluationContextType::SingleRow;
-    //     this->properties = &executionContext;
-    //     this->row = row;
-    //     this->outerRow = nullptr;
-    //     this->innerRow = nullptr;
-    // }
 
     EvaluationContext::EvaluationContext(
         const QueryResult &row,
@@ -114,11 +107,12 @@ namespace Expressions{
         this->variables = executionContext.GetVariables();
         this->materializedRow = row;
         this->row = nullptr;
+        this->joinRow = nullptr;
     }
 
     EvaluationContext::EvaluationContext(
-        const Pages::RowReference* row,
-        const Pages::RowReference* joinRow,
+        const Pages::RowView* row,
+        const Pages::RowView* joinRow,
         const CoreEngine::ExecutionContext& executionContext
     ) :     row(row), joinRow(joinRow),
             allocator(executionContext.GetAllocator()),
@@ -126,28 +120,28 @@ namespace Expressions{
             type(EvaluationContextType::Join){}
 
     EvaluationContext EvaluationContext::CreateJoinContext(
-        const Pages::RowReference* outerRow,
-        const Pages::RowReference* innerRow,
+        const Pages::RowView* outerRow,
+        const Pages::RowView* innerRow,
         const CoreEngine::ExecutionContext& executionContext
     ){
         return EvaluationContext(outerRow, innerRow, executionContext);
     }
 
     Value Expression::EvaluateJoin(const EvaluationContext& context) const{
-        auto previousColumns = context.row->lazyState->numberOfColumns;
+        auto previousColumns = context.row->numberOfColumns;
         if (this->columnIndex < previousColumns)
             return context.row->PartialMaterialize(context.allocator, this->columnIndex);
 
-        for (const auto& joinedRow : context.row->lazyState->joinedRows) {
-            const auto joinRowColumns = joinedRow.lazyState->numberOfColumns;
+        for (const auto& joinedRow : context.row->logicalState->joinedRows) {
+            const auto joinRowColumns = joinedRow->numberOfColumns;
 
             if (this->columnIndex < previousColumns + joinRowColumns)
-                return joinedRow.PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
+                return joinedRow->PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
 
             previousColumns += joinRowColumns;
         }
 
-        if (this->columnIndex < previousColumns + context.joinRow->lazyState->numberOfColumns)
+        if (this->columnIndex < previousColumns + context.joinRow->numberOfColumns)
             return context.joinRow->PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
 
         return Value::Null();
@@ -186,23 +180,32 @@ namespace Expressions{
     const BranchExpression * Expression::AsBranch() const{ return static_cast<const BranchExpression*>(this); }
     const FunctionExpression * Expression::AsFunction() const{ return static_cast<const FunctionExpression*>(this); }
     const JsonExpression* Expression::AsJson() const{ return static_cast<const JsonExpression*>(this); }
+
+    bool Expression::IsColumnType() const{
+        return this->expressionType == ExpressionType::Column
+            || this->expressionType == ExpressionType::Json;
+    }
+
     void Expression::SetIndex(const column_index_t index){ this->columnIndex = index; }
 
     Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
-        auto previousColumns = context.row->lazyState->numberOfColumns;
+        auto previousColumns = context.row->numberOfColumns;
         if (this->columnIndex < previousColumns)
             return context.row->PartialMaterialize(context.allocator, this->columnIndex);
 
-        for (const auto& joinedRow : context.row->lazyState->joinedRows) {
-            const auto joinRowColumns = joinedRow.lazyState->numberOfColumns;
+        for (const auto& joinedRow : context.row->logicalState->joinedRows) {
+            const auto joinRowColumns = joinedRow->numberOfColumns;
 
             if (this->columnIndex < previousColumns + joinRowColumns)
-                return joinedRow.PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
+                return joinedRow->PartialMaterialize(
+                    context.allocator,
+                    this->columnIndex - previousColumns
+                );
 
             previousColumns += joinRowColumns;
         }
 
-        return Value::Null();
+        return Value::Null(context.allocator);
     }
 
     ColumnExpression::ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias){
@@ -706,18 +709,20 @@ namespace Expressions{
         return arguments[0];
     }
 
-    bool FunctionExpression::ValidateCoalesce(const DataStructures::PolymorphicArray<Expression*>& arguments, DataTypes::String& errorMessage){
+    bool FunctionExpression::ValidateCoalesce(
+        const DataStructures::PolymorphicArray<Expression*>& arguments,
+        DataTypes::String& errorMessage
+    ){
         auto promotedType = DataType::String;
 
-        std::vector<DataType> argTypes;
+        DataStructures::PolymorphicArray<DataType> argTypes(arguments.GetAllocator(), arguments.Size());
         for (const auto& argument : arguments) {
             const auto argType = argument->GetReturnType();
-
-            argTypes.push_back(argType);
+            argTypes.Push(argType);
             promotedType = Value::PromoteType(promotedType, argType);
         }
 
-        for (const auto& type : argTypes) {
+        for (const auto type : argTypes) {
             if (!DataTypes::Coercions::IsCoercionAllowed(type, promotedType)){
                 FunctionExpression::ConstructInvalidCastMessage(errorMessage, type, promotedType);
                 return false;
@@ -904,15 +909,20 @@ namespace Expressions{
     Value JsonExpression::Evaluate(const EvaluationContext& context) const{
         switch (context.type) {
         case EvaluationContext::EvaluationContextType::SingleRow: {
-            const auto columnValue = context.row->PartialMaterialize(context.allocator, this->columnPtr->columnIndex);
+            const auto columnValue = context.row->PartialMaterialize(
+                context.allocator,
+                this->columnPtr->columnIndex
+            );
             return this->EvaluateJsonPath(context, columnValue);
         }
         case EvaluationContext::EvaluationContextType::MaterializedRow: {
             const auto columnValue = context.materializedRow.GetColumnAt(this->columnPtr->columnIndex);
             return this->EvaluateJsonPath(context, columnValue);
         }
-        case EvaluationContext::EvaluationContextType::Join:
-            return this->EvaluateJsonPath(context, this->EvaluateJoin(context));
+        case EvaluationContext::EvaluationContextType::Join:{
+            const auto columnValue = this->columnPtr->Evaluate(context);
+            return this->EvaluateJsonPath(context, columnValue);
+        }
         case EvaluationContext::EvaluationContextType::Constant:
         case EvaluationContext::EvaluationContextType::Aggregate:
         case EvaluationContext::EvaluationContextType::Window:

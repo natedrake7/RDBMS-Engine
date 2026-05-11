@@ -294,6 +294,16 @@ namespace QueryPipeline {
             DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
         );
 
+        static void ProcessBinaryOperationJoinLeftCondition(
+            Expressions::Expression* expression,
+            JoinConditionInfo& info
+        );
+
+        static void ProcessBinaryOperationJoinRightCondition(
+            Expressions::Expression* expression,
+            JoinConditionInfo& info
+        );
+
         static void ProcessJoinCondition(
             Expressions::Expression* expression,
             DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,

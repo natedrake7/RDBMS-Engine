@@ -118,7 +118,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression
@@ -135,7 +135,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexSeek(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
     ){
@@ -151,7 +151,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::SystemClusteredIndexSeek(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
         const DataTypes::Indexing::Key& key,
         const Expressions::Expression* expression
     ){
@@ -167,7 +167,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowReference> *selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
@@ -186,7 +186,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowReference> *selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
         const Expressions::Expression *expression
     ){
         if (this->header.allocationPageId == INVALID_PAGE_ID)
@@ -204,7 +204,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::SystemClusteredIndexScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
         const Expressions::Expression* expression
     ){
         if (this->header.allocationPageId == INVALID_PAGE_ID)
@@ -222,7 +222,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::NonClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowReference> *selectedRows,
+        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
         const Int indexPos,
         IndexState& state,
         const Expressions::Expression *expression
@@ -293,7 +293,7 @@ namespace CoreEngine::StorageTypes {
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
-        std::vector<Pages::RowReference> results;
+        std::vector<Pages::RowView> results;
         // tree->IndexScan(properties, &results, state);
 
         if(results.empty())

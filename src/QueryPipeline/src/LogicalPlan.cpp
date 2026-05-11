@@ -144,6 +144,11 @@ namespace QueryPipeline {
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
+            case PipelineConstants::JoinAlgorithm::CrossJoin:
+                return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossInnerJoin>(
+                    left->ToPhysical(context),
+                    right->ToPhysical(context)
+                );
         }
 
         throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
@@ -165,6 +170,11 @@ namespace QueryPipeline {
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
+                );
+            case PipelineConstants::JoinAlgorithm::CrossJoin:
+                return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossLeftJoin>(
+                    left->ToPhysical(context),
+                    right->ToPhysical(context)
                 );
         }
 
@@ -188,6 +198,11 @@ namespace QueryPipeline {
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
+            case PipelineConstants::JoinAlgorithm::CrossJoin:
+                return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossLeftJoin>(
+                    right->ToPhysical(context),
+                    left->ToPhysical(context)
+                );
         }
 
         throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
@@ -209,6 +224,11 @@ namespace QueryPipeline {
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
+                );
+            case PipelineConstants::JoinAlgorithm::CrossJoin:
+                return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossFullJoin>(
+                    left->ToPhysical(context),
+                    right->ToPhysical(context)
                 );
         }
 

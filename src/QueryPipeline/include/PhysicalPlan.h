@@ -28,10 +28,25 @@ namespace QueryPipeline {
 }
 
 namespace QueryPipeline::PhysicalPlan {
+    struct ExecutionResult;
+
+    static void PerformNullJoin(
+        const ::Memory::IAllocator* allocator,
+        ExecutionResult& result,
+        Pages::RowView* outerRow,
+        Int numberOfColumns
+    );
+    static void PerformJoin(
+        const ::Memory::IAllocator* allocator,
+        ExecutionResult& result,
+        const Pages::RowView* outerRow,
+        const Pages::RowView* innerRow
+    );
+
     struct ExecutionResult {
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
         DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
-        DataStructures::PolymorphicArray<Pages::RowReference> rows;
+        DataStructures::PolymorphicArray<Pages::RowView*> rows;
         DataStructures::PolymorphicArray<QueryResult> results;
 
         Errors::RuntimeStatus status;
@@ -69,7 +84,7 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode();
         explicit PlanNode(const DataTypes::Guid& currentSessionId);
         virtual ~PlanNode() = default;
-        void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowReference>& rows);
+        void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowView>& rows);
         void InsertPostProjectionResultsToTemporaryDatabase(
             const CoreEngine::ExecutionContext& context,
             ExecutionResult& result,
@@ -448,6 +463,7 @@ namespace QueryPipeline::PhysicalPlan {
      * @{
      */
 
+    // --- Nested Loop Joins ---
     class PhysicalNestedLoopInnerJoin final : public PlanNode {
         PlanNode* left;
         PlanNode* right;
@@ -455,7 +471,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         [[nodiscard]] ExecutionResult ExecuteBatchJoin(
             const CoreEngine::ExecutionContext& context,
-            const ExecutionResult& leftResult
+            ExecutionResult& leftResult
         ) const;
     public:
         PhysicalNestedLoopInnerJoin(
@@ -466,6 +482,42 @@ namespace QueryPipeline::PhysicalPlan {
         ~PhysicalNestedLoopInnerJoin() override;
         ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
     };
+
+    class PhysicalNestedLoopLeftJoin final : public PlanNode {
+        PlanNode* left;
+        PlanNode* right;
+        Expressions::Expression* expression;
+
+        [[nodiscard]] ExecutionResult ExecuteBatchJoin(
+            const CoreEngine::ExecutionContext& context,
+            ExecutionResult& leftResult
+        ) const;
+
+    public:
+        PhysicalNestedLoopLeftJoin(
+            PlanNode* left,
+            PlanNode* right,
+            Expressions::Expression* expression
+        );
+        ~PhysicalNestedLoopLeftJoin() override;
+        ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
+    };
+
+    class PhysicalNestedLoopFullJoin final : public PlanNode {
+        PlanNode* left;
+        PlanNode* right;
+        Expressions::Expression* joinCondition;
+    public:
+        PhysicalNestedLoopFullJoin(
+            PlanNode* left,
+            PlanNode* right,
+            Expressions::Expression* joinCondition
+        );
+        ~PhysicalNestedLoopFullJoin() override;
+        ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
+    };
+
+    // --- Merge Joins ---
 
     class PhysicalMergeInnerJoin final : public PlanNode {
         PlanNode* left;
@@ -539,31 +591,45 @@ namespace QueryPipeline::PhysicalPlan {
         ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
     };
 
-    class PhysicalNestedLoopLeftJoin final : public PlanNode {
+    class PhysicalCrossInnerJoin final : public PlanNode {
         PlanNode* left;
         PlanNode* right;
-        Expressions::Expression* expression;
+
+        ExecutionResult ExecuteBatchJoin(
+            const CoreEngine::ExecutionContext& context,
+            ExecutionResult& leftResult
+        ) const;
     public:
-        PhysicalNestedLoopLeftJoin(
-            PlanNode* left,
-            PlanNode* right,
-            Expressions::Expression* expression
-        );
-        ~PhysicalNestedLoopLeftJoin() override;
+        PhysicalCrossInnerJoin(PlanNode* left, PlanNode* right);
+        ~PhysicalCrossInnerJoin() override;
         ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
     };
 
-    class PhysicalNestedLoopFullJoin final : public PlanNode {
+    class PhysicalCrossLeftJoin final : public PlanNode {
         PlanNode* left;
         PlanNode* right;
-        Expressions::Expression* joinCondition;
+
+        ExecutionResult ExecuteBatchJoin(
+            const CoreEngine::ExecutionContext& context,
+            ExecutionResult& leftResult
+        ) const;
     public:
-        PhysicalNestedLoopFullJoin(
-            PlanNode* left,
-            PlanNode* right,
-            Expressions::Expression* joinCondition
-        );
-        ~PhysicalNestedLoopFullJoin() override;
+        PhysicalCrossLeftJoin(PlanNode* left, PlanNode* right);
+        ~PhysicalCrossLeftJoin() override;
+        ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
+    };
+
+    class PhysicalCrossFullJoin final : public PlanNode {
+        PlanNode* left;
+        PlanNode* right;
+
+        ExecutionResult ExecuteBatchJoin(
+            const CoreEngine::ExecutionContext& context,
+            ExecutionResult& leftResult
+        ) const;
+    public:
+        PhysicalCrossFullJoin(PlanNode* left, PlanNode* right);
+        ~PhysicalCrossFullJoin() override;
         ExecutionResult Execute(const CoreEngine::ExecutionContext& context) override;
     };
 

@@ -3,7 +3,7 @@
 
 #include "../../Systemic/include/Key.h"
 #include "../../Systemic/include/RowIdentifier.h"
-#include "RowReference.h"
+#include "RowView.h"
 
 namespace CoreEngine::StorageTypes{
     class InsertPayload;
@@ -54,7 +54,7 @@ namespace Pages{
 
 	struct LeafNodeTuple{
 		DataTypes::Indexing::Key key;
-		RowReference row;
+		RowView row;
 
 		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
 		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
@@ -62,7 +62,7 @@ namespace Pages{
 		LeafNodeTuple& operator=(const LeafNodeTuple& other) = delete;
 		LeafNodeTuple(const LeafNodeTuple& other) = delete;
 
-		LeafNodeTuple(RowReference& row, DataTypes::Indexing::Key& key);
+		LeafNodeTuple(RowView& row, DataTypes::Indexing::Key& key);
 	};
 
 	struct RowIdTuple{

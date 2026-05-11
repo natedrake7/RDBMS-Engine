@@ -155,6 +155,9 @@ namespace DataStructures{
             this->_size += count;
         }
 
+        void AlignSize(){
+            this->_size = this->_capacity;
+        }
 
         void MemoryCopy(const void* src, const Int size){
             if (this->_size + size > this->_capacity){

@@ -36,40 +36,40 @@ namespace CoreEngine {
 
         static Headers::DatabaseHeader ToDatabaseHeader(
             const ::Memory::IAllocator* allocator,
-            const Pages::RowReference& rowPtr
+            const Pages::RowView* rowPtr
         );
         static Headers::DatabaseHeader ToDatabaseHeader(
             const ::Memory::IAllocator* allocator,
-            const Pages::RowReference& rowPtr,
+            const Pages::RowView* rowPtr,
            DataStructures::PolymorphicArray<Headers::TableHeader>& dbTables,
            DataStructures::PolymorphicArray<Headers::SchemaHeader>& schemas
         );
-        static Headers::SchemaHeader ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::TableHeader ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::ColumnHeader ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::IndexHeader ToIndexHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::IndexColumnsHeader ToIndexColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+        static Headers::SchemaHeader ToSchemaHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::TableHeader ToTableHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::ColumnHeader ToColumnHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::IndexHeader ToIndexHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::IndexColumnsHeader ToIndexColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::IdentityColumnsHeader ToIdentityColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
         static Headers::ConstraintsHeader ToConstraintsHeader(
             const ::Memory::IAllocator* allocator,
-            const Pages::RowReference& rowPtr,
+            const Pages::RowView* rowPtr,
            DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader>& constraintColumns,
             Headers::IndexHeader& indexHeader
         );
-        static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::DefaultValuesHeader ToDefaultValuesHeader(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
-        static Headers::TableStatistics ToTableStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+        static Headers::ConstraintsColumnsHeader ToConstraintsColumnsHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::DefaultValuesHeader ToDefaultValuesHeader(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
+        static Headers::TableStatistics ToTableStatistics(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
         static Headers::ColumnStatistics ToColumnStatistics(
             const ::Memory::IAllocator* allocator,
-            const Pages::RowReference& rowPtr,
+            const Pages::RowView* rowPtr,
             DataType columnType
         );
         static Headers::ColumnHistograms ToColumnHistograms(
             const ::Memory::IAllocator* allocator,
-            const Pages::RowReference& rowPtr,
+            const Pages::RowView* rowPtr,
             DataType columnType
         );
-        static Headers::IndexStatistics ToIndexStatistics(const ::Memory::IAllocator* allocator, const Pages::RowReference& rowPtr);
+        static Headers::IndexStatistics ToIndexStatistics(const ::Memory::IAllocator* allocator, const Pages::RowView* rowPtr);
 
     public:
         SystemCatalog(SystemCatalog const&) = delete;

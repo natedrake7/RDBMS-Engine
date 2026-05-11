@@ -23,7 +23,7 @@ namespace MultiThreading{
 }
 
 namespace Pages{
-    struct RowReference;
+    struct RowView;
     struct Frame;
 
     struct PageHeader{
@@ -69,7 +69,7 @@ namespace Pages{
         [[nodiscard]] PageHeader* GetHeader()const;
 
         [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
-        [[nodiscard]] RowReference PeekRow(
+        [[nodiscard]] RowView* PeekRow(
             const ::Memory::IAllocator* allocator,
             Int indexPosition,
             Int offSet
@@ -103,7 +103,7 @@ namespace Pages{
         bool UpdateRow(
             const ::Memory::IAllocator* allocator,
             const CoreEngine::StorageTypes::InsertPayload& payload,
-            const RowReference& rowPtr
+            const RowView* rowPtr
         ) const;
         void SetForwardPointer(
             Int indexPosition,
@@ -122,13 +122,13 @@ namespace Pages{
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 
-        void InitializeRowReferenceCache(const RowReference* rowPtr)const;
+        void InitializeRowReferenceCache(const RowView* rowPtr)const;
         [[nodiscard]] QueryResult MaterializeRow(
             const Memory::IAllocator* allocator,
             Int indexPosition,
             Int keySize
         ) const;
-        Value PartialMaterializeRow(const Memory::IAllocator* allocator, const RowReference* rowPtr, column_index_t columnIndex) const;
+        Value PartialMaterializeRow(const Memory::IAllocator* allocator, const RowView* rowPtr, column_index_t columnIndex) const;
 
         [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
 

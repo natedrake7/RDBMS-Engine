@@ -1,11 +1,11 @@
 ﻿#include "../../include/Algorithms/AggregateFunctions.h"
 #include "../../include/DataStorage/Column.h"
-#include "../../include/Pages/Additional/RowReference.h"
+#include "../../include/Pages/Additional/RowView.h"
 
 #include <limits>
 
 long double AggregateFunctions::Average(
-    const std::vector<Pages::RowReference>& rows,
+    const std::vector<Pages::RowView>& rows,
     const column_index_t& columnIndex,
     const long double* constantValue
 ){
@@ -21,7 +21,7 @@ long double AggregateFunctions::Average(
 }
 
 uint64_t AggregateFunctions::Count(
-    const std::vector<Pages::RowReference>& rows,
+    const std::vector<Pages::RowView>& rows,
     const column_index_t &columnIndex,
     const long double *constantValue
 ){
@@ -40,7 +40,7 @@ uint64_t AggregateFunctions::Count(
     return count;
 }
 
-long double AggregateFunctions::Max(const std::vector<Pages::RowReference> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Max(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -62,7 +62,7 @@ long double AggregateFunctions::Max(const std::vector<Pages::RowReference> &rows
     return max;
 }
 
-long double AggregateFunctions::Min(const std::vector<Pages::RowReference> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Min(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -84,7 +84,7 @@ long double AggregateFunctions::Min(const std::vector<Pages::RowReference> &rows
     return min;
 }
 
-long double AggregateFunctions::Sum(const std::vector<Pages::RowReference> &rows, const column_index_t &columnIndex, const long double *constantValue)
+long double AggregateFunctions::Sum(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;

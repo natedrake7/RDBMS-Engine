@@ -5,7 +5,7 @@
 #include "DataStorage/Table.h"
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
-#include "Pages/Additional/RowReference.h"
+#include "Pages/Additional/RowView.h"
 
 namespace Pages{
     PageHeader::PageHeader(){
@@ -132,19 +132,25 @@ namespace Pages{
         std::memcpy(&rowHeader.version, this->framePtr->data + offSet, Constants::ROW_VERSION_HEADER_SIZE);
         offSetCopy += Constants::ROW_VERSION_HEADER_SIZE;
 
-        rowHeader.nullBitMap.GetDataFromFile(this->framePtr->data, offSetCopy);
-        rowHeader.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSetCopy);
-        rowHeader.overflowBitMap.GetDataFromFile(this->framePtr->data, offSetCopy);
+
+        rowHeader.nullBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
+        rowHeader.largeObjectBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
+        rowHeader.overflowBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
 
         return rowHeader;
     }
 
-    RowReference PageView::PeekRow(
+    RowView* PageView::PeekRow(
         const ::Memory::IAllocator* allocator,
         const Int indexPosition,
         const Int offSet
     ) const{
-        return RowReference(this->framePtr, allocator, indexPosition, offSet);
+        return allocator->Allocate<RowView>(
+            this->framePtr,
+            allocator,
+            indexPosition,
+            offSet
+        );
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
@@ -314,19 +320,19 @@ namespace Pages{
     bool PageView::UpdateRow(
         const ::Memory::IAllocator* allocator,
         const CoreEngine::StorageTypes::InsertPayload& payload,
-        const RowReference& rowPtr
+        const RowView* rowPtr
     ) const{
-        if (this->IndexOutOfBounds(rowPtr.indexPosition))
+        if (this->IndexOutOfBounds(rowPtr->indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
-        const auto slot = this->GetSlotDirectory(rowPtr.indexPosition);
+        const auto slot = this->GetSlotDirectory(rowPtr->indexPosition);
 
-        const auto rowOffset = rowPtr.keySize + slot.GetOffset();
+        const auto rowOffset = rowPtr->keySize + slot.GetOffset();
         // const auto key = this->GetKey(rowOffset);
 
-        const auto previousRowSize = slot.GetSize() - rowPtr.keySize;
+        const auto previousRowSize = slot.GetSize() - rowPtr->keySize;
         const auto size = payload.Size();
-        const auto totalSize = rowPtr.keySize + size;
+        const auto totalSize = rowPtr->keySize + size;
         //if new row size is less than or equal to previous row size, update in place
         if (size <= previousRowSize){
             std::memcpy(this->framePtr->data + rowOffset, payload.Data(), size);
@@ -343,7 +349,7 @@ namespace Pages{
         //if next row cant fit in the remaining space, we need to compact the page
         //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
         if (this->framePtr->headerPtr->bytesLeft < totalSize){
-            this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), rowPtr.indexPosition);
+            this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), rowPtr->indexPosition);
             this->Defragment(allocator);
 
             //even if after the defragment row cant fit, throw exception
@@ -358,8 +364,8 @@ namespace Pages{
         // this->SerializeRow(rowHeader, row, nextOffset);
         // Use memmove instead of memcpy when copying within the same buffer to handle potential overlap
         if (this->IsIndexPage()){
-            std::memmove(this->framePtr->data + nextOffset, this->framePtr->data + slot.GetOffset(), rowPtr.keySize);
-            nextOffset += rowPtr.keySize;
+            std::memmove(this->framePtr->data + nextOffset, this->framePtr->data + slot.GetOffset(), rowPtr->keySize);
+            nextOffset += rowPtr->keySize;
         }
 
         // Use memcpy for payload since it's from a different buffer (no overlap possible)
@@ -367,7 +373,7 @@ namespace Pages{
 
         //update slot directory
         const auto newSlot = SlotDirectory(offSetCopy, totalSize, SlotDirectory::SLOT_USED);
-        this->UpdateSlotDirectory(newSlot, rowPtr.indexPosition);
+        this->UpdateSlotDirectory(newSlot, rowPtr->indexPosition);
 
         //update bytes
         //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
@@ -416,32 +422,32 @@ namespace Pages{
         return this->framePtr->latch;
     }
 
-    void PageView::InitializeRowReferenceCache(const RowReference* rowPtr)const{
+    void PageView::InitializeRowReferenceCache(const RowView* rowPtr)const{
         const auto slot = this->GetSlotDirectory(rowPtr->indexPosition);
 
         page_offset_t offSet = rowPtr->keySize + slot.GetOffset() + Constants::ROW_VERSION_HEADER_SIZE;
-        const auto numberOfColumns = rowPtr->lazyState->numberOfColumns;
+        const auto numberOfColumns = rowPtr->numberOfColumns;
 
-        rowPtr->lazyState->isHeaderInitialized = true;
+        rowPtr->physicalState->isHeaderInitialized = true;
 
         const auto bitmapsSize = ByteMaps::BitMap::HeapSize(numberOfColumns);
-        rowPtr->lazyState->header.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-        rowPtr->lazyState->header.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-        rowPtr->lazyState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-        rowPtr->lazyState->sizes.Resize(numberOfColumns);
+        rowPtr->physicalState->sizes.Resize(numberOfColumns);
 
         for (int i = 0; i < numberOfColumns; i++){
-            if (rowPtr->lazyState->header.nullBitMap.Get(i))
+            if (rowPtr->physicalState->header.nullBitMap.Get(i))
                 continue;
 
-            std::memcpy(&rowPtr->lazyState->sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
+            std::memcpy(&rowPtr->physicalState->sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
             offSet += sizeof(block_size_t);
         }
 
-        rowPtr->lazyState->dataOffset = offSet;
+        rowPtr->physicalState->dataOffset = offSet;
     }
 
     QueryResult PageView::MaterializeRow(
@@ -508,27 +514,27 @@ namespace Pages{
 
     Value PageView::PartialMaterializeRow(
         const Memory::IAllocator* allocator,
-        const RowReference* rowPtr,
+        const RowView* rowPtr,
         const column_index_t columnIndex
     ) const{
         const auto& columns = this->framePtr->table->GetColumns();
-        if (!rowPtr->lazyState->isHeaderInitialized)
+        if (!rowPtr->physicalState->isHeaderInitialized)
             this->InitializeRowReferenceCache(rowPtr);
 
-        block_size_t offSet = rowPtr->lazyState->dataOffset;
+        block_size_t offSet = rowPtr->physicalState->dataOffset;
         for (int i = 0; i < columnIndex; i++){
-            if (rowPtr->lazyState->header.nullBitMap.Get(i))
+            if (rowPtr->physicalState->header.nullBitMap.Get(i))
                 continue;
 
-            offSet += rowPtr->lazyState->sizes[i];
+            offSet += rowPtr->physicalState->sizes[i];
         }
 
-        if (rowPtr->lazyState->header.nullBitMap.Get(columnIndex))
+        if (rowPtr->physicalState->header.nullBitMap.Get(columnIndex))
             return Value::Null(allocator);
 
         return Value::FromExternalStorage(
             this->framePtr->data + offSet,
-            rowPtr->lazyState->sizes[columnIndex],
+            rowPtr->physicalState->sizes[columnIndex],
             columns[columnIndex]->Type(),
             allocator
         );

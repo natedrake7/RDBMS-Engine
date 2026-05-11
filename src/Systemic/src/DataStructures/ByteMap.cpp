@@ -5,8 +5,7 @@
 
 #include "DataTypes/DataTypes.h"
 
-namespace ByteMaps
-{
+namespace ByteMaps{
     void ByteMap::CheckIndex(const byte_map_pos_t pos) const{
         if (pos >= data.size())
             throw std::out_of_range("Page index out of range.");

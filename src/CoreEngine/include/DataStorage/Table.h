@@ -224,53 +224,53 @@ namespace CoreEngine::StorageTypes
         */
             void ClusteredIndexSeekRange(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexScan(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference>* selectedRows,
+                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void HeapScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowReference> *result,
+                DataStructures::PolymorphicArray<Pages::RowView*> *result,
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
-                DataStructures::PolymorphicArray<Pages::RowReference> *result,
+                DataStructures::PolymorphicArray<Pages::RowView*> *result,
                 ScanState& state,
                 Int batchSize
             )const;
@@ -323,21 +323,21 @@ namespace CoreEngine::StorageTypes
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowReference& rowPtr,
+                const Pages::RowView* rowPtr,
                 const ExecutionContext& context,
                 const DataStructures::PolymorphicArray<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowReference& rowPtr,
+                const Pages::RowView* rowPtr,
                 const ExecutionContext& context,
                 const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus SystemUpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowReference& rowPtr,
+                const Pages::RowView* rowPtr,
                 const ::Memory::IAllocator* allocator,
                 const DataStructures::PolymorphicArray<Value>& updates
             ) const;
@@ -398,8 +398,8 @@ namespace CoreEngine::StorageTypes
                 const InsertPayload& payload
             ) const;
 
-            void DeleteLargeObjectFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns);
-            void DeleteOverflowedRowsFromPage(Pages::RowReference& rowPtr, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteLargeObjectFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t>& updatedColumns);
+            void DeleteOverflowedRowsFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
             [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId) const;
             [[nodiscard]] Pages::OverflowPageView GetOverflowPage(page_id_t pageId) const;
@@ -422,8 +422,8 @@ namespace CoreEngine::StorageTypes
 
             [[nodiscard]] Database* GetDatabase() const;
 
-            int HandleRowOverflow(Pages::RowReference& rowPtr) const;
-            int HandleRowOverflow(Pages::RowReference& rowPtr, const Column* column)const;
+            int HandleRowOverflow(Pages::RowView& rowPtr) const;
+            int HandleRowOverflow(Pages::RowView& rowPtr, const Column* column)const;
 
             void InsertLargeObjectToPage(InsertPayload& payload);
 
@@ -448,7 +448,7 @@ namespace CoreEngine::StorageTypes
             void HandleAddColumn(
                 const ExecutionContext& executionContext,
                 const Pages::PageView* page,
-                const Pages::RowReference& rowPtr,
+                const Pages::RowView* rowPtr,
                 column_index_t index,
                 const Value& defaultValue
             ) const;

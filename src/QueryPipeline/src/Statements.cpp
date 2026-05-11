@@ -2512,6 +2512,8 @@ namespace QueryPipeline::Statements {
         const Dictionary<Int, column_index_t>& columnIndicesDictionary,
         Expressions::Expression *expression
     ){
+        if (expression == nullptr) return;
+
         switch (expression->expressionType) {
             case Expressions::ExpressionType::Binary:
                 AssignColumnIndicesToBinaryExpression(columnIndicesDictionary, expression->AsBinary());
@@ -2527,6 +2529,9 @@ namespace QueryPipeline::Statements {
                 break;
             case Expressions::ExpressionType::Column:
                 AssignColumnIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+                break;
+            case Expressions::ExpressionType::Json:
+                AssignColumnIndicesToColumnExpression(columnIndicesDictionary, expression->AsJson()->columnPtr);
                 break;
             case Expressions::ExpressionType::Variable:
             case Expressions::ExpressionType::Expression:
