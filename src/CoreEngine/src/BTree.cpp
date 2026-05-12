@@ -1097,7 +1097,7 @@ namespace Indexing{
                     auto* row = currentNode.PeekRowReference(allocator, i);
                     evaluationContext.row = row;
 
-                    if (expression->Evaluate(evaluationContext).AsBool())
+                    if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                         result->Push(std::move(row));
 
                     continue;
@@ -1172,7 +1172,7 @@ namespace Indexing{
 
                 auto* row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = row;
-                if (expression->Evaluate(evaluationContext).AsBool())
+                if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     result->Push(std::move(row));
             }
 
@@ -1241,7 +1241,7 @@ namespace Indexing{
                 auto* row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = row;
 
-                if (expression->Evaluate(evaluationContext).AsBool())
+                if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     result->Push(std::move(row));
             }
 
@@ -1342,7 +1342,7 @@ namespace Indexing{
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++) {
                 auto* row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = row;
-                if (!expression->Evaluate(evaluationContext).AsBool())
+                if (!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
                 result->Push(std::move(row));
@@ -1388,7 +1388,7 @@ namespace Indexing{
             for (Int i = 0;i < currentNode.PageSize();i++){
                 auto* row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = row;
-                if(!expression->Evaluate(evaluationContext).AsBool())
+                if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
                 result->Push(std::move(row));
@@ -1422,7 +1422,7 @@ namespace Indexing{
                 auto* row = currentNode.PeekRowReference(allocator, i);
                 evaluationContext.row = row;
 
-                if(!expression->Evaluate(evaluationContext).AsBool())
+                if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
                 result->Push(std::move(row));
@@ -1580,7 +1580,7 @@ namespace Indexing{
                 auto* row = currentNode.PeekRowReference(allocator, indexPosition);
 
                 evaluationContext.row = row;
-                const auto value = expression->Evaluate(evaluationContext);
+                const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                 if(!value.AsBool())
                     continue;
 
@@ -1625,7 +1625,7 @@ namespace Indexing{
 
                 evaluationContext.row = row;
 
-                const auto value = expression->Evaluate(evaluationContext);
+                const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                 if(!value.AsBool())
                     continue;
 
@@ -1756,7 +1756,7 @@ namespace Indexing{
                   ){
                       auto* row = currentNode.PeekRowReference(allocator, i);
                       evaluationContext.row = row;
-                      const auto value = expression->Evaluate(evaluationContext);
+                      const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                       if(!value.AsBool())
                           continue;
 

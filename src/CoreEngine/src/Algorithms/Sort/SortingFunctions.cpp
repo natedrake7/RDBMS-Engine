@@ -84,10 +84,10 @@ bool SortingFunctions::CompareRows(
     for (const auto& condition : sortConditions)
     {
         evaluationContext.materializedRow = firstRow;
-        const auto& firstValue = condition->expression->Evaluate(evaluationContext);
+        const auto firstValue = Expressions::EvaluateExpression(condition->expression, evaluationContext);
 
         evaluationContext.materializedRow = secondRow;
-        const auto& secondValue = condition->expression->Evaluate(evaluationContext);
+        const auto& secondValue = Expressions::EvaluateExpression(condition->expression, evaluationContext);
 
         //if column is indexed(and it is the first condition, it is already sorted by it so set the result accordingly result is positive)
         // const int result = SortingFunctions::CompareBlockByDataType(firstRowData, secondRowData);

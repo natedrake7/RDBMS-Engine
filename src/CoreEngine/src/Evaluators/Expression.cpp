@@ -282,8 +282,8 @@ namespace Expressions{
     DataType ConstantExpression::GetReturnType() const{ return this->value.GetType(); }
 
     bool BinaryExpression::ValidateAddition()const{
-        const auto leftType = this->left->GetReturnType();
-        const auto rightType = this->right->GetReturnType();
+        const auto leftType = GetExpressionReturnType(this->left);
+        const auto rightType = GetExpressionReturnType(this->right);
 
         switch (Value::PromoteType(leftType, rightType)) {
         case DataType::TinyInt:
@@ -304,8 +304,8 @@ namespace Expressions{
     }
 
     bool BinaryExpression::ValidateSubtraction() const{
-        const auto leftType = this->left->GetReturnType();
-        const auto rightType = this->right->GetReturnType();
+        const auto leftType = GetExpressionReturnType(this->left);
+        const auto rightType = GetExpressionReturnType(this->right);
 
         switch (Value::PromoteType(leftType, rightType)) {
         case DataType::TinyInt:
@@ -326,8 +326,8 @@ namespace Expressions{
     }
 
     bool BinaryExpression::ValidateMultiplication() const{
-        const auto leftType = this->left->GetReturnType();
-        const auto rightType = this->right->GetReturnType();
+        const auto leftType = GetExpressionReturnType(this->left);
+        const auto rightType = GetExpressionReturnType(this->right);
 
         switch (Value::PromoteType(leftType, rightType)) {
         case DataType::TinyInt:
@@ -353,8 +353,8 @@ namespace Expressions{
     }
 
     bool BinaryExpression::ValidateModulo() const{
-        const auto leftType = this->left->GetReturnType();
-        const auto rightType = this->right->GetReturnType();
+        const auto leftType = GetExpressionReturnType(this->left);
+        const auto rightType = GetExpressionReturnType(this->right);
 
         switch (Value::PromoteType(leftType, rightType)) {
         case DataType::TinyInt:
@@ -387,29 +387,29 @@ namespace Expressions{
     Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
         switch (this->operation) {
         case BinaryOperator::Add:
-            return this->left->Evaluate(context) + this->right->Evaluate(context);
+            return EvaluateExpression(this->left, context) + EvaluateExpression(this->right, context);
         case BinaryOperator::Subtract:
-            return this->left->Evaluate(context) - this->right->Evaluate(context);
+            return EvaluateExpression(this->left, context) - EvaluateExpression(this->right, context);
         case BinaryOperator::Multiply:
-            return this->left->Evaluate(context) * this->right->Evaluate(context);
+            return EvaluateExpression(this->left, context) * EvaluateExpression(this->right, context);
         case BinaryOperator::Divide:
-            return this->left->Evaluate(context) / this->right->Evaluate(context);
+            return EvaluateExpression(this->left, context) / EvaluateExpression(this->right, context);
         case BinaryOperator::Modulo:
-            return this->left->Evaluate(context) % this->right->Evaluate(context);
+            return EvaluateExpression(this->left, context) % EvaluateExpression(this->right, context);
         case BinaryOperator::Equal:
-            return Value(this->left->Evaluate(context) == this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) == EvaluateExpression(this->right, context), context.allocator);
         case BinaryOperator::EqualIgnoreOrdinalCase:
-            return Value::EqualsIgnoreOrdinalCase(this->left->Evaluate(context), this->right->Evaluate(context));
+            return Value::EqualsIgnoreOrdinalCase(EvaluateExpression(this->left, context), EvaluateExpression(this->right, context));
         case BinaryOperator::NotEqual:
-            return Value(this->left->Evaluate(context) != this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) != EvaluateExpression(this->right, context), context.allocator);
         case BinaryOperator::Greater:
-            return Value(this->left->Evaluate(context) > this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) > EvaluateExpression(this->right, context), context.allocator);
         case BinaryOperator::GreaterEqual:
-            return Value(this->left->Evaluate(context) >= this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) >= EvaluateExpression(this->right, context), context.allocator);
         case BinaryOperator::Less:
-            return Value(this->left->Evaluate(context) < this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) < EvaluateExpression(this->right, context), context.allocator);
         case BinaryOperator::LessEqual:
-            return Value(this->left->Evaluate(context) <= this->right->Evaluate(context), context.allocator);
+            return Value(EvaluateExpression(this->left, context) <= EvaluateExpression(this->right, context), context.allocator);
         default:
             throw std::runtime_error("BinaryExpression::Evaluate: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
@@ -422,8 +422,8 @@ namespace Expressions{
         case BinaryOperator::Multiply:
         case BinaryOperator::Divide:
         case BinaryOperator::Modulo: {
-            const auto& leftType = this->left->GetReturnType();
-            const auto& rightType = this->right->GetReturnType();
+            const auto leftType = GetExpressionReturnType(this->left);
+            const auto rightType = GetExpressionReturnType(this->right);
             return Value::PromoteType(leftType, rightType);
         }
         case BinaryOperator::Equal:
@@ -468,7 +468,10 @@ namespace Expressions{
         const auto& expectedType = info.expectedTypes.First();
 
         for (int i = 0;i < this->arguments.Size(); i++)
-            if (!FunctionExpression::ValidateReturnType(info, errorMessage, expectedType, this->arguments[i]->GetReturnType(), i))
+            if (!FunctionExpression::ValidateReturnType(
+                info, errorMessage, expectedType,
+                GetExpressionReturnType(this->arguments[i]), i
+                ))
                 return false;
 
         return true;
@@ -476,7 +479,7 @@ namespace Expressions{
 
     bool FunctionExpression::ValidateArgumentTypes(const FunctionInfo &info, DataTypes::String& errorMessage) const{
         for (int i = 0;i < this->arguments.Size(); i++)
-            if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], this->arguments[i]->GetReturnType(), i))
+            if (!FunctionExpression::ValidateReturnType(info, errorMessage, info.expectedTypes[i], GetExpressionReturnType(this->arguments[i]), i))
                 return false;
 
         return true;
@@ -543,7 +546,7 @@ namespace Expressions{
     Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
         DataStructures::PolymorphicArray<Value> evaluatedArguments(context.allocator, this->arguments.Size());
         for (const auto& arg : this->arguments)
-            evaluatedArguments.Push(std::move(arg->Evaluate(context)));
+            evaluatedArguments.Push(std::move(EvaluateExpression(arg, context)));
 
         // if (!this->IsPlugin())
         return FunctionDictionary.Get(this->functionType)(context, evaluatedArguments);
@@ -679,8 +682,8 @@ namespace Expressions{
         const DataStructures::PolymorphicArray<Expression*>& arguments,
         DataTypes::String& errorMessage
     ) {
-        const auto& firstArgumentType = arguments[0]->GetReturnType();
-        const auto& secondArgumentType = arguments[1]->GetReturnType();
+        const auto firstArgumentType = GetExpressionReturnType(arguments[0]);
+        const auto secondArgumentType = GetExpressionReturnType(arguments[1]);
 
         const auto promotedType = Value::PromoteType(
             firstArgumentType,
@@ -717,7 +720,7 @@ namespace Expressions{
 
         DataStructures::PolymorphicArray<DataType> argTypes(arguments.GetAllocator(), arguments.Size());
         for (const auto& argument : arguments) {
-            const auto argType = argument->GetReturnType();
+            const auto argType = GetExpressionReturnType(argument);
             argTypes.Push(argType);
             promotedType = Value::PromoteType(promotedType, argType);
         }
@@ -797,13 +800,13 @@ namespace Expressions{
     Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
         switch (this->logicalType) {
         case LogicalType::And: {
-            const auto leftValue = this->left->Evaluate(context);
-            const auto rightValue = this->right->Evaluate(context);
+            const auto leftValue = EvaluateExpression(this->left, context);
+            const auto rightValue = EvaluateExpression(this->right, context);
             return Value(leftValue.AsBool() && rightValue.AsBool(), context.allocator, 0);
         }
         case LogicalType::Or: {
-            const auto leftValue = this->left->Evaluate(context);
-            const auto rightValue = this->right->Evaluate(context);
+            const auto leftValue = EvaluateExpression(this->left, context);
+            const auto rightValue = EvaluateExpression(this->right, context);
             return Value(leftValue.AsBool() || rightValue.AsBool(), context.allocator, 0);
         }
         case LogicalType::Invalid:
@@ -816,17 +819,17 @@ namespace Expressions{
 
     Value BranchExpression::EvaluateSwitch(const EvaluationContext &context) const{
         for (int i = 0;i < this->branches.Size(); i++) {
-            if (this->branches[i]->Evaluate(context).AsBool())
-                return this->results[i]->Evaluate(context);
+            if (EvaluateExpression(this->branches[i], context).AsBool())
+                return EvaluateExpression(this->results[i], context);
         }
 
-        return this->baseCase->Evaluate(context);
+        return EvaluateExpression(this->baseCase, context);
     }
 
     Value BranchExpression::EvaluateTernary(const EvaluationContext &context) const{
-        if (this->branches[0]->Evaluate(context).AsBool())
-            return this->results[0]->Evaluate(context);
-        return this->results[1]->Evaluate(context);
+        if (EvaluateExpression(this->branches[0], context).AsBool())
+            return EvaluateExpression(this->results[0], context);
+        return EvaluateExpression(this->results[1], context);
     }
 
     BranchExpression::BranchExpression(const BranchType type, const ::Memory::IAllocator* allocator)
@@ -850,10 +853,10 @@ namespace Expressions{
     DataType BranchExpression::GetReturnType() const {
         auto returnType = DataType::String;
         for (const auto& result : this->results)
-            returnType = Value::PromoteType(result->GetReturnType(), returnType);
+            returnType = Value::PromoteType(GetExpressionReturnType(result), returnType);
 
         if (this->HasBaseCase())
-            returnType = Value::PromoteType(this->baseCase->GetReturnType(), returnType);
+            returnType = Value::PromoteType(GetExpressionReturnType(this->baseCase), returnType);
 
         return returnType;
     }
@@ -934,5 +937,53 @@ namespace Expressions{
 
     DataType JsonExpression::GetReturnType() const{
         return this->type;
+    }
+
+    Value EvaluateExpression(const Expression* expression, const EvaluationContext& context){
+        switch (expression->expressionType){
+        case ExpressionType::Column:
+            return expression->AsColumn()->Evaluate(context);
+        case ExpressionType::Constant:
+            return expression->AsConstant()->Evaluate(context);
+        case ExpressionType::Binary:
+            return expression->AsBinary()->Evaluate(context);
+        case ExpressionType::Logical:
+            return expression->AsLogical()->Evaluate(context);
+        case ExpressionType::Variable:
+            return expression->AsVariable()->Evaluate(context);
+        case ExpressionType::Branch:
+            return expression->AsBranch()->Evaluate(context);
+        case ExpressionType::Function:
+            return expression->AsFunction()->Evaluate(context);
+        case ExpressionType::Json:
+            return expression->AsJson()->Evaluate(context);
+        case ExpressionType::Expression:
+        default:
+            return Value::Null(context.allocator);
+        }
+    }
+
+    DataType GetExpressionReturnType(const Expression* expression){
+        switch (expression->expressionType){
+        case ExpressionType::Column:
+            return expression->AsColumn()->GetReturnType();
+        case ExpressionType::Constant:
+            return expression->AsConstant()->GetReturnType();
+        case ExpressionType::Binary:
+            return expression->AsBinary()->GetReturnType();
+        case ExpressionType::Logical:
+            return expression->AsLogical()->GetReturnType();
+        case ExpressionType::Variable:
+            return expression->AsVariable()->GetReturnType();
+        case ExpressionType::Branch:
+            return expression->AsBranch()->GetReturnType();
+        case ExpressionType::Function:
+            return expression->AsFunction()->GetReturnType();
+        case ExpressionType::Json:
+            return expression->AsJson()->GetReturnType();
+        case ExpressionType::Expression:
+        default:
+            return DataType::Null;
+        }
     }
 }

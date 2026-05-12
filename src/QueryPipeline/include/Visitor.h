@@ -181,6 +181,7 @@ namespace QueryPipeline {
 
         antlrcpp::Any visitJsonKey(SQLParser::JsonKeyContext* context) override;
 
+        antlrcpp::Any visitCastingExpression(SQLParser::CastingExpressionContext* context) override;
     };
 
     static std::string CreatePositionErrorMessage(const antlr4::ParserRuleContext* context) {

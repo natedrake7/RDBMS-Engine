@@ -307,7 +307,7 @@ namespace CoreEngine::StorageTypes {
         for(const auto& row : results){
 
             evaluationContext.row = &row;
-            const auto value = expression->Evaluate(evaluationContext);
+            const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
             if(value.AsBool())
             {
                 // const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);

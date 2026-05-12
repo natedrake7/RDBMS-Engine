@@ -146,7 +146,7 @@ namespace QueryPipeline::PhysicalPlan {
         context
     );
 
-    auto value = this->expression->Evaluate(evaluationContext);
+    auto value = Expressions::EvaluateExpression(this->expression, evaluationContext);
     this->variable.SetValue(value);
 
     if (!this->server->AddOrSetVariable(this->sessionId, this->variable)){
@@ -409,7 +409,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
       for (const auto& expression : this->resultExpressions) {
         evaluationContext.row = row;
-        resultRow.AddColumn(expression->Evaluate(evaluationContext));
+        resultRow.AddColumn(Expressions::EvaluateExpression(expression, evaluationContext));
       }
 
       result.results.Push(std::move(resultRow));
@@ -436,7 +436,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         for (const auto& expression : this->resultExpressions) {
             result.displayColumnNames.Push(expression->name);
 
-            auto field = expression->Evaluate(evaluationContext);
+            auto field = Expressions::EvaluateExpression(expression, evaluationContext);
             resultRow.AddColumn(field);
         }
 
@@ -486,7 +486,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         );
         for (auto& row : result.rows) {
             evaluationContext.row = row;
-            if (!this->filter->Evaluate(evaluationContext).AsBool())
+            if (!Expressions::EvaluateExpression(this->filter, evaluationContext).AsBool())
                 continue;
 
             filteredRows.Push(row);
@@ -581,7 +581,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
                 context
             );
 
-            auto value = expressions[i]->Evaluate(evaluationContext);
+            auto value = Expressions::EvaluateExpression(expressions[i], evaluationContext);
             value.SetColumnIndex(this->columnsIndices[index]);
             values.Push(std::move(value));
         }

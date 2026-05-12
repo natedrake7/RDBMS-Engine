@@ -88,4 +88,8 @@ namespace QueryPipeline{
 
         throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
     }
+
+    antlrcpp::Any SQLVisitorImplementation::visitCastingExpression(SQLParser::CastingExpressionContext* context){
+        return std::any(nullptr);
+    }
 }

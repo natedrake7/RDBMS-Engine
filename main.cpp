@@ -114,6 +114,8 @@
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies AS M ON M.data->>name = A.Name
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st inner join dbo.sys_databases AS sd ON sd.database_id = st.database_id
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st left join dbo.sys_databases AS sd ON sd.database_id = 1
+//heavier join
+//SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
 
 int main(){
     DataTypes::Coercions::Initialize();

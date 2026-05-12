@@ -1,12 +1,12 @@
 #pragma once
+#include "Expression.h"
 #include "Expressions.Additional.h"
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
 
-namespace DataTypes
-{
+namespace DataTypes{
     struct JsonPathStep;
 }
 
@@ -96,9 +96,6 @@ namespace Expressions{
         virtual ~Expression() = default;
         Expression();
 
-        [[nodiscard]] virtual Value Evaluate(const EvaluationContext& context) const = 0;
-        [[nodiscard]] virtual DataType GetReturnType() const = 0;
-
         [[nodiscard]] bool IsBinary()const;
         [[nodiscard]] bool IsLogical()const;
         [[nodiscard]] bool IsConstant()const;
@@ -147,8 +144,8 @@ namespace Expressions{
         ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
         explicit ColumnExpression(column_index_t index);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
-        [[nodiscard]] DataType GetReturnType() const override;
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+        [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
     };
 
@@ -160,8 +157,8 @@ namespace Expressions{
         explicit ConstantExpression(Value& value);
         explicit ConstantExpression(Value&& value);
 
-      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
-      [[nodiscard]] DataType GetReturnType() const override;
+      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+      [[nodiscard]] DataType GetReturnType() const;
     };
 
     class BinaryExpression final : public Expression {
@@ -180,8 +177,8 @@ namespace Expressions{
         BinaryExpression(Expression* left, Expression* right, BinaryOperator operation);
         ~BinaryExpression()override;
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
-        [[nodiscard]] DataType GetReturnType() const override;
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+        [[nodiscard]] DataType GetReturnType() const;
 
         [[nodiscard]] bool ValidateOperation()const;
     };
@@ -204,7 +201,7 @@ namespace Expressions{
         Constants::FunctionType functionType;
 
         FunctionExpression(Constants::FunctionType functionType, DataStructures::PolymorphicArray<Expression*>& arguments);
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
 
         //String Function
         [[nodiscard]] static Value Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments);
@@ -238,7 +235,7 @@ namespace Expressions{
         [[nodiscard]] static bool ValidateCoalesce(const DataStructures::PolymorphicArray<Expression*>& arguments, DataTypes::String& errorMessage);
 
         [[nodiscard]] bool ValidateNumberOfArguments(DataTypes::String& errorMessage)const;
-        [[nodiscard]] DataType GetReturnType() const override;
+        [[nodiscard]] DataType GetReturnType() const;
 
         [[nodiscard]] bool IsPlugin()const;
     };
@@ -261,8 +258,8 @@ namespace Expressions{
         [[nodiscard]] bool IsAnd()const;
         [[nodiscard]] bool HasAtLeastOneConstant()const;
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const override;
-        [[nodiscard]] DataType GetReturnType() const override;
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+        [[nodiscard]] DataType GetReturnType() const;
     };
 
     class BranchExpression final : public Expression {
@@ -278,8 +275,8 @@ namespace Expressions{
         Expression* baseCase;
 
         explicit BranchExpression(BranchType type, const ::Memory::IAllocator* allocator);
-        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
-        [[nodiscard]]DataType GetReturnType() const override;
+        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
+        [[nodiscard]]DataType GetReturnType() const;
 
         [[nodiscard]] bool HasBaseCase()const;
         [[nodiscard]] bool ValidateNumberOfArguments()const;
@@ -293,8 +290,8 @@ namespace Expressions{
 
       explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
 
-      [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
-      [[nodiscard]]DataType GetReturnType() const override;
+      [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
+      [[nodiscard]]DataType GetReturnType() const;
     };
 
     class JsonExpression final : public Expression {
@@ -308,7 +305,10 @@ namespace Expressions{
 
         explicit JsonExpression(ColumnExpression* columnPtr, const ::Memory::IAllocator* allocator);
 
-        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const override;
-        [[nodiscard]]DataType GetReturnType() const override;
+        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
+        [[nodiscard]]DataType GetReturnType() const;
     };
+
+    Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);
+    DataType GetExpressionReturnType(const Expression* expression);
 }

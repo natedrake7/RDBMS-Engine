@@ -68,7 +68,7 @@ namespace QueryPipeline::Statements {
                 validationStatus.code = Errors::ValidationError::Error;
                 validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-            this->expression->GetReturnType(),
+            Expressions::GetExpressionReturnType(this->expression),
             type
                 );
 
@@ -76,7 +76,7 @@ namespace QueryPipeline::Statements {
             }
 
             if (type == DataType::Null)
-                this->variable.SetType(this->expression->GetReturnType());
+                this->variable.SetType(Expressions::GetExpressionReturnType(this->expression));
         }
 
         context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
@@ -108,7 +108,7 @@ namespace QueryPipeline::Statements {
                 validationStatus.code = Errors::ValidationError::Error;
                 validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-                    this->expression->GetReturnType(),
+                    Expressions::GetExpressionReturnType(this->expression),
                     type
                 );
 
@@ -116,7 +116,7 @@ namespace QueryPipeline::Statements {
             }
 
             if (type == DataType::Null)
-                this->variable.SetType(this->expression->GetReturnType());
+                this->variable.SetType(Expressions::GetExpressionReturnType(this->expression));
         }
 
         context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
@@ -725,7 +725,7 @@ namespace QueryPipeline::Statements {
         if (!expressionResult.IsOk()) return expressionResult;
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, this->where.expression))
-            return ClauseCannotBeEvaluatedToBool(context, this->where.expression->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(this->where.expression));
 
         return Errors::ValidationStatus::Ok();
     }
@@ -997,7 +997,7 @@ namespace QueryPipeline::Statements {
         const Expressions::Expression* expression,
         const DataTypes::String& columnName
     ) const{
-        const auto valueType = expression->GetReturnType();
+        const auto valueType = Expressions::GetExpressionReturnType(expression);
 
         const auto& columnsDictionary = this->tableColumnsDictionary.Get(this->table->tableId);
 
@@ -1228,7 +1228,7 @@ namespace QueryPipeline::Statements {
         const QueryContext& context,
         const UpdateColumn* update
     ) const{
-        const auto valueType = update->value->GetReturnType();
+        const auto valueType = Expressions::GetExpressionReturnType(update->value);
         if (
             DataTypes::Coercions::IsCoercionAllowed(
             valueType,
@@ -1745,8 +1745,8 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-                    binaryExpr->left->GetReturnType(),
-                    binaryExpr->right->GetReturnType()
+                    Expressions::GetExpressionReturnType(binaryExpr->left),
+                    Expressions::GetExpressionReturnType(binaryExpr->right)
                 )
             );
         }
@@ -1755,8 +1755,8 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_OPERATION_ON_DATATYPES(
                     context.GetAllocator(),
-                    binaryExpr->left->GetReturnType(),
-                    binaryExpr->right->GetReturnType()
+                    Expressions::GetExpressionReturnType(binaryExpr->left),
+                    Expressions::GetExpressionReturnType(binaryExpr->right)
                 )
             );
         }
@@ -1781,8 +1781,8 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-                    binaryExpr->left->GetReturnType(),
-                    binaryExpr->right->GetReturnType()
+                    Expressions::GetExpressionReturnType(binaryExpr->left),
+                    Expressions::GetExpressionReturnType(binaryExpr->right)
                 )
             );
         }
@@ -1791,8 +1791,8 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_OPERATION_ON_DATATYPES(
                     context.GetAllocator(),
-                    binaryExpr->left->GetReturnType(),
-                    binaryExpr->right->GetReturnType()
+                    Expressions::GetExpressionReturnType(binaryExpr->left),
+                    Expressions::GetExpressionReturnType(binaryExpr->right)
                 )
             );
         }
@@ -1813,9 +1813,9 @@ namespace QueryPipeline::Statements {
         if (!result.IsOk()) return result;
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->left->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
         if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
         FoldExpression(context, logicalExpr, expression);
         return Errors::ValidationStatus::Ok();
@@ -1834,9 +1834,9 @@ namespace QueryPipeline::Statements {
         if (!result.IsOk())return result;
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->left->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-            return ClauseCannotBeEvaluatedToBool(context, logicalExpr->right->GetReturnType());
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
         FoldExpression(context, logicalExpr, expression);
         return Errors::ValidationStatus::Ok();
@@ -1902,7 +1902,7 @@ namespace QueryPipeline::Statements {
                 return Errors::ValidationStatus::Error(
                     Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
                         context.GetAllocator(),
-                        branch->GetReturnType()
+                        Expressions::GetExpressionReturnType(branch)
                     )
                 );
             }
@@ -2256,8 +2256,8 @@ namespace QueryPipeline::Statements {
 
     bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
         // If one side is a column expression, its type takes precedence
-        const auto leftType = left->GetReturnType();
-        const auto rightType = right->GetReturnType();
+        const auto leftType = Expressions::GetExpressionReturnType(left);
+        const auto rightType = Expressions::GetExpressionReturnType(right);
 
         const auto isLeftColumn = left->IsColumn();
         const auto isRightColumn = right->IsColumn();
@@ -2307,7 +2307,7 @@ namespace QueryPipeline::Statements {
             return DataTypes::Coercions::IsCoercionAllowed(constantExpr->GetReturnType(), type);
         }
 
-        return DataTypes::Coercions::IsCoercionAllowed(expression->GetReturnType(), type);
+        return DataTypes::Coercions::IsCoercionAllowed(Expressions::GetExpressionReturnType(expression), type);
     }
 
     Errors::ValidationStatus CompileWildcard(
@@ -2499,7 +2499,7 @@ namespace QueryPipeline::Statements {
     }
 
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
-        auto value = expression->Evaluate(Expressions::EvaluationContext(context.GetAllocator()));
+        auto value = Expressions::EvaluateExpression(expression, Expressions::EvaluationContext(context.GetAllocator()));
         expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 
@@ -2630,7 +2630,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        column->returnType = expression->GetReturnType();
+        column->returnType = Expressions::GetExpressionReturnType(expression);
         return Errors::ValidationStatus::Ok();
     }
 

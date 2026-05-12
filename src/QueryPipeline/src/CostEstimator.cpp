@@ -117,7 +117,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateExpressionComparisonCost(const Expressions::Expression* expression){
-        switch (expression->GetReturnType()) {
+        switch (Expressions::GetExpressionReturnType(expression)) {
             case DataType::TinyInt:
             case DataType::SmallInt:
             case DataType::Int:

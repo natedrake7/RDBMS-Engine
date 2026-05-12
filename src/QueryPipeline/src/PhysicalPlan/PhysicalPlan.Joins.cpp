@@ -57,10 +57,10 @@ namespace QueryPipeline::PhysicalPlan {
                 for (const auto& innerRow: rightResult.rows) {
                     evaluationContext.row = outerRow;
                     evaluationContext.joinRow = innerRow;
-                    if (!this->expression->Evaluate(evaluationContext).AsBool())
+                    if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
                         continue;
 
-                    PerformJoin(allocator, result, outerRow, innerRow);
+                     PerformJoin(allocator, result, outerRow, innerRow);
                 }
             }
         }
@@ -115,7 +115,7 @@ namespace QueryPipeline::PhysicalPlan {
                 for (const auto& innerRow: rightResult.rows) {
                     evaluationContext.row = outerRow;
                     evaluationContext.joinRow = innerRow;
-                    if (!this->expression->Evaluate(evaluationContext).AsBool())
+                    if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
                         continue;
 
                     matchedRows[i] = true;

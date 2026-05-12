@@ -808,7 +808,7 @@ namespace CoreEngine::StorageTypes {
                     auto* row = page.PeekRow(executionContext.GetAllocator(), i, 0);
 
                     evaluationContext.row = row;
-                    const auto value = expression->Evaluate(evaluationContext);
+                    const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool()) continue;
 
                     auto result = this->UpdateRowNoLock(&page, row, executionContext, updates);
@@ -870,7 +870,7 @@ namespace CoreEngine::StorageTypes {
                     auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
                     evaluationContext.row = rowPtr;
 
-                    const auto value = expression->Evaluate(evaluationContext);
+                    const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool())
                         continue;
 
@@ -1152,7 +1152,7 @@ namespace CoreEngine::StorageTypes {
 
         const Expressions::EvaluationContext evaluationContext(rowPtr, context);
         for (const auto* updateExpr : updates) {
-            auto updatedValue = updateExpr->Evaluate(evaluationContext);
+            auto updatedValue = Expressions::EvaluateExpression(updateExpr, evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);
         }
