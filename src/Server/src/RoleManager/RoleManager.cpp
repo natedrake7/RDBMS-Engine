@@ -14,7 +14,7 @@ namespace Security {
     RoleManager::RoleManager() = default;
 
     RoleManager::~RoleManager(){
-        this->_allocator.Reset();
+        this->_allocator.Release();
     }
 
     const Role* RoleManager::GetRole(const Int roleId)const{

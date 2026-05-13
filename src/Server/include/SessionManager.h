@@ -4,9 +4,12 @@
 #include "../../Systemic/include/Guards/ReadWriteMutex.h"
 #include "../../Systemic/include/Security/Session.h"
 
+namespace QueryPipeline{
+    class CompileContext;
+}
+
 namespace Network::Sessions {
   class SessionManager {
-
     Dictionary<DataTypes::Guid, Session*> sessions;
 
     mutable MultiThreading::ReadWriteMutex mutex;
@@ -25,9 +28,11 @@ namespace Network::Sessions {
     [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& id, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
-      const DataTypes::Guid &id,
-      CoreEngine::ExecutionContext& context,
-      QueryPipeline::PhysicalPlan::PlanNode *physicalPlan)const;
+        const DataTypes::Guid &id,
+        const QueryPipeline::CompileContext& compileContext,
+        CoreEngine::ExecutionContext& executionContext,
+        QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
+    )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
   };
 }

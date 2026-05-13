@@ -7,6 +7,11 @@
 #include "SessionManager.h"
 #include "UserManager.h"
 
+namespace QueryPipeline
+{
+    class CompileContext;
+}
+
 namespace CoreEngine {
   class TemporaryDatabase;
 }
@@ -78,9 +83,10 @@ namespace Network {
     [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
-      const DataTypes::Guid &id,
-      CoreEngine::ExecutionContext& context,
-      QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
+        const DataTypes::Guid &id,
+        const QueryPipeline::CompileContext& compileContext,
+        CoreEngine::ExecutionContext& executionContext,
+        QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 

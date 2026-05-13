@@ -61,6 +61,9 @@ namespace Pages{
         PageView();
         explicit PageView(Frame* framePtr);
 
+        PageView(const PageView& other) = delete;
+        PageView& operator=(const PageView& other) = delete;
+
         PageView& operator=(PageView&& other) noexcept;
         PageView(PageView&& other) noexcept;
 
@@ -135,8 +138,5 @@ namespace Pages{
         [[nodiscard]] bool IsValid()const;
 
         [[nodiscard]] Constants::PageType GetPageType() const;
-
-        void IncreasePinCount() const;
-        void DecreasePinCount() const;
     };
 }

@@ -51,10 +51,6 @@ namespace DataTypes{
     static void DownCastFromSmallInt(Value& value);
     static void DownCastFromInt(Value& value);
     static void DownCastFromBigInt(Value& value);
-
-    // static void constexpr InitializeTrueStrings();
-    // static void constexpr InitializeFalseStrings();
-
     static void InitializeTypeCoercionMatrix();
 
     public:

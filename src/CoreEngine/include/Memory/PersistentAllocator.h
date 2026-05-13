@@ -24,6 +24,7 @@ namespace CoreEngine::Memory{
         ~PersistentAllocator() override;
 
         [[nodiscard]] void* AllocateRaw(UnsignedInt size) const override;
+        void Release() const override;
         void Reset() const override;
     };
 }

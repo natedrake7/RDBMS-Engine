@@ -16,7 +16,7 @@ namespace Security {
     UserManager::UserManager() =  default;
 
     UserManager::~UserManager(){
-        this->_allocator.Reset();
+        this->_allocator.Release();
     }
 
     User* UserManager::Authenticate(const DataTypes::StringView& name, const DataTypes::StringView& password)const{

@@ -270,8 +270,12 @@ namespace QueryPipeline{
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
+            //set batch size correctly
             CoreEngine::ExecutionContext executionContext(snapshot, 10000, session->variables);
-            queryContext.cursors.Push(server.CreateCursor(sessionId, executionContext, physicalPlan));
+            queryContext.cursors.Push(server.CreateCursor(
+                sessionId, queryContext._compileContext,
+                executionContext, physicalPlan
+            ));
         }
 
         return queryContext;

@@ -51,7 +51,7 @@ namespace CoreEngine::Memory{
     }
 
     PersistentAllocator::~PersistentAllocator(){
-        this->PersistentAllocator::Reset();
+        this->PersistentAllocator::Release();
     }
 
     PersistentAllocator::PersistentAllocator(PersistentAllocator&& other) noexcept{
@@ -84,7 +84,7 @@ namespace CoreEngine::Memory{
         return ptr;
     }
 
-    void PersistentAllocator::Reset() const{
+    void PersistentAllocator::Release() const{
         if (this->_head == nullptr)
             return;
 
@@ -101,5 +101,13 @@ namespace CoreEngine::Memory{
         this->_tail = nullptr;
 
         GlobalMemoryManager::Get().ReleaseExecutionReservation(totalMemoryFreed);
+    }
+
+    void PersistentAllocator::Reset() const{
+        auto* node = this->_head;
+        while(node != nullptr){
+            node->_offset = 0;
+            node = node->_next;
+        }
     }
 }

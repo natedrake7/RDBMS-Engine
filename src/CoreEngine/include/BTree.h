@@ -116,7 +116,7 @@ namespace Indexing{
         );
         Errors::RuntimeStatus InsertToNonFullNode(
             const CoreEngine::ExecutionContext& context,
-            const Pages::IndexPageView& parent,
+            Pages::IndexPageView& root,
             const Pages::IndexInsertTuple& tuple,
             Int pagesToAllocate,
             Int& indexPosition
@@ -124,15 +124,16 @@ namespace Indexing{
 
         static Errors::RuntimeStatus InsertToNode(
             const CoreEngine::ExecutionContext& context,
-            const Pages::IndexPageView& parent,
+            const Pages::IndexPageView& node,
+            MultiThreading::ReaderGuard& readGuard,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         );
 
-        [[nodiscard]] Pages::IndexPageView SearchKey(const ::Memory::IAllocator* allocator, const DataTypes::Indexing::Key& key) const;
+        [[nodiscard]] Pages::IndexPageView SearchKey(const DataTypes::Indexing::Key& key) const;
         [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors) const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator) const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(const ::Memory::IAllocator* allocator, TinyInt& depth) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode() const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(TinyInt& depth) const;
 
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const CoreEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;

@@ -53,7 +53,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Column::Destroy() const{
-         this->_allocator.Reset();
+         this->_allocator.Release();
     }
 
     Column::~Column(){

@@ -37,7 +37,7 @@ namespace CoreEngine {
     }
 
     VersionDatabase::~VersionDatabase(){
-        this->_allocator.Reset();
+        this->_allocator.Release();
     }
 
     std::tuple<DataTypes::String, DataTypes::String> VersionDatabase::ReadConfiguration(
@@ -280,17 +280,17 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     ){
         Errors::RuntimeStatus status;
-        const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
-        const auto page = this->GetLastUndoPage(allocator, table, payload.Size());
-
-        MultiThreading::WriterGuard lock(&page.Latch());
-
-        const auto indexPosition = page.InsertRow(payload);
-
-        rowPointer.pageId = page.PageId();
-        rowPointer.offset = indexPosition;
-
-        this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
+        // const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
+        // const auto page = this->GetLastUndoPage(allocator, table, payload.Size());
+        //
+        // MultiThreading::WriterGuard lock(&page.Latch());
+        //
+        // const auto indexPosition = page.InsertRow(payload);
+        //
+        // rowPointer.pageId = page.PageId();
+        // rowPointer.offset = indexPosition;
+        //
+        // this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
         return status;
     }
 

@@ -10,6 +10,7 @@ namespace QueryPipeline {
     Cursor::~Cursor(){ delete this->plan; }
 
     PhysicalPlan::ExecutionResult Cursor::FetchNextBatch(){
+        this->executionContext.ResetAllocator();
         auto result = this->plan->Execute(this->executionContext);
         this->canFetchMore = result.canFetchMore;
         return result;

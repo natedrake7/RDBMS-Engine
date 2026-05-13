@@ -9,6 +9,10 @@ namespace MultiThreading {
       ReaderGuard();
       explicit ReaderGuard(ReadWriteMutex* mtx);
       ~ReaderGuard();
+
+      ReaderGuard& operator=(const ReaderGuard& other) = delete;
+      ReaderGuard(const ReaderGuard& other) = delete;
+
       ReaderGuard& operator=(ReaderGuard&& other)noexcept;
       ReaderGuard(ReaderGuard&& other) noexcept;
 

@@ -127,8 +127,9 @@ namespace CoreEngine {
                     table
                 );
 
-                auto readerGuard = MultiThreading::ReaderGuard(&indexPage.Latch());
-                if(!indexPage.IsEmpty())
+                bool success = false;
+                auto readerGuard = MultiThreading::ReaderGuard::TryLock(&indexPage.Latch(), success);
+                if(!success || !indexPage.IsEmpty())
                     continue;
 
                 return indexPage;

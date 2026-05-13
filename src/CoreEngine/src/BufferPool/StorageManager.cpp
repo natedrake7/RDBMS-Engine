@@ -21,7 +21,7 @@ StorageManager::~StorageManager() {
     for (const auto* framePtr : this->pageTable | std::views::values) {
         if (framePtr == nullptr)
             continue;
-        this->RemovePageWithoutKeyDeletion(framePtr);
+        this->FlushFrameToDisk(framePtr);
     }
 }
 
@@ -39,41 +39,40 @@ void StorageManager::CreateFile(
 }
 
 void StorageManager::EvictPage() {
+    const Pages::Frame* victim = nullptr;
+    PageKey victimKey;
+
     MultiThreading::WriterGuard lock(&this->clockMutex_);
-
-    bool evicted = false;
-    PageKey frameKey;
-    while (!evicted) {
-        auto* page = this->_memoryManager->GetFrame(this->clockHand);
-
-        if (page == nullptr || page->pinCount.load() > 0 || page->priority.load() >= Constants::PagePriority::HIGH) {
-            this->clockHand = (this->clockHand + 1) % this->capacity;
-            continue;
-        }
-
-        MultiThreading::WriterGuard pageLock(&page->latch);
-
-        if (page->hasSecondChance) {
-            page->hasSecondChance = false;
-            this->clockHand = (this->clockHand + 1) % this->capacity;
-
-            continue;
-        }
+    while (victim == nullptr) {
+        auto* frame = this->_memoryManager->GetFrame(this->clockHand);
 
         this->clockHand = (this->clockHand + 1) % this->capacity;
-        const auto* frame = this->_memoryManager->GetFrame(this->clockHand);
-        this->RemovePageWithoutKeyDeletion(frame);
-        evicted = true;
-        frameKey = PageKey::Create(frame->fileKey, frame->headerPtr->pageId);
+        if (frame == nullptr)
+            continue;
+
+        MultiThreading::WriterGuard pageLock(&frame->latch);
+
+        if (frame->pinCount.load() > 0 || frame->priority.load() >= Constants::PagePriority::HIGH)
+            continue;
+
+        if (frame->hasSecondChance){
+            frame->hasSecondChance = false;
+            continue;
+        }
+
+        victim = frame;
+        victimKey = PageKey::Create(victim->fileKey, victim->headerPtr->pageId);
     }
+
+    this->FlushFrameToDisk(victim);
 
     {
         MultiThreading::WriterGuard tableLock(&this->tableMutex);
-        this->pageTable.Remove(frameKey);
+        this->pageTable.Remove(victimKey);
     }
 }
 
-void StorageManager::RemovePageWithoutKeyDeletion(const Pages::Frame *framePtr){
+void StorageManager::FlushFrameToDisk(const Pages::Frame *framePtr){
     if (!framePtr->isDirty)
         return;
 

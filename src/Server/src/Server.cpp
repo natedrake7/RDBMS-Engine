@@ -203,10 +203,11 @@ namespace Network {
 
   QueryPipeline::Cursor* Server::CreateCursor(
     const DataTypes::Guid &id,
-    CoreEngine::ExecutionContext& context,
+    const QueryPipeline::CompileContext& compileContext,
+    CoreEngine::ExecutionContext& executionContext,
     QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
   ) const {
-    return this->sessionManager.CreateCursor(id, context, physicalPlan);
+    return this->sessionManager.CreateCursor(id, compileContext, executionContext, physicalPlan);
   }
 
   bool Server::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const {

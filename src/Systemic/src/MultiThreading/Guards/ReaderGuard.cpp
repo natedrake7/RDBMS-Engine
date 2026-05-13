@@ -2,63 +2,67 @@
 #include "../../../include/Guards/ReadWriteMutex.h"
 
 namespace MultiThreading {
+    ReaderGuard::ReaderGuard(){
+        this->mutex = nullptr;
+    }
 
-ReaderGuard::ReaderGuard(){
-  this->mutex = nullptr;
-}
+    ReaderGuard::ReaderGuard(ReadWriteMutex* mtx){
+        this->mutex = mtx;
+        this->mutex->SharedLock();
+    }
 
-ReaderGuard::ReaderGuard(ReadWriteMutex* mtx){
-  this->mutex = mtx;
-  this->mutex->SharedLock();
-}
+    ReaderGuard::~ReaderGuard(){
+        if (this->mutex == nullptr)
+            return;
 
-ReaderGuard::~ReaderGuard(){
-  if (this->mutex == nullptr)
-    return;
+        this->mutex->SharedUnlock();
+    }
 
-  this->mutex->SharedUnlock();
-}
+    ReaderGuard & ReaderGuard::operator=(ReaderGuard &&other) noexcept{
+        if (this == &other)
+            return *this;
 
-ReaderGuard & ReaderGuard::operator=(ReaderGuard &&other) noexcept{
-  if (this == &other)
-    return *this;
+        if (this->mutex != nullptr)
+            this->mutex->SharedUnlock();
 
-  this->mutex = other.mutex;
-  other.mutex = nullptr;
+        this->mutex = other.mutex;
+        other.mutex = nullptr;
 
-  return *this;
-}
+        return *this;
+    }
 
-ReaderGuard::ReaderGuard(ReaderGuard &&other) noexcept{
-  if (this == &other)
-    return;
+    ReaderGuard::ReaderGuard(ReaderGuard &&other) noexcept{
+        if (this == &other)
+            return;
 
-  this->mutex = other.mutex;
-  other.mutex = nullptr;
-}
+        if (this->mutex != nullptr)
+            this->mutex->SharedUnlock();
 
-ReaderGuard ReaderGuard::TryLock(ReadWriteMutex *mtx, bool& isSuccessful){
-  auto guard = ReaderGuard();
+        this->mutex = other.mutex;
+        other.mutex = nullptr;
+    }
 
-  guard.SetMutex(mtx);
+    ReaderGuard ReaderGuard::TryLock(ReadWriteMutex *mtx, bool& isSuccessful){
+        auto guard = ReaderGuard();
 
-  isSuccessful = mtx->SharedTryLock();
-  if (!isSuccessful)
-    guard.DisableMutex();
+        guard.SetMutex(mtx);
 
-  return guard;
-}
+        isSuccessful = mtx->SharedTryLock();
+        if (!isSuccessful)
+            guard.DisableMutex();
 
-void ReaderGuard::SetMutex(ReadWriteMutex *mtx){
-  this->mutex = mtx;
-}
+        return guard;
+    }
 
-void ReaderGuard::Release()const{
-  this->mutex->SharedUnlock();
-}
+    void ReaderGuard::SetMutex(ReadWriteMutex *mtx){
+        this->mutex = mtx;
+    }
 
-void ReaderGuard::DisableMutex(){
-  this->mutex = nullptr;
-}
+    void ReaderGuard::Release()const{
+        this->mutex->SharedUnlock();
+    }
 
+    void ReaderGuard::DisableMutex(){
+        this->mutex = nullptr;
+    }
 }

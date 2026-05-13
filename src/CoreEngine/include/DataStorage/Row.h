@@ -62,7 +62,7 @@ namespace CoreEngine::StorageTypes
         ByteMaps::BitMap overflowBitMap;
 
         explicit RowHeader();
-        explicit RowHeader(const ::Memory::IAllocator* allocator, Int bitMapsSize);
+        // explicit RowHeader(const ::Memory::IAllocator* allocator, Int bitMapsSize);
         RowHeader(const RowHeader& otherHeader);
         RowHeader& operator=(const RowHeader& otherHeader);
         RowHeader(RowHeader&& otherHeader) noexcept;

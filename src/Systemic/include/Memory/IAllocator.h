@@ -13,6 +13,7 @@ namespace Memory {
             template <typename Entity, typename... Args>
             Entity* Allocate(Args&&... args)const;
 
+            virtual void Release() const = 0;
             virtual void Reset() const = 0;
     };
 

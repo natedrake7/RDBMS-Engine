@@ -3,41 +3,47 @@
 #include "../../../include/Guards/ReadWriteMutex.h"
 
 namespace MultiThreading {
-  WriterGuard::WriterGuard(ReadWriteMutex *mtx){
-    this->mutex = mtx;
-    this->mutex->UniqueLock();
-  }
+    WriterGuard::WriterGuard(ReadWriteMutex *mtx){
+        this->mutex = mtx;
+        this->mutex->UniqueLock();
+    }
 
-  WriterGuard::WriterGuard() {
-    this->mutex = nullptr;
-  }
+    WriterGuard::WriterGuard() {
+        this->mutex = nullptr;
+    }
 
-  WriterGuard::~WriterGuard(){
-    if (this->mutex != nullptr)
-      this->mutex->UniqueUnlock();
-  }
+    WriterGuard::~WriterGuard(){
+        if (this->mutex != nullptr)
+            this->mutex->UniqueUnlock();
+    }
 
-  WriterGuard::WriterGuard(WriterGuard &&other) noexcept {
-    if (this == &other)
-      return;
+    WriterGuard::WriterGuard(WriterGuard &&other) noexcept {
+        if (this == &other)
+            return;
 
-    this->mutex = other.mutex;
-    other.mutex = nullptr;
-  }
+        if (this->mutex != nullptr)
+            this->mutex->UniqueUnlock();
 
-  WriterGuard & WriterGuard::operator=(WriterGuard &&other) noexcept {
-    if (this == &other)
-      return *this;
+        this->mutex = other.mutex;
+        other.mutex = nullptr;
+    }
 
-    this->mutex = other.mutex;
-    other.mutex = nullptr;
+    WriterGuard & WriterGuard::operator=(WriterGuard &&other) noexcept {
+        if (this == &other)
+            return *this;
 
-    return *this;
-  }
+        if (this->mutex != nullptr)
+            this->mutex->UniqueUnlock();
 
-  void WriterGuard::PromoteLock()const{
-    this->mutex->PromoteLock();
-  }
+        this->mutex = other.mutex;
+        other.mutex = nullptr;
+
+        return *this;
+    }
+
+    void WriterGuard::PromoteLock()const{
+        this->mutex->PromoteLock();
+    }
 
   void WriterGuard::SetMutex(ReadWriteMutex *mtx) {
     this->mutex = mtx;

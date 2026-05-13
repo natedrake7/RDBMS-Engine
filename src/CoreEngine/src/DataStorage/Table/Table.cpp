@@ -277,7 +277,7 @@ namespace CoreEngine::StorageTypes {
           for (const auto* column : this->_columns)
               column->Destroy();
 
-          this->_allocator.Reset();
+          this->_allocator.Release();
     }
 
     Table::~Table(){

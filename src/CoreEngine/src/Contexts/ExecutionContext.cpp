@@ -71,6 +71,10 @@ namespace CoreEngine{
         this->allocator.Reset();
     }
 
+    bool ExecutionContext::IsAllocatorEmpty() const{
+        return this->allocator.IsEmpty();
+    }
+
     void* ExecutionContext::Allocate(const Int size) const{
         return this->allocator.AllocateRaw(size);
     }

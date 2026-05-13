@@ -28,11 +28,11 @@ namespace CoreEngine::StorageTypes {
 
     RowHeader::RowHeader() = default;
 
-    RowHeader::RowHeader(const ::Memory::IAllocator* allocator, const Int bitMapsSize){
-        this->nullBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
-        this->largeObjectBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
-        this->overflowBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
-    }
+    // RowHeader::RowHeader(const ::Memory::IAllocator* allocator, const Int bitMapsSize){
+    //     this->nullBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
+    //     this->largeObjectBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
+    //     this->overflowBitMap = ByteMaps::BitMap(allocator, bitMapsSize, false);
+    // }
 
     RowHeader & RowHeader::operator=(const RowHeader &otherHeader){
         if (this == &otherHeader)

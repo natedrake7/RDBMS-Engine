@@ -105,6 +105,9 @@ namespace Pages{
         if (this == &other)
             return *this;
 
+        if (this->IsValid())
+            this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
+
         this->framePtr = other.framePtr;
         other.framePtr = nullptr;
         return *this;
@@ -431,11 +434,11 @@ namespace Pages{
         rowPtr->physicalState->isHeaderInitialized = true;
 
         const auto bitmapsSize = ByteMaps::BitMap::HeapSize(numberOfColumns);
-        rowPtr->physicalState->header.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.nullBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-        rowPtr->physicalState->header.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.largeObjectBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
-        rowPtr->physicalState->header.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, numberOfColumns);
+        rowPtr->physicalState->header.overflowBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
         offSet += bitmapsSize;
         rowPtr->physicalState->sizes.Resize(numberOfColumns);
 
@@ -468,16 +471,12 @@ namespace Pages{
 
         const auto bitmapsSize = ByteMaps::BitMap::HeapSize(columnsSize);
 
-        rowHeader.nullBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        rowHeader.nullBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
         offSet += bitmapsSize;
-        rowHeader.largeObjectBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        rowHeader.largeObjectBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
         offSet += bitmapsSize;
-        rowHeader.overflowBitMap = ByteMaps::BitMap::FromExistingData(this->framePtr->data + offSet, columnsSize);
+        rowHeader.overflowBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
         offSet += bitmapsSize;
-
-        // rowHeader.nullBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
-        // rowHeader.largeObjectBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
-        // rowHeader.overflowBitMap.GetDataFromFile(this->framePtr->data, offSet, columnsSize);
 
         auto result = QueryResult(allocator);
 
@@ -551,13 +550,5 @@ namespace Pages{
 
     Constants::PageType PageView::GetPageType() const{
         return this->framePtr->type;
-    }
-
-    void PageView::IncreasePinCount() const{
-        this->framePtr->pinCount.fetch_add(1, std::memory_order_relaxed);
-    }
-
-    void PageView::DecreasePinCount() const{
-        this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
     }
 }

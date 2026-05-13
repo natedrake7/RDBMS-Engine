@@ -68,7 +68,7 @@ namespace Storage {
 
         // static DataTypes::String CreateKey(const DataTypes::StringView& filename, page_id_t pageId);
         void EvictPage();
-        void RemovePageWithoutKeyDeletion(const Pages::Frame* framePtr);
+        void FlushFrameToDisk(const Pages::Frame* framePtr);
         Pages::Frame* OpenExtent(
             FileKey fileKey,
             page_id_t pageId,

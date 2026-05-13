@@ -14,6 +14,9 @@ namespace MultiThreading {
       explicit WriterGuard();
       ~WriterGuard();
 
+      WriterGuard(const WriterGuard& other) = delete;
+      WriterGuard& operator=(const WriterGuard& other) = delete;
+
       WriterGuard(WriterGuard&& other)noexcept;
       WriterGuard& operator=(WriterGuard&& other)noexcept;
 

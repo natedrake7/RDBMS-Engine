@@ -21,6 +21,10 @@ namespace Pages{
             IndexPageView();
             explicit IndexPageView(Frame* framePtr);
 
+
+            IndexPageView& operator=(const IndexPageView& other) = delete;
+            IndexPageView(const IndexPageView& other) = delete;
+        
             IndexPageView(IndexPageView&& other) noexcept;
             IndexPageView& operator=(IndexPageView&& other) noexcept;
 
@@ -59,23 +63,21 @@ namespace Pages{
             DataTypes::Indexing::Key GetKeyByIndex(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             //always returns the result of the comparison of the page key against the provided key
-            Comparators::Comparator CompareKeyAtIndex(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+            Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
             LeafNodeTuple PeekLeafTuple(const ::Memory::IAllocator* allocator,Int indexPosition) const;
-            RowView* PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             InternalNodeTuple PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             CoreEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(
-                const ::Memory::IAllocator* allocator,
                 Int indexPosition,
                 Int& outKeySize
             ) const;
 
-            page_id_t GetChild(
-                const ::Memory::IAllocator* allocator,
-                Int indexPosition
-            ) const;
+            [[nodiscard]] bool IsRowVisible(Int indexPosition, const CoreEngine::Snapshot& snapshot)const;
+            RowView* PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
+
+            page_id_t GetChild(Int indexPosition) const;
             InternalNodeTuple GetInternalNodeTuple(
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition

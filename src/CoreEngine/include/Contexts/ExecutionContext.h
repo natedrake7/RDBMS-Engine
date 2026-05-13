@@ -86,6 +86,7 @@ namespace CoreEngine {
             [[nodiscard]] const Snapshot& GetSnapshot()const;
 
             void ResetAllocator()const;
+            bool IsAllocatorEmpty()const;
 
             void* Allocate(Int size) const;
             template<typename T>

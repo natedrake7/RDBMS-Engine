@@ -10,7 +10,7 @@ namespace Memory{
 namespace ByteMaps{
     class BitMap final{
         object_t* _data;
-        bit_map_size_t size;
+        bit_map_size_t _size;
 
         BitMap(object_t* data, bit_map_size_t size);
 
@@ -18,20 +18,15 @@ namespace ByteMaps{
     public:
         BitMap();
         BitMap(const BitMap &bitMap);
-        explicit BitMap(
-            const ::Memory::IAllocator* allocator,
-            bit_map_size_t size,
-            byte_t defaultValue = 0
-        );
 
-        static BitMap FromExistingData(object_t *data, bit_map_size_t size);
-
+        BitMap(const ::Memory::IAllocator* allocator, bit_map_size_t size, bool defaultValue);
         BitMap &operator=(const BitMap &other);
 
         BitMap(BitMap &&other) noexcept;
         BitMap& operator=(BitMap &&other) noexcept;
         ~BitMap();
 
+        void FromExistingData(object_t *data, bit_map_size_t size);
         void Set(bit_map_pos_t position, bool value) const;
         [[nodiscard]] bool Get(bit_map_pos_t position) const;
         [[nodiscard]] bit_map_size_t GetSize() const;

@@ -34,6 +34,7 @@ namespace Expressions{
     class ColumnExpression;
     class ConstantExpression;
     class BranchExpression;
+    class CastExpression;
 
     struct EvaluationContext {
         enum class EvaluationContextType : UnsignedTinyInt {
@@ -113,6 +114,7 @@ namespace Expressions{
         [[nodiscard]] BranchExpression* AsBranch();
         [[nodiscard]] FunctionExpression* AsFunction();
         [[nodiscard]] JsonExpression* AsJson();
+        [[nodiscard]] CastExpression* AsCast();
 
         [[nodiscard]] const BinaryExpression* AsBinary()const;
         [[nodiscard]] const LogicalExpression* AsLogical()const;
@@ -122,6 +124,7 @@ namespace Expressions{
         [[nodiscard]] const BranchExpression* AsBranch()const;
         [[nodiscard]] const FunctionExpression* AsFunction()const;
         [[nodiscard]] const JsonExpression* AsJson()const;
+        [[nodiscard]] const CastExpression* AsCast()const;
 
         [[nodiscard]] bool IsColumnType()const;
 
@@ -187,7 +190,7 @@ namespace Expressions{
         [[nodiscard]] bool ValidateUnlimitedArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const;
         [[nodiscard]] bool ValidateArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const;
         [[nodiscard]] static bool ValidateReturnType(
-        const FunctionInfo& info,
+            const FunctionInfo& info,
             DataTypes::String& errorMessage,
             DataType expectedType,
             DataType returnType,
@@ -307,6 +310,19 @@ namespace Expressions{
 
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
         [[nodiscard]]DataType GetReturnType() const;
+    };
+
+    class CastExpression final: public Expression{
+    public:
+        Expression* expression;
+        DataType targetType;
+
+        bool isTryCast;
+
+        CastExpression(Expression* expression, DataType targetType, bool isTryCast);
+
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context) const;
+        [[nodiscard]] DataType GetReturnType() const;
     };
 
     Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);

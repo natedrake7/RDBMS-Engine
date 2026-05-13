@@ -11,6 +11,7 @@ namespace CoreEngine::Memory{
 
         [[nodiscard]] UnsignedInt NewChunkCapacity(UnsignedInt size)const;
         void AllocateNewChunk(UnsignedInt size)const;
+        void TryFindNewChunk(UnsignedInt size)const;
 
         public:
             explicit Allocator();
@@ -22,6 +23,9 @@ namespace CoreEngine::Memory{
             ~Allocator() override;
 
             void* AllocateRaw(UnsignedInt size)const override;
+            void Release() const override;
             void Reset() const override;
+
+            bool IsEmpty() const;
     };
 }

@@ -19,26 +19,37 @@
 #include "Memory/PersistentAllocator.h"
 
 namespace CoreEngine{
-    void Database::WriteHeaderToFile() const
-    {
-        auto metaDataPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+    void Database::WriteHeaderToFile() const{
+        const auto metaDataPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
         metaDataPage.SetDatabaseHeader(this->header);
     }
 
     page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
-        const page_id_t numGAMPagesBefore = pageId / Constants::GAM_NUMBER_OF_PAGES;
         const page_id_t pfsIndex = pageId / Constants::PAGE_FREE_SPACE_SIZE;
-        constexpr page_id_t firstPfsPageId = 1;
+        if (pfsIndex == 0) return 1;
 
-        return firstPfsPageId + pfsIndex + numGAMPagesBefore;
+        // Count of GAM pages that precede PFS #pfsIndex in the sys file:
+        // GAM #g precedes PFS #pfsIndex when g*GAM_COVERAGE < pfsIndex*PFS_COVERAGE,
+        // plus 1 because GAM#0 (at sys page 2) always precedes PFS#1 and above.
+        const page_id_t gamsPreceding =
+            (static_cast<page_id_t>(pfsIndex) * Constants::PAGE_FREE_SPACE_SIZE)
+            / Constants::GAM_NUMBER_OF_PAGES + 1;
+
+        return 1 + pfsIndex + gamsPreceding;
     }
 
     page_id_t Database::GetGamAssociatedPage(const page_id_t pageId) {
-        const auto numOfGamPages = (pageId / Constants::GAM_NUMBER_OF_PAGES) + 2;
+        const page_id_t gamIndex = pageId / Constants::GAM_NUMBER_OF_PAGES;
 
-        const auto numOfPfsPages = (pageId / Constants::PAGE_FREE_SPACE_SIZE);
+        // PFS pages that precede GAM #gamIndex in the sys file:
+        // PFS #0 always precedes GAM#0 → +1
+        // For GAM #g, additional PFS pages = floor(g * GAM_COVERAGE / PFS_COVERAGE)
+        const page_id_t pfsPreceding =
+            (static_cast<page_id_t>(gamIndex) * Constants::GAM_NUMBER_OF_PAGES)
+            / Constants::PAGE_FREE_SPACE_SIZE + 1;
 
-        return numOfGamPages > 2 ? numOfPfsPages + numOfGamPages + 1 : numOfPfsPages + numOfGamPages;
+        // Header(1) + PFS pages before it + prior GAM pages
+        return 1 + pfsPreceding + gamIndex;
     }
 
 //    page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
@@ -205,7 +216,7 @@ namespace CoreEngine{
             dbTable->Destroy();
         }
 
-        this->_allocator.Reset();
+        this->_allocator.Release();
     }
 
     std::vector<Logging::LogEntry> Database::RecoverLogs(){

@@ -60,16 +60,12 @@
 
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies_RL_Actors AS MA ON A.ID = MA.ActorID
 //TODO add priority in pages to store system pages indefinetely and decrease second chance count
-//TODO add page wrapper to handle page pin counts and locks releases etcE
 //TODO add commits and rollbacks.
 //Also update row version pointers on commit to point to the latest version and not have to traverse the linked list on each select
 //TODO add isolation levels (read uncommitted, read committed, repeatable read, serializable)
 //TODO add deadlock detection and resolution mechanism
 //validate correct versionDb implementation
-//Added batch streamline
 //need to fix bug on background thread
-//check sys_column_stats implementation.
-//check why tree order is desc and not asc
 //Improve index seek selection and split or statements in sub queries
 //when or statments exist break into multiple index seek queries(if not index seek dont break go to index scan)
 //create union logical and physical plan node to concatanate the results of the subqueries(later add it as a command)
@@ -79,7 +75,6 @@
 //implement clean bulk insert functionality
 //improve page split factor on indexes to be more compact and void multiple pages split
 //check heap insert (add locks)
-
 //TODO improve cost estimation and statistics collection
 //TODO implement better query optimization techniques (dynamic programming, genetic algorithms, simulated annealing)
 //TODO implement parallel query execution and distributed databases
@@ -87,7 +82,6 @@
 //verify temp db flow implementation.
 //Implement full Forward Ptr Functionality
 
-//add peek header functionality on page rows to delay materialization
 //TODO make join usable again
 //TODO fix decimal multiplication and create division for it to be complete
 //CREATE DATABASE MoviesDB
@@ -102,7 +96,6 @@
 //TODO plugins use WASM to import from any language and write maybe C# code for CSV exports etc.
 
 //TODO use json accessors for updates as well.
-//TODO use binary search on B tree lower bound and upper bound to go to O(logn)
 //TODO add CAST, TRYCAST
 
 //CREATE DATABASE MoviesDB
@@ -111,11 +104,15 @@
 //CREATE TABLE dbo.Movies(ID INT PRIMARY KEY IDENTITY(1,1), Data JSON)
 //INSERT INTO dbo.Movies(Data) VALUES('{"name": "kostas"}')
 //INSERT INTO dbo.Actors(Name, Age) VALUES('Kostas', 200)
+//SELECT * FROM dbo.Actors
+//INSERT INTO dbo.Actors(Name, Age) SELECT Name, Age FROM dbo.Actors
 //SELECT * FROM dbo.Actors AS A INNER JOIN dbo.Movies AS M ON M.data->>name = A.Name
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st inner join dbo.sys_databases AS sd ON sd.database_id = st.database_id
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st left join dbo.sys_databases AS sd ON sd.database_id = 1
 //heavier join
 //SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
+
+//TODO make storageManager lookup be a vector to allow faster access array[databaseId][fileType][pageId] -> framePtr*
 
 int main(){
     DataTypes::Coercions::Initialize();

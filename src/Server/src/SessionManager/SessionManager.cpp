@@ -6,6 +6,7 @@
 #include <ranges>
 
 #include "../../../CoreEngine/include/Managers/GlobalMemoryManager.h"
+#include "../../../QueryPipeline/include/CompileContext.h"
 
 namespace Network::Sessions {
     SessionManager::SessionManager() = default;
@@ -83,7 +84,8 @@ namespace Network::Sessions {
 
     QueryPipeline::Cursor* SessionManager::CreateCursor(
         const DataTypes::Guid &id,
-        CoreEngine::ExecutionContext& context,
+        const QueryPipeline::CompileContext& compileContext,
+        CoreEngine::ExecutionContext& executionContext,
         QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
     )const{
         MultiThreading::WriterGuard guard(&this->mutex);
@@ -94,9 +96,10 @@ namespace Network::Sessions {
             return nullptr;
 
         const auto cursorId = session->nextCursorId++;
-        auto* cursor = context.Allocate<QueryPipeline::Cursor>(
+
+        auto* cursor = compileContext.Allocate<QueryPipeline::Cursor>(
             cursorId,
-            context,
+            executionContext,
             physicalPlan
         );
 

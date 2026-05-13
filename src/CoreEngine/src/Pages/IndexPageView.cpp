@@ -91,6 +91,9 @@ namespace Pages{
         if (this == &other)
             return *this;
 
+        if (this->IsValid())
+            this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
+
         this->framePtr = other.framePtr;
         this->initialOffset = other.initialOffset;
 
@@ -130,8 +133,8 @@ namespace Pages{
 
     UnsignedSmallInt IndexPageView::Keys() const{
         return this->IsLeaf()
-            ? this->framePtr->headerPtr->size
-            : this->framePtr->headerPtr->size - 1;
+                   ? this->framePtr->headerPtr->size
+                   : this->framePtr->headerPtr->size - 1;
     }
 
     void IndexPageView::SetIsLeaf(const bool isLeaf) const{
@@ -300,7 +303,7 @@ namespace Pages{
         return this->GetKeyByOffset(allocator, offSet);
     }
 
-    Comparators::Comparator IndexPageView::CompareKeyAtIndex(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
+    Comparators::Comparator IndexPageView::ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto offSet = slot.GetOffset();
 
@@ -318,10 +321,10 @@ namespace Pages{
             auto* data = dataPtr + sizeof(key_size_t);
 
             auto value = Value::FromMove(
-              data,
-              size,
-              type,
-              nullptr
+                data,
+                size,
+                type,
+                nullptr
             );
 
             const auto result = Comparators::Compare(
@@ -348,12 +351,6 @@ namespace Pages{
         return LeafNodeTuple(ref, key);
     }
 
-    RowView* IndexPageView::PeekRowReference(const Memory::IAllocator* allocator, const Int indexPosition) const{
-        const auto slot = this->GetSlotDirectory(indexPosition);
-        const auto keySize = this->GetKeySize(slot.GetOffset());
-        return allocator->Allocate<RowView>(this->framePtr, allocator, indexPosition, keySize);
-    }
-
     InternalNodeTuple IndexPageView::PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
@@ -370,35 +367,47 @@ namespace Pages{
     }
 
     CoreEngine::StorageTypes::RowVersioningHeader IndexPageView::PeekVersionHeader(
-        const ::Memory::IAllocator* allocator,
         const Int indexPosition,
         Int& outKeySize
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
         auto offset = slot.GetOffset();
-        const auto key = this->GetKeyByOffset(allocator, offset);
+        outKeySize = this->GetKeySize(offset);
+        offset += outKeySize;
 
-        outKeySize = key.size;
         CoreEngine::StorageTypes::RowVersioningHeader header;
         std::memcpy(&header, this->framePtr->data + offset, Constants::ROW_VERSION_HEADER_SIZE);
 
         return header;
     }
 
-    page_id_t IndexPageView::GetChild(
-        const ::Memory::IAllocator* allocator,
-        const Int indexPosition
-    ) const{
-            const auto slot = this->GetSlotDirectory(indexPosition);
-            auto offset = slot.GetOffset();
+    bool IndexPageView::IsRowVisible(const Int indexPosition, const CoreEngine::Snapshot& snapshot) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto offset = slot.GetOffset();
+        const auto* versionHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowVersioningHeader*>(
+            this->framePtr->data + offset + this->GetKeySize(offset)
+        );
 
-            if (indexPosition != 0)
-                const auto key =  this->GetKeyByOffset(allocator, offset);
+        return versionHeader->IsVisibleForTransaction(snapshot);
+    }
 
-            page_id_t pageId = 0;
-            std::memcpy(&pageId, this->framePtr->data + offset, sizeof(page_id_t));
-            return pageId;
+    RowView* IndexPageView::PeekRowReference(const Memory::IAllocator* allocator, const Int indexPosition) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto keySize = this->GetKeySize(slot.GetOffset());
+        return allocator->Allocate<RowView>(this->framePtr, allocator, indexPosition, keySize);
+    }
+
+    page_id_t IndexPageView::GetChild(const Int indexPosition) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        auto offset = slot.GetOffset();
+
+        if (indexPosition != 0)
+            offset += this->GetKeySize(offset);
+
+        page_id_t value;
+        std::memcpy(&value, this->framePtr->data + offset, sizeof(page_id_t));
+        return value;
     }
 
     InternalNodeTuple IndexPageView::GetInternalNodeTuple(

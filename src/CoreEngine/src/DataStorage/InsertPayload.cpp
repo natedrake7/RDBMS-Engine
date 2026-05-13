@@ -199,15 +199,15 @@ namespace CoreEngine::StorageTypes{
         const Int bitmapSize,
         const Int numberOfColumns
     ) const{
-        this->header = RowHeader(allocator, numberOfColumns);
+        // this->header = RowHeader(allocator, numberOfColumns);
 
         page_offset_t offSet = Constants::ROW_VERSION_HEADER_SIZE;
 
-        std::memcpy(header.nullBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        this->header.nullBitMap.FromExistingData(this->_data + offSet, bitmapSize);
         offSet += bitmapSize;
-        std::memcpy(header.largeObjectBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        this->header.largeObjectBitMap.FromExistingData(this->_data + offSet, bitmapSize);
         offSet += bitmapSize;
-        std::memcpy(header.overflowBitMap.DataPtrUnsafe(), this->_data + offSet, bitmapSize);
+        this->header.overflowBitMap.FromExistingData(this->_data + offSet, bitmapSize);
         offSet += bitmapSize;
 
         this->isHeaderInitialized = true;

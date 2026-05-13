@@ -12,6 +12,5 @@
 /.vs/DatabaseCpp
 /.vs
 /out/build/x64-Debug
-/cmake-build-debug-clang/
 /out/
 /.cache/clangd/index
