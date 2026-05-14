@@ -41,5 +41,7 @@ namespace Pages{
         Frame();
         Frame(object_t* data, const CoreEngine::StorageTypes::Table* table);
         Frame& operator=(const Frame& other);
+
+        [[nodiscard]] bool IsValid()const;
     };
 }

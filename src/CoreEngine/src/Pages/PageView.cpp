@@ -25,7 +25,9 @@ namespace Pages{
     }
 
     page_offset_t PageView::NewInsertOffset() const{
-        return Constants::PAGE_SIZE - this->framePtr->headerPtr->bytesLeft; //- this->framePtr->headerPtr->size * SlotDirectory::Size;
+        return Constants::PAGE_SIZE
+                - this->framePtr->headerPtr->bytesLeft
+                - this->framePtr->headerPtr->size * SlotDirectory::Size;
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){

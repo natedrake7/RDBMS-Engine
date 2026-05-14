@@ -49,27 +49,42 @@ struct std::hash<Storage::PageKey> {
 };
 
 namespace Storage {
+    static auto constexpr SEGMENT_SIZE = 4096;
+    static auto constexpr FILE_TABLE_SIZE = 2;
+    static auto constexpr INVALID_FRAME = -1;
+
+    using FrameId = Int;
+
+    struct Segment{
+        FrameId frames[SEGMENT_SIZE];
+        Segment();
+    };
+
+    struct FileTable{
+        DataStructures::PolymorphicArray<Segment*> segments;
+    };
+
+    struct DatabaseTable{
+        FileTable files[FILE_TABLE_SIZE];
+    };
 
     class StorageManager final{
-        Int capacity;
-        Int clockHand;
-        // std::vector<Pages::Frame*> frames;
-        Dictionary<PageKey, Pages::Frame*> pageTable; // pageId -> frame index
-
-        CoreEngine::BufferPoolMemoryManager* _memoryManager;
-
+        FileManager fileManager;
         mutable MultiThreading::ReadWriteMutex clockMutex_; // protects eviction sweep
         mutable MultiThreading::ReadWriteMutex tableMutex; // protects pageTable_ and frame insertion
 
-        FileManager fileManager;
+        DataStructures::PolymorphicArray<DatabaseTable*> _pageTable;
+        const CoreEngine::Memory::PersistentAllocator _allocator;
+        CoreEngine::BufferPoolMemoryManager* _memoryManager;
 
-    protected:
+        Int capacity;
+        Int clockHand;
+
         explicit StorageManager();
 
-        // static DataTypes::String CreateKey(const DataTypes::StringView& filename, page_id_t pageId);
-        void EvictPage();
-        void FlushFrameToDisk(const Pages::Frame* framePtr);
-        Pages::Frame* OpenExtent(
+        void EvictPageNoLock();
+        void TryFlushFrameToDiskNoLock(const Pages::Frame* framePtr);
+        Pages::Frame* OpenExtentNoLock(
             FileKey fileKey,
             page_id_t pageId,
             extent_id_t extentId,
@@ -78,9 +93,21 @@ namespace Storage {
         );
         static void SetReadFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
         static void SetWriteFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
-        inline bool IsPageCached(PageKey key) const;
+
+        void CacheFrameToPageTableNoLock(FileKey key, page_id_t pageId, FrameId frameId);
         Pages::Frame* CreateFrame(FileKey fileKey, const DataTypes::StringView& filename, page_id_t pageId, const CoreEngine::StorageTypes::Table *table);
-        Pages::Frame* GetRawPage(
+
+        void EnsureDatabaseTableExistsNoLock(const FileKey fileKey);
+        void EnsureSegmentExistsNoLock(const FileKey fileKey, const page_id_t pageId);
+        Pages::Frame* HandlePageCacheMiss(
+            FileKey fileKey,
+            const DataTypes::StringView& filename,
+            page_id_t pageId,
+            const CoreEngine::StorageTypes::Table *table,
+            MultiThreading::ReaderGuard& readGuard
+        );
+
+        Pages::Frame* GetFrame(
             FileKey fileKey,
             const DataTypes::StringView& filename,
             page_id_t pageId,

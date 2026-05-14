@@ -7,47 +7,26 @@
 #include "Pages/IndexPageView.h"
 #include "Pages/Additional/Frame.h"
 #include <iostream>
-#include <ranges>
 
 namespace Storage {
+Segment::Segment(){
+    std::memset(frames, INVALID_FRAME, sizeof(FrameId) * SEGMENT_SIZE);
+}
+
 StorageManager::StorageManager(){
     this->_memoryManager = &CoreEngine::BufferPoolMemoryManager::Get();
-    this->capacity = this->_memoryManager->FramesCount();
-    this->pageTable.reserve(this->capacity);
+    this->_pageTable.SetAllocator(&this->_allocator);
+    this->capacity = this->_memoryManager->Capacity();
     this->clockHand = 0;
 }
 
-StorageManager::~StorageManager() {
-    for (const auto* framePtr : this->pageTable | std::views::values) {
-        if (framePtr == nullptr)
-            continue;
-        this->FlushFrameToDisk(framePtr);
-    }
-}
-
-StorageManager& StorageManager::Get(){
-    static StorageManager storageManager;
-    return storageManager;
-}
-
-void StorageManager::CreateFile(
-    const FileKey key,
-    const DataTypes::StringView& filename,
-    const DataTypes::StringView& extension
-){
-  this->fileManager.CreateFile(key, filename, extension);
-}
-
-void StorageManager::EvictPage() {
+void StorageManager::EvictPageNoLock() {
     const Pages::Frame* victim = nullptr;
-    PageKey victimKey;
-
-    MultiThreading::WriterGuard lock(&this->clockMutex_);
     while (victim == nullptr) {
         auto* frame = this->_memoryManager->GetFrame(this->clockHand);
 
         this->clockHand = (this->clockHand + 1) % this->capacity;
-        if (frame == nullptr)
+        if (!frame->IsValid())
             continue;
 
         MultiThreading::WriterGuard pageLock(&frame->latch);
@@ -61,36 +40,35 @@ void StorageManager::EvictPage() {
         }
 
         victim = frame;
-        victimKey = PageKey::Create(victim->fileKey, victim->headerPtr->pageId);
     }
 
-    this->FlushFrameToDisk(victim);
+    this->TryFlushFrameToDiskNoLock(victim);
 
-    {
-        MultiThreading::WriterGuard tableLock(&this->tableMutex);
-        this->pageTable.Remove(victimKey);
-    }
+    const auto& victimKey = victim->fileKey;
+    const auto segmentId = victim->headerPtr->pageId / SEGMENT_SIZE;
+    const auto segmentOffset = victim->headerPtr->pageId % SEGMENT_SIZE;
+    this->_pageTable[victimKey.databaseId]->files[static_cast<size_t>(victimKey.type)].segments[segmentId]->frames[segmentOffset] = INVALID_FRAME;
+    this->_memoryManager->EvictFrame();
 }
 
-void StorageManager::FlushFrameToDisk(const Pages::Frame *framePtr){
+void StorageManager::TryFlushFrameToDiskNoLock(const Pages::Frame *framePtr){
     if (!framePtr->isDirty)
         return;
 
     const auto file = this->fileManager.GetFile(framePtr->fileKey, framePtr->filename);
-
     const auto offSet = framePtr->headerPtr->pageId * Constants::PAGE_SIZE;
+
     file.Write(framePtr->data, Constants::PAGE_SIZE, offSet);
     file.Flush();
 }
 
-Pages::Frame* StorageManager::OpenExtent(
+Pages::Frame* StorageManager::OpenExtentNoLock(
     const FileKey fileKey,
     const page_id_t pageId,
     const extent_id_t extentId,
     const DataTypes::StringView& filename,
     const CoreEngine::StorageTypes::Table *table
 ){
-
     // read page from disk, call this->fileManager
     const auto file = this->fileManager.GetFile(fileKey, filename);
     const auto firstExtentPageId = CoreEngine::Database::CalculateExtentFirstPageId(extentId);
@@ -105,70 +83,101 @@ Pages::Frame* StorageManager::OpenExtent(
     for (int i = 0; i < Constants::EXTENT_SIZE; i++){
         offSet = i * Constants::PAGE_SIZE;
 
-        if (bytesRead < offSet)
-            break;
+        if (bytesRead < offSet) break;
 
         const page_id_t currentPageId = firstExtentPageId + i;
-        const auto key = PageKey::Create(fileKey, currentPageId);
+        const auto segmentId = static_cast<Int>(currentPageId / SEGMENT_SIZE);
+        const auto segmentOffset = static_cast<Int>(currentPageId % SEGMENT_SIZE);
 
-        if (this->IsPageCached(key)) continue;
+        this->EnsureSegmentExistsNoLock(fileKey, currentPageId);
+        auto* segment = this->_pageTable[fileKey.databaseId]->files[static_cast<size_t>(fileKey.type)].segments[segmentId];
 
-        if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES)
-            this->EvictPage();
+        if (segment->frames[segmentOffset] != INVALID_FRAME)
+            continue;
 
-        {
-            MultiThreading::WriterGuard tableLock(&this->tableMutex);
-            const auto frame = this->clockHand % this->capacity;
+        if (this->_memoryManager->IsFull())
+            this->EvictPageNoLock();
 
-            const auto pageDataOffset = frame * Constants::PAGE_SIZE;
-            auto* pageDataPtr = this->_memoryManager->CopyToMemory(buffer, pageDataOffset, offSet);
-            auto* newFramePtr = this->_memoryManager->GetFrame(frame);
+        const auto frameId = this->clockHand % this->capacity;
 
-            newFramePtr->data = pageDataPtr;
-            newFramePtr->filename = filename;
-            newFramePtr->fileKey = fileKey;
-            newFramePtr->isDirty = false;
-            newFramePtr->hasSecondChance = false;
-            newFramePtr->pinCount.store(0);
-            newFramePtr->priority.store(Constants::PagePriority::LOW);
-            newFramePtr->table = table;
-            newFramePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(pageDataPtr);
+        const auto pageDataOffset = frameId * Constants::PAGE_SIZE;
+        auto* newFramePtr = this->_memoryManager->AllocateFrame(frameId);
+        newFramePtr->data = this->_memoryManager->CopyToMemory(buffer, pageDataOffset, offSet);
+        newFramePtr->filename = filename;
+        newFramePtr->fileKey = fileKey;
+        newFramePtr->isDirty = false;
+        newFramePtr->hasSecondChance = false;
+        newFramePtr->pinCount.store(0);
+        newFramePtr->priority.store(Constants::PagePriority::LOW);
+        newFramePtr->table = table;
+        newFramePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(newFramePtr->data);
 
-            if (currentPageId == pageId)
-                framePtr = newFramePtr;
+        if (currentPageId == pageId)
+            framePtr = newFramePtr;
 
-            this->pageTable[key] = newFramePtr;
-            this->clockHand = (this->clockHand + 1) % this->capacity;
-        }
+        segment->frames[segmentOffset] = frameId;
+        this->clockHand = (this->clockHand + 1) % this->capacity;
     }
-
-    if (framePtr == nullptr)
-    {
-        std::cout << "Page not found in extent" << std::endl;
-        return nullptr;
-    }
-
 
     return framePtr;
 }
 
-Pages::Frame* StorageManager::GetRawPage(
+Pages::Frame* StorageManager::GetFrame(
     const FileKey fileKey,
     const DataTypes::StringView& filename,
     const page_id_t pageId,
     const CoreEngine::StorageTypes::Table *table
 ) {
-    {
-        MultiThreading::ReaderGuard lock(&this->tableMutex);
+    MultiThreading::ReaderGuard lock(&this->tableMutex);
 
-        Pages::Frame* framePtr = nullptr;
-        if (this->pageTable.TryGetValue(PageKey::Create(fileKey, pageId), framePtr))
-            return framePtr;
+    if (fileKey.databaseId >= _pageTable.Size())
+        return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
+
+    auto* dbTable = _pageTable[fileKey.databaseId];
+    if (dbTable == nullptr)
+        return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
+
+    auto& [segments] = dbTable->files[static_cast<size_t>(fileKey.type)];
+
+    const auto segmentId = pageId / SEGMENT_SIZE;
+    const auto offset = pageId % SEGMENT_SIZE;
+
+    if (segmentId >= segments.Size())
+        return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
+
+    const auto* segment = segments[segmentId];
+    if (segment == nullptr)
+        return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
+
+    const auto frameId = segment->frames[offset];
+    if (frameId == INVALID_FRAME)
+        return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
+
+    return _memoryManager->GetFrame(frameId);
+}
+
+StorageManager& StorageManager::Get(){
+    static StorageManager storageManager;
+    return storageManager;
+}
+
+StorageManager::~StorageManager(){
+    for (Int i = 0; i < this->capacity; i++){
+        const auto* frame = this->_memoryManager->GetFrame(i);
+        if (frame == nullptr || !frame->IsValid())
+            continue;
+
+        MultiThreading::WriterGuard pageLock(&frame->latch);
+        this->TryFlushFrameToDiskNoLock(frame);
     }
+}
 
-    const auto extentId = CoreEngine::Database::CalculateExtentId(pageId);
-    //cache miss
-    return this->OpenExtent(fileKey, pageId, extentId, filename, table);
+void StorageManager::CreateFile(
+    const FileKey key,
+    const DataTypes::StringView& filename,
+    const DataTypes::StringView& extension
+){
+    this->fileManager.CreateFile(key, filename, extension);
 }
 
 Pages::PageView StorageManager::CreatePage(
@@ -189,7 +198,7 @@ Pages::PageView StorageManager::GetPage(
     const page_id_t pageId,
     const CoreEngine::StorageTypes::Table *table
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, table);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, table);
     frame->type = Constants::PageType::DATA;
     return Pages::PageView(frame);
 }
@@ -207,7 +216,7 @@ Pages::LargeObjectView StorageManager::GetLargeDataPage(
     const page_id_t pageId,
     const CoreEngine::StorageTypes::Table *table
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, table);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, table);
     frame->type = Constants::PageType::LOB;
     return Pages::LargeObjectView(frame);
 }
@@ -225,7 +234,7 @@ Pages::OverflowPageView StorageManager::GetOverflowPage(
     const page_id_t pageId,
     const CoreEngine::StorageTypes::Table *table
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, table);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, table);
     frame->type = Constants::PageType::OVERFLOWTYPE;
     return Pages::OverflowPageView(frame);
 }
@@ -292,17 +301,24 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
     return Pages::IndexPageView(frame);
 }
 
-Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes::StringView& filename, const page_id_t pageId, const CoreEngine::StorageTypes::Table *table){
+Pages::Frame* StorageManager::CreateFrame(
+    const FileKey fileKey,
+    const DataTypes::StringView& filename,
+    const page_id_t pageId,
+    const CoreEngine::StorageTypes::Table *table
+){
     MultiThreading::WriterGuard lock(&this->tableMutex);
 
-    if (this->pageTable.size() >= Constants::MAX_NUMBER_OF_PAGES)
-        this->EvictPage();
+    this->EnsureDatabaseTableExistsNoLock(fileKey);
+    this->EnsureSegmentExistsNoLock(fileKey, pageId);
 
-    const auto frameIndex = this->clockHand % this->capacity;
+    if (this->_memoryManager->IsFull())
+        this->EvictPageNoLock();
 
-    auto* framePtr = this->_memoryManager->GetFrame(frameIndex);
+    const auto frameId = this->clockHand % this->capacity;
 
-    framePtr->data = this->_memoryManager->Data() + frameIndex * Constants::PAGE_SIZE;
+    auto* framePtr = this->_memoryManager->AllocateFrame(frameId);
+    framePtr->data = this->_memoryManager->Data() + frameId * Constants::PAGE_SIZE;
     framePtr->table = table;
     framePtr->filename = filename;
     framePtr->fileKey = fileKey;
@@ -313,24 +329,66 @@ Pages::Frame* StorageManager::CreateFrame(const FileKey fileKey, const DataTypes
     framePtr->headerPtr = reinterpret_cast<Pages::PageHeader*>(framePtr->data);
     framePtr->headerPtr->pageId = pageId;
 
-    this->pageTable[PageKey::Create(fileKey, pageId)] = framePtr;
+    this->CacheFrameToPageTableNoLock(fileKey, pageId, frameId);
     this->clockHand = (this->clockHand + 1) % this->capacity;
 
     return framePtr;
 }
 
+void StorageManager::EnsureDatabaseTableExistsNoLock(const FileKey fileKey){
+    if (this->_pageTable.Size() < fileKey.databaseId + 1)
+        this->_pageTable.Resize(fileKey.databaseId + 1);
+
+    if (this->_pageTable[fileKey.databaseId] == nullptr){
+        auto* databaseTable = this->_allocator.Allocate<DatabaseTable>();
+        this->_pageTable[fileKey.databaseId] = databaseTable;
+        databaseTable->files[0].segments.SetAllocator(&this->_allocator);
+        databaseTable->files[1].segments.SetAllocator(&this->_allocator);
+    }
+}
+
+void StorageManager::EnsureSegmentExistsNoLock(const FileKey fileKey, const page_id_t pageId){
+    auto& [segments] = this->_pageTable[fileKey.databaseId]->files[static_cast<size_t>(fileKey.type)];
+    const auto segmentId = static_cast<Int>(pageId / SEGMENT_SIZE);
+
+    if (segments.Size() < segmentId + 1)
+        segments.Resize(segmentId + 1);
+
+    if (segments[segmentId] == nullptr)
+        segments[segmentId] = this->_allocator.Allocate<Segment>();
+}
+
+Pages::Frame* StorageManager::HandlePageCacheMiss(
+    const FileKey fileKey,
+    const DataTypes::StringView& filename,
+    const page_id_t pageId,
+    const CoreEngine::StorageTypes::Table* table,
+    MultiThreading::ReaderGuard& readGuard
+){
+    MultiThreading::WriterGuard::Promote(&this->tableMutex, readGuard);
+    this->EnsureDatabaseTableExistsNoLock(fileKey);
+    this->EnsureSegmentExistsNoLock(fileKey, pageId);
+
+    MultiThreading::WriterGuard clockLock(&this->clockMutex_);
+    return this->OpenExtentNoLock(
+        fileKey, pageId,
+        CoreEngine::Database::CalculateExtentId(pageId),
+        filename, table
+    );
+}
+
+
 Pages::HeaderPageView StorageManager::GetHeaderPage(
     const FileKey fileKey,
     const DataTypes::StringView& filename
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, Constants::HEADER_PAGE_ID, nullptr);
+    auto* frame = this->GetFrame(fileKey, filename, Constants::HEADER_PAGE_ID, nullptr);
     auto view =  Pages::HeaderPageView(frame);
     return view;
 }
 
-Pages::PageFreeSpaceView StorageManager::GetPageFreeSpacePage(const FileKey fileKey, const DataTypes::StringView& filename, const page_id_t pageId)
-{
-    auto* page = this->GetRawPage(fileKey, filename, pageId, nullptr);
+Pages::PageFreeSpaceView StorageManager::GetPageFreeSpacePage(const FileKey fileKey, const DataTypes::StringView& filename, const page_id_t pageId){
+    auto* page = this->GetFrame(fileKey, filename, pageId, nullptr);
     return Pages::PageFreeSpaceView(page);
 }
 
@@ -340,7 +398,7 @@ Pages::IndexPageView StorageManager::GetIndexPage(
   const page_id_t pageId,
   const CoreEngine::StorageTypes::Table* table
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, table);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, table);
 
     if (frame->additionalHeader.indexHeaderPtr == nullptr)
         frame->additionalHeader.indexHeaderPtr = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->data + Constants::PAGE_HEADER_SIZE);
@@ -354,7 +412,7 @@ Pages::AllocationPageView StorageManager::GetAllocationPage(
   const page_id_t pageId,
   const CoreEngine::StorageTypes::Table *table
 ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, table);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, table);
     frame->additionalHeader.allocationHeaderPtr = reinterpret_cast<Pages::IndexAllocationPageAdditionalHeader*>(frame->data + Constants::PAGE_HEADER_SIZE);
     return Pages::AllocationPageView(frame);
 }
@@ -364,16 +422,17 @@ Pages::GlobalAllocationPageView StorageManager::GetGlobalAllocationMapPage(
     const DataTypes::StringView& filename,
     const page_id_t pageId
     ){
-    auto* frame = this->GetRawPage(fileKey, filename, pageId, nullptr);
+    auto* frame = this->GetFrame(fileKey, filename, pageId, nullptr);
     return Pages::GlobalAllocationPageView(frame);
 }
 
 ////////////////////////////////////////////////////////////////////
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
-bool StorageManager::IsPageCached(const PageKey key) const{
-    MultiThreading::ReaderGuard lock(&this->tableMutex);
-    return this->pageTable.Contains(key);
+void StorageManager::CacheFrameToPageTableNoLock(FileKey key, const page_id_t pageId, const FrameId frameId){
+    const auto segmentId = pageId / SEGMENT_SIZE;
+    const auto offset = pageId % SEGMENT_SIZE;
+    this->_pageTable[key.databaseId]->files[static_cast<size_t>(key.type)].segments[segmentId]->frames[offset] = frameId;
 }
 
 void StorageManager::SetReadFilePointerToOffset(std::fstream *file, const std::streampos &offSet) {

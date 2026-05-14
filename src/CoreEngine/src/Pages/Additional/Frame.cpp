@@ -47,4 +47,8 @@ namespace Pages{
 
         return *this;
     }
+
+    bool Frame::IsValid() const{
+        return this->data != nullptr;
+    }
 }

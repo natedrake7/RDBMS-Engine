@@ -175,6 +175,7 @@ namespace DataStructures{
 
             T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
             std::memcpy(newData, this->_data, this->_size * sizeof(T));
+            std::memset(newData + this->_size, 0, (newCapacity - this->_size) * sizeof(T));
 
             this->_data = newData;
             this->_capacity = newCapacity;
@@ -194,7 +195,7 @@ namespace DataStructures{
 
         void Remove(Int index){
             if (index < 0 || index >= this->_size)
-                throw std::out_of_range("Index out of range.");
+                throw std::out_of_range("PolymorphicArray: Index out of range.");
 
             // Shift elements to the left to fill the gap
             for (Int i = index; i < this->_size - 1; i++)
@@ -205,7 +206,7 @@ namespace DataStructures{
 
         void RemoveFrom(Int index){
             if (index < 0 || index >= this->_size)
-                throw std::out_of_range("Index out of range.");
+                throw std::out_of_range("PolymorphicArray: Index out of range.");
 
             this->_size = index;
         }
@@ -227,14 +228,14 @@ namespace DataStructures{
 
         [[nodiscard]] T& operator[](Int index){
             if (index < 0 || index >= this->_size)
-                throw std::out_of_range("Index out of range.");
+                throw std::out_of_range("PolymorphicArray: Index out of range.");
 
             return this->_data[index];
         }
 
         [[nodiscard]] const T& operator[](Int index) const{
             if (index < 0 || index >= this->_size)
-                throw std::out_of_range("Index out of range.");
+                throw std::out_of_range("PolymorphicArray: Index out of range.");
 
             return this->_data[index];
         }

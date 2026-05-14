@@ -266,7 +266,3 @@ void RegisterSignalHandlers(){
     signal(SIGTERM, shutdownClient);  // kill command
     signal(SIGABRT, shutdownClient);  // abort()
 }
-
-void Testing(){
-
-}

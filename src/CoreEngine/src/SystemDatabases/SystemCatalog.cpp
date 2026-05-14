@@ -125,13 +125,18 @@ namespace CoreEngine {
                 auto* column = table->AddColumn(nameView, columnType, columnSize, columnIndex, columnHeader.nullable);
 
                 if (columnHeader.hasIdentity){
+                    auto defaultIdentityValue = Constants::DEFAULT_IDENTITY_VALUE;
+                    if (i == CatalogTables::SysDatabases
+                        && columnIndex == static_cast<Int>(SysDatabases::DatabaseId)
+                    ) defaultIdentityValue = Constants::SYSTEM_CATALOG_ID;
+
                     column->SetIdentity(
                         Headers::IdentityColumnsHeader(
                             tableHeader.id,
                             columnIndex,
                             Constants::DEFAULT_IDENTITY_SEED,
                             Constants::DEFAULT_IDENTITY_INCREMENT,
-                            Constants::DEFAULT_IDENTITY_VALUE,
+                            defaultIdentityValue,
                             true,
                             Constants::DEFAULT_IDENTITY_CACHE_BLOCK
                         )

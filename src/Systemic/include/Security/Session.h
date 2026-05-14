@@ -38,7 +38,7 @@ namespace Network {
       this->user = user;
 
       //default to masterdb
-      this->databaseId = 1;
+      this->databaseId = Constants::SYSTEM_CATALOG_ID;
       this->transactionId = 0;
     }
   };
