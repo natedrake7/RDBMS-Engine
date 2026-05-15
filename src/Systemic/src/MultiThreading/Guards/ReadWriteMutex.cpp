@@ -1,116 +1,221 @@
 #include "../../../include/Guards/ReadWriteMutex.h"
 
 namespace MultiThreading {
-    ReadWriteMutex::ReadWriteMutex(){
-        this->writersWaiting.store(0);
-        this->state.store(0);
-        // this->readers = 0;
-        // this->writerActive = false;
+
+bool ReadWriteMutex::TrySharedFast() {
+    auto s = this->state.load(std::memory_order_acquire);
+
+    while (s >= 0) {
+        // Optional writer preference:
+        if (this->waitingWriters.load(std::memory_order_relaxed) > 0)
+            return false;
+
+        if (this->upgradePending.load(std::memory_order_relaxed))
+            return false;
+
+        if (this->state.compare_exchange_weak(
+            s,
+            s + 1,
+            std::memory_order_acquire,
+            std::memory_order_relaxed
+        )) return true;
     }
 
-    ReadWriteMutex::~ReadWriteMutex() = default;
+    return false;
+}
 
-    void ReadWriteMutex::SharedLock(){
-        while (true) {
-            // Spin if writer active or writers waiting
-            while (this->state.load(std::memory_order_acquire) < 0
-                || this->writersWaiting.load(std::memory_order_acquire) > 0
-            ) std::this_thread::yield();
+bool ReadWriteMutex::TryUniqueFast() {
+    auto expected = 0;
+    return this->state.compare_exchange_strong(
+        expected,
+        -1,
+        std::memory_order_acquire,
+        std::memory_order_relaxed
+    );
+}
 
-            auto expected = this->state.load(std::memory_order_relaxed);
-            if (expected >= 0
-                && this->state.compare_exchange_weak(expected, expected + 1,
-                    std::memory_order_acquire, std::memory_order_relaxed))
-                return;
-        }
-        // std::unique_lock lk(this->mutex);
-        // // Wait while a writer is active OR writers waiting and we prefer writers
-        // this->readersCV.wait(lk, [this]()
-        // {
-        // return !this->writerActive && this->writersWaiting == 0;
-        // });
-        // this->readers++;
+bool ReadWriteMutex::TryPromoteLock() {
+    auto expected = false;
+    // only one upgrader allowed
+    if (!this->upgradePending.compare_exchange_strong(
+        expected,
+        true,
+        std::memory_order_acquire,
+        std::memory_order_relaxed))
+        return false;
+
+    int expectedState = 1;
+
+    bool success =
+        this->state.compare_exchange_strong(
+            expectedState,
+            -1,
+            std::memory_order_acquire,
+            std::memory_order_relaxed);
+
+    this->upgradePending.store(false, std::memory_order_release);
+
+    return success;
+}
+
+ReadWriteMutex::ReadWriteMutex()
+    : state(0)
+    , waitingReaders(0)
+    , waitingWriters(0)
+    , upgradePending(false){}
+
+void ReadWriteMutex::SharedLock() {
+    // FAST PATH
+    if (TrySharedFast())
+        return;
+
+    // ADAPTIVE SPIN
+    for (int i = 0; i < SPIN_COUNT; ++i) {
+        if (TrySharedFast())
+            return;
+
+        cpu_pause();
     }
 
-    void ReadWriteMutex::SharedUnlock(){
-        this->state.fetch_sub(1, std::memory_order_release);
-        // std::unique_lock lk(mutex);
-        //
-        // this->readers--;
-        //
-        // if (this->readers == 0)
-        // this->writersCV.notify_one();
+    // SLOW PATH (park thread)
+    this->waitingReaders.fetch_add(1, std::memory_order_relaxed);
+
+    std::unique_lock lock(waitMutex);
+
+    this->readersCV.wait(lock, [this]() {
+        if (this->waitingWriters.load(std::memory_order_relaxed) > 0)
+            return false;
+
+        const auto s = this->state.load(std::memory_order_acquire);
+
+        return s >= 0;
+    });
+
+    this->waitingReaders.fetch_sub(1, std::memory_order_relaxed);
+
+    // acquire reader slot
+    while (true) {
+        auto s = this->state.load(std::memory_order_acquire);
+
+        if (s < 0)
+            continue;
+
+        if (this->state.compare_exchange_weak(
+            s,
+            s + 1,
+            std::memory_order_acquire,
+            std::memory_order_relaxed
+        )) return;
+    }
+}
+
+void ReadWriteMutex::SharedUnlock() {
+
+    const auto prev = this->state.fetch_sub(
+        1,
+        std::memory_order_release
+    );
+
+    // last reader wakes writer
+    if (prev == 1) {
+        std::lock_guard lock(waitMutex);
+
+        if (this->waitingWriters.load(std::memory_order_relaxed) > 0)
+            this->writersCV.notify_one();
+    }
+}
+
+void ReadWriteMutex::UniqueLock() {
+    // FAST PATH
+    if (TryUniqueFast())
+        return;
+
+    // ADAPTIVE SPIN
+    for (int i = 0; i < SPIN_COUNT; ++i) {
+        if (TryUniqueFast())
+            return;
+
+        cpu_pause();
     }
 
-    void ReadWriteMutex::UniqueLock(){
-        this->writersWaiting.fetch_add(1, std::memory_order_relaxed);
-        int expected = 0;
-        while (!this->state.compare_exchange_weak(expected, -1,
-            std::memory_order_acquire, std::memory_order_relaxed)) {
-            expected = 0;
-            std::this_thread::yield();
-            }
-        this->writersWaiting.fetch_sub(1, std::memory_order_relaxed);
-        // std::unique_lock lk(this->mutex);
-        //
-        // this->writersWaiting++;
-        // this->writersCV.wait(lk, [this]()
-        // {
-        // return !this->writerActive && this->readers == 0;
-        // });
-        // this->writersWaiting--;
-        // this->writerActive = true;
+    // SLOW PATH
+    this->waitingWriters.fetch_add(1, std::memory_order_relaxed);
+
+    std::unique_lock lock(waitMutex);
+
+    this->writersCV.wait(lock, [this]() {
+        return this->state.load(std::memory_order_acquire) == 0;
+    });
+
+    this->waitingWriters.fetch_sub(1, std::memory_order_relaxed);
+
+    int expected = 0;
+
+    while (!this->state.compare_exchange_weak(
+        expected,
+        -1,
+        std::memory_order_acquire,
+        std::memory_order_relaxed))
+    {
+        expected = 0;
+    }
+}
+
+void ReadWriteMutex::UniqueUnlock() {
+    this->state.store(0, std::memory_order_release);
+
+    std::lock_guard lock(waitMutex);
+
+    // Prefer writers first
+    if (this->waitingWriters.load(std::memory_order_relaxed) > 0) {
+        this->writersCV.notify_one();
+        return;
     }
 
-    void ReadWriteMutex::UniqueUnlock(){
-        this->state.store(0, std::memory_order_release);
-        // std::unique_lock lk(this->mutex);
-        // this->writerActive = false;
-        // // Prefer waking a writer first to avoid writer starvation
-        // if (this->writersWaiting > 0) {
-        // this->writersCV.notify_one();
-        // return;
-        // }
-        //
-        // this->readersCV.notify_all();
+    // Otherwise wake all readers
+    this->readersCV.notify_all();
+}
+
+bool ReadWriteMutex::SharedTryLock() {
+    return TrySharedFast();
+}
+
+    bool ReadWriteMutex::UniqueTryLock() {
+        return TryUniqueFast();
     }
 
-    bool ReadWriteMutex::SharedTryLock(){
-        if (this->writersWaiting.load(std::memory_order_acquire) > 0) return false;
-        auto expected = this->state.load(std::memory_order_relaxed);
-        if (expected < 0) return false;
-        return this->state.compare_exchange_strong(expected, expected + 1,
-            std::memory_order_acquire, std::memory_order_relaxed);
-   // std::unique_lock lk(this->mutex);
-   //
-   // if (this->writerActive || this->writersWaiting > 0)
-   //   return false;
-   //
-   // // Wait while a writer is active OR writers waiting and we prefer writers
-   // this->readersCV.wait(lk, [this]()
-   // {
-   //     return !this->writerActive && this->writersWaiting == 0;
-   // });
-   // this->readers++;
-   //
-   // return true;
+void ReadWriteMutex::PromoteLock() {
+    bool expected = false;
+
+    // wait until upgrade slot available
+    while (!this->upgradePending.compare_exchange_weak(
+        expected,
+        true,
+        std::memory_order_acquire,
+        std::memory_order_relaxed))
+    {
+        expected = false;
+        cpu_pause();
     }
 
-    bool ReadWriteMutex::UniqueTryLock(){
-        auto expected = 0;
-        return this->state.compare_exchange_strong(expected, -1,
-        std::memory_order_acquire, std::memory_order_relaxed);
+    this->waitingWriters.fetch_add(1, std::memory_order_relaxed);
+
+    // wait until we're sole reader
+    while (true) {
+        auto expectedState = 1;
+        if (this->state.compare_exchange_weak(
+            expectedState,
+            -1,
+            std::memory_order_acquire,
+            std::memory_order_relaxed))
+            break;
+
+        cpu_pause();
     }
 
-    void ReadWriteMutex::PromoteLock(){
-        // Promote: already hold shared lock (state >= 1), want exclusive
-        // Atomically go from 1 reader (us) to writer (-1)
-        auto expected = 1;
-        while (!this->state.compare_exchange_weak(expected, -1,
-            std::memory_order_acquire, std::memory_order_relaxed)) {
-            // Other readers still active, wait for them to drain
-            expected = 1;
-            std::this_thread::yield();
-        }
-    }
+    this->waitingWriters.fetch_sub(1, std::memory_order_relaxed);
+
+    this->upgradePending.store(false, std::memory_order_release);
+}
+
 }
