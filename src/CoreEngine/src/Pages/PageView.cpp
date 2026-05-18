@@ -5,7 +5,7 @@
 #include "DataStorage/Table.h"
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
-#include "Pages/Additional/RowView.h"
+#include "DataStorage/Row.h"
 
 namespace Pages{
     PageHeader::PageHeader(){
@@ -17,25 +17,25 @@ namespace Pages{
     PageHeader::~PageHeader() = default;
 
     void PageView::SetFileName(const DataTypes::StringView& otherFilename) const{
-        this->framePtr->filename = otherFilename;
+        this->_frame->filename = otherFilename;
     }
 
     void PageView::SetPageId(const page_id_t pageId) const{
-        this->framePtr->headerPtr->pageId = pageId;
+        this->_frame->headerPtr->pageId = pageId;
     }
 
     page_offset_t PageView::NewInsertOffset() const{
         return Constants::PAGE_SIZE
-                - this->framePtr->headerPtr->bytesLeft
-                - this->framePtr->headerPtr->size * SlotDirectory::Size;
+                - this->_frame->headerPtr->bytesLeft
+                - this->_frame->headerPtr->size * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){
-        return Constants::PAGE_SIZE - (indexPosition + 1) * SlotDirectory::Size;
+        return Constants::PAGE_SIZE - (indexPosition + 1) * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-        return Constants::PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::Size;
+        return Constants::PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::SIZE;
     }
 
     void PageView::UpdateSlotDirectory(
@@ -43,63 +43,69 @@ namespace Pages{
         const Int indexPosition
     ) const{
         std::memcpy(
-            this->framePtr->data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
+            this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
             &slotDirectory,
-            SlotDirectory::Size
+            SlotDirectory::SIZE
         );
     }
 
     bool PageView::IndexOutOfBounds(const Int indexPosition) const{
-        return indexPosition >= this->framePtr->headerPtr->size;
+        return indexPosition >= this->_frame->headerPtr->size;
     }
 
-    void PageView::AdjustSlotDirectories(const Int indexPosition, const page_offset_t& offset, const Int slotSize) const{
-        const auto slotsToMove = this->framePtr->headerPtr->size - indexPosition;
-        const auto slotBytesToMove = slotsToMove * SlotDirectory::Size;
+    void PageView::AdjustSlotDirectories(
+        const Int indexPosition,
+        const page_offset_t offset,
+        const row_size_t rowSize,
+        const key_size_t keySize
+    ) const{
+        const auto slotsToMove = this->_frame->headerPtr->size - indexPosition;
+        const auto slotBytesToMove = slotsToMove * SlotDirectory::SIZE;
         const auto srcOffset = Pages::PageView::SlotDirectoriesToMoveOffSet(indexPosition, slotsToMove);
-        const auto dstOffset = srcOffset - SlotDirectory::Size;
+        const auto dstOffset = srcOffset - SlotDirectory::SIZE;
 
         std::memmove(
-            this->framePtr->data + dstOffset,
-            this->framePtr->data + srcOffset,
+            this->_frame->_data + dstOffset,
+            this->_frame->_data + srcOffset,
             slotBytesToMove
         );
 
-        const auto slot = SlotDirectory(offset, slotSize, SlotDirectory::SLOT_USED);
+        const auto slot = SlotDirectory(offset, keySize, rowSize, keySize, SlotDirectory::SLOT_USED);
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
     Int PageView::RawDataSize() const{
-        return this->framePtr->type == Constants::PageType::INDEX
+        return this->_frame->type == Constants::PageType::INDEX
                    ? Constants::INDEX_PAGE_DEFAULT_SIZE
                    : Constants::PAGE_SIZE_WITHOUT_HEADER;
     }
 
     void PageView::InsertFirstRow(const CoreEngine::StorageTypes::InsertPayload& payload) const{
         const auto rowSize = payload.Size();
+        const auto offSet = this->NewInsertOffset();
 
-        std::memcpy(this->framePtr->data + this->initialOffset, payload.Data(), rowSize);
+        std::memcpy(this->_frame->_data + offSet, payload.Data(), rowSize);
 
-        const auto newSlot = SlotDirectory(0, rowSize, SlotDirectory::SLOT_USED);
+        const auto newSlot = SlotDirectory(offSet, 0, rowSize, 0, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
-        this->framePtr->headerPtr->size++;
-        this->framePtr->isDirty = true;
-        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
+        this->_frame->headerPtr->size++;
+        this->_frame->isDirty = true;
+        this->_frame->headerPtr->bytesLeft -= (rowSize + SlotDirectory::SIZE);
     }
 
     bool PageView::IsIndexPage() const{
-        return this->framePtr->type == Constants::PageType::INDEX;
+        return this->_frame->type == Constants::PageType::INDEX;
     }
 
     PageView::PageView(){
-        this->framePtr = nullptr;
+        this->_frame = nullptr;
         this->initialOffset = Constants::PAGE_HEADER_SIZE;
     }
 
     PageView::PageView(Frame* framePtr){
-        this->framePtr = framePtr;
-        this->framePtr->pinCount.fetch_add(1, std::memory_order_relaxed);
+        this->_frame = framePtr;
+        this->_frame->pinCount.fetch_add(1, std::memory_order_relaxed);
         this->initialOffset = Constants::PAGE_HEADER_SIZE;
     }
 
@@ -108,76 +114,54 @@ namespace Pages{
             return *this;
 
         if (this->IsValid())
-            this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
+            this->_frame->pinCount.fetch_sub(1, std::memory_order_relaxed);
 
-        this->framePtr = other.framePtr;
-        other.framePtr = nullptr;
+        this->_frame = other._frame;
+        other._frame = nullptr;
         return *this;
     }
 
     PageView::PageView(PageView&& other) noexcept{
-        this->framePtr = other.framePtr;
-        other.framePtr = nullptr;
+        this->_frame = other._frame;
+        other._frame = nullptr;
     }
 
     PageView::~PageView(){
         if (this->IsValid())
-            this->framePtr->pinCount.fetch_sub(1, std::memory_order_relaxed);
+            this->_frame->pinCount.fetch_sub(1, std::memory_order_relaxed);
     }
 
     PageHeader* PageView::GetHeader() const{
-        return this->framePtr->headerPtr;
+        return this->_frame->headerPtr;
     }
 
-    CoreEngine::StorageTypes::RowHeader PageView::PeekRowHeader(const Int indexPosition, const Int offSet) const{
-        auto rowHeader = CoreEngine::StorageTypes::RowHeader();
+    CoreEngine::StorageTypes::RowHeader PageView::PeekRowHeader(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-
-        page_offset_t offSetCopy = offSet == 0 ? slot.GetOffset() : offSet;
-        std::memcpy(&rowHeader.version, this->framePtr->data + offSet, Constants::ROW_VERSION_HEADER_SIZE);
-        offSetCopy += Constants::ROW_VERSION_HEADER_SIZE;
-
-
-        rowHeader.nullBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
-        rowHeader.largeObjectBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
-        rowHeader.overflowBitMap.ReadFromPage(this->framePtr->data, offSetCopy);
-
+        CoreEngine::StorageTypes::RowHeader rowHeader;
+        std::memcpy(&rowHeader, this->_frame->_data + slot.AbsoluteDataOffset(), Constants::ROW_VERSION_HEADER_SIZE);
         return rowHeader;
-    }
-
-    RowView* PageView::PeekRow(
-        const ::Memory::IAllocator* allocator,
-        const Int indexPosition,
-        const Int offSet
-    ) const{
-        return allocator->Allocate<RowView>(
-            this->framePtr,
-            allocator,
-            indexPosition,
-            offSet
-        );
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
         SlotDirectory slot;
         std::memcpy(
             &slot,
-            this->framePtr->data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
-            SlotDirectory::Size
+            this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
+            SlotDirectory::SIZE
         );
         return slot;
     }
 
     void PageView::InsertNewSlot(const SlotDirectory slotDirectory) const{
         std::memcpy(
-            this->framePtr->data + Pages::PageView::SlotDirectoryOffSet(this->framePtr->headerPtr->size),
+            this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(this->_frame->headerPtr->size),
             &slotDirectory,
-            SlotDirectory::Size
+            SlotDirectory::SIZE
         );
     }
 
     void PageView::Defragment(const ::Memory::IAllocator* allocator) const{
-        auto* header = this->framePtr->headerPtr;
+        auto* header = this->_frame->headerPtr;
 
         if (header->size <= 1) return;
 
@@ -193,35 +177,35 @@ namespace Pages{
         for (Int i = 0;i < header->size;i++){
             auto slot = defragmentationSlots[i];
 
-            if (slot.slotDirectory.GetOffset() == offset){
-                offset += slot.slotDirectory.GetSize();
+            if (slot.slotDirectory.Offset() == offset){
+                offset += slot.slotDirectory.Size();
                 continue;
             }
 
             std::memmove(
-                this->framePtr->data + offset,
-                this->framePtr->data + slot.slotDirectory.GetOffset(),
-                slot.slotDirectory.GetSize()
+                this->_frame->_data + offset,
+                this->_frame->_data + slot.slotDirectory.Offset(),
+                slot.slotDirectory.Size()
             );
 
             slot.slotDirectory.SetOffset(offset);
             this->UpdateSlotDirectory(slot.slotDirectory, slot.indexPosition);
-            offset += slot.slotDirectory.GetSize();
+            offset += slot.slotDirectory.Size();
         }
 
-        const auto usedBytes = offset + (header->size * SlotDirectory::Size);
+        const auto usedBytes = offset + (header->size * SlotDirectory::SIZE);
         header->bytesLeft = Constants::PAGE_SIZE - usedBytes;
-        this->framePtr->isDirty = true;
+        this->_frame->isDirty = true;
     }
 
     void PageView::Resize(const Int size) const{
-        for (int i = size; i < this->framePtr->headerPtr->size; i++){
+        for (int i = size; i < this->_frame->headerPtr->size; i++){
             const auto slot = this->GetSlotDirectory(i);
-            this->framePtr->headerPtr->bytesLeft += slot.GetSize() + SlotDirectory::Size;
+            this->_frame->headerPtr->bytesLeft += slot.Size() + SlotDirectory::SIZE;
         }
 
-        this->framePtr->headerPtr->size = size;
-        this->framePtr->isDirty = true;
+        this->_frame->headerPtr->size = size;
+        this->_frame->isDirty = true;
     }
 
     void PageView::DistributeFromPage(
@@ -236,17 +220,21 @@ namespace Pages{
 
         for (Int index = slotToMoveFrom; index < donorPage->PageSize(); index++){
             const auto leftSlot = donorPage->GetSlotDirectory(index);
-            std::memcpy(this->framePtr->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+            std::memcpy(this->_frame->_data + offset, leftData + leftSlot.DataOffset(), leftSlot.DataSize());
 
-            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
+            const auto rightSlot = SlotDirectory(
+                offset, leftSlot.DataOffset(),
+                leftSlot.DataSize(), leftSlot.KeySize(),
+                SlotDirectory::SLOT_USED
+            );
             this->InsertNewSlot(rightSlot);
 
-            offset += leftSlot.GetSize();
-            this->framePtr->headerPtr->size++;
+            offset += leftSlot.Size();
+            this->_frame->headerPtr->size++;
         }
 
-        this->framePtr->headerPtr->bytesLeft -= this->framePtr->headerPtr->size * SlotDirectory::Size + (offset - startOffset);;
-        this->framePtr->isDirty = true;
+        this->_frame->headerPtr->bytesLeft -= this->_frame->headerPtr->size * SlotDirectory::SIZE + (offset - startOffset);;
+        this->_frame->isDirty = true;
 
         donorPage->Resize(donorNewSize);
         donorPage->Defragment(allocator);
@@ -263,139 +251,155 @@ namespace Pages{
 
         for (Int index = 0; index < numberOfSlotsToMove; index++){
             const auto leftSlot = donorPage->GetSlotDirectory(index);
-            std::memcpy(this->framePtr->data + offset, leftData + leftSlot.GetOffset(), leftSlot.GetSize());
+            const auto leftSize = leftSlot.Size();
 
-            const auto rightSlot = SlotDirectory(offset, leftSlot.GetSize(), SlotDirectory::SLOT_USED);
+            std::memcpy(this->_frame->_data + offset, leftData + leftSlot.Offset(), leftSize);
+
+            const auto rightSlot = SlotDirectory(
+                offset, leftSlot.DataOffset(), leftSlot.DataSize(),
+                leftSlot.KeySize(), SlotDirectory::SLOT_USED
+            );
             this->InsertNewSlot(rightSlot);
 
-            offset += leftSlot.GetSize();
-            this->framePtr->headerPtr->size++;
-            this->framePtr->headerPtr->bytesLeft -= leftSlot.GetSize() + SlotDirectory::Size;
+            offset += leftSize;
+            this->_frame->headerPtr->size++;
+            this->_frame->headerPtr->bytesLeft -= leftSize + SlotDirectory::SIZE;
         }
 
-        this->framePtr->isDirty = true;
+        this->_frame->isDirty = true;
 
         donorPage->Resize(donorResizeVariant);
         donorPage->Defragment(allocator);
-    }
-
-    void PageView::DistributeSingleSlotFromPage(PageView* donorPage, Int donorIndexPosition, Int donorResizeVariant)
-    {
     }
 
     Int PageView::InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload) const{
         const auto rowSize = payload.Size();
 
         auto nextOffset = this->NewInsertOffset();
-        const auto offSetCopy = nextOffset;
 
-        std::memcpy(this->framePtr->data + nextOffset, payload.Data(), rowSize);
+
+        std::memcpy(this->_frame->_data + nextOffset, payload.Data(), rowSize);
         nextOffset += rowSize;
 
-        const auto newSlot = SlotDirectory(offSetCopy, rowSize, SlotDirectory::SLOT_USED);
+        const auto newSlot = SlotDirectory(
+            nextOffset, 0,
+            rowSize, 0, SlotDirectory::SLOT_USED
+        );
         this->InsertNewSlot(newSlot);
 
-        this->framePtr->headerPtr->size++;
-        this->framePtr->isDirty = true;
-        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
+        this->_frame->headerPtr->size++;
+        this->_frame->isDirty = true;
+        this->_frame->headerPtr->bytesLeft -= (rowSize + SlotDirectory::SIZE);
 
-        return this->framePtr->headerPtr->size - 1;
+        return this->_frame->headerPtr->size - 1;
     }
 
-    void PageView::InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload, const Int indexPosition) const{
-        if (indexPosition >= this->framePtr->headerPtr->size){
+    void PageView::InsertRow(
+        const CoreEngine::StorageTypes::InsertPayload& payload,
+        const Int indexPosition
+    ) const{
+        if (indexPosition >= this->_frame->headerPtr->size){
             const auto _ = this->InsertRow(payload);
             return;
         }
 
         const auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
-
         const auto rowSize = payload.Size();
 
-        std::memcpy(this->framePtr->data + nextOffset, payload.Data(), rowSize);
+        std::memcpy(this->_frame->_data + nextOffset, payload.Data(), rowSize);
 
-        this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize);
+        this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize, 0);
 
-        this->framePtr->headerPtr->bytesLeft -= (rowSize + SlotDirectory::Size);
-        this->framePtr->headerPtr->size++;
-        this->framePtr->isDirty = true;
+        this->_frame->headerPtr->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        this->_frame->headerPtr->size++;
+        this->_frame->isDirty = true;
     }
 
     bool PageView::UpdateRow(
         const ::Memory::IAllocator* allocator,
         const CoreEngine::StorageTypes::InsertPayload& payload,
-        const RowView* rowPtr
+        const page_offset_t indexPosition
     ) const{
-        if (this->IndexOutOfBounds(rowPtr->indexPosition))
+        if (this->IndexOutOfBounds(indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
 
-        const auto slot = this->GetSlotDirectory(rowPtr->indexPosition);
+        auto slot = this->GetSlotDirectory(indexPosition);
+        const auto newSize = payload.Size();
 
-        const auto rowOffset = rowPtr->keySize + slot.GetOffset();
-        // const auto key = this->GetKey(rowOffset);
+        // In-place update: new data fits in existing slot
+        if (newSize <= slot.DataSize()){
+            std::memcpy(this->_frame->_data + slot.DataOffset(), payload.Data(), newSize);
 
-        const auto previousRowSize = slot.GetSize() - rowPtr->keySize;
-        const auto size = payload.Size();
-        const auto totalSize = rowPtr->keySize + size;
-        //if new row size is less than or equal to previous row size, update in place
-        if (size <= previousRowSize){
-            std::memcpy(this->framePtr->data + rowOffset, payload.Data(), size);
-            // this->SerializeRow(rowHeader, row, offSet);
-            this->framePtr->headerPtr->bytesLeft -= totalSize;
-            this->framePtr->isDirty = true;
+            // Update slot to reflect new (possibly smaller) size
+            const auto updatedSlot = SlotDirectory(
+                slot.Offset(), slot.DataOffset(),
+                newSize, slot.KeySize(), SlotDirectory::SLOT_USED
+            );
+            this->UpdateSlotDirectory(updatedSlot, indexPosition);
+
+            this->_frame->headerPtr->bytesLeft += (slot.DataSize() - newSize);
+            this->_frame->isDirty = true;
             return true;
         }
 
-        //insert new row at the end
-        auto nextOffset = this->NewInsertOffset();
-        auto offSetCopy = nextOffset;
+        //preserve key by copying it into memory
+        auto* keyData = static_cast<object_t*>(allocator->AllocateRaw(slot.KeySize()));
+        std::memcpy(keyData, this->_frame->_data + slot.Offset(), slot.KeySize());
 
-        //if next row cant fit in the remaining space, we need to compact the page
-        //keep slot offset and set its size to 0 so defragmentation does nothing as it is last on the offset
-        if (this->framePtr->headerPtr->bytesLeft < totalSize){
-            this->UpdateSlotDirectory(SlotDirectory(nextOffset, 0, SlotDirectory::SLOT_DEAD), rowPtr->indexPosition);
+        // Defragment if not enough space for new data
+        const auto requiredSpace = newSize + slot.KeySize();
+        if (this->_frame->headerPtr->bytesLeft < requiredSpace){
+            // Out-of-place update: mark old slot as dead, write new data at end
+            // Mark old slot dead so defragment can reclaim it
+            slot.SetFlag(SlotDirectory::SLOT_DEAD);
+            this->UpdateSlotDirectory(slot, indexPosition);
+
+            // Reclaim the old slot's bytes so defragment has accurate bytesLeft
+            this->_frame->headerPtr->bytesLeft += slot.Size();
             this->Defragment(allocator);
 
-            //even if after the defragment row cant fit, throw exception
-            if (this->framePtr->headerPtr->bytesLeft < totalSize)
-                return false;
-
-            nextOffset = this->NewInsertOffset();
-            offSetCopy = nextOffset;
+            if (this->_frame->headerPtr->bytesLeft < requiredSpace)
+                return false;  // truly full even after defragment
         }
 
-        // key.Serialize(this->framePtr->data, nextOffset);
-        // this->SerializeRow(rowHeader, row, nextOffset);
-        // Use memmove instead of memcpy when copying within the same buffer to handle potential overlap
-        if (this->IsIndexPage()){
-            std::memmove(this->framePtr->data + nextOffset, this->framePtr->data + slot.GetOffset(), rowPtr->keySize);
-            nextOffset += rowPtr->keySize;
+        auto nextOffset = this->NewInsertOffset();
+        const auto slotOffset = nextOffset;  // slot points to start of key+data
+
+        // For index pages: copy key from old location first
+        if (slot.KeySize() > 0){
+            // key was at slot.Offset() (before data), copy it to new location
+            std::memcpy(this->_frame->_data + nextOffset, keyData, slot.KeySize());
+            nextOffset += slot.KeySize();
         }
 
-        // Use memcpy for payload since it's from a different buffer (no overlap possible)
-        std::memcpy(this->framePtr->data + nextOffset, payload.Data(), size);
+        // Write new row data
+        std::memcpy(this->_frame->_data + nextOffset, payload.Data(), newSize);
 
-        //update slot directory
-        const auto newSlot = SlotDirectory(offSetCopy, totalSize, SlotDirectory::SLOT_USED);
-        this->UpdateSlotDirectory(newSlot, rowPtr->indexPosition);
+        // Update slot directory to point to new location
+        const auto newSlot = SlotDirectory(
+            slotOffset,             // offset = start of key+data
+            nextOffset - slotOffset,           // dataOffset = start of data (after key)
+            newSize,                // dataSize
+            slot.KeySize(),         // keySize preserved
+            SlotDirectory::SLOT_USED
+        );
+        this->UpdateSlotDirectory(newSlot, indexPosition);
 
-        //update bytes
-        //Decrease by total size even though the previous offset is freed, as it becomes fragmented and no row can be inserted
-        //unless pages gets defragmented
-        this->framePtr->headerPtr->bytesLeft -= totalSize;
-        this->framePtr->isDirty = true;
+        this->_frame->headerPtr->bytesLeft -= requiredSpace;
+        this->_frame->isDirty = true;
         return true;
     }
 
-    void PageView::SetForwardPointer(const Int indexPosition, const DataTypes::RowIdentifier& rowId) const{
-        const auto slot = this->GetSlotDirectory(indexPosition);
+    void PageView::SetForwardPointer(const Int indexPosition, const RID& rowId) const{
+        auto slot = this->GetSlotDirectory(indexPosition);
+        const auto offSet = slot.AbsoluteDataOffset();
 
-        const auto offSet = slot.GetOffset();
+        std::memcpy(this->_frame->_data + offSet, &rowId, ROW_ID_SIZE);
 
-        std::memcpy(this->framePtr->data + offSet, &rowId, ROW_ID_SIZE);
-
-        this->UpdateSlotDirectory(SlotDirectory(offSet, ROW_ID_SIZE, SlotDirectory::SLOT_FORWARDED), indexPosition);
+        slot.SetFlag(SlotDirectory::SLOT_FORWARDED);
+        slot.SetDataOffset(offSet);
+        this->UpdateSlotDirectory(slot, indexPosition);
     }
 
     void PageView::Delete(const Int indexPosition) const{
@@ -404,153 +408,106 @@ namespace Pages{
     }
 
     page_id_t PageView::PageId() const{
-        return this->framePtr->headerPtr->pageId;
+        return this->_frame->headerPtr->pageId;
     }
 
     page_size_t PageView::PageSize() const{
-        return this->framePtr->headerPtr->size;
+        return this->_frame->headerPtr->size;
     }
 
     page_size_t PageView::BytesLeft() const{
-        return this->framePtr->headerPtr->bytesLeft;
+        return this->_frame->headerPtr->bytesLeft;
     }
 
     object_t* PageView::GetData() const{
-        return this->framePtr->data;
+        return this->_frame->_data;
     }
 
     Frame* PageView::GetFrame() const{
-        return this->framePtr;
+        return this->_frame;
     }
 
     MultiThreading::ReadWriteMutex& PageView::Latch() const{
-        return this->framePtr->latch;
-    }
-
-    void PageView::InitializeRowReferenceCache(const RowView* rowPtr)const{
-        const auto slot = this->GetSlotDirectory(rowPtr->indexPosition);
-
-        page_offset_t offSet = rowPtr->keySize + slot.GetOffset() + Constants::ROW_VERSION_HEADER_SIZE;
-        const auto numberOfColumns = rowPtr->numberOfColumns;
-
-        rowPtr->physicalState->isHeaderInitialized = true;
-
-        const auto bitmapsSize = ByteMaps::BitMap::HeapSize(numberOfColumns);
-        rowPtr->physicalState->header.nullBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
-        offSet += bitmapsSize;
-        rowPtr->physicalState->header.largeObjectBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
-        offSet += bitmapsSize;
-        rowPtr->physicalState->header.overflowBitMap.FromExistingData(this->framePtr->data + offSet, numberOfColumns);
-        offSet += bitmapsSize;
-        rowPtr->physicalState->sizes.Resize(numberOfColumns);
-
-        for (int i = 0; i < numberOfColumns; i++){
-            if (rowPtr->physicalState->header.nullBitMap.Get(i))
-                continue;
-
-            std::memcpy(&rowPtr->physicalState->sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
-            offSet += sizeof(block_size_t);
-        }
-
-        rowPtr->physicalState->dataOffset = offSet;
+        return this->_frame->latch;
     }
 
     QueryResult PageView::MaterializeRow(
         const Memory::IAllocator* allocator,
-        const Int indexPosition,
-        const Int keySize
+        const Int indexPosition
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        const auto& columns = this->framePtr->table->GetColumns();
+        const auto& columns = this->_frame->table->GetColumns();
         const auto columnsSize = columns.Size();
-
-        page_offset_t offSet = keySize + slot.GetOffset();
-
-        auto rowHeader = CoreEngine::StorageTypes::RowHeader();
-
-        offSet += Constants::ROW_VERSION_HEADER_SIZE;
-
-        const auto bitmapsSize = ByteMaps::BitMap::HeapSize(columnsSize);
-
-        rowHeader.nullBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
-        offSet += bitmapsSize;
-        rowHeader.largeObjectBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
-        offSet += bitmapsSize;
-        rowHeader.overflowBitMap.FromExistingData(this->framePtr->data + offSet, columnsSize);
-        offSet += bitmapsSize;
 
         auto result = QueryResult(allocator);
 
-        block_size_t sizes[columnsSize];
+        const auto dataOffset = slot.AbsoluteDataOffset();
+        const auto entryTableOffset = dataOffset + Constants::ROW_VERSION_HEADER_SIZE;
+        const auto* rowDataPtr = this->_frame->_data + dataOffset;
+        auto* entries = reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(this->_frame->_data + entryTableOffset);
 
         for (int i = 0;i < columnsSize; i++){
-            if (rowHeader.nullBitMap.Get(i))
-                continue;
-
-            std::memcpy(&sizes[i], this->framePtr->data + offSet, sizeof(block_size_t));
-            offSet += sizeof(block_size_t);
-        }
-
-        for (int i = 0;i < columnsSize; i++){
-            if (rowHeader.nullBitMap.Get(i)){
-                auto value = Value::Null();
+            const auto type = entries[i].Type();
+            if (CoreEngine::StorageTypes::RowEntry::IsNull(type)){
+                auto value = Value::Null(allocator);
                 result.AddColumn(value);
                 continue;
             }
 
+            auto entrySize = entries[i].Size();
+            auto offSet = entries[i].Offset();
+
             auto value = Value(
-                static_cast<const object_t*>(this->framePtr->data + offSet),
-                sizes[i],
+                rowDataPtr + entries[i].Offset(),
+                entries[i].Size(),
                 columns[i]->Type(),
                 allocator
             );
-            offSet += sizes[i];
-
             result.AddColumn(value);
         }
 
         return result;
     }
 
-    Value PageView::PartialMaterializeRow(
-        const Memory::IAllocator* allocator,
-        const RowView* rowPtr,
-        const column_index_t columnIndex
-    ) const{
-        const auto& columns = this->framePtr->table->GetColumns();
-        if (!rowPtr->physicalState->isHeaderInitialized)
-            this->InitializeRowReferenceCache(rowPtr);
+    bool PageView::IsValid() const{
+        return this->_frame != nullptr;
+    }
 
-        block_size_t offSet = rowPtr->physicalState->dataOffset;
-        for (int i = 0; i < columnIndex; i++){
-            if (rowPtr->physicalState->header.nullBitMap.Get(i))
-                continue;
+    Constants::PageType PageView::GetPageType() const{
+        return this->_frame->type;
+    }
 
-            offSet += rowPtr->physicalState->sizes[i];
-        }
+    bool PageView::Filter(const Frame* frame, const RID* rowId, Int columnIndex){
+    }
 
-        if (rowPtr->physicalState->header.nullBitMap.Get(columnIndex))
-            return Value::Null(allocator);
+    Value PageView::GetColumnAt(
+        const ::Memory::IAllocator* allocator,
+        const PageView* page,
+        const CoreEngine::StorageTypes::RID* row,
+        const Int columnIndex
+    ){
+        const auto slot = page->GetSlotDirectory(row->_index);
+        const auto* frame = page->GetFrame();
+        const auto* rowDataPtr = frame->_data + slot.Offset() + slot.DataOffset();
+
+        const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
+            rowDataPtr + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+        );
+
+        if (rowEntry.IsNull())
+            return Value::Null();
 
         return Value::FromExternalStorage(
-            this->framePtr->data + offSet,
-            rowPtr->physicalState->sizes[columnIndex],
-            columns[columnIndex]->Type(),
+            rowDataPtr + rowEntry._offset,
+            rowEntry.Size(),
+            frame->table->GetColumns()[columnIndex]->Type(),
             allocator
         );
     }
 
-    RawRowReference PageView::RowRawData(const Int indexPosition, const Int offSet) const{
+    RawRowReference PageView::RawRowData(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        return RawRowReference(this->framePtr->data + slot.GetOffset() + offSet, slot.GetSize() - offSet);
-    }
-
-    bool PageView::IsValid() const{
-        return this->framePtr != nullptr;
-    }
-
-    Constants::PageType PageView::GetPageType() const{
-        return this->framePtr->type;
+        return RawRowReference(this->_frame->_data + slot.AbsoluteDataOffset(), slot.DataSize());
     }
 }

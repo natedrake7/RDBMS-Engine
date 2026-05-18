@@ -13,6 +13,12 @@ namespace DataTypes{
 class Variable;
 
 namespace CoreEngine{
+    namespace StorageTypes
+    {
+        class Table;
+        struct RID;
+    }
+
     class ExecutionContext;
     class ScanState;
 }
@@ -22,6 +28,8 @@ namespace Memory{
 }
 
 namespace Pages{
+    class PageView;
+    struct RID;
     struct RowView;
 }
 
@@ -48,25 +56,28 @@ namespace Expressions{
 
         QueryResult materializedRow;
 
-        const Pages::RowView* row;
-        const Pages::RowView* joinRow;
+        const CoreEngine::StorageTypes::RID* row;
+        const CoreEngine::StorageTypes::RID* joinRow;
 
         const Memory::IAllocator* allocator;
+        const CoreEngine::StorageTypes::Table* table;
+
         const Dictionary<DataTypes::String, Variable>* variables;
 
         EvaluationContextType type;
 
-        EvaluationContext(const ::Memory::IAllocator* allocator);
+        explicit EvaluationContext(const ::Memory::IAllocator* allocator);
         EvaluationContext(
             EvaluationContextType type,
-            const ::Memory::IAllocator* allocator
+            const ::Memory::IAllocator* allocator,
+            const CoreEngine::StorageTypes::Table* table
         );
         explicit EvaluationContext(
             EvaluationContextType type,
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
-            const Pages::RowView* row,
+            const CoreEngine::StorageTypes::RID* row,
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
@@ -74,20 +85,20 @@ namespace Expressions{
             const CoreEngine::ExecutionContext& executionContext
         );
         explicit EvaluationContext(
-            const Pages::RowView* row,
-            const Pages::RowView* joinRow,
+            const CoreEngine::StorageTypes::RID* row,
+            const CoreEngine::StorageTypes::RID* joinRow,
             const CoreEngine::ExecutionContext& executionContext
         );
         static EvaluationContext CreateJoinContext(
-            const Pages::RowView* outerRow,
-            const Pages::RowView* innerRow,
+            const CoreEngine::StorageTypes::RID* outerRow,
+            const CoreEngine::StorageTypes::RID* innerRow,
             const CoreEngine::ExecutionContext& executionContext
         );
     };
 
     class Expression {
     protected:
-        Value EvaluateJoin(const EvaluationContext& context) const;
+        [[nodiscard]] Value EvaluateJoin(const EvaluationContext& context) const;
 
     public:
         DataTypes::String name;

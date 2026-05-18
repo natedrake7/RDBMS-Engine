@@ -1,9 +1,7 @@
 ﻿#pragma once
-#include <array>
-
 #include "../../Systemic/include/Key.h"
 #include "../../Systemic/include/RowIdentifier.h"
-#include "RowView.h"
+#include "../../DataStorage/Row.h"
 
 namespace CoreEngine::StorageTypes{
     class InsertPayload;
@@ -54,7 +52,7 @@ namespace Pages{
 
 	struct LeafNodeTuple{
 		DataTypes::Indexing::Key key;
-		RowView row;
+		CoreEngine::StorageTypes::RID row;
 
 		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
 		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
@@ -62,7 +60,7 @@ namespace Pages{
 		LeafNodeTuple& operator=(const LeafNodeTuple& other) = delete;
 		LeafNodeTuple(const LeafNodeTuple& other) = delete;
 
-		LeafNodeTuple(RowView& row, DataTypes::Indexing::Key& key);
+		LeafNodeTuple(CoreEngine::StorageTypes::RID& row, DataTypes::Indexing::Key& key);
 	};
 
 	struct RowIdTuple{

@@ -128,7 +128,7 @@ int main(){
     bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // Tests::InitializeTester();
-    // Tests::RunTest(&Tests::ParseJson);
+    // Tests::RunTest(&Tests::IndexPageUpdate);
     //
     // return 0;
     // External::Plugin plugin;

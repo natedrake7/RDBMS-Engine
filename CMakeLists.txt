@@ -179,7 +179,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/HeaderPageView.cpp
         src/CoreEngine/src/Pages/Additional/SlotDirectory.cpp
         src/CoreEngine/src/Pages/Additional/Frame.cpp
-        src/CoreEngine/src/Pages/Additional/RowView.cpp
         src/CoreEngine/src/Pages/Additional/IndexPageStructs.cpp
         src/CoreEngine/src/Pages/LargeObjectView.cpp
         src/CoreEngine/src/Pages/OverflowPageView.cpp

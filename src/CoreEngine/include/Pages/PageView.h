@@ -5,6 +5,12 @@
 #include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"
 
+namespace Expressions
+{
+    class Expression;
+    struct EvaluationContext;
+}
+
 namespace Memory
 {
     class IAllocator;
@@ -23,6 +29,7 @@ namespace MultiThreading{
 }
 
 namespace Pages{
+    struct RID;
     struct RowView;
     struct Frame;
 
@@ -37,7 +44,7 @@ namespace Pages{
 
     class PageView{
     protected:
-        Frame* framePtr;
+        Frame* _frame;
         UnsignedSmallInt initialOffset;
 
         void SetFileName(const DataTypes::StringView& otherFilename) const;
@@ -49,7 +56,12 @@ namespace Pages{
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition)const;
 
         [[nodiscard]] bool IndexOutOfBounds(Int indexPosition) const;
-        void AdjustSlotDirectories(Int indexPosition, const page_offset_t& offset, Int slotSize) const;
+        void AdjustSlotDirectories(
+            Int indexPosition,
+            page_offset_t offset,
+            row_size_t rowSize,
+            key_size_t keySize
+        ) const;
 
         [[nodiscard]] Int RawDataSize()const;
 
@@ -71,12 +83,7 @@ namespace Pages{
 
         [[nodiscard]] PageHeader* GetHeader()const;
 
-        [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition, Int offSet)const;
-        [[nodiscard]] RowView* PeekRow(
-            const ::Memory::IAllocator* allocator,
-            Int indexPosition,
-            Int offSet
-        ) const;
+        [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition)const;
 
         [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
@@ -97,8 +104,6 @@ namespace Pages{
             Int donorResizeVariant
         ) const;
 
-        void DistributeSingleSlotFromPage(PageView* donorPage, Int donorIndexPosition, Int donorResizeVariant);
-
         [[nodiscard]] Int InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload) const;
         void InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload, Int indexPosition) const;
 
@@ -106,11 +111,16 @@ namespace Pages{
         bool UpdateRow(
             const ::Memory::IAllocator* allocator,
             const CoreEngine::StorageTypes::InsertPayload& payload,
-            const RowView* rowPtr
+            page_offset_t indexPosition
         ) const;
         void SetForwardPointer(
             Int indexPosition,
-            const DataTypes::RowIdentifier& rowId
+            const RID& rowId
+        ) const;
+
+        QueryResult MaterializeRow(
+            const Memory::IAllocator* allocator,
+            Int indexPosition
         ) const;
 
         void Delete(Int indexPosition) const;
@@ -125,18 +135,23 @@ namespace Pages{
 
         [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
 
-        void InitializeRowReferenceCache(const RowView* rowPtr)const;
-        [[nodiscard]] QueryResult MaterializeRow(
-            const Memory::IAllocator* allocator,
-            Int indexPosition,
-            Int keySize
-        ) const;
-        Value PartialMaterializeRow(const Memory::IAllocator* allocator, const RowView* rowPtr, column_index_t columnIndex) const;
-
-        [[nodiscard]] RawRowReference RowRawData(Int indexPosition, Int offSet) const;
-
         [[nodiscard]] bool IsValid()const;
 
         [[nodiscard]] Constants::PageType GetPageType() const;
+
+        static bool Filter(
+            const Frame* frame,
+            const RID* rowId,
+            Int columnIndex
+        );
+
+        static Value GetColumnAt(
+            const ::Memory::IAllocator* allocator,
+            const PageView* page,
+            const CoreEngine::StorageTypes::RID* row,
+            Int columnIndex
+        );
+
+        [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
     };
 }

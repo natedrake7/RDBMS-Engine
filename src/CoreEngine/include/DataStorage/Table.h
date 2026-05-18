@@ -118,12 +118,7 @@ namespace CoreEngine::StorageTypes
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 transaction_id_t transactionId,
-                const DataStructures::PolymorphicArray<Value> &inputData
-            ) const;
-            InsertPayload CreateUpdatePayload(
-                Errors::RuntimeStatus& status,
-                const ::Memory::IAllocator* allocator,
-                transaction_id_t transactionId,
+                Int dataSize,
                 const DataStructures::PolymorphicArray<Value> &inputData
             ) const;
         /**
@@ -224,49 +219,49 @@ namespace CoreEngine::StorageTypes
         */
             void ClusteredIndexSeekRange(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 const Expressions::Expression* expression
             );
             void SystemClusteredIndexScan(
                 const ::Memory::IAllocator* allocator,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 const Expressions::Expression* expression
             );
             void NonClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+                DataStructures::PolymorphicArray<RID>* selectedRows,
                 Int indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
             void HeapScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<Pages::RowView*> *result,
+                DataStructures::PolymorphicArray<RID> *result,
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
@@ -323,21 +318,21 @@ namespace CoreEngine::StorageTypes
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowView* rowPtr,
+                const RID* row,
                 const ExecutionContext& context,
                 const DataStructures::PolymorphicArray<Value>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowView* rowPtr,
+                const RID* row,
                 const ExecutionContext& context,
                 const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
             );
             [[nodiscard]]
             Errors::RuntimeStatus SystemUpdateRowNoLock(
                 const Pages::PageView* page,
-                const Pages::RowView* rowPtr,
+                const RID* row,
                 const ::Memory::IAllocator* allocator,
                 const DataStructures::PolymorphicArray<Value>& updates
             ) const;
@@ -372,6 +367,16 @@ namespace CoreEngine::StorageTypes
         */
 
         /** @} End of: Calculation and Utility Functions*/
+
+        /**
+        * @name Materialization Functions
+        * @{
+        */
+            Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* row, column_index_t columnIndex) const;
+            static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
+            QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
+            QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
+        /** @} End of: Materialization Functions*/
 
         /**
         * @name Page and Index Management Functions
@@ -416,9 +421,7 @@ namespace CoreEngine::StorageTypes
 
             [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
 
-//            void GetIndexedColumnKeys(vector<column_index_t> *vector) const;
-
-//            void GetNonClusteredIndexedColumnKeys(vector<vector<column_index_t>> *vector) const;
+            [[nodiscard]] row_size_t CalculatePayloadSize()const;
 
             [[nodiscard]] Database* GetDatabase() const;
 

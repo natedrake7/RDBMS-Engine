@@ -1,35 +1,62 @@
 ﻿#include "../../../include/Pages/Additional/SlotDirectory.h"
 
 namespace Pages{
-    SlotDirectory::SlotDirectory(){
-        this->flags_offset = 0;
-        this->size = 0;
-    }
+    SlotDirectory::SlotDirectory()
+        :   flags_offset(0), _dataSize(0),
+            _offset(0), _keySize(0){}
 
     SlotDirectory::SlotDirectory(
         const UnsignedSmallInt offset,
-        const UnsignedSmallInt size,
+        const UnsignedSmallInt dataOffset,
+        const UnsignedSmallInt dataSize,
+        const UnsignedSmallInt keySize,
         const Flag flag
     ){
-        this->SetOffset(offset);
-        this->SetSize(size);
+        this->_offset = offset;
+        this->_dataSize = dataSize;
+        this->_keySize = keySize;
+        this->SetDataOffset(dataOffset);
         this->SetFlag(flag);
     }
 
-    void SlotDirectory::SetOffset(const UnsignedSmallInt otherOffset){
+    UnsignedSmallInt SlotDirectory::AbsoluteDataOffset() const{
+        return this->_offset + this->DataOffset();
+    }
+
+    void SlotDirectory::SetDataOffset(const UnsignedSmallInt otherOffset){
         this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
     }
 
-    UnsignedSmallInt SlotDirectory::GetOffset() const{
+    UnsignedSmallInt SlotDirectory::DataOffset() const{
         return this->flags_offset & OFFSET_MASK;
     }
 
-    void SlotDirectory::SetSize(const UnsignedSmallInt otherSize){
-        this->size = otherSize;
+    void SlotDirectory::SetDataSize(const UnsignedSmallInt otherSize){
+        this->_dataSize = otherSize;
     }
 
-    UnsignedSmallInt SlotDirectory::GetSize() const{
-        return this->size;
+    UnsignedSmallInt SlotDirectory::Offset() const{
+        return this->_offset;
+    }
+
+    void SlotDirectory::SetOffset(const UnsignedSmallInt otherOffset){
+        this->_offset = otherOffset;
+    }
+
+    UnsignedSmallInt SlotDirectory::KeySize() const{
+        return this->_keySize;
+    }
+
+    void SlotDirectory::SetKeySize(const UnsignedSmallInt otherSize){
+        this->_keySize = otherSize;
+    }
+
+    UnsignedSmallInt SlotDirectory::Size() const{
+        return this->_dataSize + this->_keySize;
+    }
+
+    UnsignedSmallInt SlotDirectory::DataSize() const{
+        return this->_dataSize;
     }
 
     void SlotDirectory::SetFlag(const Flag otherFlag){
@@ -45,6 +72,6 @@ namespace Pages{
     bool SlotDirectory::ForwardPointer() const { return this->GetFlag() == SLOT_FORWARDED; }
     bool SlotDirectory::Dead() const { return this->GetFlag() == SLOT_DEAD; }
     bool SlotDirectory::Default() const{
-        return this->flags_offset == 0 && this->size == 0;
+        return this->flags_offset == 0 && this->_dataSize == 0;
     }
 }

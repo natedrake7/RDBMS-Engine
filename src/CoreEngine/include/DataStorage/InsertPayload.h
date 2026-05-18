@@ -17,6 +17,8 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes {
+    class Column;
+
     class InsertPayload final{
         object_t* _data;
         UnsignedSmallInt size;
@@ -24,7 +26,6 @@ namespace CoreEngine::StorageTypes {
 
         mutable RowHeader header;
         mutable bool isHeaderInitialized;
-        mutable std::vector<Value> materializedColumns;
 
         bool isReferencingExternalData;
 
@@ -50,12 +51,12 @@ namespace CoreEngine::StorageTypes {
         inline Int SetGuid(const Value& value);
 
         Int SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status);
-
-        page_offset_t DeserializeHeader(
-            const ::Memory::IAllocator* allocator,
-            Int bitmapSize,
-            Int numberOfColumns
-        ) const;
+        //
+        // page_offset_t DeserializeHeader(
+        //     const ::Memory::IAllocator* allocator,
+        //     Int bitmapSize,
+        //     Int numberOfColumns
+        // ) const;
 
     public:
         InsertPayload();
@@ -77,7 +78,7 @@ namespace CoreEngine::StorageTypes {
 
         ~InsertPayload();
 
-        void SetData(const void* otherData, UnsignedSmallInt dataSize);
+        UnsignedSmallInt SetData(const void* otherData, UnsignedSmallInt dataSize);
         void SetData(const void* otherData, UnsignedSmallInt dataSize, Int offSet) const;
         Int SetData(const Value& value, const Column* column, Errors::RuntimeStatus& status);
 
@@ -85,11 +86,11 @@ namespace CoreEngine::StorageTypes {
 
         Value MaterializeColumn(
             const ExecutionContext& context,
-            const Column* column,
-            Int numberOfColumns
+            const Column* column
         ) const;
         object_t* Data()const;
         UnsignedSmallInt Size()const;
+        UnsignedSmallInt Offset()const;
     };
 
     template <typename T>

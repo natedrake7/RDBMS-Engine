@@ -194,27 +194,6 @@ namespace CoreEngine::StorageTypes{
         }
     }
 
-    page_offset_t InsertPayload::DeserializeHeader(
-        const ::Memory::IAllocator* allocator,
-        const Int bitmapSize,
-        const Int numberOfColumns
-    ) const{
-        // this->header = RowHeader(allocator, numberOfColumns);
-
-        page_offset_t offSet = Constants::ROW_VERSION_HEADER_SIZE;
-
-        this->header.nullBitMap.FromExistingData(this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-        this->header.largeObjectBitMap.FromExistingData(this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-        this->header.overflowBitMap.FromExistingData(this->_data + offSet, bitmapSize);
-        offSet += bitmapSize;
-
-        this->isHeaderInitialized = true;
-
-        return offSet;
-    }
-
     InsertPayload::InsertPayload(){
         this->_data = nullptr;
         this->size = 0;
@@ -333,9 +312,11 @@ namespace CoreEngine::StorageTypes{
         this->_data = nullptr;
     }
 
-    void InsertPayload::SetData(const void* otherData, const UnsignedSmallInt dataSize){
+    UnsignedSmallInt InsertPayload::SetData(const void* otherData, const UnsignedSmallInt dataSize){
         std::memcpy(this->_data + this->offset, otherData, dataSize);
+        const auto dataOffset = this->offset;
         this->offset += dataSize;
+        return dataOffset;
     }
 
     void InsertPayload::SetData(const void* otherData, const UnsignedSmallInt dataSize, const Int offSet) const{
@@ -343,9 +324,6 @@ namespace CoreEngine::StorageTypes{
     }
 
     Int InsertPayload::SetData(const Value& value, const Column* column, Errors::RuntimeStatus& status){
-        if (value.IsNull())
-            return 0;
-
         return this->SetDataByType(value, column, status);
     }
 
@@ -355,51 +333,21 @@ namespace CoreEngine::StorageTypes{
 
     Value InsertPayload::MaterializeColumn(
         const ExecutionContext& context,
-        const Column* column,
-        const Int numberOfColumns
+        const Column* column
     ) const{
         // Calculate bitmap size once
-        const auto bitmapSize = static_cast<Int>(std::ceil(static_cast<double>(numberOfColumns) / 8.0));
-
-        page_offset_t offSet = !this->isHeaderInitialized
-                                   ? this->DeserializeHeader(context.GetAllocator(), bitmapSize, numberOfColumns)
-                                   : Constants::ROW_VERSION_HEADER_SIZE + 3 * bitmapSize;
-
         const auto columnOrdinal = column->OrdinalPosition();
 
-        // Early exit if column is null
-        if (this->header.nullBitMap.Get(columnOrdinal))
-            return Value::Null(nullptr);
+        const auto offSet = Constants::ROW_VERSION_HEADER_SIZE + columnOrdinal * sizeof(RowEntry);
+        const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
 
-        // Calculate offset to the target column's data
-        // We only iterate up to and including the target column
-        block_size_t blockSize = 0;
-        block_size_t blockOffset = 0;
-
-        for (int i = 0; i <= columnOrdinal; i++){
-            if (this->header.nullBitMap.Get(i))
-                continue;
-
-            std::memcpy(&blockSize, this->_data + offSet, sizeof(block_size_t));
-            offSet += sizeof(block_size_t);
-
-            if (i < columnOrdinal)
-                blockOffset += blockSize;
-        }
-
-        // Skip remaining column sizes we don't need
-        for (int i = columnOrdinal + 1; i < numberOfColumns; i++){
-            if (this->header.nullBitMap.Get(i))
-                continue;
-            offSet += sizeof(block_size_t);
-        }
-
-        offSet += blockOffset;
+        if (columnDataEntry->Type() == RowEntry::NULLVAL)
+            return Value::Null(context.GetAllocator());
 
         // Create and populate the value
         return Value::FromExternalStorage(
-            this->_data + offSet,
-            blockSize,
+            this->_data + columnDataEntry->Offset(),
+            columnDataEntry->Size(),
             column->Type(),
             context.GetAllocator(),
             columnOrdinal
@@ -412,5 +360,9 @@ namespace CoreEngine::StorageTypes{
 
     UnsignedSmallInt InsertPayload::Size() const{
         return this->size;
+    }
+
+    UnsignedSmallInt InsertPayload::Offset() const{
+        return this->offset;
     }
 }

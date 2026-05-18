@@ -9,24 +9,24 @@ namespace Pages{
     }
 
     byte_t* PageFreeSpaceView::GetByte(const page_id_t pageId) const{
-        return this->framePtr->data + this->GetOffset(pageId);
+        return this->_frame->_data + this->GetOffset(pageId);
     }
 
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame){}
 
     PageFreeSpaceView::PageFreeSpaceView(PageFreeSpaceView&& other) noexcept{
-        this->framePtr = other.framePtr;
+        this->_frame = other._frame;
         this->initialOffset = other.initialOffset;
-        other.framePtr = nullptr;
+        other._frame = nullptr;
     }
 
     PageFreeSpaceView& PageFreeSpaceView::operator=(PageFreeSpaceView&& other) noexcept{
         if (this == &other)
             return *this;
 
-        this->framePtr = other.framePtr;
+        this->_frame = other._frame;
         this->initialOffset = other.initialOffset;
-        other.framePtr = nullptr;
+        other._frame = nullptr;
 
         return *this;
     }
@@ -53,7 +53,7 @@ namespace Pages{
         const auto pageType = page->GetPageType();
         assert(pageType == type);
 
-        this->framePtr->isDirty = true;
+        this->_frame->isDirty = true;
     }
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{

@@ -2,7 +2,7 @@
 
 namespace Pages{
     Frame::Frame(){
-        this->data = nullptr;
+        this->_data = nullptr;
         this->table = nullptr;
         this->isDirty = false;
         this->pinCount = 0;
@@ -16,7 +16,7 @@ namespace Pages{
     }
 
     Frame::Frame(object_t* data, const CoreEngine::StorageTypes::Table* table){
-        this->data = data;
+        this->_data = data;
         this->table = table;
         this->isDirty = false;
         this->pinCount = 0;
@@ -33,7 +33,7 @@ namespace Pages{
         if (this == &other)
             return *this;
 
-        this->data = other.data;
+        this->_data = other._data;
         this->table = other.table;
         this->isDirty = other.isDirty;
         this->pinCount = other.pinCount.load();
@@ -49,6 +49,6 @@ namespace Pages{
     }
 
     bool Frame::IsValid() const{
-        return this->data != nullptr;
+        return this->_data != nullptr;
     }
 }

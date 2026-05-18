@@ -1,11 +1,12 @@
 ﻿#include "../../include/Algorithms/AggregateFunctions.h"
 #include "../../include/DataStorage/Column.h"
-#include "../../include/Pages/Additional/RowView.h"
 
 #include <limits>
 
+#include "DataStorage/Row.h"
+
 long double AggregateFunctions::Average(
-    const std::vector<Pages::RowView>& rows,
+    const std::vector<CoreEngine::StorageTypes::RID>& rows,
     const column_index_t& columnIndex,
     const long double* constantValue
 ){
@@ -17,30 +18,31 @@ long double AggregateFunctions::Average(
     // for (const auto& row : rows)
     //     AggregateFunctions::SumByColumnType(sum, row->GetData()[columnIndex]);
 
-    return sum / static_cast<long double>(rows.size());
+    // return sum / static_cast<long double>(rows.size());
+    return 0;
 }
 
 uint64_t AggregateFunctions::Count(
-    const std::vector<Pages::RowView>& rows,
+    const std::vector<CoreEngine::StorageTypes::RID>& rows,
     const column_index_t &columnIndex,
     const long double *constantValue
 ){
-    if (constantValue != nullptr)
-        return rows.size();
+    // if (constantValue != nullptr)
+    //     return rows.size();
     
     uint64_t count = 0;
-    for (const auto& row : rows)
-    {
-        // if (row->GetNullBitMapValue(columnIndex))
-        //     continue;
-
-        count++;
-    }
+    // for (const auto& row : rows)
+    // {
+    //     // if (row->GetNullBitMapValue(columnIndex))
+    //     //     continue;
+    //
+    //     count++;
+    // }
 
     return count;
 }
 
-long double AggregateFunctions::Max(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Max(const std::vector<CoreEngine::StorageTypes::RID> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -62,7 +64,7 @@ long double AggregateFunctions::Max(const std::vector<Pages::RowView> &rows, con
     return max;
 }
 
-long double AggregateFunctions::Min(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
+long double AggregateFunctions::Min(const std::vector<CoreEngine::StorageTypes::RID> &rows, const column_index_t &columnIndex, const bool &isSelectedColumnIndexed, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;
@@ -84,7 +86,7 @@ long double AggregateFunctions::Min(const std::vector<Pages::RowView> &rows, con
     return min;
 }
 
-long double AggregateFunctions::Sum(const std::vector<Pages::RowView> &rows, const column_index_t &columnIndex, const long double *constantValue)
+long double AggregateFunctions::Sum(const std::vector<CoreEngine::StorageTypes::RID> &rows, const column_index_t &columnIndex, const long double *constantValue)
 {
     if (constantValue != nullptr)
         return *constantValue;

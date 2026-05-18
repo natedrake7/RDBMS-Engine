@@ -3,7 +3,6 @@
 #include "../../Systemic/include/Key.h"
 #include "../../Systemic/include/DataStructures/SortedDictionary.h"
 
-#include <vector>
 #include "DatabaseConstants.h"
 #include "../../QueryPipeline/include/PhysicalPlan.h"
 
@@ -50,6 +49,11 @@ namespace Indexing{
             const Pages::IndexPageView& newChild
         );
 
+        static inline Int ScanLeafUpperBound(
+            const Pages::IndexPageView& page,
+            const DataTypes::Indexing::Key& key,
+            Int left = 0
+        );
         static inline Int ScanLeafLowerBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
@@ -222,38 +226,37 @@ namespace Indexing{
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
         )const;
 
         void IndexSeekRange(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
         )const;
 
         void IndexSeek(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexSeek(
-            const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
         )const;
         void SystemIndexSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
 
@@ -261,35 +264,32 @@ namespace Indexing{
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             CoreEngine::IndexState& state
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             CoreEngine::IndexState& state,
             const Expressions::Expression* expression
         )const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
         )const;
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
         void SystemIndexScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
-        void SystemIndexScan(
-            const ::Memory::IAllocator* allocator,
-            DataStructures::PolymorphicArray<Pages::RowView*>* result
-        )const;
+        void SystemIndexScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result)const;
         void IndexScan(
             DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result,
             CoreEngine::IndexState& state,
@@ -339,7 +339,7 @@ namespace Indexing{
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SystemIndexSeekUpdate(
-            const ::Memory::IAllocator* allocator,
+            const Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;

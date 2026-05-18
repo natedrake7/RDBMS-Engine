@@ -118,7 +118,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+        DataStructures::PolymorphicArray<RID>* selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression
@@ -135,7 +135,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexSeek(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+        DataStructures::PolymorphicArray<RID>* selectedRows,
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression
     ){
@@ -151,7 +151,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::SystemClusteredIndexSeek(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+        DataStructures::PolymorphicArray<RID>* selectedRows,
         const DataTypes::Indexing::Key& key,
         const Expressions::Expression* expression
     ){
@@ -162,12 +162,12 @@ namespace CoreEngine::StorageTypes {
             return;
         }
 
-        tree->SystemIndexSeek(allocator, key, selectedRows);
+        tree->SystemIndexSeek(key, selectedRows);
     }
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
+        DataStructures::PolymorphicArray<RID> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
@@ -186,7 +186,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
+        DataStructures::PolymorphicArray<RID> *selectedRows,
         const Expressions::Expression *expression
     ){
         if (this->header.allocationPageId == INVALID_PAGE_ID)
@@ -204,7 +204,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::SystemClusteredIndexScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowView*>* selectedRows,
+        DataStructures::PolymorphicArray<RID>* selectedRows,
         const Expressions::Expression* expression
     ){
         if (this->header.allocationPageId == INVALID_PAGE_ID)
@@ -217,12 +217,12 @@ namespace CoreEngine::StorageTypes {
             return;
         }
 
-        tree->SystemIndexScan(allocator, selectedRows);
+        tree->SystemIndexScan(selectedRows);
     }
 
     void Table::NonClusteredIndexScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<Pages::RowView*> *selectedRows,
+        DataStructures::PolymorphicArray<RID> *selectedRows,
         const Int indexPos,
         IndexState& state,
         const Expressions::Expression *expression
@@ -293,7 +293,7 @@ namespace CoreEngine::StorageTypes {
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
-        std::vector<Pages::RowView> results;
+        std::vector<RID> results;
         // tree->IndexScan(properties, &results, state);
 
         if(results.empty())
@@ -306,7 +306,7 @@ namespace CoreEngine::StorageTypes {
 
         for(const auto& row : results){
 
-            evaluationContext.row = &row;
+            // evaluationContext.row = &row;
             const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
             if(value.AsBool())
             {
@@ -322,6 +322,25 @@ namespace CoreEngine::StorageTypes {
         IndexState &state
     ){
 
+    }
+
+    Value Table::MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* row, const column_index_t columnIndex) const{
+        const auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+            this->database->GetDataFileKey(),
+            this->database->GetFileName(),
+            row->_pageId,
+            this
+        );
+
+        return Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
+    }
+
+    QueryResult Table::Materialize(
+        const ::Memory::IAllocator* allocator,
+        const Pages::PageView* page,
+        const RID* row
+    ){
+        return page->MaterializeRow(allocator, row->_index);
     }
 
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
@@ -403,8 +422,7 @@ namespace CoreEngine::StorageTypes {
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(
                 executionContext,
-                this->_columns[columnId],
-                this->_columns.Size()
+                this->_columns[columnId]
             );
             key.InsertKey(DataTypes::Indexing::Key(value));
         }
@@ -441,5 +459,19 @@ namespace CoreEngine::StorageTypes {
                 keySize += column->Size();
 
         return keySize;
+    }
+
+    row_size_t Table::CalculatePayloadSize() const{
+        row_size_t payloadSize = Constants::ROW_VERSION_HEADER_SIZE;
+        for (const auto* column : this->_columns){
+            if (column->isColumnLOB()){
+                payloadSize+= sizeof(page_id_t) + sizeof(RowEntry);
+                continue;
+            }
+
+            payloadSize += column->Size() + sizeof(RowEntry);
+        }
+
+        return payloadSize;
     }
 }

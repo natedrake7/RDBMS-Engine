@@ -180,8 +180,8 @@ namespace CoreEngine::StorageTypes {
         const Pages::RawRowReference& rowRef
     )const{
         static auto& versionDatabase = VersionDatabase::Get();
-        RowVersionPointer versionPtr;
-        versionDatabase.InsertRow(allocator, rowRef, versionPtr, this);
+        RowHeader rowHeader;
+        versionDatabase.InsertRow(allocator, rowRef, rowHeader, this);
     }
 
     Table::Table(const table_id_t tableId, const Int ordinalPosition, Database* database){
@@ -297,19 +297,20 @@ namespace CoreEngine::StorageTypes {
                     executionContext.GetAllocator()
             );
 
-        // std::pmr::vector<InsertPayload> rows(&properties.allocator);
 
         DataStructures::PolymorphicArray<InsertPayload> rows(executionContext.GetAllocator(), input.Size());
-        // rows.reserve(input.size());
 
         Int rowSize = 0;
         DataStructures::PolymorphicArray<char> buffer;
+
+        const auto estimatedPayloadSize = this->CalculatePayloadSize();
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
                 status,
                 executionContext.GetAllocator(),
                 executionContext.GetCurrentTransactionId(),
+                estimatedPayloadSize,
                 insertedRow.Data()
             );
 
@@ -326,16 +327,11 @@ namespace CoreEngine::StorageTypes {
             this->header.ordinalPosition
         );
 
-        // if (this->IsClustered())
-        //   pagesNeeded /= INDEX_PAGE_DEFAULT_SIZE;
-        // else
-        //   pagesNeeded /= PAGE_SIZE_WITHOUT_HEADER;
-
         const float pageSize = this->IsClustered()
                 ? static_cast<float>(Constants::INDEX_PAGE_DEFAULT_SIZE)
                 : static_cast<float>(Constants::PAGE_SIZE_WITHOUT_HEADER);
 
-        auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
+        const auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
@@ -359,6 +355,7 @@ namespace CoreEngine::StorageTypes {
             status,
             executionContext.GetAllocator(),
             executionContext.GetCurrentTransactionId(),
+            this->CalculatePayloadSize(),
             inputData
         );
 
@@ -423,7 +420,7 @@ namespace CoreEngine::StorageTypes {
             ? this->ClusteredIndexInsert(executionContext, payload, pagesToAllocate)
             : this->HeapInsert(executionContext, payload, pagesToAllocate);
 
-        const auto rowId = status.rowId;
+        // const auto rowId = status.rowId;
         if (status.code != Errors::RuntimeError::Ok)
             return status;
 
@@ -435,7 +432,7 @@ namespace CoreEngine::StorageTypes {
         //         return status;
         // }
 
-        status.rowId = rowId;
+        // status.rowId = rowId;
         return status;
       }
 
@@ -534,7 +531,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::HeapScan(
       const ExecutionContext& executionContext,
-      DataStructures::PolymorphicArray<Pages::RowView*> *result,
+      DataStructures::PolymorphicArray<RID> *result,
       ScanState& state
     )const{
         if(this->header.allocationPageId == INVALID_PAGE_ID)
@@ -579,12 +576,9 @@ namespace CoreEngine::StorageTypes {
             state.lastFetchedRowId.pageId = extentPageId;
 
             for (int i = state.GetNextKeyIndex(); i < page.PageSize(); i++) {
-              auto* rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
+              result->Push(RID(extentPageId, i));
 
-              result->Push(rowPtr);
-
-              state.lastFetchedRowId.indexId = i;
-
+                state.lastFetchedRowId.indexId = i;
               if (result->Size() == executionContext.GetBatchSize()) {
                 state.canFetchMore = true;
                 return;
@@ -597,6 +591,27 @@ namespace CoreEngine::StorageTypes {
         }
     }
 
+    QueryResult Table::MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const{
+          const auto page = Storage::StorageManager::Get().GetIndexPage(
+                this->database->GetDataFileKey(),
+                this->database->GetFileName(),
+                row->_pageId,
+                this
+          );
+
+          return page.MaterializeRow(allocator, row->_index);
+    }
+
+    QueryResult Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
+          const auto page = Storage::StorageManager::Get().GetPage(
+                  this->database->GetDataFileKey(),
+                  this->database->GetFileName(),
+                  row->_pageId,
+                  this
+            );
+          return page.MaterializeRow(allocator, row->_index);
+    }
+
     void Table::TemporaryDatabaseHeapScan(
         DataStructures::PolymorphicArray<Pages::RowView*> *result,
         ScanState& state,
@@ -605,7 +620,7 @@ namespace CoreEngine::StorageTypes {
         auto properties = ExecutionContext();
         properties.SetBatchSize(batchSize);
 
-        this->HeapScan(properties, result, state);
+        // this->HeapScan(properties, result, state);
     }
 
     void Table::HeapDelete(
@@ -692,8 +707,8 @@ namespace CoreEngine::StorageTypes {
 
           MultiThreading::WriterGuard pageLock(&newPage.Latch());
 
-          status.rowId.indexId = newPage.InsertRow(payload);
-          status.rowId.pageId = newPage.PageId();
+          // status.rowId.offset = newPage.InsertRow(payload);
+          // status.rowId.pageId = newPage.PageId();
 
           return status;
       }
@@ -735,10 +750,10 @@ namespace CoreEngine::StorageTypes {
                   if (payload.Size() > page.BytesLeft())
                       continue;
 
-                  status.rowId.indexId = page.InsertRow(payload);
+                  // status.rowId.offset = page.InsertRow(payload);
                   pageFreeSpacePage.SetPageMetaData(&page);
 
-                  status.rowId.pageId = pageId;
+                  // status.rowId.pageId = pageId;
                   return status;
               }
           }
@@ -751,9 +766,9 @@ namespace CoreEngine::StorageTypes {
         );
 
       MultiThreading::WriterGuard pageLock(&newPage.Latch());
-
-      status.rowId.indexId = newPage.InsertRow(payload);
-      status.rowId.pageId = newPage.PageId();
+      //
+      // status.rowId.offset = newPage.InsertRow(payload);
+      // status.rowId.pageId = newPage.PageId();
 
       return {};
     }
@@ -805,16 +820,14 @@ namespace CoreEngine::StorageTypes {
                     continue;
 
                 for (int i = 0; i < page.PageSize(); i++) {
-                    auto* row = page.PeekRow(executionContext.GetAllocator(), i, 0);
+                    auto row = RID(extentPageId, i);
+                    evaluationContext.row = &row;
 
-                    evaluationContext.row = row;
                     const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool()) continue;
 
-                    auto result = this->UpdateRowNoLock(&page, row, executionContext, updates);
-
-                    if (!result.IsOk())
-                        return result;
+                    auto result = this->UpdateRowNoLock(&page, &row, executionContext, updates);
+                    if (!result.IsOk()) return result;
                 }
             }
         }
@@ -867,14 +880,14 @@ namespace CoreEngine::StorageTypes {
                 auto page = Storage::StorageManager::Get().GetPage(dataKey, filename, extentPageId, this);
 
                 for (int i = 0;i < page.PageSize(); i++){
-                    auto rowPtr = page.PeekRow(executionContext.GetAllocator(), i, 0);
-                    evaluationContext.row = rowPtr;
+                    auto row = RID(extentPageId, i);
+                    evaluationContext.row = &row;
 
                     const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool())
                         continue;
 
-                    auto result = this->UpdateRowNoLock(&page, rowPtr, executionContext, updates);
+                    auto result = this->UpdateRowNoLock(&page, &row, executionContext, updates);
                     if (!result.IsOk())
                         return result;
                 }
@@ -1093,83 +1106,82 @@ namespace CoreEngine::StorageTypes {
     //Handle overflow too dynamically probably during row insert
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowView* rowPtr,
+        const RID* row,
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Value>& updates
     ){
-        // this->DeleteLargeObjectFromPage(row, updatedColumns);
-        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
-
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
-
-        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
-
         const auto* allocator = context.GetAllocator();
-        this->InsertToVersionDatabase(allocator, rowRawData);
+        this->InsertToVersionDatabase(allocator, page->RawRowData(row->_index));
 
-        auto materializedRow = rowPtr->Materialize(allocator);
+        auto materializedRow = page->MaterializeRow(allocator, row->_index);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        auto newPayload = this->CreateUpdatePayload(
+        auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
             context.GetCurrentTransactionId(),
+            this->CalculatePayloadSize(),
             materializedRow.Data()
         );
 
         if (!status.IsOk())
             return status;
 
-        if (page->UpdateRow(allocator, newPayload, rowPtr))
+        if (page->UpdateRow(allocator, newPayload, row->_index))
             return status;
 
           //only for heap tables
           auto insertResult = this->InsertRow(context, newPayload, 1);
 
-          if (!insertResult.IsOk())
-              return insertResult;
+          if (!insertResult.IsOk()) return insertResult;
 
           //install forward referencing ptr to older row pos
-          page->SetForwardPointer(rowPtr->indexPosition, insertResult.rowId);
+          // page->SetForwardPointer(row->offset, insertResult.rowId);
           return insertResult;
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowView* rowPtr,
+        const RID* row,
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ){
 
-        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
+        const auto rowRawData = page->RawRowData(row->_index);
 
         const auto* allocator = context.GetAllocator();
         this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = rowPtr->Materialize(allocator);
+        auto materializedRow = page->MaterializeRow(allocator, row->_index);
 
-        const Expressions::EvaluationContext evaluationContext(rowPtr, context);
+        const Expressions::EvaluationContext evaluationContext(row, context);
         for (const auto* updateExpr : updates) {
             auto updatedValue = Expressions::EvaluateExpression(updateExpr, evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->columnIndex);
             materializedRow.Update(updatedValue);
         }
 
+        auto size = 0;
+        for (const auto& value : materializedRow.Data())
+            size += value.Size();
+
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        auto newPayload = this->CreateUpdatePayload(
+        auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
             context.GetCurrentTransactionId(),
+            size,
             materializedRow.Data()
         );
 
         if (!status.IsOk())
             return status;
 
-        if (page->UpdateRow(allocator, newPayload, rowPtr))
+        if (page->UpdateRow(allocator, newPayload, row->_index))
             return status;
 
         //only for heap tables
@@ -1179,41 +1191,41 @@ namespace CoreEngine::StorageTypes {
             return insertResult;
 
         //install forward referencing ptr to older row pos
-        page->SetForwardPointer(rowPtr->indexPosition, insertResult.rowId);
+        // page->SetForwardPointer(row->offset, insertResult.rowId);
 
         return insertResult;
     }
 
     Errors::RuntimeStatus Table::SystemUpdateRowNoLock(
         const Pages::PageView* page,
-        const Pages::RowView* rowPtr,
+        const RID* row,
         const ::Memory::IAllocator* allocator,
         const DataStructures::PolymorphicArray<Value>& updates
     ) const{
-        // this->DeleteLargeObjectFromPage(row, updatedColumns);
-        // this->DeleteOverflowedRowsFromPage(row, updatedColumns);
-
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
-
-        const auto rowRawData = page->RowRawData(rowPtr->indexPosition, rowPtr->physicalState->dataOffset);
+        const auto rowRawData = page->RawRowData(row->_index);
         this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = rowPtr->Materialize(allocator);
+        auto materializedRow = page->MaterializeRow(allocator, row->_index);
         materializedRow.Update(updates);
 
+        auto size = 0;
+        for (const auto& value : materializedRow.Data())
+            size += value.Size();
+
         Errors::RuntimeStatus status;
-        const auto newPayload = this->CreateUpdatePayload(
+        const auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
             FIRST_TRANSACTION_ID,
+            size,
             materializedRow.Data()
         );
 
-        if (!status.IsOk())
-            return status;
+        if (!status.IsOk()) return status;
 
-        const auto _ = page->UpdateRow(allocator, newPayload, rowPtr);
+        const auto _ = page->UpdateRow(allocator, newPayload, row->_index);
         return status;
     }
 
@@ -1403,13 +1415,13 @@ namespace CoreEngine::StorageTypes {
     ) const{
         const auto* allocator = executionContext.GetAllocator();
 
-        auto materializedRow = rowPtr->Materialize(allocator);
-        materializedRow.AddColumn(defaultValue, index);
+        // auto materializedRow = rowPtr->Materialize(allocator);
+        // materializedRow.AddColumn(defaultValue, index);
 
         Errors::RuntimeStatus status;
-        const auto payload = this->CreateInsertPayload(status, allocator, 0, materializedRow.Data());
+        // const auto payload = this->CreateInsertPayload(status, allocator, 0, materializedRow.Data());
 
-        page->UpdateRow(allocator, payload, rowPtr);
+        // page->UpdateRow(allocator, payload, rowPtr);
 
         // this->InsertLargeObjectToPage(row);
 

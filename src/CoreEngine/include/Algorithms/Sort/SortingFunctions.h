@@ -5,15 +5,12 @@
 #include "../../../../Systemic/include/RowIdentifier.h"
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../include/DataStorage/Column.h"
+#include "../../../include/DataStorage/Row.h"
 #include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 namespace CoreEngine{
     class ExecutionContext;
     struct ScanState;
-}
-
-namespace Pages{
-    struct RowView;
 }
 
 class GroupCondition;
@@ -47,11 +44,11 @@ struct MergeElement{
 
 class SortingFunctions{
          [[nodiscard]] static std::string CreateGroupByKey(
-           const Pages::RowView& row,
+           const CoreEngine::StorageTypes::RID& row,
            const std::vector<GroupCondition> &sortConditions
           );
          static long double ApplyAggregateFunctionToGroup(
-           const std::vector<Pages::RowView>& rowGroup,
+           const std::vector<CoreEngine::StorageTypes::RID>& rowGroup,
            const GroupCondition& condition
           );
 
@@ -64,14 +61,14 @@ class SortingFunctions{
           );
          [[nodiscard]] static bool CompareRowsAscending(
             const CoreEngine::ExecutionContext& context,
-            const Pages::RowView& firstRow,
-            const Pages::RowView& secondRow,
+            const CoreEngine::StorageTypes::RID& firstRow,
+            const CoreEngine::StorageTypes::RID& secondRow,
             const column_index_t& columnIndex
           );
          [[nodiscard]] static bool CompareRowsDescending(
             const CoreEngine::ExecutionContext& context,
-            const Pages::RowView& firstRow,
-            const Pages::RowView& secondRow,
+            const CoreEngine::StorageTypes::RID& firstRow,
+            const CoreEngine::StorageTypes::RID& secondRow,
             const column_index_t& columnIndex
           );
          static void OrderBy(
@@ -80,7 +77,7 @@ class SortingFunctions{
             const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(
-           const std::vector<Pages::RowView>& rows,
+           const std::vector<CoreEngine::StorageTypes::RID>& rows,
            const std::vector<GroupCondition>& sortConditions
           );
 };

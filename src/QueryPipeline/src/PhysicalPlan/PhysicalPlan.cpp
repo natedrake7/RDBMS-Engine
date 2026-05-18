@@ -87,7 +87,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
   void PlanNode::InsertPostProjectionResultsToTemporaryDatabase(
-    const CoreEngine::ExecutionContext& context,
+    CoreEngine::ExecutionContext& context,
     ExecutionResult& result,
     DataTypes::RowIdentifier& firstRowId
   ){
@@ -103,11 +103,11 @@ namespace QueryPipeline::PhysicalPlan {
     const auto& columns = table->GetColumns();
     result.status = table->BatchInsert(context, result.results);
 
-    firstRowId = result.status.rowId;
+    // firstRowId = result.status.rowId;
   }
 
   ExecutionResult PlanNode::StreamFromTemporaryDatabase(
-    const CoreEngine::ExecutionContext& context,
+    CoreEngine::ExecutionContext& context,
     CoreEngine::ScanState& state
   ) const
   {
@@ -121,12 +121,12 @@ namespace QueryPipeline::PhysicalPlan {
 
     const auto* table = tempDb.OpenTable(this->temporaryTableId);
 
-    table->TemporaryDatabaseHeapScan(&result.rows, state, context.GetBatchSize());
+    // table->TemporaryDatabaseHeapScan(&result.rows, state, context.GetBatchSize());
 
     result.results.Reserve(result.rows.Size());
 
-    for (const auto& row: result.rows)
-      result.results.Push(row->Materialize(context.GetAllocator()));
+    // for (const auto& row: result.rows)
+    //   result.results.Push(row->Materialize(context.GetAllocator()));
 
     return result;
   }
@@ -138,7 +138,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
     : PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
-  ExecutionResult PhysicalDeclareVariable::Execute(const CoreEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalDeclareVariable::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
 
     const Expressions::EvaluationContext evaluationContext(
@@ -168,7 +168,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
    : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
-  ExecutionResult PhysicalCreateUser::Execute(const CoreEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -185,7 +185,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
     : PlanNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
-  ExecutionResult PhysicalGrantRole::Execute(const CoreEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalGrantRole::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -205,7 +205,7 @@ namespace QueryPipeline::PhysicalPlan {
 
   PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
 
-  ExecutionResult PhysicalCreateDatabase::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
 
@@ -231,7 +231,7 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
     : sessionId(sessionId), databaseId(databaseId){}
 
-  ExecutionResult PhysicalUseDatabase::Execute(const CoreEngine::ExecutionContext& context) {
+  ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
     result.rows.TrySetAllocator(context.GetAllocator());
 
@@ -255,7 +255,7 @@ namespace QueryPipeline::PhysicalPlan {
 PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
   : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
-  ExecutionResult PhysicalSchemaCreate::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalSchemaCreate::Execute(CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
           Errors::RuntimeError::Error,
@@ -277,7 +277,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTableScan::~PhysicalTableScan() = default;
 
-  ExecutionResult PhysicalTableScan::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = this->server->UseDatabase(context, this->table->databaseId);
@@ -311,11 +311,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScan::~PhysicalIndexScan() = default;
 
-  ExecutionResult PhysicalIndexScan::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
     tablePtr->GetConstantColumns(&result.columns);
@@ -336,6 +335,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     if (result.canFetchMore == false)
       this->state.Reset();
 
+    context.AddTable(tablePtr);
+
     return result;
   }
 
@@ -352,7 +353,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexSeek::~PhysicalIndexSeek() = default;
 
-  ExecutionResult PhysicalIndexSeek::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
@@ -364,6 +365,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     //select if to use clustered or non clustered index here
     tablePtr->ClusteredIndexSeek(context, &result.rows, this->key, this->expression);
 
+    context.AddTable(tablePtr);
     return result;
   }
 
@@ -372,12 +374,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     DataTypes::Indexing::Key& minKey,
     DataTypes::Indexing::Key& maxKey,
     Expressions::Expression* expression
-  )
-    : table(table), expression(expression), minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
+  ):    table(table), expression(expression),
+        minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
 
   PhysicalIndexSeekRange::~PhysicalIndexSeekRange() = default;
 
-  ExecutionResult PhysicalIndexSeekRange::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
@@ -389,14 +391,18 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     //select if to use clustered or non clustered index here
     tablePtr->ClusteredIndexSeekRange(context, &result.rows, this->minKey, this->maxKey, this->expression);
 
+    context.AddTable(tablePtr);
     return result;
   }
 
-  ExecutionResult PhysicalProject::ExecuteStatement(const CoreEngine::ExecutionContext& context) const{
+  ExecutionResult PhysicalProject::ExecuteStatement(CoreEngine::ExecutionContext& context) const{
     auto result = this->child->Execute(context);
 
     for (const auto& expression : this->resultExpressions)
         result.displayColumnNames.Push(expression->name);
+
+    if (result.rows.Empty())
+        return result;
 
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,
@@ -404,11 +410,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     );
 
     result.results.Reserve(result.rows.Size());
+
+    const auto firstPageId = result.rows[0]._pageId;
+
     for (const auto& row: result.rows) {
       QueryResult resultRow(context.GetAllocator());
 
       for (const auto& expression : this->resultExpressions) {
-        evaluationContext.row = row;
+        evaluationContext.row = &row;
         resultRow.AddColumn(Expressions::EvaluateExpression(expression, evaluationContext));
       }
 
@@ -424,7 +433,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     return result;
   }
 
-    ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
+    ExecutionResult PhysicalProject::ExecuteConstantStatement(CoreEngine::ExecutionContext& context)const{
         auto result = ExecutionResult(context);
         QueryResult resultRow(context.GetAllocator());
 
@@ -453,7 +462,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalProject::~PhysicalProject() = default;
 
-    ExecutionResult PhysicalProject::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalProject::Execute(CoreEngine::ExecutionContext& context){
         return (this->child == nullptr)
             ? this->ExecuteConstantStatement(context)
             : this->ExecuteStatement(context);
@@ -468,7 +477,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalFilter::~PhysicalFilter() = default;
 
-    ExecutionResult PhysicalFilter::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
         if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
@@ -480,12 +489,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             context
         );
 
-        DataStructures::PolymorphicArray<Pages::RowView*> filteredRows(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> filteredRows(
             context.GetAllocator(),
             result.rows.Size() / 2
         );
         for (auto& row : result.rows) {
-            evaluationContext.row = row;
+            evaluationContext.row = &row;
             if (!Expressions::EvaluateExpression(this->filter, evaluationContext).AsBool())
                 continue;
 
@@ -505,7 +514,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalTop::~PhysicalTop() = default;
 
-    ExecutionResult PhysicalTop::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
         if (this->top > result.results.Size())
@@ -525,7 +534,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalDistinct::~PhysicalDistinct() = default;
 
-    ExecutionResult PhysicalDistinct::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalDistinct::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
         DataStructures::PolymorphicArray<QueryResult> results;
@@ -568,7 +577,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         const Int index
     ) const{
         auto& [expressions] = this->fields[index];
@@ -592,7 +601,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     ExecutionResult PhysicalInsert::InsertFromChild(
         CoreEngine::StorageTypes::Table* tablePtr,
-        const CoreEngine::ExecutionContext& context
+        CoreEngine::ExecutionContext& context
     )const{
         Int rowCount = 0;
         while (true){
@@ -617,7 +626,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     ExecutionResult PhysicalInsert::InsertFromFields(
       CoreEngine::StorageTypes::Table* tablePtr,
-      const CoreEngine::ExecutionContext& context
+      CoreEngine::ExecutionContext& context
     ) const{
         auto result = ExecutionResult(context);
 
@@ -645,7 +654,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalInsert::~PhysicalInsert() = default;
 
-    ExecutionResult PhysicalInsert::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
@@ -660,7 +669,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalHeapDelete::~PhysicalHeapDelete() = default;
 
-    ExecutionResult PhysicalHeapDelete::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalHeapDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
@@ -677,7 +686,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScanDelete::~PhysicalIndexScanDelete() = default;
 
-    ExecutionResult PhysicalIndexScanDelete::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -694,7 +703,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete() = default;
 
-    ExecutionResult PhysicalIndexSeekDelete::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -714,7 +723,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalHeapUpdate::~PhysicalHeapUpdate() = default;
 
-    ExecutionResult PhysicalHeapUpdate::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalHeapUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -732,7 +741,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate() = default;
 
-    ExecutionResult PhysicalIndexScanUpdate::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexScanUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
@@ -750,7 +759,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
 
-  ExecutionResult PhysicalIndexSeekUpdate::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
     const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
@@ -775,7 +784,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalTableCreate::~PhysicalTableCreate() = default;
 
-  ExecutionResult PhysicalTableCreate::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
     if (this->session == nullptr || this->session->user == nullptr)
       return ExecutionResult(
           Errors::RuntimeError::Error,
@@ -953,7 +962,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
   PhysicalOrderBy::~PhysicalOrderBy() = default;
 
-  ExecutionResult PhysicalOrderBy::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalOrderBy::Execute(CoreEngine::ExecutionContext& context){
     if (!this->comparator.HasProperties())
         this->comparator.SetExecutionContext(&context);
 
@@ -1038,7 +1047,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         DataStructures::PolymorphicArray<column_index_t> &columns
     ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
 
-    ExecutionResult PhysicalIndexCreate::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexCreate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
         const auto* db = this->server->UseDatabase(context, this->table->databaseId);

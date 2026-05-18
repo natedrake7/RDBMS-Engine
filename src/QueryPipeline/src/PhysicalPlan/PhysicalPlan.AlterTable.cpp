@@ -13,7 +13,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAddColumn::~PhysicalAddColumn() = default;
 
-  ExecutionResult PhysicalAddColumn::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalAddColumn::Execute(CoreEngine::ExecutionContext& context){
     this->column->type.name.ToLowerInPlace();
     const auto columnType = ColumnTypesDictionary.Get(this->column->type.name.ToView());
 
@@ -88,7 +88,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalDropColumn::~PhysicalDropColumn() = default;
 
-  ExecutionResult PhysicalDropColumn::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalDropColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -114,7 +114,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
-  ExecutionResult PhysicalRenameColumn::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalRenameColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
@@ -147,7 +147,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 
-  ExecutionResult PhysicalAlterColumn::Execute(const CoreEngine::ExecutionContext& context){
+  ExecutionResult PhysicalAlterColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)

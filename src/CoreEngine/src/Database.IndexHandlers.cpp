@@ -23,38 +23,38 @@ namespace CoreEngine {
         return key;
     }
 
-    DataTypes::Indexing::Key Database::CreateKey(
-        const ExecutionContext& context,
-        const std::vector<column_index_t>& indexedColumns,
-        const Pages::RowView& rowPtr,
-        const Int offSet
-    ){
+    // DataTypes::Indexing::Key Database::CreateKey(
+    //     const ExecutionContext& context,
+    //     const std::vector<column_index_t>& indexedColumns,
+    //     const Pages::RowView& rowPtr,
+    //     const Int offSet
+    // ){
+    //
+    //     DataTypes::Indexing::Key key;
+    //     for (const auto ordinalPosition : indexedColumns){
+    //         auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition - offSet);
+    //         key.InsertKey(DataTypes::Indexing::Key(data));
+    //     }
+    //
+    //     return key;
+    // }
 
-        DataTypes::Indexing::Key key;
-        for (const auto ordinalPosition : indexedColumns){
-            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition - offSet);
-            key.InsertKey(DataTypes::Indexing::Key(data));
-        }
-
-        return key;
-    }
-
-    DataTypes::Indexing::Key Database::CreateKey(
-        const ExecutionContext& context,
-        const std::vector<column_index_t> &indexedColumns,
-        const Pages::RowView& rowPtr,
-        const DataTypes::RowIdentifier &rowId
-    ){
-        DataTypes::Indexing::Key key;
-        for (const auto ordinalPosition : indexedColumns){
-            auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition);
-            key.InsertKey(DataTypes::Indexing::Key(data));
-        }
-
-        key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier, context.GetAllocator()));
-
-        return key;
-    }
+    // DataTypes::Indexing::Key Database::CreateKey(
+    //     const ExecutionContext& context,
+    //     const std::vector<column_index_t> &indexedColumns,
+    //     const Pages::RowView& rowPtr,
+    //     const DataTypes::RowIdentifier &rowId
+    // ){
+    //     DataTypes::Indexing::Key key;
+    //     for (const auto ordinalPosition : indexedColumns){
+    //         auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition);
+    //         key.InsertKey(DataTypes::Indexing::Key(data));
+    //     }
+    //
+    //     key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier, context.GetAllocator()));
+    //
+    //     return key;
+    // }
 
    Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
         const ::Memory::IAllocator* allocator,

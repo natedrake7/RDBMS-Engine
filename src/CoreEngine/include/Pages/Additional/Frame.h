@@ -1,10 +1,8 @@
 ﻿#pragma once
 #include <atomic>
-#include <string>
-
 #include "../../BTree.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
-#include "BufferPool/StorageManager.h"
+#include "../../BufferPool/FileManager.h"
 
 namespace Pages{
     struct IndexAllocationPageAdditionalHeader;
@@ -24,7 +22,7 @@ namespace Pages{
             IndexAllocationPageAdditionalHeader* allocationHeaderPtr;
         }additionalHeader;
 
-        object_t* data;
+        object_t* _data;
 
         const CoreEngine::StorageTypes::Table* table;
         PageHeader* headerPtr;

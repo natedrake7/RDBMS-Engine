@@ -1,6 +1,12 @@
 #pragma once
+#include <iosfwd>
 #include <vector>
-#include "../DataStorage/Row.h"
+
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+
+namespace CoreEngine::StorageTypes{
+    class Table;
+}
 
 namespace CoreEngine::LoggingStructures {
   struct LogEntryBody {

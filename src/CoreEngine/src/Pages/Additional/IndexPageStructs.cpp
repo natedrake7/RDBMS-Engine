@@ -1,5 +1,7 @@
 ﻿#include "../../../include/Pages/Additional/IndexPageStructs.h"
 
+#include "DataStorage/Row.h"
+
 namespace Pages{
     Constants::TreeType IndexPageAdditionalHeader::GetTreeType() const{
         return PackedByte::ExtractBits<Constants::TreeType>(flags._data, TREE_TYPE_BIT_POS, TREE_TYPE_BIT_MASK);
@@ -82,22 +84,8 @@ namespace Pages{
         this->row = std::move(other.row);
     }
 
-    // LeafNodeTuple& LeafNodeTuple::operator=(const LeafNodeTuple& other){
-    //     if (this == &other)
-    //         return *this;
-    //
-    //     this->key = other.key;
-    //     this->row = other.row;
-    //
-    //     return *this;
-    // }
-    //
-    // LeafNodeTuple::LeafNodeTuple(const LeafNodeTuple& other){
-    //     this->key = other.key;
-    //     this->row = other.row;
-    // }
 
-    LeafNodeTuple::LeafNodeTuple(RowView& row, DataTypes::Indexing::Key& key){
+    LeafNodeTuple::LeafNodeTuple(CoreEngine::StorageTypes::RID& row, DataTypes::Indexing::Key& key){
         this->key = std::move(key);
         this->row = std::move(row);
     }

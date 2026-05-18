@@ -5,9 +5,6 @@
 
 namespace Pages{
     class IndexPageView final : public PageView {
-            void InsertFirstKey(const DataTypes::Indexing::Key& key) const;
-            void InsertKey(const DataTypes::Indexing::Key& key) const;
-
             void InsertFirstTuple(const IndexInsertTuple& tuple) const;
 
             DataTypes::Indexing::Key GetKeyByOffset(
@@ -55,7 +52,7 @@ namespace Pages{
             [[nodiscard]] bool HasLeftSibling() const;
             [[nodiscard]] bool HasRightSibling() const;
 
-            void InsertKey(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+            // void InsertKey(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
             void InsertTuple(const IndexInsertTuple& tuple) const;
             void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
@@ -63,21 +60,13 @@ namespace Pages{
             DataTypes::Indexing::Key GetKeyByIndex(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
             //always returns the result of the comparison of the page key against the provided key
-            Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+            [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
-            LeafNodeTuple PeekLeafTuple(const ::Memory::IAllocator* allocator,Int indexPosition) const;
-
-            InternalNodeTuple PeekInternalNodeTuple(const ::Memory::IAllocator* allocator, Int indexPosition) const;
-
-            CoreEngine::StorageTypes::RowVersioningHeader PeekVersionHeader(
-                Int indexPosition,
-                Int& outKeySize
-            ) const;
+            CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 
             [[nodiscard]] bool IsRowVisible(Int indexPosition, const CoreEngine::Snapshot& snapshot)const;
-            RowView* PeekRowReference(const ::Memory::IAllocator* allocator, Int indexPosition) const;
 
-            page_id_t GetChild(Int indexPosition) const;
+            [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
             InternalNodeTuple GetInternalNodeTuple(
                 const ::Memory::IAllocator* allocator,
                 Int indexPosition
@@ -88,10 +77,7 @@ namespace Pages{
             //     const CoreEngine::Snapshot& snapshot,
             //     Int indexPosition
             // ) const;
-            void RemoveKeyFromChild(
-                const ::Memory::IAllocator* allocator,
-                Int indexPosition
-            ) const;
+            void RemoveKeyFromChild(Int indexPosition) const;
 
             void Log(
                 const ::Memory::IAllocator* allocator,

@@ -67,6 +67,14 @@ namespace CoreEngine{
         return this->snapshot;
     }
 
+    void ExecutionContext::AddTable(const StorageTypes::Table* table){
+        this->schema.tables[this->schema.tableCount++] = table;
+    }
+
+    const StorageTypes::Table* ExecutionContext::GetTable(const UnsignedInt index) const{
+        return this->schema.tables[index];
+    }
+
     void ExecutionContext::ResetAllocator() const{
         this->allocator.Reset();
     }

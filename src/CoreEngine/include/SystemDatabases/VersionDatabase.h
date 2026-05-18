@@ -76,13 +76,13 @@ namespace CoreEngine{
             Errors::RuntimeStatus InsertRow(
                 const ::Memory::IAllocator* allocator,
                 const Pages::RawRowReference& rowRef,
-                StorageTypes::RowVersionPointer& rowPointer,
+                StorageTypes::RowHeader& rowHeader,
                 const StorageTypes::Table* table
             );
-            Pages::RowView* RetrieveRowReference(
+            StorageTypes::RID RetrieveRowReference(
                 const ::Memory::IAllocator* allocator,
                 const Snapshot& snapshot,
-                const StorageTypes::RowVersionPointer& rowPointer,
+                const StorageTypes::RowHeader& rowHeader,
                 const StorageTypes::Table* table
             )const;
             [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;

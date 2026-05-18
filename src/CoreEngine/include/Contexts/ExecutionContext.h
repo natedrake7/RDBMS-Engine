@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
@@ -16,6 +17,10 @@ namespace Memory{
 class Variable;
 
 namespace CoreEngine {
+    namespace StorageTypes{
+        class Table;
+    }
+
     struct ScanState;
 
     struct Snapshot {
@@ -56,7 +61,16 @@ namespace CoreEngine {
         [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == FIRST_TRANSACTION_ID; }
     };
 
+    struct ExecutionSchema{
+        const StorageTypes::Table* tables[Constants::MAX_QUERY_JOINS];
+        UnsignedInt tableCount;
+
+        ExecutionSchema(): tables{nullptr}, tableCount(0){}
+    };
+
     class ExecutionContext {
+        ExecutionSchema schema;
+
         Snapshot snapshot;
         Memory::Allocator allocator;
         const Dictionary<DataTypes::String, Variable>* variables;
@@ -84,6 +98,9 @@ namespace CoreEngine {
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
+
+            void AddTable(const StorageTypes::Table* table);
+            const StorageTypes::Table* GetTable(UnsignedInt index) const;
 
             void ResetAllocator()const;
             bool IsAllocatorEmpty()const;

@@ -304,20 +304,20 @@ namespace CoreEngine {
                 allocatedPagesPerExtent++;
 
                 for (int i = 0;i < pageSize;i++){
-                    const auto* row = page.PeekRow(&allocator, i, 0);
-                    auto materializedRow = row->Materialize(&allocator);
+                    // const auto* row = page.PeekRow(&allocator, i, 0);
+                    // auto materializedRow = row->Materialize(&allocator);
 
-                    tableStatistics.averageRowSize += row->Size();
-                    sampleRowCount++;
-
-                    for (int j = 0; j < columnStatistics.Size(); j++){
-                        auto& columnStats = columnStatistics[j];
-                        StatisticsScheduler::UpdateColumnStatistics(
-                            columnStats,
-                               materializedRow.GetColumnReferenceAt(j),
-                            sortedValues[columnStats.columnId]
-                        );
-                    }
+                    // tableStatistics.averageRowSize += row->Size();
+                    // sampleRowCount++;
+                    //
+                    // for (int j = 0; j < columnStatistics.Size(); j++){
+                    //     auto& columnStats = columnStatistics[j];
+                    //     StatisticsScheduler::UpdateColumnStatistics(
+                    //         columnStats,
+                    //            materializedRow.GetColumnReferenceAt(j),
+                    //         sortedValues[columnStats.columnId]
+                    //     );
+                    // }
                 }
             }
     }

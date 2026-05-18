@@ -5,7 +5,10 @@ namespace Pages{
     struct SlotDirectory{
     private:
         UnsignedSmallInt flags_offset;
-        UnsignedSmallInt size;
+        UnsignedSmallInt _dataSize;
+
+        UnsignedSmallInt _offset;
+        UnsignedSmallInt _keySize;
 
         static constexpr UnsignedSmallInt OFFSET_MASK = 0x3FFF; // lower 14 bits
         static constexpr UnsignedSmallInt FLAGS_MASK  = 0xC000; // upper 2 bits
@@ -18,20 +21,32 @@ namespace Pages{
             SLOT_DEAD       = 3
         };
 
-        static constexpr UnsignedTinyInt Size = 4;
+        static constexpr UnsignedTinyInt SIZE = 8;
 
         SlotDirectory();
         SlotDirectory(
             UnsignedSmallInt offset,
-            UnsignedSmallInt size,
+            UnsignedSmallInt dataOffset,
+            UnsignedSmallInt dataSize,
+            UnsignedSmallInt keySize,
             Flag flag
         );
 
-        [[nodiscard]] UnsignedSmallInt GetOffset() const;
+        [[nodiscard]] UnsignedSmallInt AbsoluteDataOffset() const;
+
+        [[nodiscard]] UnsignedSmallInt DataOffset() const;
+        void SetDataOffset(UnsignedSmallInt otherOffset);
+
+        [[nodiscard]] UnsignedSmallInt DataSize() const;
+        void SetDataSize(UnsignedSmallInt otherSize);
+
+        [[nodiscard]] UnsignedSmallInt Offset() const;
         void SetOffset(UnsignedSmallInt otherOffset);
 
-        [[nodiscard]] UnsignedSmallInt GetSize() const;
-        void SetSize(UnsignedSmallInt otherSize);
+        [[nodiscard]] UnsignedSmallInt KeySize() const;
+        void SetKeySize(UnsignedSmallInt otherSize);
+
+        [[nodiscard]] UnsignedSmallInt Size()const;
 
         [[nodiscard]] Flag GetFlag() const;
         void SetFlag(Flag otherFlag);
@@ -56,7 +71,7 @@ namespace Pages{
         }
 
         static bool OrderAscendingByOffSet(const SlotDirectoryDefragment& lhs, const SlotDirectoryDefragment& rhs){
-            return lhs.slotDirectory.GetOffset() < rhs.slotDirectory.GetOffset();
+            return lhs.slotDirectory.DataOffset() < rhs.slotDirectory.DataOffset();
         }
     };
 }

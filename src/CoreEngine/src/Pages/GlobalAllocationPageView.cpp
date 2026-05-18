@@ -10,39 +10,39 @@ namespace Pages{
 
     bool GlobalAllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
         const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        return (this->framePtr->data[this->GetBitIndex(bitIndex)] & mask) != 0;
+        return (this->_frame->_data[this->GetBitIndex(bitIndex)] & mask) != 0;
     }
 
     void GlobalAllocationPageView::SetBit(const std::size_t bitIndex) const noexcept{
         const std::size_t byteIndex = this->GetBitIndex(bitIndex);
         const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        const auto byte = static_cast<UnsignedTinyInt>(this->framePtr->data[byteIndex] | mask);
-        this->framePtr->data[byteIndex] = static_cast<char>(byte);
+        const auto byte = static_cast<UnsignedTinyInt>(this->_frame->_data[byteIndex] | mask);
+        this->_frame->_data[byteIndex] = static_cast<char>(byte);
     }
 
     void GlobalAllocationPageView::ClearBit(const std::size_t bitIndex) const noexcept{
         const std::size_t byteIndex = this->GetBitIndex(bitIndex);
         const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        auto byte = this->framePtr->data[byteIndex];
+        auto byte = this->_frame->_data[byteIndex];
         byte = static_cast<UnsignedTinyInt>(byte & static_cast<UnsignedTinyInt>(~mask));
-        this->framePtr->data[byteIndex] = static_cast<char>(byte);
+        this->_frame->_data[byteIndex] = static_cast<char>(byte);
     }
 
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {}
 
     GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{
-        this->framePtr = other.framePtr;
-        other.framePtr = nullptr;
+        this->_frame = other._frame;
+        other._frame = nullptr;
     }
 
     GlobalAllocationPageView& GlobalAllocationPageView::operator=(GlobalAllocationPageView&& other) noexcept{
         if (this == &other)
             return *this;
 
-        this->framePtr = other.framePtr;
+        this->_frame = other._frame;
         this->initialOffset = other.initialOffset;
 
-        other.framePtr = nullptr;
+        other._frame = nullptr;
         return *this;
     }
 
@@ -57,11 +57,11 @@ namespace Pages{
                 continue;
 
             this->SetBit(extentId);
-            this->framePtr->isDirty = true;
+            this->_frame->isDirty = true;
 
             allocatedExtents++;
 
-            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->framePtr->headerPtr->pageId) + extentId);
+            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->headerPtr->pageId) + extentId);
         }
 
         return allocatedExtents;
@@ -69,7 +69,7 @@ namespace Pages{
 
     void GlobalAllocationPageView::DeallocateExtent(const extent_id_t extentId) const{
         this->ClearBit(extentId);
-        this->framePtr->isDirty = true;
+        this->_frame->isDirty = true;
     }
 
     bool GlobalAllocationPageView::IsFull() const{
@@ -82,7 +82,7 @@ namespace Pages{
         if(startingIndex >= Constants::EXTENT_BIT_MAP_SIZE)
             return allocatedExtents;
 
-        MultiThreading::ReaderGuard lock(&this->framePtr->latch);
+        MultiThreading::ReaderGuard lock(&this->_frame->latch);
 
         allocatedExtents.reserve(Constants::EXTENT_BIT_MAP_SIZE - startingIndex);
 
@@ -90,7 +90,7 @@ namespace Pages{
             if (!this->GetBit(id))
                 continue;
 
-            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->framePtr->headerPtr->pageId) + id);
+            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->headerPtr->pageId) + id);
         }
 
         return allocatedExtents;

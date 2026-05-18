@@ -91,8 +91,6 @@ namespace Storage {
             const DataTypes::StringView& filename,
             const CoreEngine::StorageTypes::Table *table
         );
-        static void SetReadFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
-        static void SetWriteFilePointerToOffset(std::fstream *file, const std::streampos &offSet);
 
         void CacheFrameToPageTableNoLock(FileKey key, page_id_t pageId, FrameId frameId);
         Pages::Frame* CreateFrame(FileKey fileKey, const DataTypes::StringView& filename, page_id_t pageId, const CoreEngine::StorageTypes::Table *table);

@@ -8,34 +8,34 @@ namespace QueryPipeline::PhysicalPlan {
     void PerformNullJoin(
         const ::Memory::IAllocator* allocator,
         ExecutionResult& result,
-        Pages::RowView* outerRow,
+        Pages::RID* outerRow,
         const Int numberOfColumns
     ){
-        outerRow->Join(
-        Pages::RowView::NullReference(
-                allocator,
-                numberOfColumns
-            )
-        );
-        result.rows.Push(outerRow);
+        // outerRow->Join(
+        // Pages::RowView::NullReference(
+        //         allocator,
+        //         numberOfColumns
+        //     )
+        // );
+        // result.rows.Push(outerRow);
     }
 
     void PerformJoin(
         const ::Memory::IAllocator* allocator,
         ExecutionResult& result,
-        const Pages::RowView* outerRow,
-        const Pages::RowView* innerRow
+        const Pages::RID* outerRow,
+        const Pages::RID* innerRow
     ){
-        const auto outerCopy = Pages::RowView::Copy(
-            outerRow,
-            allocator
-        );
-        outerCopy->Join(innerRow);
-        result.rows.Push(outerCopy);
+        // const auto outerCopy = Pages::RowView::Copy(
+        //     outerRow,
+        //     allocator
+        // );
+        // outerCopy->Join(innerRow);
+        // result.rows.Push(outerCopy);
     }
 
     ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const {
         const auto* allocator = context.GetAllocator();
@@ -55,12 +55,12 @@ namespace QueryPipeline::PhysicalPlan {
 
             for (const auto& outerRow: leftResult.rows) {
                 for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = outerRow;
-                    evaluationContext.joinRow = innerRow;
+                    evaluationContext.row = &outerRow;
+                    evaluationContext.joinRow = &innerRow;
                     if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
                         continue;
 
-                     PerformJoin(allocator, result, outerRow, innerRow);
+                     // PerformJoin(allocator, result, outerRow, innerRow);
                 }
             }
         }
@@ -76,7 +76,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalNestedLoopInnerJoin::~PhysicalNestedLoopInnerJoin() = default;
 
-    ExecutionResult PhysicalNestedLoopInnerJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalNestedLoopInnerJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
         result.canFetchMore = leftResult.canFetchMore;
@@ -84,7 +84,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalNestedLoopLeftJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const{
         const auto* allocator = context.GetAllocator();
@@ -113,13 +113,13 @@ namespace QueryPipeline::PhysicalPlan {
             for (int i = 0;i < leftResult.rows.Size();i++){
                 const auto& outerRow = leftResult.rows[i];
                 for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = outerRow;
-                    evaluationContext.joinRow = innerRow;
+                    evaluationContext.row = &outerRow;
+                    evaluationContext.joinRow = &innerRow;
                     if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
                         continue;
 
                     matchedRows[i] = true;
-                    PerformJoin(allocator, result, outerRow, innerRow);
+                    // PerformJoin(allocator, result, outerRow, innerRow);
                 }
             }
         }
@@ -129,10 +129,10 @@ namespace QueryPipeline::PhysicalPlan {
                 continue;
 
             auto& outerRow = leftResult.rows[i];
-            outerRow->Join(
-                Pages::RowView::NullReference(allocator, rightNumberOfColumns)
-            );
-            result.rows.Push(std::move(outerRow));
+            // outerRow->Join(
+            //     Pages::RowView::NullReference(allocator, rightNumberOfColumns)
+            // );
+            // result.rows.Push(std::move(outerRow));
         }
 
         return result;
@@ -146,7 +146,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalNestedLoopLeftJoin::~PhysicalNestedLoopLeftJoin() = default;
 
-    ExecutionResult PhysicalNestedLoopLeftJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalNestedLoopLeftJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
         result.canFetchMore = leftResult.canFetchMore;
@@ -161,7 +161,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalNestedLoopFullJoin::~PhysicalNestedLoopFullJoin() = default;
 
-    ExecutionResult PhysicalNestedLoopFullJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalNestedLoopFullJoin::Execute(CoreEngine::ExecutionContext& context) {
         // auto* result = new ExecutionResult();
         //
         // auto* leftResult = this->left->Execute(properties);
@@ -216,7 +216,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalMergeInnerJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const {
         using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -297,7 +297,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalMergeInnerJoin::~PhysicalMergeInnerJoin() = default;
 
-    ExecutionResult PhysicalMergeInnerJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalMergeInnerJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -306,7 +306,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalMergeLeftJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const {
         // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -396,7 +396,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalMergeLeftJoin::~PhysicalMergeLeftJoin() = default;
 
-    ExecutionResult PhysicalMergeLeftJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalMergeLeftJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -405,7 +405,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalMergeFullJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const {
         // using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
@@ -496,7 +496,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalMergeFullJoin::~PhysicalMergeFullJoin() = default;
 
-    ExecutionResult PhysicalMergeFullJoin::Execute(const CoreEngine::ExecutionContext& context) {
+    ExecutionResult PhysicalMergeFullJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
 
@@ -505,7 +505,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalCrossInnerJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const{
         const auto* allocator = context.GetAllocator();
@@ -524,9 +524,9 @@ namespace QueryPipeline::PhysicalPlan {
             for (int i = 0;i < leftResult.rows.Size();i++){
                 const auto& outerRow = leftResult.rows[i];
                 for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = outerRow;
-                    evaluationContext.joinRow = innerRow;
-                    PerformJoin(allocator, result, outerRow, innerRow);
+                    // evaluationContext.row = outerRow;
+                    // evaluationContext.joinRow = innerRow;
+                    // PerformJoin(allocator, result, outerRow, innerRow);
                 }
             }
         }
@@ -539,7 +539,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalCrossInnerJoin::~PhysicalCrossInnerJoin() = default;
 
-    ExecutionResult PhysicalCrossInnerJoin::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalCrossInnerJoin::Execute(CoreEngine::ExecutionContext& context){
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
         result.canFetchMore = leftResult.canFetchMore;
@@ -547,7 +547,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     ExecutionResult PhysicalCrossLeftJoin::ExecuteBatchJoin(
-        const CoreEngine::ExecutionContext& context,
+        CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const{
         const auto* allocator = context.GetAllocator();
@@ -558,12 +558,12 @@ namespace QueryPipeline::PhysicalPlan {
 
         if (rightResult.rows.Empty()){
             for (auto& outerRow : leftResult.rows){
-                PerformNullJoin(
-                    allocator,
-                    result,
-                    outerRow,
-                    rightNumberOfColumns
-                );
+                // PerformNullJoin(
+                //     allocator,
+                //     result,
+                //     outerRow,
+                //     rightNumberOfColumns
+                // );
             }
 
             return result;
@@ -582,9 +582,9 @@ namespace QueryPipeline::PhysicalPlan {
             for (int i = 0;i < leftResult.rows.Size();i++){
                 const auto& outerRow = leftResult.rows[i];
                 for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = outerRow;
-                    evaluationContext.joinRow = innerRow;
-                    PerformJoin(allocator, result, outerRow, innerRow);
+                    // evaluationContext.row = outerRow;
+                    // evaluationContext.joinRow = innerRow;
+                    // PerformJoin(allocator, result, outerRow, innerRow);
                 }
             }
         }
@@ -597,7 +597,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalCrossLeftJoin::~PhysicalCrossLeftJoin() = default;
 
-    ExecutionResult PhysicalCrossLeftJoin::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalCrossLeftJoin::Execute(CoreEngine::ExecutionContext& context){
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
         result.canFetchMore = leftResult.canFetchMore;
@@ -609,7 +609,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalCrossFullJoin::~PhysicalCrossFullJoin() = default;
 
-    ExecutionResult PhysicalCrossFullJoin::Execute(const CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalCrossFullJoin::Execute(CoreEngine::ExecutionContext& context){
         return ExecutionResult(context);
     }
 }

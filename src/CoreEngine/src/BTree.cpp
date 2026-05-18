@@ -1,7 +1,7 @@
 ﻿#include "../include/BTree.h"
 #include <algorithm>
 #include <cassert>
-#include <iostream>
+#include "../include/DataStorage/Row.h"
 #include "../include/DataStorage/Column.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/BufferPool/StorageManager.h"
@@ -27,6 +27,28 @@ namespace Indexing
         newChild.SetRightSibling(child.RightSibling());
         newChild.SetLeftSibling(child.PageId());
         child.SetRightSibling(newChild.PageId());
+    }
+
+    Int BTree::ScanLeafUpperBound(
+        const Pages::IndexPageView& page,
+        const DataTypes::Indexing::Key& key,
+        Int left
+    ){
+        Int right = page.Keys();
+
+        while (left < right){
+            const Int mid = left + (right - left) / 2;
+
+            const auto comparison = page.ComparePageKeyAgainst(key, mid);
+            if (comparison == Comparators::Comparator::Greater){
+                right = mid;
+                continue;
+            }
+
+            left = mid + 1;
+        }
+
+        return left;
     }
 
     Int BTree::ScanLeafLowerBound(
@@ -68,18 +90,8 @@ namespace Indexing
         }
 
         if (left < page.Keys()){
-            if (page.ComparePageKeyAgainst(key, left) == Comparators::Comparator::Equal) {
-                const auto tupleKey = page.GetKeyByIndex(allocator, left);
-                std::cout
-                    << "Found duplicate key: "
-                    << key << " and: "
-                    << tupleKey
-                    << " at position " << left
-                    << " in page " << page.PageId()
-                    << std::endl;
-
-                return -1;
-            }
+            if (page.ComparePageKeyAgainst(key, left) == Comparators::Comparator::Equal)
+                return -1;  // duplicate key
         }
 
         return left;
@@ -655,7 +667,7 @@ namespace Indexing
 
                 if (childIndex > 0) {
                     const auto childKey = child.GetKeyByIndex(context.GetAllocator(), childIndex - 1);
-                    parent.InsertKey(childKey, childIndex - 1);
+                    // parent.InsertKey(childKey, childIndex - 1);
                 }
 
                 return true;
@@ -888,20 +900,20 @@ namespace Indexing
             tableStatistics.rowCount += static_cast<Int>(numOfRows);
 
             for (Int i = 0;i < numOfRows; i++){
-                auto [_, rowPtr] = currentNode.PeekLeafTuple(allocator, i);
+                // auto [_, rowPtr] = currentNode.PeekLeafTuple(allocator, i);
 
-                auto materializedRow = rowPtr.Materialize(allocator);
-                tableStatistics.averageRowSize += rowPtr.Size();
-
-                for (Int j = 0; j < columnStatistics.Size(); j++) {
-                    auto& columnStats = columnStatistics[j];
-
-                    CoreEngine::StatisticsScheduler::UpdateColumnStatistics(
-                        columnStats,
-                        materializedRow.GetColumnReferenceAt(j),
-                        sortedValues[columnStats.columnId]
-                    );
-                }
+                // auto materializedRow = rowPtr.Materialize(allocator);
+                // tableStatistics.averageRowSize += rowPtr.Size();
+                //
+                // for (Int j = 0; j < columnStatistics.Size(); j++) {
+                //     auto& columnStats = columnStatistics[j];
+                //
+                //     CoreEngine::StatisticsScheduler::UpdateColumnStatistics(
+                //         columnStats,
+                //         materializedRow.GetColumnReferenceAt(j),
+                //         sortedValues[columnStats.columnId]
+                //     );
+                // }
             }
 
             if(!currentNode.HasRightSibling())
@@ -1038,25 +1050,24 @@ namespace Indexing
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     )const{
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchKey(minKey);
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
+
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey);
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(maxKey, i) == Comparators::Comparator::Greater)
-                    return;
-
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                result->Push(currentNode.PeekRowReference(allocator, i));
+
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1071,16 +1082,15 @@ namespace Indexing
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchKey(minKey);
-
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
+
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1089,23 +1099,16 @@ namespace Indexing
                 context
             );
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                const auto maxKeyCompareResult = currentNode.ComparePageKeyAgainst(maxKey, i);
-                if (maxKeyCompareResult <= Comparators::Comparator::Equal){
-                    if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
-                        continue;
-
-                    auto* row = currentNode.PeekRowReference(allocator, i);
-                    evaluationContext.row = row;
-
-                    if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
-                        result->Push(std::move(row));
-
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey);
+            for (Int i = startingIndex; i < endingIndex; i++){
+                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                }
 
-                if (maxKeyCompareResult == Comparators::Comparator::Greater)
-                    return;
+                auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &row;
+
+                if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
+                    result->Push(row);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1119,24 +1122,24 @@ namespace Indexing
     void BTree::IndexSeek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     ) const {
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchKey(key);
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
         while (true){
+
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(key, i) != Comparators::Comparator::Equal)
-                    return;
+
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                result->Push(currentNode.PeekRowReference(allocator, i));
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
 
             const auto rightSibling = currentNode.RightSibling();
@@ -1151,13 +1154,12 @@ namespace Indexing
     void BTree::IndexSeek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression *expression
     ) const {
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchKey(key);
 
         auto evaluationContext = Expressions::EvaluationContext(
@@ -1169,17 +1171,15 @@ namespace Indexing
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(key, i) != Comparators::Comparator::Equal)
-                    return;
-
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
                 if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
-                    result->Push(std::move(row));
+                    result->Push(rid);
             }
 
             const auto rightSibling = currentNode.RightSibling();
@@ -1192,9 +1192,8 @@ namespace Indexing
     }
 
     void BTree::SystemIndexSeek(
-        const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     ) const{
         if (this->IsEmpty())
             return;
@@ -1204,12 +1203,10 @@ namespace Indexing
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(key, i) != Comparators::Comparator::Equal)
-                    return;
 
-                result->Push(currentNode.PeekRowReference(allocator, i));
-            }
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            for (Int i = startingIndex; i < endingIndex; i++)
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
 
             const auto rightSibling = currentNode.RightSibling();
             if(rightSibling == INVALID_PAGE_ID)
@@ -1223,7 +1220,7 @@ namespace Indexing
     void BTree::SystemIndexSeek(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1233,22 +1230,22 @@ namespace Indexing
 
         auto evaluationContext = Expressions::EvaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            allocator
+            allocator,
+            this->table
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(key, i) != Comparators::Comparator::Equal)
-                    return;
 
-                auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            for (Int i = startingIndex; i < endingIndex; i++){
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
 
                 if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
-                    result->Push(std::move(row));
+                    result->Push(rid);
             }
 
             const auto rightSibling = currentNode.RightSibling();
@@ -1285,13 +1282,11 @@ namespace Indexing
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         CoreEngine::IndexState& state
     )const{
         if (this->IsEmpty())
             return;
-
-        const auto& allocator = context.GetAllocator();
 
         result->Reserve(context.GetBatchSize());
         auto currentNode = state.pageId == INVALID_PAGE_ID
@@ -1305,7 +1300,7 @@ namespace Indexing
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                result->Push(currentNode.PeekRowReference(allocator, i));
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
 
             if(!currentNode.HasRightSibling()) {
@@ -1326,14 +1321,13 @@ namespace Indexing
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         CoreEngine::IndexState& state,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
@@ -1352,12 +1346,12 @@ namespace Indexing
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
                 if (!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
-                result->Push(std::move(row));
+                result->Push(rid);
 
                 if (result->Size() == context.GetBatchSize()) {
                     state.lastFetchedKeyIndex = i;
@@ -1374,19 +1368,18 @@ namespace Indexing
             }
 
             currentNode = this->GetNode(currentNode.RightSibling());
-      }
+        }
     }
 
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
@@ -1400,12 +1393,12 @@ namespace Indexing
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
                 if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
-                result->Push(std::move(row));
+                result->Push(rid);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1417,7 +1410,7 @@ namespace Indexing
 
     void BTree::SystemIndexScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1426,20 +1419,21 @@ namespace Indexing
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            allocator
+            allocator,
+            this->table
         );
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-                auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
 
                 if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
-                result->Push(std::move(row));
+                result->Push(rid);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1449,20 +1443,16 @@ namespace Indexing
         }
     }
 
-    void BTree::SystemIndexScan(
-        const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result
-    ) const{
+    void BTree::SystemIndexScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result) const{
         if (this->IsEmpty())
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
-
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for(Int i = 0;i < currentNode.PageSize();i++){
-                result->Push(currentNode.PeekRowReference(allocator, i));
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1474,22 +1464,19 @@ namespace Indexing
 
     void BTree::IndexScan(
         const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<Pages::RowView*>* result
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     )const{
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchLeftMostLeafNode();
-
-        while (true)
-        {
+        while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for(Int i = 0;i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                result->Push(currentNode.PeekRowReference(allocator, i));
+                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
 
             if(!currentNode.HasRightSibling())
@@ -1585,9 +1572,11 @@ namespace Indexing
         if (this->IsEmpty())
             return;
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchLeftMostLeafNode();
-        Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, context);
+        Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            context
+        );
 
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
@@ -1595,16 +1584,15 @@ namespace Indexing
             for (Int i = 0; i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                const auto* row = currentNode.PeekRowReference(allocator, i);
+                const auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
 
-                evaluationContext.row = row;
-                const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
-                if(!value.AsBool())
+                evaluationContext.row = &row;
+                if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
                 const auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &row,
                     context,
                     updates
                 );
@@ -1628,7 +1616,6 @@ namespace Indexing
         if (this->IsEmpty())
             return {};
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
@@ -1641,17 +1628,16 @@ namespace Indexing
             for (Int i = 0;i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                const auto* row = currentNode.PeekRowReference(allocator, i);
 
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
 
-                const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
-                if(!value.AsBool())
+                if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     context,
                     updates
                 );
@@ -1676,7 +1662,6 @@ namespace Indexing
         if (this->IsEmpty())
             return {};
 
-        const auto& allocator = context.GetAllocator();
         auto currentNode = this->SearchLeftMostLeafNode();
 
         while (true){
@@ -1685,11 +1670,11 @@ namespace Indexing
             for (Int i = 0;i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                const auto* row = currentNode.PeekRowReference(allocator, i);
 
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     context,
                     updates
                 );
@@ -1729,10 +1714,11 @@ namespace Indexing
 
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
-                const auto* row = currentNode.PeekRowReference(context.GetAllocator(), i);
+
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     context,
                     updates
                 );
@@ -1759,8 +1745,6 @@ namespace Indexing
         if (this->IsEmpty())
             return {};
 
-        const auto& allocator = context.GetAllocator();
-
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
@@ -1778,8 +1762,8 @@ namespace Indexing
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                const auto* row = currentNode.PeekRowReference(allocator, i);
-                evaluationContext.row = row;
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                evaluationContext.row = &rid;
                 const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
 
                 if(!value.AsBool())
@@ -1787,7 +1771,7 @@ namespace Indexing
 
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     context,
                     updates
                 );
@@ -1813,9 +1797,6 @@ namespace Indexing
         if (this->IsEmpty())
             return {};
 
-
-        const auto& allocator = context.GetAllocator();
-
         auto currentNode = this->SearchKey(*minKey);
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, *minKey);
 
@@ -1823,17 +1804,16 @@ namespace Indexing
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
             for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-
-                if (currentNode.ComparePageKeyAgainst(*maxKey, i) != Comparators::Comparator::Greater)
+                if (currentNode.ComparePageKeyAgainst(*maxKey, i) == Comparators::Comparator::Greater)
                     return {};
 
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
-                const auto* row = currentNode.PeekRowReference(allocator, i);
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     context,
                     updates
                 );
@@ -1869,10 +1849,10 @@ namespace Indexing
                 if (compareResult == Comparators::Comparator::Greater)
                     return {};
 
-                const auto* row = currentNode.PeekRowReference(allocator, i);
+                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->SystemUpdateRowNoLock(
                     &currentNode,
-                    row,
+                    &rid,
                     allocator,
                     updates
                 );

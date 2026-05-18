@@ -1,8 +1,6 @@
 #pragma once
 #include <cstdint>
-
 #include "Key.h"
-#include "RowIdentifier.h"
 
 namespace Errors {
   enum class RuntimeError : uint8_t {
@@ -27,13 +25,11 @@ namespace Errors {
     DataTypes::String message;
 
     DataTypes::Indexing::Key primaryKey;
-    DataTypes::RowIdentifier rowId;
+    // Pages::RID rowId;
 
-    explicit RuntimeStatus(const ::Memory::IAllocator* allocator) {
-      this->code = RuntimeError::Ok;
-      this->message = DataTypes::String::Empty(allocator);
-      this->primaryKey = DataTypes::Indexing::Key();
-    }
+    explicit RuntimeStatus(const ::Memory::IAllocator* allocator)
+        :   code(RuntimeError::Ok), message(DataTypes::String::Empty(allocator)),
+            primaryKey(DataTypes::Indexing::Key()){}
 
     // RuntimeStatus(const RuntimeError code, DataTypes::String& message){
     //     this->code = code;
@@ -79,7 +75,7 @@ namespace Errors {
       this->code = other.code;
       this->message = std::move(other.message);
       this->primaryKey = std::move(other.primaryKey);
-      this->rowId = other.rowId;
+      // this->rowId = other.rowId;
     }
 
     RuntimeStatus& operator=(RuntimeStatus&& other) noexcept{
@@ -89,7 +85,7 @@ namespace Errors {
       this->code = other.code;
       this->message = std::move(other.message);
       this->primaryKey = std::move(other.primaryKey);
-      this->rowId = other.rowId;
+      // this->rowId = other.rowId;
 
       return *this;
     }

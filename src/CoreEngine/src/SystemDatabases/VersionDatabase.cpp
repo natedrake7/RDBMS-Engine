@@ -1,5 +1,7 @@
 #include "../../include/SystemDatabases/VersionDatabase.h"
 
+#include <fstream>
+
 #include "../../include/BufferPool/StorageManager.h"
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
@@ -276,7 +278,7 @@ namespace CoreEngine {
     Errors::RuntimeStatus VersionDatabase::InsertRow(
         const ::Memory::IAllocator* allocator,
         const Pages::RawRowReference& rowRef,
-        StorageTypes::RowVersionPointer& rowPointer,
+        StorageTypes::RowHeader& rowHeader,
         const StorageTypes::Table* table
     ){
         Errors::RuntimeStatus status;
@@ -294,22 +296,23 @@ namespace CoreEngine {
         return status;
     }
 
-    Pages::RowView* VersionDatabase::RetrieveRowReference(
+    StorageTypes::RID VersionDatabase::RetrieveRowReference(
         const ::Memory::IAllocator* allocator,
         const Snapshot& snapshot,
-        const StorageTypes::RowVersionPointer &rowPointer,
+        const StorageTypes::RowHeader& rowHeader,
         const StorageTypes::Table *table
     )const {
         {
             const auto page = Storage::StorageManager::Get().GetPage(
                 this->dataFileKey,
                 this->filenameView,
-                rowPointer.pageId,
+                rowHeader._oldVersionPageId,
                 table
             );
 
             MultiThreading::ReaderGuard lock(&page.Latch());
-            return page.PeekRow(allocator, rowPointer.offset, 0);
+            return StorageTypes::RID(page.PageId(), rowHeader._oldVersionOffset);
+            // return page.PeekRow(allocator, rowHeader._oldVersionOffset, 0);
         }
     }
 
@@ -357,11 +360,11 @@ namespace CoreEngine {
                 MultiThreading::WriterGuard pageLatch(&page.Latch());
 
                 for (int i = 0; i < page.PageSize(); i++) {
-                    auto rowHeader = page.PeekRowHeader(i, 0);
+                    const auto rowHeader = page.PeekRowHeader(i);
 
                     if (
                         transactionId == FIRST_TRANSACTION_ID
-                        || rowHeader.version.createdTransactionId <= transactionId
+                        || rowHeader._createdTransactionId <= transactionId
                     ) {
                         page.Delete(i);
                         i--;
