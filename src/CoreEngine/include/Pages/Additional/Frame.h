@@ -14,7 +14,7 @@ namespace CoreEngine::StorageTypes{
 
 namespace Pages{
     struct Frame{
-        mutable MultiThreading::ReadWriteMutex latch;
+        mutable MultiThreading::Mutex latch;
         DataTypes::StringView filename;
 
         union{

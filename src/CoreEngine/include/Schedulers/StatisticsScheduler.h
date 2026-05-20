@@ -20,7 +20,7 @@ namespace CoreEngine::StorageTypes {
 }
 
 namespace MultiThreading {
-  class ReadWriteMutex;
+  class Mutex;
 }
 
 namespace CoreEngine {
@@ -38,7 +38,7 @@ namespace CoreEngine {
         static inline std::condition_variable _cv;
 
         const Dictionary<Int, Database*>* databasesDictionary;
-        MultiThreading::ReadWriteMutex* latch;
+        MultiThreading::Mutex* latch;
         SystemCatalog* catalog;
         StatisticsManager* statsManager;
 
@@ -88,12 +88,12 @@ namespace CoreEngine {
         )const;
 
         public:
-            StatisticsScheduler(const Dictionary<Int, Database*>& databasesDictionary, MultiThreading::ReadWriteMutex& latch);
+            StatisticsScheduler(const Dictionary<Int, Database*>& databasesDictionary, MultiThreading::Mutex& latch);
             void UpdateStatistics()const;
             static void Start(
                 const std::atomic<bool> &isServerRunning,
                 const Dictionary<Int, Database*> &databasesDictionary,
-                MultiThreading::ReadWriteMutex &latch
+                MultiThreading::Mutex &latch
             );
             static void Stop();
             static void UpdateColumnStatistics(

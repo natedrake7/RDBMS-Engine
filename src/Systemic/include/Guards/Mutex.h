@@ -10,7 +10,7 @@
 #endif
 
 namespace MultiThreading {
-    class ReadWriteMutex {
+    class Mutex {
         // state:
         //  0  -> unlocked
         // >0  -> reader count
@@ -42,8 +42,8 @@ namespace MultiThreading {
         bool TryPromoteLock();
 
     public:
-        ReadWriteMutex();
-        ~ReadWriteMutex() = default;
+        Mutex();
+        ~Mutex() = default;
 
         void SharedLock();
         void SharedUnlock();

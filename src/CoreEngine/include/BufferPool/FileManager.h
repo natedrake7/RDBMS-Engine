@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../../../Systemic/include/Constants.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
-#include "../../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../../Systemic/include/Guards/Mutex.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../../Systemic/include/DataTypes/String.h"
 
@@ -56,7 +56,7 @@ namespace Storage{
 
     class FileManager final {
         Dictionary<FileKey, file_descriptor_t> fileTable;
-        mutable MultiThreading::ReadWriteMutex tableMutex; // protects pageTable_ and frame insertion
+        mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
 
         static constexpr Int DIRECTORY_SIZE = 512;
         protected:

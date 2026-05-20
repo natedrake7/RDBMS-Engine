@@ -1,7 +1,7 @@
 #pragma once
 #include "../../QueryPipeline/include/Cursor.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
-#include "../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../Systemic/include/Guards/Mutex.h"
 #include "../../Systemic/include/Security/Session.h"
 
 namespace QueryPipeline{
@@ -12,7 +12,7 @@ namespace Network::Sessions {
   class SessionManager {
     Dictionary<DataTypes::Guid, Session*> sessions;
 
-    mutable MultiThreading::ReadWriteMutex mutex;
+    mutable MultiThreading::Mutex mutex;
 
     [[nodiscard]] Session* TryGetSessionWithoutLock(const DataTypes::Guid& id)const;
 

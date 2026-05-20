@@ -1,4 +1,6 @@
 #pragma once
+#include <atomic>
+
 #include "Constants.h"
 #include "DataTypes/DateTime.h"
 #include <string>

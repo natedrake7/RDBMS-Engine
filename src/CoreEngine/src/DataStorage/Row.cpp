@@ -3,12 +3,15 @@
 
 namespace CoreEngine::StorageTypes {
     RowHeader::RowHeader()
-        :   _createdTransactionId(INVALID_TRANSACTION_ID), _deletedTransactionId(0),
+        :   _createdTransactionId(INVALID_TRANSACTION_ID), _deletedTransactionId(INVALID_TRANSACTION_ID),
             _oldVersionPageId(INVALID_PAGE_ID), _oldVersionOffset(0){}
 
     bool RowHeader::IsVisibleForTransaction(const Snapshot& snapshot) const{
         return this->_deletedTransactionId != FIRST_TRANSACTION_ID
-                && this->_deletedTransactionId < snapshot.maximumTransactionId
+                && (
+                    this->_deletedTransactionId < snapshot.maximumTransactionId
+                    || this->_deletedTransactionId == INVALID_TRANSACTION_ID
+                )
                 && !snapshot.activeTransactionIds.Contains(this->_deletedTransactionId)
                 && this->_deletedTransactionId != snapshot.transactionId;
     }

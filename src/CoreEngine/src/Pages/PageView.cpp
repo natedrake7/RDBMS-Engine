@@ -220,7 +220,7 @@ namespace Pages{
 
         for (Int index = slotToMoveFrom; index < donorPage->PageSize(); index++){
             const auto leftSlot = donorPage->GetSlotDirectory(index);
-            std::memcpy(this->_frame->_data + offset, leftData + leftSlot.DataOffset(), leftSlot.DataSize());
+            std::memcpy(this->_frame->_data + offset, leftData + leftSlot.Offset(), leftSlot.Size());
 
             const auto rightSlot = SlotDirectory(
                 offset, leftSlot.DataOffset(),
@@ -329,7 +329,8 @@ namespace Pages{
 
         // In-place update: new data fits in existing slot
         if (newSize <= slot.DataSize()){
-            std::memcpy(this->_frame->_data + slot.DataOffset(), payload.Data(), newSize);
+            const auto dataOffset = slot.AbsoluteDataOffset();
+            std::memcpy(this->_frame->_data + dataOffset, payload.Data(), newSize);
 
             // Update slot to reflect new (possibly smaller) size
             const auto updatedSlot = SlotDirectory(
@@ -427,7 +428,7 @@ namespace Pages{
         return this->_frame;
     }
 
-    MultiThreading::ReadWriteMutex& PageView::Latch() const{
+    MultiThreading::Mutex& PageView::Latch() const{
         return this->_frame->latch;
     }
 
@@ -489,10 +490,10 @@ namespace Pages{
     ){
         const auto slot = page->GetSlotDirectory(row->_index);
         const auto* frame = page->GetFrame();
-        const auto* rowDataPtr = frame->_data + slot.Offset() + slot.DataOffset();
+        const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         if (rowEntry.IsNull())

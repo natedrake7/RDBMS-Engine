@@ -65,7 +65,7 @@ set(ANTLR_SRC
 set_source_files_properties(${ANTLR_SRC} PROPERTIES GENERATED TRUE)
 
 add_library(Systemic SHARED
-        src/Systemic/src/MultiThreading/Guards/ReadWriteMutex.cpp
+        src/Systemic/src/MultiThreading/Guards/Mutex.cpp
         src/Systemic/src/MultiThreading/Guards/ReaderGuard.cpp
         src/Systemic/src/MultiThreading/Guards/WriterGuard.cpp
         src/Systemic/src/DataStructures/BitMap.cpp

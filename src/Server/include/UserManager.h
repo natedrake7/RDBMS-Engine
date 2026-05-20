@@ -2,7 +2,7 @@
 #include "../../CoreEngine/include/Memory/PersistentAllocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../Systemic/include/Guards/Mutex.h"
 #include "../../Systemic/include/DataTypes/StringView.h"
 
 namespace DataTypes{
@@ -17,7 +17,7 @@ namespace Security {
         const CoreEngine::Memory::PersistentAllocator _allocator;
 
         Dictionary<DataTypes::StringView, User*> users;
-        mutable MultiThreading::ReadWriteMutex mutex;
+        mutable MultiThreading::Mutex mutex;
 
     public:
         UserManager();

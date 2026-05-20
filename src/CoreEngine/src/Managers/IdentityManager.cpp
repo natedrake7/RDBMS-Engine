@@ -6,73 +6,76 @@
 
 
 namespace CoreEngine::StorageTypes {
-  void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator, const BigInt value) const{
-      SystemCatalog::Get().UpdateIdentityByColumnId(
-          allocator,
-          this->header.tableId,
-          this->header.columnId,
-          value + this->header.increment
-      );
-  }
+    void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator, const BigInt value){
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-   IdentityManager::IdentityManager() {
-       this->startingValue = 0;
-   }
+        if (value < this->startingValue + this->header.cacheBlock)
+            return;
 
-  IdentityManager::~IdentityManager() = default;
+        SystemCatalog::Get().UpdateIdentityByColumnId(
+            allocator,
+            this->header.tableId,
+            this->header.columnId,
+            value + this->header.increment
+        );
 
-  void IdentityManager::SetHeaderIds(const Int tableId, const Int columnId){
-      this->header.tableId = tableId;
-      this->header.columnId = columnId;
-  }
+        this->header.lastValue += this->header.increment;
+    }
 
-  void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
-      this->header = newHeader;
-      this->startingValue = this->header.lastValue;
-  }
+    IdentityManager::IdentityManager() {
+        this->startingValue = 0;
+        this->counter = 0;
+    }
 
-  const Headers::IdentityColumnsHeader & IdentityManager::GetHeader() const{
-      return this->header;
-  }
+    IdentityManager::~IdentityManager() = default;
 
-  BigInt IdentityManager::Generate(const ::Memory::IAllocator* allocator){
-      bool updateMasterDb = false;
+    void IdentityManager::SetHeaderIds(const Int tableId, const Int columnId){
+        this->header.tableId = tableId;
+        this->header.columnId = columnId;
+    }
 
-      MultiThreading::WriterGuard guard(&this->mutex);
+    void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
+        this->header = newHeader;
+        this->startingValue = this->header.lastValue;
+        this->counter.store(this->startingValue, std::memory_order_relaxed);
+    }
 
-      const auto value = this->header.lastValue;
+    const Headers::IdentityColumnsHeader& IdentityManager::GetHeader() const{
+        return this->header;
+    }
 
-      this->header.lastValue += this->header.increment;
+    BigInt IdentityManager::Generate(const ::Memory::IAllocator* allocator){
+        const auto value = this->counter.fetch_add(this->header.increment, std::memory_order_relaxed);
 
-      updateMasterDb = value >= (this->startingValue + this->header.cacheBlock);
+        if (value < this->startingValue + this->header.cacheBlock)
+            return value;
 
-      if (updateMasterDb) {
-          this->startingValue = value;
-          this->UpdateMasterDb(allocator, value);
-      }
+        this->UpdateMasterDb(allocator, value);
 
-      return value;
-  }
+        return value;
+    }
 
-  bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value){
-      if (this->header.columnId == INVALID_COLUMN_ID)
-          return false;
+    bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value){
+        if (this->header.columnId == INVALID_COLUMN_ID)
+            return false;
 
-      value = this->Generate(allocator);
+        value = this->Generate(allocator);
 
-      return true;
-  }
+        return true;
+    }
 
-  void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator)const{
-      if (this->header.columnId == INVALID_COLUMN_ID) return;
+    void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator) const{
+        if (this->header.columnId == INVALID_COLUMN_ID) return;
 
-      SystemCatalog::Get().UpdateIdentityByColumnId(
-          allocator,
-          this->header.tableId,
-          this->header.columnId,
-          this->header.lastValue
-      );
-  }
+        MultiThreading::WriterGuard guard(&this->mutex);
 
-  bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
+        SystemCatalog::Get().UpdateIdentityByColumnId(
+            allocator,
+            this->header.tableId,
+            this->header.columnId,
+            this->header.lastValue
+        );
+    }
+
+    bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
 }

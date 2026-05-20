@@ -258,5 +258,5 @@ namespace Network {
 
     const Dictionary<Int, CoreEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
 
-    MultiThreading::ReadWriteMutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
+    MultiThreading::Mutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

@@ -1,12 +1,12 @@
 #include "../../../include/Guards/ReaderGuard.h"
-#include "../../../include/Guards/ReadWriteMutex.h"
+#include "../../../include/Guards/Mutex.h"
 
 namespace MultiThreading {
     ReaderGuard::ReaderGuard(){
         this->mutex = nullptr;
     }
 
-    ReaderGuard::ReaderGuard(ReadWriteMutex* mtx){
+    ReaderGuard::ReaderGuard(Mutex* mtx){
         this->mutex = mtx;
         this->mutex->SharedLock();
     }
@@ -42,7 +42,7 @@ namespace MultiThreading {
         other.mutex = nullptr;
     }
 
-    ReaderGuard ReaderGuard::TryLock(ReadWriteMutex *mtx, bool& isSuccessful){
+    ReaderGuard ReaderGuard::TryLock(Mutex *mtx, bool& isSuccessful){
         auto guard = ReaderGuard();
 
         guard.SetMutex(mtx);
@@ -54,7 +54,7 @@ namespace MultiThreading {
         return guard;
     }
 
-    void ReaderGuard::SetMutex(ReadWriteMutex *mtx){
+    void ReaderGuard::SetMutex(Mutex *mtx){
         this->mutex = mtx;
     }
 

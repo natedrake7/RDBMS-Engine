@@ -25,7 +25,7 @@ namespace CoreEngine::StorageTypes{
 }
 
 namespace MultiThreading{
-    class ReadWriteMutex;
+    class Mutex;
 }
 
 namespace Pages{
@@ -133,7 +133,7 @@ namespace Pages{
 
         [[nodiscard]] Frame* GetFrame()const;
 
-        [[nodiscard]] MultiThreading::ReadWriteMutex& Latch()const;
+        [[nodiscard]] MultiThreading::Mutex& Latch()const;
 
         [[nodiscard]] bool IsValid()const;
 

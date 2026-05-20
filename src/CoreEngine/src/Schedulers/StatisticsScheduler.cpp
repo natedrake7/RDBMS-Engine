@@ -412,7 +412,7 @@ namespace CoreEngine {
 
     StatisticsScheduler::StatisticsScheduler(
         const Dictionary<Int, Database *> &databasesDictionary,
-        MultiThreading::ReadWriteMutex &latch
+        MultiThreading::Mutex &latch
     ){
         this->databasesDictionary = &databasesDictionary;
         this->latch = &latch;
@@ -428,7 +428,7 @@ namespace CoreEngine {
     void StatisticsScheduler::Start(
         const std::atomic<bool> &isServerRunning,
         const Dictionary<Int, Database*> &databasesDictionary,
-        MultiThreading::ReadWriteMutex &latch
+        MultiThreading::Mutex &latch
     ){
         using namespace std::chrono_literals;
         const StatisticsScheduler scheduler(databasesDictionary, latch);

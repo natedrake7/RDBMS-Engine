@@ -319,21 +319,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     tablePtr->GetConstantColumns(&result.columns);
 
-    if (this->isClustered) {
-      tablePtr->ClusteredIndexScan(context, &result.rows, this->state, this->expression);
-      result.canFetchMore = this->state.canFetchMore;
-
-      if (result.canFetchMore == false)
-        this->state.Reset();
-
-      return result;
-    }
-
-    tablePtr->NonClusteredIndexScan(context, &result.rows, 0, this->state, this->expression);
+    if (this->isClustered)
+        tablePtr->ClusteredIndexScan(context, &result.rows, this->state, this->expression);
+    else
+        tablePtr->NonClusteredIndexScan(context, &result.rows, 0, this->state, this->expression);
 
     result.canFetchMore = this->state.canFetchMore;
     if (result.canFetchMore == false)
-      this->state.Reset();
+        this->state.Reset();
 
     context.AddTable(tablePtr);
 
@@ -413,6 +406,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     const auto firstPageId = result.rows[0]._pageId;
 
+    evaluationContext.table = context.GetTable(0);
     for (const auto& row: result.rows) {
       QueryResult resultRow(context.GetAllocator());
 

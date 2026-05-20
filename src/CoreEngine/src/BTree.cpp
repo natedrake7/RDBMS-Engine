@@ -1002,50 +1002,6 @@ namespace Indexing
         return this->InsertToNonFullNode(context, root, tuple, pagesToAllocate, indexPosition);
     }
 
-    //TODO fix non clusteredIndex Seek
-    void BTree::IndexSeekRange(
-        const DataTypes::Indexing::Key &minKey,
-        const DataTypes::Indexing::Key &maxKey, DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData> &result
-    ) const{
-        if (this->IsEmpty())
-            return;
-
-        // auto currentNode = this->SearchKey(minKey);
-        Pages::IndexPageView previousNode;
-
-        while (true)
-        {
-            // auto* keys = currentNode->GetKeysUnsafe();
-
-            // if (previousNode.Get() && maxKey >= *keys->at(0))
-            // {
-            //     // auto* previousKeys = previousNode->GetKeysUnsafe();
-            //
-            //     // Check if the last key in the previous node is within the range
-            //     // if (maxKey >= *previousKeys->at(previousKeys->size() - 1))
-            //     //     result.emplace_back(previousNode->dataPageId, previousNode->keys.size());
-            // }
-            //
-            // for (const auto* key : *keys)
-            // {
-            //     if (minKey <= *key && maxKey >= *key)
-            //     {
-            //         // result.emplace_back(currentNode->dataPageId, i);
-            //         continue;
-            //     }
-            //
-            //     if (maxKey < *key)
-            //         return;
-            // }
-
-            // if(!currentNode.HasRightSibling())
-            //     return;
-            //
-            // previousNode = std::move(currentNode);
-            // currentNode = this->GetNode(currentNode.RightSibling());
-        }
-    }
-
     void BTree::IndexSeekRange(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &minKey,
@@ -1061,7 +1017,7 @@ namespace Indexing
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
 
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
@@ -1099,7 +1055,7 @@ namespace Indexing
                 context
             );
 
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
@@ -1134,7 +1090,7 @@ namespace Indexing
 
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
@@ -1171,7 +1127,7 @@ namespace Indexing
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
@@ -1204,7 +1160,7 @@ namespace Indexing
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++)
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
 
@@ -1235,11 +1191,10 @@ namespace Indexing
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
-
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key);
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
@@ -1255,29 +1210,6 @@ namespace Indexing
             currentNode = this->GetNode(rightSibling);
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
-    }
-
-    void BTree::IndexScan(DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData> &result)const
-    {
-        if (this->IsEmpty())
-            return;
-
-        // auto currentNode = this->SearchLeftMostLeafNode();
-        // Pages::IndexPageView previousNode;
-        //
-        // while (true)
-        // {
-        //     // auto* keys = currentNode->GetKeysUnsafe();
-        //
-        //     // for (Int i = 0; i < keys->size(); i++)
-        //     //     result.emplace_back(currentNode->dataPageId, i);
-        //
-        //     if(!currentNode.HasRightSibling())
-        //         return;
-        //
-        //     // previousNode = currentNode;
-        //     currentNode = this->GetNode(currentNode.RightSibling());
-        // }
     }
 
     void BTree::IndexScan(
@@ -1451,9 +1383,8 @@ namespace Indexing
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            for(Int i = 0;i < currentNode.PageSize();i++){
+            for(Int i = 0;i < currentNode.PageSize();i++)
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
-            }
 
             if(!currentNode.HasRightSibling())
                 return;
@@ -1701,17 +1632,13 @@ namespace Indexing
             return {};
 
         auto currentNode = this->SearchKey(key);
-        auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
 
+        auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
         while (true) {
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                const auto compareResult = currentNode.ComparePageKeyAgainst(key, i);
-
-                if (compareResult == Comparators::Comparator::Greater)
-                    return {};
-
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
@@ -1756,9 +1683,8 @@ namespace Indexing
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(*maxKey, i) == Comparators::Comparator::Greater)
-                    return {};
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, *maxKey, startingIndex);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
@@ -1803,10 +1729,8 @@ namespace Indexing
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                if (currentNode.ComparePageKeyAgainst(*maxKey, i) == Comparators::Comparator::Greater)
-                    return {};
-
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, *maxKey, startingIndex);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
                     continue;
 
@@ -1844,11 +1768,8 @@ namespace Indexing
         while (true) {
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
-            for (Int i = startingIndex; i < currentNode.PageSize(); i++){
-                const auto compareResult = currentNode.ComparePageKeyAgainst(key, i);
-                if (compareResult == Comparators::Comparator::Greater)
-                    return {};
-
+            const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
+            for (Int i = startingIndex; i < endingIndex; i++){
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->SystemUpdateRowNoLock(
                     &currentNode,
@@ -1867,60 +1788,6 @@ namespace Indexing
             currentNode = this->GetNode(currentNode.RightSibling());
             startingIndex = 0;
         }
-    }
-
-    void BTree::SearchKey(const DataTypes::Indexing::Key &key, DataTypes::Indexing::QueryData &result) const
-    {
-        if (this->IsEmpty())
-            return;
-
-        // auto currentNode = this->GetNode(this->indexPageId);
-        //
-        // while (!currentNode->IsLeaf())
-        // {
-        //     auto* keys = currentNode->GetKeysUnsafe();
-        //
-        //     const auto iterator = ranges::lower_bound(*keys, &key);
-        //
-        //     const Int index = iterator - keys->begin();
-        //
-        //     auto* children = currentNode->GetChildren();
-        //
-        //     currentNode = this->GetNode(children->at(index));
-        // }
-
-        // auto currentNode = this->SearchKey(key);
-        //
-        // Pages::IndexPageView previousNode;
-        // while (true)
-        // {
-        //     if (currentNode == nullptr)
-        //         return;
-        //
-        //     // MultiThreading::ReaderGuard
-        //     auto* keys = currentNode->GetKeysUnsafe();
-        //
-        //     if (previousNode.Get() && key <= *keys->at(0))
-        //     {
-        //         // result.pageId = previousNode->dataPageId;
-        //         // result.indexPosition = previousNode->keys.size();
-        //         return;
-        //     }
-        //
-        //     for (Int i = 0; i < keys->size(); i++)
-        //     {
-        //         if (key == *keys->at(i))
-        //         {
-        //
-        //             // result.pageId = currentNode->dataPageId;
-        //             // result.indexPosition = i;
-        //             return;
-        //         }
-        //     }
-        //
-        //     previousNode = currentNode;
-        //     currentNode = this->GetNode(currentNode.GetRightSibling());
-        // }
     }
 
     void BTree::Remove(const DataTypes::Indexing::Key &key){

@@ -70,8 +70,8 @@ namespace Storage {
 
     class StorageManager final{
         FileManager fileManager;
-        mutable MultiThreading::ReadWriteMutex clockMutex_; // protects eviction sweep
-        mutable MultiThreading::ReadWriteMutex tableMutex; // protects pageTable_ and frame insertion
+        mutable MultiThreading::Mutex clockMutex_; // protects eviction sweep
+        mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
 
         DataStructures::PolymorphicArray<DatabaseTable*> _pageTable;
         const CoreEngine::Memory::PersistentAllocator _allocator;

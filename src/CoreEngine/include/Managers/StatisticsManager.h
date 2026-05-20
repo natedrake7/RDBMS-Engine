@@ -8,13 +8,13 @@
 namespace CoreEngine {
   class StatisticsManager {
     Dictionary<Int, Headers::TableStatistics> tableStatisticsCache;
-    mutable MultiThreading::ReadWriteMutex tableStatisticsLatch;
+    mutable MultiThreading::Mutex tableStatisticsLatch;
 
     Dictionary<Int, Headers::ColumnStatistics> columnStatisticsCache;
-    mutable MultiThreading::ReadWriteMutex columnStatisticsLatch;
+    mutable MultiThreading::Mutex columnStatisticsLatch;
 
     Dictionary<Int, std::vector<Headers::IndexStatistics>> indexStatisticsCache;
-    mutable MultiThreading::ReadWriteMutex indexStatisticsLatch;
+    mutable MultiThreading::Mutex indexStatisticsLatch;
 
     public:
       static StatisticsManager& Get();

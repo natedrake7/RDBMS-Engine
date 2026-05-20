@@ -1,8 +1,8 @@
-#include "../../../include/Guards/ReadWriteMutex.h"
+#include "../../../include/Guards/Mutex.h"
 
 namespace MultiThreading {
 
-bool ReadWriteMutex::TrySharedFast() {
+bool Mutex::TrySharedFast() {
     auto s = this->state.load(std::memory_order_acquire);
 
     while (s >= 0) {
@@ -24,7 +24,7 @@ bool ReadWriteMutex::TrySharedFast() {
     return false;
 }
 
-bool ReadWriteMutex::TryUniqueFast() {
+bool Mutex::TryUniqueFast() {
     auto expected = 0;
     return this->state.compare_exchange_strong(
         expected,
@@ -34,7 +34,7 @@ bool ReadWriteMutex::TryUniqueFast() {
     );
 }
 
-bool ReadWriteMutex::TryPromoteLock() {
+bool Mutex::TryPromoteLock() {
     auto expected = false;
     // only one upgrader allowed
     if (!this->upgradePending.compare_exchange_strong(
@@ -58,13 +58,13 @@ bool ReadWriteMutex::TryPromoteLock() {
     return success;
 }
 
-ReadWriteMutex::ReadWriteMutex()
+Mutex::Mutex()
     : state(0)
     , waitingReaders(0)
     , waitingWriters(0)
     , upgradePending(false){}
 
-void ReadWriteMutex::SharedLock() {
+void Mutex::SharedLock() {
     // FAST PATH
     if (TrySharedFast())
         return;
@@ -109,7 +109,7 @@ void ReadWriteMutex::SharedLock() {
     }
 }
 
-void ReadWriteMutex::SharedUnlock() {
+void Mutex::SharedUnlock() {
 
     const auto prev = this->state.fetch_sub(
         1,
@@ -125,7 +125,7 @@ void ReadWriteMutex::SharedUnlock() {
     }
 }
 
-void ReadWriteMutex::UniqueLock() {
+void Mutex::UniqueLock() {
     // FAST PATH
     if (TryUniqueFast())
         return;
@@ -161,7 +161,7 @@ void ReadWriteMutex::UniqueLock() {
     }
 }
 
-void ReadWriteMutex::UniqueUnlock() {
+void Mutex::UniqueUnlock() {
     this->state.store(0, std::memory_order_release);
 
     std::lock_guard lock(waitMutex);
@@ -176,15 +176,15 @@ void ReadWriteMutex::UniqueUnlock() {
     this->readersCV.notify_all();
 }
 
-bool ReadWriteMutex::SharedTryLock() {
+bool Mutex::SharedTryLock() {
     return TrySharedFast();
 }
 
-    bool ReadWriteMutex::UniqueTryLock() {
+    bool Mutex::UniqueTryLock() {
         return TryUniqueFast();
     }
 
-void ReadWriteMutex::PromoteLock() {
+void Mutex::PromoteLock() {
     bool expected = false;
 
     // wait until upgrade slot available

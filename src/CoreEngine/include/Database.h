@@ -46,8 +46,8 @@ namespace CoreEngine {
     };
 
 class Database final{
-    MultiThreading::ReadWriteMutex gamPageMutex;
-    MultiThreading::ReadWriteMutex pfsPageMutex;
+    MultiThreading::Mutex gamPageMutex;
+    MultiThreading::Mutex pfsPageMutex;
 
     // Dictionary<Int, table_id_t> tableIdsDictionary;
 

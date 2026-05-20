@@ -75,16 +75,6 @@ namespace DataTypes::Indexing {
     );
 
     DataTypes::String ToString(const Memory::IAllocator* allocator) const;
-
     friend std::ostream& operator<<(std::ostream& os, const Key& key);
-  };
-
-  struct QueryData{
-    page_id_t pageId;
-    page_offset_t indexPosition;
-
-    QueryData();
-    QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition);
-    ~QueryData();
   };
 }

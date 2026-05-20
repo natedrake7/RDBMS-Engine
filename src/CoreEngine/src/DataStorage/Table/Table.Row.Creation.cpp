@@ -22,6 +22,7 @@ namespace CoreEngine::StorageTypes{
 
         std::memcpy(payload.Data(), &rowHeader, Constants::ROW_VERSION_HEADER_SIZE);
 
+        auto autoComputedColumns = 0;
         for (const auto& column : this->_columns){
             const auto ordinalPosition = column->OrdinalPosition();
 
@@ -34,10 +35,11 @@ namespace CoreEngine::StorageTypes{
                 RowEntry rowEntry(dataOffset, RowEntry::INLINE, columnSize);
                 payload.SetData(&rowEntry, sizeof(RowEntry), dataEntriesOffset);
                 dataEntriesOffset += sizeof(RowEntry);
+                autoComputedColumns++;
                 continue;
             }
 
-            const auto& value = inputData[ordinalPosition];
+            const auto& value = inputData[ordinalPosition - autoComputedColumns];
             if (value.IsNull()){
                 RowEntry rowEntry(0, RowEntry::NULLVAL, 0);
                 payload.SetData(&rowEntry, sizeof(RowEntry), dataEntriesOffset);

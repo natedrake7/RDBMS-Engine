@@ -217,12 +217,6 @@ namespace Indexing{
         );
 
         void IndexSeekRange(
-            const DataTypes::Indexing::Key& minKey,
-            const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData>& result
-        )const;
-
-        void IndexSeekRange(
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
@@ -259,8 +253,6 @@ namespace Indexing{
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
-
-        void IndexScan(DataStructures::PolymorphicArray<DataTypes::Indexing::QueryData>& result)const;
 
         void IndexScan(
             const CoreEngine::ExecutionContext& context,
@@ -343,8 +335,6 @@ namespace Indexing{
             const DataTypes::Indexing::Key& key,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;
-
-        void SearchKey(const DataTypes::Indexing::Key& key, DataTypes::Indexing::QueryData& result) const;
 
         void Remove(const DataTypes::Indexing::Key& key);
 

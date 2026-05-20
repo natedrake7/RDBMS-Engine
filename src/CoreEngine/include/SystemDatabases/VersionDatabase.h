@@ -4,9 +4,9 @@
 
 namespace CoreEngine{
     class VersionDatabase {
-        MultiThreading::ReadWriteMutex lastUsedPageMutex;
-        MultiThreading::ReadWriteMutex gamPageMutex;
-        MultiThreading::ReadWriteMutex pfsPageMutex;
+        MultiThreading::Mutex lastUsedPageMutex;
+        MultiThreading::Mutex gamPageMutex;
+        MultiThreading::Mutex pfsPageMutex;
 
         Memory::PersistentAllocator _allocator;
 

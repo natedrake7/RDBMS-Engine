@@ -1,13 +1,13 @@
 #pragma once
 namespace MultiThreading {
-  class ReadWriteMutex;
+  class Mutex;
 
   class ReaderGuard {
-    ReadWriteMutex* mutex;
+    Mutex* mutex;
 
     public:
       ReaderGuard();
-      explicit ReaderGuard(ReadWriteMutex* mtx);
+      explicit ReaderGuard(Mutex* mtx);
       ~ReaderGuard();
 
       ReaderGuard& operator=(const ReaderGuard& other) = delete;
@@ -16,9 +16,9 @@ namespace MultiThreading {
       ReaderGuard& operator=(ReaderGuard&& other)noexcept;
       ReaderGuard(ReaderGuard&& other) noexcept;
 
-      static ReaderGuard TryLock(ReadWriteMutex* mtx, bool& isSuccessful);
+      static ReaderGuard TryLock(Mutex* mtx, bool& isSuccessful);
 
-      void SetMutex(ReadWriteMutex* mtx);
+      void SetMutex(Mutex* mtx);
 
       void Release()const;
       void DisableMutex();

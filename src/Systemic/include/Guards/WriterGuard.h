@@ -2,15 +2,15 @@
 
 namespace MultiThreading {
   class ReaderGuard;
-  class ReadWriteMutex;
+  class Mutex;
 
   class WriterGuard {
-    ReadWriteMutex* mutex;
+    Mutex* mutex;
 
     void PromoteLock()const;
 
     public:
-      explicit WriterGuard(ReadWriteMutex* mtx);
+      explicit WriterGuard(Mutex* mtx);
       explicit WriterGuard();
       ~WriterGuard();
 
@@ -20,9 +20,9 @@ namespace MultiThreading {
       WriterGuard(WriterGuard&& other)noexcept;
       WriterGuard& operator=(WriterGuard&& other)noexcept;
 
-      void SetMutex(ReadWriteMutex* mtx);
-      static WriterGuard Promote(ReadWriteMutex* mtx, ReaderGuard& readGuard);
-      static WriterGuard TryLock(ReadWriteMutex* mtx, bool& isSuccessful);
+      void SetMutex(Mutex* mtx);
+      static WriterGuard Promote(Mutex* mtx, ReaderGuard& readGuard);
+      static WriterGuard TryLock(Mutex* mtx, bool& isSuccessful);
 
       void DisableMutex();
 

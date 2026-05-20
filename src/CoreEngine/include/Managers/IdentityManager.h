@@ -1,6 +1,6 @@
 #pragma once
 #include "../../../Systemic/include/Headers.h"
-#include "../../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../../Systemic/include/Guards/Mutex.h"
 
 namespace CoreEngine{
     class ExecutionContext;
@@ -11,9 +11,11 @@ namespace CoreEngine::StorageTypes{
         Headers::IdentityColumnsHeader header;
         BigInt startingValue;
 
-        mutable MultiThreading::ReadWriteMutex mutex;
+        std::atomic<BigInt> counter;
 
-        void UpdateMasterDb(const ::Memory::IAllocator* allocator, BigInt value)const;
+        mutable MultiThreading::Mutex mutex;
+
+        void UpdateMasterDb(const ::Memory::IAllocator* allocator, BigInt value);
 
     public:
         IdentityManager();

@@ -5,20 +5,6 @@
 #include <ostream>
 
 namespace DataTypes::Indexing{
-   QueryData::QueryData()
-    {
-        this->indexPosition = 0;
-        this->pageId = 0;
-    }
-
-   QueryData::QueryData(const page_id_t &pageId, const page_offset_t &otherIndexPosition)
-    {
-        this->pageId = pageId;
-        this->indexPosition = otherIndexPosition;
-    }
-
-   QueryData::~QueryData() = default;
-
     Key::Key()
         : value(Value::Null(nullptr)), size(0){}
 

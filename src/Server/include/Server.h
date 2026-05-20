@@ -32,7 +32,7 @@ namespace Network {
 
     Dictionary<Int, CoreEngine::Database*> databases;
 
-    MultiThreading::ReadWriteMutex databasesLatch;
+    MultiThreading::Mutex databasesLatch;
 
     CoreEngine::TemporaryDatabase* temporaryDatabase;
     CoreEngine::SystemCatalog* systemCatalog;
@@ -101,7 +101,7 @@ namespace Network {
         bool isServerInitialization = false
     );
     const Dictionary<Int, CoreEngine::Database*>& GetDatabases()const;
-    MultiThreading::ReadWriteMutex& GetDatabasesLatch();
+    MultiThreading::Mutex& GetDatabasesLatch();
     
   };
 }

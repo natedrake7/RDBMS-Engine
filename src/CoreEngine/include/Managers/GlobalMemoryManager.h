@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/Guards/ReadWriteMutex.h"
+#include "../../Systemic/include/Guards/Mutex.h"
 #include "../../Systemic/include/Memory/Functions.h"
 
 namespace Memory{
@@ -9,8 +9,8 @@ namespace Memory{
 
 namespace CoreEngine{
     class GlobalMemoryManager{
-        mutable MultiThreading::ReadWriteMutex _executionPoolMutex;
-        mutable MultiThreading::ReadWriteMutex _miscPoolMutex;
+        mutable MultiThreading::Mutex _executionPoolMutex;
+        mutable MultiThreading::Mutex _miscPoolMutex;
 
         UnsignedBigInt _dbCapacity;
         UnsignedBigInt _bufferPoolCapacity;

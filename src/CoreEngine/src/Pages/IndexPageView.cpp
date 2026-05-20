@@ -178,7 +178,7 @@ namespace Pages{
 
         std::memcpy(this->_frame->_data + nextOffset, &child, sizeof(page_id_t));
 
-        const auto newSlot = SlotDirectory(nextOffset, nextOffset, sizeof(page_id_t), 0, SlotDirectory::SLOT_USED);
+        const auto newSlot = SlotDirectory(nextOffset, 0, sizeof(page_id_t), 0, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
         this->_frame->headerPtr->size++;
@@ -305,9 +305,8 @@ namespace Pages{
 
     bool IndexPageView::IsRowVisible(const Int indexPosition, const CoreEngine::Snapshot& snapshot) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        const auto offset = slot.DataOffset();
         const auto* versionHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
-            this->_frame->_data + offset + this->GetKeySize(offset)
+            this->_frame->_data + slot.AbsoluteDataOffset()
         );
 
         return versionHeader->IsVisibleForTransaction(snapshot);
@@ -327,7 +326,7 @@ namespace Pages{
         InternalNodeTuple tuple;
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        auto offset = slot.DataOffset();
+        auto offset = slot.Offset();
         if (indexPosition != 0){
             auto key = this->GetKeyByOffset(allocator, offset);
             tuple.SetKey(key);

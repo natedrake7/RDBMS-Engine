@@ -97,6 +97,7 @@
 
 //TODO use json accessors for updates as well.
 //TODO add CAST, TRYCAST
+//TODO make key entity better(use simillar format to rows)
 
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
@@ -111,8 +112,6 @@
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st left join dbo.sys_databases AS sd ON sd.database_id = 1
 //heavier join
 //SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
-
-//TODO make storageManager lookup be a vector to allow faster access array[databaseId][fileType][pageId] -> framePtr*
 
 int main(){
     DataTypes::Coercions::Initialize();
