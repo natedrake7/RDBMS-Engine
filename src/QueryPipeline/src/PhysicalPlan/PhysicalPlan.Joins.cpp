@@ -8,7 +8,7 @@ namespace QueryPipeline::PhysicalPlan {
     void PerformNullJoin(
         const ::Memory::IAllocator* allocator,
         ExecutionResult& result,
-        Pages::RID* outerRow,
+        CoreEngine::StorageTypes::RID* outerRow,
         const Int numberOfColumns
     ){
         // outerRow->Join(
@@ -23,8 +23,8 @@ namespace QueryPipeline::PhysicalPlan {
     void PerformJoin(
         const ::Memory::IAllocator* allocator,
         ExecutionResult& result,
-        const Pages::RID* outerRow,
-        const Pages::RID* innerRow
+        const CoreEngine::StorageTypes::RID* outerRow,
+        const CoreEngine::StorageTypes::RID* innerRow
     ){
         // const auto outerCopy = Pages::RowView::Copy(
         //     outerRow,
@@ -32,6 +32,16 @@ namespace QueryPipeline::PhysicalPlan {
         // );
         // outerCopy->Join(innerRow);
         // result.rows.Push(outerCopy);
+    }
+
+    void VectorBatch::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){
+        this->_columns = static_cast<Value**>(allocator->AllocateRaw(numberOfColumns * sizeof(Value*)));
+        this->_numberOfColumns = numberOfColumns;
+        this->_numberOfRows = 0;
+    }
+
+    void VectorBatch::SetColumn(Value* columnData, const Int column) const{
+        this->_columns[column] = columnData;
     }
 
     ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
@@ -53,16 +63,16 @@ namespace QueryPipeline::PhysicalPlan {
             auto rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
 
-            for (const auto& outerRow: leftResult.rows) {
-                for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = &outerRow;
-                    evaluationContext.joinRow = &innerRow;
-                    if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
-                        continue;
-
-                     // PerformJoin(allocator, result, outerRow, innerRow);
-                }
-            }
+            // for (const auto& outerRow: leftResult.rows) {
+            //     for (const auto& innerRow: rightResult.rows) {
+            //         evaluationContext.row = &outerRow;
+            //         evaluationContext.joinRow = &innerRow;
+            //         if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
+            //             continue;
+            //
+            //          // PerformJoin(allocator, result, outerRow, innerRow);
+            //     }
+            // }
         }
 
         return result;
@@ -98,42 +108,42 @@ namespace QueryPipeline::PhysicalPlan {
 
         bool canFetchMore = true;
 
-        DataStructures::PolymorphicArray<bool> matchedRows(
-            allocator,
-            leftResult.rows.Size()
-        );
-        matchedRows.AlignSize();
-
-        auto rightNumberOfColumns = 0;
-        while (canFetchMore) {
-            auto rightResult = this->right->Execute(context);
-            rightNumberOfColumns = rightResult.columns.Size();
-            canFetchMore = rightResult.canFetchMore;
-
-            for (int i = 0;i < leftResult.rows.Size();i++){
-                const auto& outerRow = leftResult.rows[i];
-                for (const auto& innerRow: rightResult.rows) {
-                    evaluationContext.row = &outerRow;
-                    evaluationContext.joinRow = &innerRow;
-                    if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
-                        continue;
-
-                    matchedRows[i] = true;
-                    // PerformJoin(allocator, result, outerRow, innerRow);
-                }
-            }
-        }
-
-        for (int i = 0;i < matchedRows.Size();i++){
-            if (matchedRows[i])
-                continue;
-
-            auto& outerRow = leftResult.rows[i];
-            // outerRow->Join(
-            //     Pages::RowView::NullReference(allocator, rightNumberOfColumns)
-            // );
-            // result.rows.Push(std::move(outerRow));
-        }
+        // DataStructures::PolymorphicArray<bool> matchedRows(
+        //     allocator,
+        //     leftResult.rows.Size()
+        // );
+        // matchedRows.AlignSize();
+        //
+        // auto rightNumberOfColumns = 0;
+        // while (canFetchMore) {
+        //     auto rightResult = this->right->Execute(context);
+        //     rightNumberOfColumns = rightResult.columns.Size();
+        //     canFetchMore = rightResult.canFetchMore;
+        //
+        //     for (int i = 0;i < leftResult.rows.Size();i++){
+        //         const auto& outerRow = leftResult.rows[i];
+        //         for (const auto& innerRow: rightResult.rows) {
+        //             evaluationContext.row = &outerRow;
+        //             evaluationContext.joinRow = &innerRow;
+        //             if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
+        //                 continue;
+        //
+        //             matchedRows[i] = true;
+        //             // PerformJoin(allocator, result, outerRow, innerRow);
+        //         }
+        //     }
+        // }
+        //
+        // for (int i = 0;i < matchedRows.Size();i++){
+        //     if (matchedRows[i])
+        //         continue;
+        //
+        //     auto& outerRow = leftResult.rows[i];
+        //     // outerRow->Join(
+        //     //     Pages::RowView::NullReference(allocator, rightNumberOfColumns)
+        //     // );
+        //     // result.rows.Push(std::move(outerRow));
+        // }
 
         return result;
     }
@@ -521,14 +531,14 @@ namespace QueryPipeline::PhysicalPlan {
             auto rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
 
-            for (int i = 0;i < leftResult.rows.Size();i++){
-                const auto& outerRow = leftResult.rows[i];
-                for (const auto& innerRow: rightResult.rows) {
-                    // evaluationContext.row = outerRow;
-                    // evaluationContext.joinRow = innerRow;
-                    // PerformJoin(allocator, result, outerRow, innerRow);
-                }
-            }
+            // for (int i = 0;i < leftResult.rows.Size();i++){
+            //     const auto& outerRow = leftResult.rows[i];
+            //     for (const auto& innerRow: rightResult.rows) {
+            //         // evaluationContext.row = outerRow;
+            //         // evaluationContext.joinRow = innerRow;
+            //         // PerformJoin(allocator, result, outerRow, innerRow);
+            //     }
+            // }
         }
 
         return result;
@@ -556,18 +566,18 @@ namespace QueryPipeline::PhysicalPlan {
         auto rightResult = this->right->Execute(context);
         auto rightNumberOfColumns = rightResult.columns.Size();
 
-        if (rightResult.rows.Empty()){
-            for (auto& outerRow : leftResult.rows){
-                // PerformNullJoin(
-                //     allocator,
-                //     result,
-                //     outerRow,
-                //     rightNumberOfColumns
-                // );
-            }
-
-            return result;
-        }
+        // if (rightResult.rows.Empty()){
+        //     for (auto& outerRow : leftResult.rows){
+        //         // PerformNullJoin(
+        //         //     allocator,
+        //         //     result,
+        //         //     outerRow,
+        //         //     rightNumberOfColumns
+        //         // );
+        //     }
+        //
+        //     return result;
+        // }
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
@@ -578,15 +588,15 @@ namespace QueryPipeline::PhysicalPlan {
         while (canFetchMore) {
             rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
-
-            for (int i = 0;i < leftResult.rows.Size();i++){
-                const auto& outerRow = leftResult.rows[i];
-                for (const auto& innerRow: rightResult.rows) {
-                    // evaluationContext.row = outerRow;
-                    // evaluationContext.joinRow = innerRow;
-                    // PerformJoin(allocator, result, outerRow, innerRow);
-                }
-            }
+            //
+            // for (int i = 0;i < leftResult.rows.Size();i++){
+            //     const auto& outerRow = leftResult.rows[i];
+            //     for (const auto& innerRow: rightResult.rows) {
+            //         // evaluationContext.row = outerRow;
+            //         // evaluationContext.joinRow = innerRow;
+            //         // PerformJoin(allocator, result, outerRow, innerRow);
+            //     }
+            // }
         }
 
         return result;

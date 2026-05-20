@@ -31,6 +31,9 @@ namespace Errors {
         :   code(RuntimeError::Ok), message(DataTypes::String::Empty(allocator)),
             primaryKey(DataTypes::Indexing::Key()){}
 
+    RuntimeStatus(const RuntimeError code, const DataTypes::String& message)
+        : code(code), message(message), primaryKey(DataTypes::Indexing::Key()){}
+
     // RuntimeStatus(const RuntimeError code, DataTypes::String& message){
     //     this->code = code;
     //     this->message = std::move(message);

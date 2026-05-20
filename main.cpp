@@ -174,8 +174,8 @@ int main(){
 
 void CommandLineInterface(Network::Server& server) {
 #ifdef IS_DEBUG
-    const std::string DEBUG_USERNAME = "admin";
-    const std::string DEBUG_PASSWORD = "admin";
+    constexpr DataTypes::StringView DEBUG_USERNAME = "admin";
+    constexpr DataTypes::StringView DEBUG_PASSWORD = "admin";
 
     const auto* user = server.Authenticate(DEBUG_USERNAME, DEBUG_PASSWORD);
 
@@ -226,13 +226,16 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
                 break;
             }
 
-            count += batch.rows.Size();
+            count += batch.result._numberOfRows;
             for (const auto& column : batch.displayColumnNames)
                 std::cout << column << " || ";
 
             std::cout << std::endl;
-            for (const auto& row : batch.results)
-                std::cout << row;
+            for (Int i = 0;i < batch.result._numberOfRows; i++){
+                for (Int j = 0;j < batch.result._numberOfColumns; j++){
+                    std::cout << batch.result._columns[j][i] << " || ";
+                }
+            }
         }
 
         if (hasError) {

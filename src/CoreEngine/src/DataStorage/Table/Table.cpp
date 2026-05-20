@@ -437,7 +437,7 @@ namespace CoreEngine::StorageTypes {
       }
 
     void Table::DeleteLargeObjectFromPage(
-        Pages::RowView& rowPtr,
+        RID* rowPtr,
         const HashSet<column_index_t>& updatedColumns
     ){
       const auto& filename = this->database->GetFileName();
@@ -488,7 +488,7 @@ namespace CoreEngine::StorageTypes {
       // }
     }
 
-    void Table::DeleteOverflowedRowsFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t> & updatedColumns)const{
+    void Table::DeleteOverflowedRowsFromPage(RID* rowPtr, const HashSet<column_index_t> & updatedColumns)const{
       const auto& filename = this->database->GetFileName();
 
       // auto* rowHeader = row->GetHeader();
@@ -613,7 +613,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::TemporaryDatabaseHeapScan(
-        DataStructures::PolymorphicArray<Pages::RowView*> *result,
+        DataStructures::PolymorphicArray<RID> *result,
         ScanState& state,
         const Int batchSize
     ) const{
@@ -1053,7 +1053,7 @@ namespace CoreEngine::StorageTypes {
           return columnDatatypes;
       }
 
-    int Table::HandleRowOverflow(Pages::RowView& rowPtr) const{
+    int Table::HandleRowOverflow(RID* rowPtr) const{
       // auto largestBlock = row->FindLargestVariableLengthColumn();
 
       // if(largestBlock.IsNull())
@@ -1076,7 +1076,7 @@ namespace CoreEngine::StorageTypes {
       // return largestBlock.Size();
     }
 
-      int Table::HandleRowOverflow(Pages::RowView& rowPtr, const Column *column)const{
+      int Table::HandleRowOverflow(RID* rowPtr, const Column *column)const{
         // auto& data = row->GetData();
         //
         // if(data.size() < column->OrdinalPosition())
@@ -1409,7 +1409,7 @@ namespace CoreEngine::StorageTypes {
     void Table::HandleAddColumn(
         const ExecutionContext& executionContext,
         const Pages::PageView* page,
-        const Pages::RowView* rowPtr,
+        const RID* rowPtr,
         const column_index_t index,
         const Value &defaultValue
     ) const{

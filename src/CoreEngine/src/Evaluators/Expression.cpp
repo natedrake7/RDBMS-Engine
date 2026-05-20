@@ -251,6 +251,37 @@ namespace Expressions{
         // }
     }
 
+    Value* ColumnExpression::Evaluate(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& context,
+        const CoreEngine::SelectionVector* selectionVector
+    ){
+        const auto* columnExpr = expression->AsColumn();
+        const auto size = selectionVector->selectedRidsCount;
+        auto* allocator = context.GetAllocator();
+        auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(size * sizeof(Value)));
+
+        const auto* table = context.GetTable(columnExpr->tableId);
+        for (Int i = 0; i < size; i++ ){
+            const auto rowIndex = selectionVector->selectedRids[0][i];
+            const auto* row = context.GetRid(0, rowIndex);
+
+            valueArray[i] = table->MaterializeColumn(context.GetAllocator(), row, columnExpr->columnIndex);
+        }
+
+        return valueArray;
+    }
+
+    Value* ColumnExpression::Evaluate(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& context,
+        const Int rangeEnd
+    ){
+        const auto* columnExpr = expression->AsColumn();
+        const auto* table = context.GetTable(0);
+        return table->MaterializeColumn(context, rangeEnd, columnExpr->columnIndex);
+    }
+
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
     bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
@@ -980,6 +1011,8 @@ namespace Expressions{
         // }
     }
 
+    DataType CastExpression::GetReturnType() const{ return this->targetType; }
+
     Value EvaluateExpression(const Expression* expression, const EvaluationContext& context){
         switch (expression->expressionType){
         case ExpressionType::Column:
@@ -1003,6 +1036,89 @@ namespace Expressions{
         case ExpressionType::Expression:
         default:
             return Value::Null(context.allocator);
+        }
+    }
+
+    Value* EvaluateExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        const Int rangeEnd
+    ){
+        switch (expression->expressionType){
+        case ExpressionType::Column:
+            return ColumnExpression::Evaluate(expression, executionContext, rangeEnd);
+        case ExpressionType::Expression:
+            break;
+        case ExpressionType::Constant:
+            break;
+        case ExpressionType::Binary:
+            break;
+        case ExpressionType::Logical:
+            break;
+        case ExpressionType::Variable:
+            break;
+        case ExpressionType::Branch:
+            break;
+        case ExpressionType::Function:
+            break;
+        case ExpressionType::Json:
+            break;
+        case ExpressionType::Cast:
+            break;
+        }
+
+        return nullptr;
+    }
+
+    Value* EvaluateExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        const CoreEngine::SelectionVector* selectionVector
+    ){
+        switch (expression->expressionType){
+        case ExpressionType::Column:
+            return ColumnExpression::Evaluate(expression, executionContext, selectionVector);
+        case ExpressionType::Expression:
+            break;
+        case ExpressionType::Constant:
+            break;
+        case ExpressionType::Binary:
+            break;
+        case ExpressionType::Logical:
+            break;
+        case ExpressionType::Variable:
+            break;
+        case ExpressionType::Branch:
+            break;
+        case ExpressionType::Function:
+            break;
+        case ExpressionType::Json:
+            break;
+        case ExpressionType::Cast:
+            break;
+        }
+
+        return nullptr;
+    }
+
+    CoreEngine::SelectionVector* EvaluateFilterExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        CoreEngine::SelectionVector* selectionVector
+    ){
+        auto* result = executionContext.Allocate<CoreEngine::SelectionVector>();
+        result->AllocateRids(executionContext.GetAllocator(), 0, selectionVector->selectedRidsCount);
+
+        switch (expression->expressionType){
+        case ExpressionType::Binary:{
+            for (int i = 0;i < selectionVector->selectedRidsCount; i++){
+            }
+        }
+        case ExpressionType::Logical:{
+
+        }
+        default:
+            break;
         }
     }
 

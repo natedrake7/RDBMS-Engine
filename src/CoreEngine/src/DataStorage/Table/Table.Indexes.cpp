@@ -324,7 +324,11 @@ namespace CoreEngine::StorageTypes {
 
     }
 
-    Value Table::MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* row, const column_index_t columnIndex) const{
+    Value Table::MaterializeColumn(
+        const ::Memory::IAllocator* allocator,
+        const RID* row,
+        const column_index_t columnIndex
+    ) const{
         const auto indexPage = Storage::StorageManager::Get().GetIndexPage(
             this->database->GetDataFileKey(),
             this->database->GetFileName(),
@@ -333,6 +337,33 @@ namespace CoreEngine::StorageTypes {
         );
 
         return Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
+    }
+
+    Value* Table::MaterializeColumn(
+        const ExecutionContext& context,
+        const Int rangeEnd,
+        const column_index_t columnIndex
+    ) const{
+        const auto fileKey = this->database->GetDataFileKey();
+        const auto filename = this->database->GetFileName();
+
+        auto* allocator = context.GetAllocator();
+        auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(rangeEnd * sizeof(Value)));
+
+        for (Int i = 0; i < rangeEnd; i++){
+            const auto* row = context.GetRid(0, i);
+
+            const auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+                fileKey,
+                filename,
+                row->_pageId,
+                this
+            );
+
+            valueArray[i] = Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
+        }
+
+        return valueArray;
     }
 
     QueryResult Table::Materialize(

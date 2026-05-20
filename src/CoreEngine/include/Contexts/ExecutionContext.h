@@ -18,6 +18,7 @@ class Variable;
 
 namespace CoreEngine {
     namespace StorageTypes{
+        struct RID;
         class Table;
     }
 
@@ -68,7 +69,41 @@ namespace CoreEngine {
         ExecutionSchema(): tables{nullptr}, tableCount(0){}
     };
 
+    struct ScanHandle{
+        const StorageTypes::RID* rids;
+        UnsignedInt size;
+
+        ScanHandle(): rids(nullptr), size(0){}
+        ScanHandle(const StorageTypes::RID* rids, const UnsignedInt size): rids(rids), size(size){}
+    };
+
+    struct ScanContext{
+        ScanHandle scanHandles[Constants::MAX_QUERY_JOINS];
+        UnsignedInt scanHandleCount;
+
+        ScanContext(): scanHandles{}, scanHandleCount(0) {}
+    };
+
+    struct SelectionVector{
+        UnsignedInt* selectedRids[Constants::MAX_QUERY_JOINS];
+
+        UnsignedTinyInt* nullMask[Constants::MAX_QUERY_JOINS];
+
+        UnsignedTinyInt sourceMap[Constants::MAX_QUERY_JOINS];
+
+        Int selectedRidsCount;
+        bool isIdentity;
+
+        SelectionVector()
+            :   selectedRids{nullptr}, nullMask{nullptr},
+                sourceMap{0}, selectedRidsCount(0), isIdentity(false) {}
+
+        void AllocateRids(const ::Memory::IAllocator* allocator, Int index, Int size);
+        void AllocateNullMask(const ::Memory::IAllocator* allocator, Int index, Int size);
+    };
+
     class ExecutionContext {
+        ScanContext scanContext;
         ExecutionSchema schema;
 
         Snapshot snapshot;
@@ -101,6 +136,11 @@ namespace CoreEngine {
 
             void AddTable(const StorageTypes::Table* table);
             const StorageTypes::Table* GetTable(UnsignedInt index) const;
+
+            void AddScanHandle(const StorageTypes::RID* rids, UnsignedInt size);
+            const ScanHandle& GetScanHandle(UnsignedInt index) const;
+
+            [[nodiscard]] const StorageTypes::RID* GetRid(UnsignedInt scanHandleIndex, UnsignedInt ridIndex) const;
 
             void ResetAllocator()const;
             bool IsAllocatorEmpty()const;

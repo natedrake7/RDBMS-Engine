@@ -13,8 +13,9 @@ namespace DataTypes{
 class Variable;
 
 namespace CoreEngine{
-    namespace StorageTypes
-    {
+    struct SelectionVector;
+
+    namespace StorageTypes{
         class Table;
         struct RID;
     }
@@ -29,8 +30,6 @@ namespace Memory{
 
 namespace Pages{
     class PageView;
-    struct RID;
-    struct RowView;
 }
 
 namespace Expressions{
@@ -159,6 +158,16 @@ namespace Expressions{
         explicit ColumnExpression(column_index_t index);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+        [[nodiscard]] static Value* Evaluate(
+            const Expression* expression,
+            const CoreEngine::ExecutionContext& context,
+            const CoreEngine::SelectionVector* selectionVector
+        );
+        [[nodiscard]] static Value* Evaluate(
+            const Expression* expression,
+            const CoreEngine::ExecutionContext& context,
+            Int rangeEnd
+        );
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
     };
@@ -337,5 +346,23 @@ namespace Expressions{
     };
 
     Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);
+
+    Value* EvaluateExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        Int rangeEnd
+    );
+    Value* EvaluateExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        const CoreEngine::SelectionVector* selectionVector
+    );
+
+    CoreEngine::SelectionVector* EvaluateFilterExpression(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& executionContext,
+        CoreEngine::SelectionVector* selectionVector
+    );
+
     DataType GetExpressionReturnType(const Expression* expression);
 }

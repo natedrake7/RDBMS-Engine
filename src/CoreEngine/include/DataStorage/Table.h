@@ -265,7 +265,7 @@ namespace CoreEngine::StorageTypes
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
-                DataStructures::PolymorphicArray<Pages::RowView*> *result,
+                DataStructures::PolymorphicArray<RID> *result,
                 ScanState& state,
                 Int batchSize
             )const;
@@ -373,6 +373,7 @@ namespace CoreEngine::StorageTypes
         * @{
         */
             Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* row, column_index_t columnIndex) const;
+            Value* MaterializeColumn(const ExecutionContext& context, Int rangeEnd, column_index_t columnIndex) const;
             static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
             QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
@@ -403,8 +404,8 @@ namespace CoreEngine::StorageTypes
                 const InsertPayload& payload
             ) const;
 
-            void DeleteLargeObjectFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t>& updatedColumns);
-            void DeleteOverflowedRowsFromPage(Pages::RowView& rowPtr, const HashSet<column_index_t>& updatedColumns)const;
+            void DeleteLargeObjectFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns);
+            void DeleteOverflowedRowsFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
             [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId) const;
             [[nodiscard]] Pages::OverflowPageView GetOverflowPage(page_id_t pageId) const;
@@ -425,8 +426,8 @@ namespace CoreEngine::StorageTypes
 
             [[nodiscard]] Database* GetDatabase() const;
 
-            int HandleRowOverflow(Pages::RowView& rowPtr) const;
-            int HandleRowOverflow(Pages::RowView& rowPtr, const Column* column)const;
+            int HandleRowOverflow(RID* rowPtr) const;
+            int HandleRowOverflow(RID* rowPtr, const Column* column)const;
 
             void InsertLargeObjectToPage(InsertPayload& payload);
 
@@ -451,7 +452,7 @@ namespace CoreEngine::StorageTypes
             void HandleAddColumn(
                 const ExecutionContext& executionContext,
                 const Pages::PageView* page,
-                const Pages::RowView* rowPtr,
+                const RID* rowPtr,
                 column_index_t index,
                 const Value& defaultValue
             ) const;

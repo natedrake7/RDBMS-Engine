@@ -70,7 +70,7 @@ namespace Network {
         Int roleId
     )const;
     [[nodiscard]] const Security::User* Authenticate(const DataTypes::String& username, const DataTypes::String& password)const;
-    [[nodiscard]] const Security::User* Authenticate(const std::string& username, const std::string& password)const;
+    [[nodiscard]] const Security::User* Authenticate(const DataTypes::StringView& username, const DataTypes::StringView& password)const;
 
     bool RoleExists(const DataTypes::String& role)const;
     const Security::Role* GetRole(const DataTypes::String& roleName)const;

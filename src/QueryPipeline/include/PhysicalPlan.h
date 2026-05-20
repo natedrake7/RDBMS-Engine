@@ -12,6 +12,7 @@
 struct MergeElement;
 
 namespace CoreEngine {
+    struct SelectionVector;
     class ExecutionContext;
     class SystemCatalog;
 }
@@ -40,16 +41,28 @@ namespace QueryPipeline::PhysicalPlan {
         const CoreEngine::StorageTypes::RID* innerRow
     );
 
+    struct VectorBatch{
+        Value** _columns;
+        Int _numberOfColumns;
+        Int _numberOfRows;
+
+        VectorBatch()
+            : _columns(nullptr), _numberOfColumns(0), _numberOfRows(0) {}
+
+        void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
+        void SetColumn(Value* columnData, Int column) const;
+    };
+
     struct ExecutionResult {
         //metadata structures of the query
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
         DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
 
-
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows;
-        DataStructures::PolymorphicArray<QueryResult> results;
+        VectorBatch result;
 
         Errors::RuntimeStatus status;
+
+        CoreEngine::SelectionVector* selectionVector;
 
         bool canFetchMore;
 
@@ -84,14 +97,14 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode();
         explicit PlanNode(const DataTypes::Guid& currentSessionId);
         virtual ~PlanNode() = default;
-        void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowView>& rows);
+        void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows);
         void InsertPostProjectionResultsToTemporaryDatabase(
-            CoreEngine::ExecutionContext& context,
+            const CoreEngine::ExecutionContext& context,
             ExecutionResult& result,
             DataTypes::RowIdentifier& firstRowId
         );
         [[nodiscard]] ExecutionResult StreamFromTemporaryDatabase(
-            CoreEngine::ExecutionContext& context,
+            const CoreEngine::ExecutionContext& context,
             CoreEngine::ScanState& state
         ) const;
         virtual ExecutionResult Execute(CoreEngine::ExecutionContext& context) = 0;
@@ -302,7 +315,7 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* child;
 
         [[nodiscard]] inline ExecutionResult ExecuteStatement(CoreEngine::ExecutionContext& context) const;
-        [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(CoreEngine::ExecutionContext& context) const;
+        [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(const CoreEngine::ExecutionContext& context) const;
     public:
         PhysicalProject(
             PlanNode* child,

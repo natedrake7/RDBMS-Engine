@@ -166,11 +166,8 @@ namespace Network {
     return this->userManager.Authenticate(username.ToView(), password.ToView());
   }
 
-  const Security::User* Server::Authenticate(const std::string& username, const std::string& password) const{
-      const auto usernameView = DataTypes::StringView(username);
-      const auto passwordView = DataTypes::StringView(password);
-
-      return this->userManager.Authenticate(usernameView, passwordView);
+  const Security::User* Server::Authenticate(const DataTypes::StringView& username, const DataTypes::StringView& password) const{
+      return this->userManager.Authenticate(username, password);
   }
 
   bool Server::RoleExists(const DataTypes::String& role) const{

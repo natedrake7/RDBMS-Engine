@@ -392,7 +392,7 @@ namespace Pages{
         return true;
     }
 
-    void PageView::SetForwardPointer(const Int indexPosition, const RID& rowId) const{
+    void PageView::SetForwardPointer(const Int indexPosition, const CoreEngine::StorageTypes::RID& rowId) const{
         auto slot = this->GetSlotDirectory(indexPosition);
         const auto offSet = slot.AbsoluteDataOffset();
 
@@ -479,7 +479,7 @@ namespace Pages{
         return this->_frame->type;
     }
 
-    bool PageView::Filter(const Frame* frame, const RID* rowId, Int columnIndex){
+    bool PageView::Filter(const Frame* frame, const CoreEngine::StorageTypes::RID* rowId, Int columnIndex){
     }
 
     Value PageView::GetColumnAt(

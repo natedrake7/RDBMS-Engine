@@ -16,78 +16,69 @@
 #include "SystemDatabases/TemporaryDatabase.h"
 
 namespace QueryPipeline::PhysicalPlan {
-  ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
-      : status(context.GetAllocator()){
-      this->canFetchMore = false;
-      this->results.SetAllocator(context.GetAllocator());
-      this->rows.SetAllocator(context.GetAllocator());
-      this->columns.SetAllocator(context.GetAllocator());
-      this->displayColumnNames.SetAllocator(context.GetAllocator());
-  }
+    ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
+        : displayColumnNames(context.GetAllocator()), columns(context.GetAllocator()),
+          status(context.GetAllocator()),
+          selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(true){}
 
-  ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const DataTypes::String& message) {
-    this->status.code = code;
-    this->status.message = message;
-    this->canFetchMore = false;
-  }
+    ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const DataTypes::String& message)
+        : status(code, message), selectionVector(nullptr),
+          canFetchMore(false) {}
 
-  ExecutionResult::ExecutionResult(
-      const Errors::RuntimeError& code,
-      const DataTypes::StringView& message,
-      const ::Memory::IAllocator* allocator
-    ){
-      this->status.code = code;
-      this->status.message = DataTypes::String(message, allocator);
-      this->canFetchMore = false;
-  }
+    ExecutionResult::ExecutionResult(
+        const Errors::RuntimeError& code,
+        const DataTypes::StringView& message,
+        const ::Memory::IAllocator* allocator
+    ) : status(code, DataTypes::String(message, allocator)),
+        selectionVector(nullptr), canFetchMore(false) {}
 
-  ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
-      this->status = std::move(other.status);
-      this->canFetchMore = other.canFetchMore;
-      this->results = std::move(other.results);
-      this->rows = std::move(other.rows);
-      this->columns = std::move(other.columns);
-      this->displayColumnNames = std::move(other.displayColumnNames);
-  }
+    ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
+        this->status = std::move(other.status);
+        this->canFetchMore = other.canFetchMore;
+        this->result = std::move(other.result);
+        this->columns = std::move(other.columns);
+        this->displayColumnNames = std::move(other.displayColumnNames);
+        this->selectionVector = other.selectionVector;
+    }
 
-  ExecutionResult& ExecutionResult::operator=(ExecutionResult&& other) noexcept{
-      if (this == &other) return *this;
-      this->status = std::move(other.status);
-      this->canFetchMore = other.canFetchMore;
-      this->results = std::move(other.results);
-      this->rows = std::move(other.rows);
-      this->columns = std::move(other.columns);
-      this->displayColumnNames = std::move(other.displayColumnNames);
-      return *this;
-  }
+    ExecutionResult& ExecutionResult::operator=(ExecutionResult&& other) noexcept{
+        if (this == &other) return *this;
+        this->status = std::move(other.status);
+        this->canFetchMore = other.canFetchMore;
+        this->result = std::move(other.result);
+        this->columns = std::move(other.columns);
+        this->displayColumnNames = std::move(other.displayColumnNames);
+        this->selectionVector = other.selectionVector;
+        return *this;
+    }
 
-  ExecutionResult::~ExecutionResult() = default;
+    ExecutionResult::~ExecutionResult() = default;
 
-  bool ExecutionResult::IsOk() const {
-    return this->status.code == Errors::RuntimeError::Ok;
-  }
+    bool ExecutionResult::IsOk() const {
+        return this->status.code == Errors::RuntimeError::Ok;
+    }
 
-  PlanNode::PlanNode() {
-    this->catalog = &CoreEngine::SystemCatalog::Get();
-    this->server = &Network::Server::Get();
-    this->session = nullptr;
-    this->temporaryTableId = INVALID_TABLE_ID;
-  }
+    PlanNode::PlanNode() {
+        this->catalog = &CoreEngine::SystemCatalog::Get();
+        this->server = &Network::Server::Get();
+        this->session = nullptr;
+        this->temporaryTableId = INVALID_TABLE_ID;
+    }
 
-  PlanNode::PlanNode(const DataTypes::Guid &currentSessionId){
-    this->sessionId = currentSessionId;
-    this->catalog = &CoreEngine::SystemCatalog::Get();
-    this->server = &Network::Server::Get();
-    this->session = this->server->GetSession(this->sessionId);
-    this->temporaryTableId = INVALID_TABLE_ID;
-  }
+    PlanNode::PlanNode(const DataTypes::Guid &currentSessionId){
+        this->sessionId = currentSessionId;
+        this->catalog = &CoreEngine::SystemCatalog::Get();
+        this->server = &Network::Server::Get();
+        this->session = this->server->GetSession(this->sessionId);
+        this->temporaryTableId = INVALID_TABLE_ID;
+    }
 
-  void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<Pages::RowView>& rows){
+    void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows){
 
-  }
+    }
 
   void PlanNode::InsertPostProjectionResultsToTemporaryDatabase(
-    CoreEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     ExecutionResult& result,
     DataTypes::RowIdentifier& firstRowId
   ){
@@ -101,20 +92,19 @@ namespace QueryPipeline::PhysicalPlan {
     this->temporaryTableId = table->GetTableId();
 
     const auto& columns = table->GetColumns();
-    result.status = table->BatchInsert(context, result.results);
+    // result.status = table->BatchInsert(context, result.results);
 
     // firstRowId = result.status.rowId;
   }
 
   ExecutionResult PlanNode::StreamFromTemporaryDatabase(
-    CoreEngine::ExecutionContext& context,
+    const CoreEngine::ExecutionContext& context,
     CoreEngine::ScanState& state
   ) const
   {
     static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
     auto result = ExecutionResult(context);
-    result.rows.TrySetAllocator(context.GetAllocator());
 
     if (this->temporaryTableId == INVALID_TABLE_ID)
       return result;
@@ -123,7 +113,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     // table->TemporaryDatabaseHeapScan(&result.rows, state, context.GetBatchSize());
 
-    result.results.Reserve(result.rows.Size());
+    // result.results.Reserve(result.rows.Size());
 
     // for (const auto& row: result.rows)
     //   result.results.Push(row->Materialize(context.GetAllocator()));
@@ -170,7 +160,6 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
-    result.rows.TrySetAllocator(context.GetAllocator());
 
     if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
         result.status = Errors::RuntimeStatus(
@@ -187,10 +176,8 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult PhysicalGrantRole::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
-    result.rows.TrySetAllocator(context.GetAllocator());
 
-    const auto* role = this->server->GetRole(this->roleName);
-
+      const auto* role = this->server->GetRole(this->roleName);
     if (role == nullptr) {
         result.status = Errors::RuntimeStatus(
             Errors::RuntimeError::Error,
@@ -233,7 +220,6 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
     auto result = ExecutionResult(context);
-    result.rows.TrySetAllocator(context.GetAllocator());
 
     if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
         result.status = Errors::RuntimeStatus(
@@ -286,13 +272,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     tablePtr->GetConstantColumns(&result.columns);
 
-    tablePtr->HeapScan(context, &result.rows, this->state);
+    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+    tablePtr->HeapScan(context, &rows, this->state);
 
     result.canFetchMore = this->state.canFetchMore;
 
     if (result.canFetchMore == false)
       this->state.Reset();
 
+    context.AddScanHandle(rows.Data(), rows.Size());
     return result;
   }
 
@@ -319,17 +307,21 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     tablePtr->GetConstantColumns(&result.columns);
 
+    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
     if (this->isClustered)
-        tablePtr->ClusteredIndexScan(context, &result.rows, this->state, this->expression);
+        tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
     else
-        tablePtr->NonClusteredIndexScan(context, &result.rows, 0, this->state, this->expression);
+        tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
 
     result.canFetchMore = this->state.canFetchMore;
     if (result.canFetchMore == false)
         this->state.Reset();
 
     context.AddTable(tablePtr);
+    context.AddScanHandle(rows.Data(), rows.Size());
 
+  result.selectionVector->selectedRidsCount = rows.Size();
+  result.selectionVector->isIdentity = true;
     return result;
   }
 
@@ -356,9 +348,14 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     tablePtr->GetConstantColumns(&result.columns);
 
     //select if to use clustered or non clustered index here
-    tablePtr->ClusteredIndexSeek(context, &result.rows, this->key, this->expression);
+    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+    tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
 
     context.AddTable(tablePtr);
+    context.AddScanHandle(rows.Data(), rows.Size());
+
+    result.selectionVector->selectedRidsCount = rows.Size();
+    result.selectionVector->isIdentity = true;
     return result;
   }
 
@@ -382,9 +379,13 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     tablePtr->GetConstantColumns(&result.columns);
 
     //select if to use clustered or non clustered index here
-    tablePtr->ClusteredIndexSeekRange(context, &result.rows, this->minKey, this->maxKey, this->expression);
+    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+    tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
 
     context.AddTable(tablePtr);
+    context.AddScanHandle(rows.Data(), rows.Size());
+  result.selectionVector->selectedRidsCount = rows.Size();
+  result.selectionVector->isIdentity = true;
     return result;
   }
 
@@ -394,40 +395,45 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     for (const auto& expression : this->resultExpressions)
         result.displayColumnNames.Push(expression->name);
 
-    if (result.rows.Empty())
+    if (result.selectionVector->selectedRidsCount == 0)
         return result;
 
-    Expressions::EvaluationContext evaluationContext(
-        Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-        context
+    // Expressions::EvaluationContext evaluationContext(
+    //     Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+    //     context
+    // );
+
+    result.result.AllocateColumns(
+        context.GetAllocator(),
+        this->resultExpressions.Size()
     );
 
-    result.results.Reserve(result.rows.Size());
-
-    const auto firstPageId = result.rows[0]._pageId;
-
-    evaluationContext.table = context.GetTable(0);
-    for (const auto& row: result.rows) {
-      QueryResult resultRow(context.GetAllocator());
-
-      for (const auto& expression : this->resultExpressions) {
-        evaluationContext.row = &row;
-        resultRow.AddColumn(Expressions::EvaluateExpression(expression, evaluationContext));
-      }
-
-      result.results.Push(std::move(resultRow));
+    result.result._numberOfRows = result.selectionVector->selectedRidsCount;
+    if (result.selectionVector->isIdentity){
+        for (Int i = 0;i < this->resultExpressions.Size(); i++){
+            auto* columnValues = Expressions::EvaluateExpression(
+                this->resultExpressions[i],
+                context,
+                result.selectionVector->selectedRidsCount
+            );
+            result.result._columns[i] = columnValues;
+        }
     }
-
-    // ranges::sort(this->columnHeaders,
-    //   [](const Headers::ColumnHeader& a, const Headers::ColumnHeader& b) {
-    //       return a.ordinalPosition < b.ordinalPosition;
-    //   }
-    // );
+    else{
+        for (Int i = 0;i < this->resultExpressions.Size(); i++){
+            auto* columnValues = Expressions::EvaluateExpression(
+                this->resultExpressions[i],
+                context,
+                result.selectionVector
+            );
+            result.result._columns[i] = columnValues;
+        }
+    }
 
     return result;
   }
 
-    ExecutionResult PhysicalProject::ExecuteConstantStatement(CoreEngine::ExecutionContext& context)const{
+    ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
         auto result = ExecutionResult(context);
         QueryResult resultRow(context.GetAllocator());
 
@@ -436,14 +442,15 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             context
         );
 
-        for (const auto& expression : this->resultExpressions) {
-            result.displayColumnNames.Push(expression->name);
-
-            auto field = Expressions::EvaluateExpression(expression, evaluationContext);
-            resultRow.AddColumn(field);
-        }
-
-        result.results.Push(std::move(resultRow));
+        // for (const auto& expression : this->resultExpressions) {
+        //     result.displayColumnNames.Push(expression->name);
+        //
+        //
+        //     auto field = Expressions::EvaluateExpression(expression, evaluationContext);
+        //     resultRow.AddColumn(field);
+        // }
+        //
+        // result.results.Push(std::move(resultRow));
 
         return result;
     }
@@ -474,28 +481,32 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
-          || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr
-        ) return result;
+        // if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
+        //   || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr
+        // ) return result;
 
         Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> filteredRows(
+        const auto& firstHandle = context.GetScanHandle(0);
+
+        result.selectionVector->AllocateRids(
             context.GetAllocator(),
-            result.rows.Size() / 2
+            0,
+            firstHandle.size
         );
-        for (auto& row : result.rows) {
+
+        for (Int i = 0; i < firstHandle.size; i++){
+            const auto& row = firstHandle.rids[i];
             evaluationContext.row = &row;
             if (!Expressions::EvaluateExpression(this->filter, evaluationContext).AsBool())
                 continue;
 
-            filteredRows.Push(row);
+            result.selectionVector->selectedRids[0][result.selectionVector->selectedRidsCount++] = i;
         }
 
-        result.rows = std::move(filteredRows);
         return result;
     }
 
@@ -511,10 +522,11 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        if (this->top > result.results.Size())
+        if (this->top > result.result._numberOfRows)
             return result;
 
-        result.results.RemoveFrom(this->top);
+        result.result._numberOfRows = this->top;
+        // result.results.RemoveFrom(this->top);
         result.canFetchMore = false;
         return result;
     }
@@ -535,29 +547,29 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
         HashSet<int64_t> computedHashes;
 
-        for (auto& row : result.results) {
-            const auto hash = row.ComputeHash();
-
-            //if no collision occurs
-            if (!computedHashes.Contains(hash)) {
-                results.Push(std::move(row));
-                computedHashes.Add(hash);
-                continue;
-            }
-
-            bool isDuplicate = false;
-            for (const auto& distinctRow : results) {
-                if (distinctRow == row) {
-                    isDuplicate = true;
-                    break;
-                }
-            }
-
-            if (!isDuplicate)
-                results.Push(std::move(row));
-        }
-
-        result.results = std::move(results);
+        // for (auto& row : result.results) {
+        //     const auto hash = row.ComputeHash();
+        //
+        //     //if no collision occurs
+        //     if (!computedHashes.Contains(hash)) {
+        //         results.Push(std::move(row));
+        //         computedHashes.Add(hash);
+        //         continue;
+        //     }
+        //
+        //     bool isDuplicate = false;
+        //     for (const auto& distinctRow : results) {
+        //         if (distinctRow == row) {
+        //             isDuplicate = true;
+        //             break;
+        //         }
+        //     }
+        //
+        //     if (!isDuplicate)
+        //         results.Push(std::move(row));
+        // }
+        //
+        // result.results = std::move(results);
 
         return result;
     }
@@ -600,7 +612,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         Int rowCount = 0;
         while (true){
             auto result = this->child->Execute(context);
-            result.status = tablePtr->BatchInsert(context, result.results);
+
+            // result.status = tablePtr->BatchInsert(context, result.results);
 
             if (!result.status.IsOk())
                 return result;
@@ -608,7 +621,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             if (!result.canFetchMore)
                 break;
 
-            rowCount += result.results.Size();
+            rowCount += result.result._numberOfRows;
             context.ResetAllocator();
         }
 
@@ -963,76 +976,76 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     auto result = this->child->Execute(context);
 
     // Case 1: In-memory sort (no external storage needed)
-    if (!result.canFetchMore && !this->UsesExternalStorage()){
-        SortingFunctions::OrderBy(context, result.results, this->expressions);
-        return result;
-    }
+    // if (!result.canFetchMore && !this->UsesExternalStorage()){
+    //     SortingFunctions::OrderBy(context, result.results, this->expressions);
+    //     return result;
+    // }
 
     // Case 2: Build phase - collect and sort batches
-    while (result.canFetchMore || (result.canFetchMore == false && this->priorityQueue.Empty())) {
-        SortingFunctions::OrderBy(context, result.results, this->expressions);
+    // while (result.canFetchMore || (result.canFetchMore == false && this->priorityQueue.Empty())) {
+    //     SortingFunctions::OrderBy(context, result.results, this->expressions);
 
-        DataTypes::RowIdentifier rowId;
-        this->InsertPostProjectionResultsToTemporaryDatabase(context, result, rowId);
-
-        auto element = MergeElement(
-            result.results[0],
-            static_cast<int>(this->priorityQueue.Size()),
-            rowId
-        );
-
-        this->priorityQueue.Add(std::move(element));
-
-        if (!result.canFetchMore)
-            break;
-
-        result = this->child->Execute(context);
-    }
-
-    // Case 3: Merge phase - k-way merge
-    result.results.Clear();
-
-    DataStructures::PolymorphicArray<DataStructures::PolymorphicArray<QueryResult>> batches;
-    batches.Resize(this->priorityQueue.Size());
-
-    while (!this->priorityQueue.Empty()){
-        auto top = this->priorityQueue.Top();
-        this->priorityQueue.Remove();
-
-        result.results.Push(std::move(top.value));
-
-        const auto batchId = top.batchId;
-
-        // Lazy load batch if needed
-        if (batches[batchId].Empty()) {
-            auto state = CoreEngine::ScanState();
-            state.lastFetchedRowId = top.rowId;
-            state.extentId = CoreEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
-
-            auto batchResult = this->StreamFromTemporaryDatabase(context, state);
-            batches[batchId] = std::move(batchResult.results);
-        }
-
-        // Remove consumed element
-        batches[batchId].Remove(0);
-
-        // Add next element from same batch if available
-        if (!batches[batchId].Empty()) {
-            auto nextElement = MergeElement(
-                batches[batchId][0],
-                batchId,
-                top.rowId // Update with proper next rowId if needed
-            );
-            this->priorityQueue.Add(std::move(nextElement));
-        }
-    }
+    //     DataTypes::RowIdentifier rowId;
+    //     this->InsertPostProjectionResultsToTemporaryDatabase(context, result, rowId);
+    //
+    //     auto element = MergeElement(
+    //         result.results[0],
+    //         static_cast<int>(this->priorityQueue.Size()),
+    //         rowId
+    //     );
+    //
+    //     this->priorityQueue.Add(std::move(element));
+    //
+    //     if (!result.canFetchMore)
+    //         break;
+    //
+    //     result = this->child->Execute(context);
+    // }
+    //
+    // // Case 3: Merge phase - k-way merge
+    // result.results.Clear();
+    //
+    // DataStructures::PolymorphicArray<DataStructures::PolymorphicArray<QueryResult>> batches;
+    // batches.Resize(this->priorityQueue.Size());
+    //
+    // while (!this->priorityQueue.Empty()){
+    //     auto top = this->priorityQueue.Top();
+    //     this->priorityQueue.Remove();
+    //
+    //     result.results.Push(std::move(top.value));
+    //
+    //     const auto batchId = top.batchId;
+    //
+    //     // Lazy load batch if needed
+    //     if (batches[batchId].Empty()) {
+    //         auto state = CoreEngine::ScanState();
+    //         state.lastFetchedRowId = top.rowId;
+    //         state.extentId = CoreEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
+    //
+    //         auto batchResult = this->StreamFromTemporaryDatabase(context, state);
+    //         batches[batchId] = std::move(batchResult.results);
+    //     }
+    //
+    //     // Remove consumed element
+    //     batches[batchId].Remove(0);
+    //
+    //     // Add next element from same batch if available
+    //     if (!batches[batchId].Empty()) {
+    //         auto nextElement = MergeElement(
+    //             batches[batchId][0],
+    //             batchId,
+    //             top.rowId // Update with proper next rowId if needed
+    //         );
+    //         this->priorityQueue.Add(std::move(nextElement));
+    //     }
+    // }
 
     return result;
   }
 
-  void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->child->UpdateScanState(rowId);
-  }
+    void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
 
     PhysicalIndexCreate::PhysicalIndexCreate(
         const DataTypes::Guid& sessionId,

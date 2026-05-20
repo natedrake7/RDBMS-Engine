@@ -11,8 +11,7 @@ namespace Expressions
     struct EvaluationContext;
 }
 
-namespace Memory
-{
+namespace Memory{
     class IAllocator;
 }
 
@@ -29,8 +28,6 @@ namespace MultiThreading{
 }
 
 namespace Pages{
-    struct RID;
-    struct RowView;
     struct Frame;
 
     struct PageHeader{
@@ -115,7 +112,7 @@ namespace Pages{
         ) const;
         void SetForwardPointer(
             Int indexPosition,
-            const RID& rowId
+            const CoreEngine::StorageTypes::RID& rowId
         ) const;
 
         QueryResult MaterializeRow(
@@ -141,7 +138,7 @@ namespace Pages{
 
         static bool Filter(
             const Frame* frame,
-            const RID* rowId,
+            const CoreEngine::StorageTypes::RID* rowId,
             Int columnIndex
         );
 

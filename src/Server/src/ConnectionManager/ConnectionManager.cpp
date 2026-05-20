@@ -348,7 +348,7 @@ void ConnectionManager::AuthorizeClientConnection(
     protocol.Deserialize(buffer);
     auto& server = Network::Server::Get();
 
-    const auto* user = server.Authenticate(protocol.GetUsername(), protocol.GetPassword());
+    const auto* user = server.Authenticate(DataTypes::StringView(protocol.GetUsername()), DataTypes::StringView(protocol.GetPassword()));
 
     if (user == nullptr) {
       Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
@@ -396,14 +396,14 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket,
 
         bool hasMore = batchResult.status.IsOk() && cursor->CanFetch();
 
-        Network::QueryResponseProtocol response(
-        batchResult.status.IsOk(),
-                hasMore,
-                batchResult.status.message.ToView(),
-                batchResult.displayColumnNames,
-             batchResult.results
-            );
-        ConnectionManager::SendToClient(socket, &response);
+        // Network::QueryResponseProtocol response(
+        // batchResult.status.IsOk(),
+        //         hasMore,
+        //         batchResult.status.message.ToView(),
+        //         batchResult.displayColumnNames,
+        //      batchResult.results
+        //     );
+        // ConnectionManager::SendToClient(socket, &response);
 
         if (!batchResult.status.IsOk()) {
           hasError = true;
