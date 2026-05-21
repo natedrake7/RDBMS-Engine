@@ -13,6 +13,7 @@ namespace DataTypes{
 class Variable;
 
 namespace CoreEngine{
+    struct DataVector;
     struct SelectionVector;
 
     namespace StorageTypes{
@@ -95,12 +96,19 @@ namespace Expressions{
         );
     };
 
+    using KernelFunction = CoreEngine::DataVector* (*)(
+        const Expression* self,
+        const EvaluationContext& context,
+        const CoreEngine::SelectionVector* selectionVector
+    );
+
     class Expression {
     protected:
         [[nodiscard]] Value EvaluateJoin(const EvaluationContext& context) const;
 
     public:
         DataTypes::String name;
+        KernelFunction kernel;
         column_index_t columnIndex;
         ExpressionType expressionType;
 
@@ -202,6 +210,17 @@ namespace Expressions{
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
         [[nodiscard]] DataType GetReturnType() const;
+
+        [[nodiscard]] static Value* Evaluate(
+            const Expression* expression,
+            const CoreEngine::ExecutionContext& context,
+            const CoreEngine::SelectionVector* selectionVector
+        );
+        [[nodiscard]] static Value* Evaluate(
+            const Expression* expression,
+            const CoreEngine::ExecutionContext& context,
+            Int rangeEnd
+        );
 
         [[nodiscard]] bool ValidateOperation()const;
     };

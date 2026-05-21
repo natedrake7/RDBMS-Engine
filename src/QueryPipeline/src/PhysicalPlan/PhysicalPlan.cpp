@@ -35,7 +35,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
-        this->result = std::move(other.result);
+        this->vectorBatch = std::move(other.vectorBatch);
         this->columns = std::move(other.columns);
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
@@ -45,7 +45,7 @@ namespace QueryPipeline::PhysicalPlan {
         if (this == &other) return *this;
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
-        this->result = std::move(other.result);
+        this->vectorBatch = std::move(other.vectorBatch);
         this->columns = std::move(other.columns);
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
@@ -384,8 +384,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     context.AddTable(tablePtr);
     context.AddScanHandle(rows.Data(), rows.Size());
-  result.selectionVector->selectedRidsCount = rows.Size();
-  result.selectionVector->isIdentity = true;
+
+    result.selectionVector->selectedRidsCount = rows.Size();
+    result.selectionVector->isIdentity = true;
     return result;
   }
 
@@ -398,17 +399,12 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     if (result.selectionVector->selectedRidsCount == 0)
         return result;
 
-    // Expressions::EvaluationContext evaluationContext(
-    //     Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-    //     context
-    // );
-
-    result.result.AllocateColumns(
+    result.vectorBatch.AllocateColumns(
         context.GetAllocator(),
         this->resultExpressions.Size()
     );
 
-    result.result._numberOfRows = result.selectionVector->selectedRidsCount;
+    result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
     if (result.selectionVector->isIdentity){
         for (Int i = 0;i < this->resultExpressions.Size(); i++){
             auto* columnValues = Expressions::EvaluateExpression(
@@ -416,7 +412,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
                 context,
                 result.selectionVector->selectedRidsCount
             );
-            result.result._columns[i] = columnValues;
+            result.vectorBatch._columns[i] = columnValues;
         }
     }
     else{
@@ -426,7 +422,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
                 context,
                 result.selectionVector
             );
-            result.result._columns[i] = columnValues;
+            result.vectorBatch._columns[i] = columnValues;
         }
     }
 
@@ -522,10 +518,10 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        if (this->top > result.result._numberOfRows)
+        if (this->top > result.vectorBatch._numberOfRows)
             return result;
 
-        result.result._numberOfRows = this->top;
+        result.vectorBatch._numberOfRows = this->top;
         // result.results.RemoveFrom(this->top);
         result.canFetchMore = false;
         return result;
@@ -621,7 +617,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
             if (!result.canFetchMore)
                 break;
 
-            rowCount += result.result._numberOfRows;
+            rowCount += result.vectorBatch._numberOfRows;
             context.ResetAllocator();
         }
 

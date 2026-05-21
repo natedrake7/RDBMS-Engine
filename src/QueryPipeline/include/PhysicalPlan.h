@@ -58,7 +58,7 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
         DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
 
-        VectorBatch result;
+        VectorBatch vectorBatch;
 
         Errors::RuntimeStatus status;
 

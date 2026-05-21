@@ -14,6 +14,7 @@
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
 #include "Pages/Additional/Frame.h"
+#include "Vectorization/Vectorization.h"
 
 namespace Expressions{
     static constexpr ConstexprDictionary FunctionDictionary{
@@ -463,6 +464,45 @@ namespace Expressions{
         default:
             throw std::runtime_error("BinaryExpression::GetReturnType: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
         }
+    }
+
+    Value* BinaryExpression::Evaluate(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext& context,
+        const Int rangeEnd
+    ){
+        auto* binaryExpr = expression->AsBinary();
+        const auto* left = EvaluateExpression(binaryExpr->left, context, rangeEnd);
+        const auto* right = EvaluateExpression(binaryExpr->right, context, rangeEnd);
+
+        switch (binaryExpr->operation){
+        case BinaryOperator::Equal:
+            break;
+        case BinaryOperator::NotEqual:
+            break;
+        case BinaryOperator::Greater:
+            break;
+        case BinaryOperator::GreaterEqual:
+            break;
+        case BinaryOperator::Less:
+            break;
+        case BinaryOperator::LessEqual:
+            break;
+        case BinaryOperator::Add:
+            break;
+        case BinaryOperator::Subtract:
+            break;
+        case BinaryOperator::Multiply:
+            break;
+        case BinaryOperator::Divide:
+            break;
+        case BinaryOperator::Modulo:
+            break;
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+            break;
+        }
+
+        return nullptr;
     }
 
     bool BinaryExpression::ValidateOperation() const {
@@ -1047,8 +1087,6 @@ namespace Expressions{
         switch (expression->expressionType){
         case ExpressionType::Column:
             return ColumnExpression::Evaluate(expression, executionContext, rangeEnd);
-        case ExpressionType::Expression:
-            break;
         case ExpressionType::Constant:
             break;
         case ExpressionType::Binary:
@@ -1064,6 +1102,9 @@ namespace Expressions{
         case ExpressionType::Json:
             break;
         case ExpressionType::Cast:
+            break;
+        case ExpressionType::Expression:
+        default:
             break;
         }
 
@@ -1078,8 +1119,6 @@ namespace Expressions{
         switch (expression->expressionType){
         case ExpressionType::Column:
             return ColumnExpression::Evaluate(expression, executionContext, selectionVector);
-        case ExpressionType::Expression:
-            break;
         case ExpressionType::Constant:
             break;
         case ExpressionType::Binary:
@@ -1095,6 +1134,8 @@ namespace Expressions{
         case ExpressionType::Json:
             break;
         case ExpressionType::Cast:
+            break;
+        case ExpressionType::Expression:
             break;
         }
 
