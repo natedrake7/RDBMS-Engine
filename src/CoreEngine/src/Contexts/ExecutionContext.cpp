@@ -1,6 +1,6 @@
 ﻿#include "../../include/Contexts/ExecutionContext.h"
-
 #include "Coercions.h"
+#include "../../include/DataStorage/Row.h"
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(

@@ -227,15 +227,15 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             }
 
             count += batch.vectorBatch._numberOfRows;
-            for (const auto& column : batch.displayColumnNames)
-                std::cout << column << " || ";
-
-            std::cout << std::endl;
-            for (Int i = 0;i < batch.vectorBatch._numberOfRows; i++){
-                for (Int j = 0;j < batch.vectorBatch._numberOfColumns; j++){
-                    std::cout << batch.vectorBatch._columns[j][i] << " || ";
-                }
-            }
+            // for (const auto& column : batch.displayColumnNames)
+            //     std::cout << column << " || ";
+            //
+            // std::cout << std::endl;
+            // for (Int i = 0;i < batch.vectorBatch._numberOfRows; i++){
+            //     for (Int j = 0;j < batch.vectorBatch._numberOfColumns; j++){
+            //         std::cout << batch.vectorBatch._columns[j][i] << " || ";
+            //     }
+            // }
         }
 
         if (hasError) {

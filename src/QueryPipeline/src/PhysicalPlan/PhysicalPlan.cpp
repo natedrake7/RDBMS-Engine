@@ -1,6 +1,5 @@
 #include "../../include/PhysicalPlan.h"
 
-#include <iostream>
 #include <utility>
 
 #include "ValidationMessages.h"
@@ -14,6 +13,7 @@
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 #include "Contexts/ExecutionContext.h"
 #include "SystemDatabases/TemporaryDatabase.h"
+#include "../../../CoreEngine/include/Vectorization/Vectorization.h"
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
@@ -320,8 +320,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     context.AddTable(tablePtr);
     context.AddScanHandle(rows.Data(), rows.Size());
 
-  result.selectionVector->selectedRidsCount = rows.Size();
-  result.selectionVector->isIdentity = true;
+    result.selectionVector->selectedRidsCount = rows.Size();
+    result.selectionVector->isIdentity = true;
     return result;
   }
 
