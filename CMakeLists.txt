@@ -113,6 +113,7 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Contexts/CompileContext.cpp
         ${ANTLR_SRC}
         src/QueryPipeline/src/Visitor/Visitor.Json.cpp
+        src/QueryPipeline/src/RowCursor.cpp
 )
 
 target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
@@ -189,6 +190,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Memory/PersistentAllocator.cpp
         src/CoreEngine/src/Extensions/StringExtensions.cpp
         src/CoreEngine/src/Vectorization/Vectorization.cpp
+        src/CoreEngine/src/Evaluators/Kernel.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

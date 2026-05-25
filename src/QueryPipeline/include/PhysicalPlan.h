@@ -42,7 +42,7 @@ namespace QueryPipeline::PhysicalPlan {
     );
 
     struct VectorBatch{
-        Value** _columns;
+        CoreEngine::DataVector** _columns;
         Int _numberOfColumns;
         Int _numberOfRows;
 
@@ -50,7 +50,7 @@ namespace QueryPipeline::PhysicalPlan {
             : _columns(nullptr), _numberOfColumns(0), _numberOfRows(0) {}
 
         void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
-        void SetColumn(Value* columnData, Int column) const;
+        void SetColumn(CoreEngine::DataVector* columnData, Int column) const;
     };
 
     struct ExecutionResult {

@@ -15,6 +15,7 @@
 
 #include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
 #include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
+#include "src/QueryPipeline/include/RowCursor.h"
 #include "src/Systemic/include/Coercions.h"
 #include "src/Systemic/include/Memory/Functions.h"
 #include "UnitTests/include/UnitTests.h"
@@ -98,6 +99,8 @@
 //TODO use json accessors for updates as well.
 //TODO add CAST, TRYCAST
 //TODO make key entity better(use simillar format to rows)
+//TODO update LogicalPlan->ToPhysical to bind expression kernels before to physical
+//TODO implement columnar evaluation
 
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
@@ -227,15 +230,13 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
             }
 
             count += batch.vectorBatch._numberOfRows;
-            // for (const auto& column : batch.displayColumnNames)
-            //     std::cout << column << " || ";
-            //
-            // std::cout << std::endl;
-            // for (Int i = 0;i < batch.vectorBatch._numberOfRows; i++){
-            //     for (Int j = 0;j < batch.vectorBatch._numberOfColumns; j++){
-            //         std::cout << batch.vectorBatch._columns[j][i] << " || ";
-            //     }
-            // }
+            for (const auto& column : batch.displayColumnNames)
+                std::cout << column << " || ";
+
+            std::cout << std::endl;
+
+            QueryPipeline::RowCursor rowCursor(&batch.vectorBatch);
+            std::cout << rowCursor << std::endl;
         }
 
         if (hasError) {

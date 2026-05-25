@@ -98,7 +98,7 @@ namespace Expressions{
 
     using KernelFunction = CoreEngine::DataVector* (*)(
         const Expression* self,
-        const EvaluationContext& context,
+        const CoreEngine::ExecutionContext& context,
         const CoreEngine::SelectionVector* selectionVector
     );
 
@@ -176,6 +176,9 @@ namespace Expressions{
             const CoreEngine::ExecutionContext& context,
             Int rangeEnd
         );
+
+        static void BindExpression(Expression* expression);
+
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
     };
@@ -371,7 +374,7 @@ namespace Expressions{
         const CoreEngine::ExecutionContext& executionContext,
         Int rangeEnd
     );
-    Value* EvaluateExpression(
+    CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
         const CoreEngine::SelectionVector* selectionVector
@@ -384,4 +387,6 @@ namespace Expressions{
     );
 
     DataType GetExpressionReturnType(const Expression* expression);
+
+    void BindExpressionKernel(Expression* expression);
 }

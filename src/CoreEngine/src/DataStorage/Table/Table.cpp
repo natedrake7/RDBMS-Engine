@@ -23,6 +23,7 @@
 #include "Logger/WriteAheadLogger.h"
 #include "Managers/GlobalMemoryManager.h"
 #include "Memory/PersistentAllocator.h"
+#include "Vectorization/Vectorization.h"
 
 namespace CoreEngine::StorageTypes {
       TableHeader::TableHeader() {
@@ -610,6 +611,55 @@ namespace CoreEngine::StorageTypes {
                   this
             );
           return page.MaterializeRow(allocator, row->_index);
+    }
+
+    void Table::MaterializeColumnFromIndexPage(
+        const ExecutionContext& context,
+        const SelectionVector* sv,
+        void* __restrict__ _data,
+        const Int dataSize,
+        const column_index_t columnIndex
+    ) const{
+            if (sv->selectedRidsCount == 0)
+                return;
+
+            for (auto i = 0; i < sv->selectedRidsCount; i++){
+                const auto ridIdx = sv->selectedRids[0][i];
+                const auto* rid = context.GetRid(0, ridIdx);
+
+                const auto page = Storage::StorageManager::Get().GetIndexPage(
+                    this->database->GetDataFileKey(),
+                    this->database->GetFileName(),
+                    rid->_pageId,
+                    this
+                );
+
+                std::memcpy(_data, page.GetColumnAt(rid, columnIndex), dataSize);
+            }
+    }
+
+    void Table::MaterializeColumnFromPage(
+        const ExecutionContext& context,
+        const Int rangeEnd,
+        void* __restrict__ _data,
+        const Int dataSize,
+        const column_index_t columnIndex
+    ) const{
+          if (rangeEnd == 0)
+              return;
+
+          for (auto i = 0; i < rangeEnd; i++){
+              const auto* rid = context.GetRid(0, i);
+
+              const auto page = Storage::StorageManager::Get().GetIndexPage(
+                  this->database->GetDataFileKey(),
+                  this->database->GetFileName(),
+                  rid->_pageId,
+                  this
+              );
+
+              std::memcpy(_data, page.GetColumnAt(rid, columnIndex), dataSize);
+          }
     }
 
     void Table::TemporaryDatabaseHeapScan(

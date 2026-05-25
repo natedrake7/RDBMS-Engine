@@ -13,6 +13,7 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
+#include "Evaluators/Kernel.h"
 #include "Pages/Additional/Frame.h"
 #include "Vectorization/Vectorization.h"
 
@@ -281,6 +282,42 @@ namespace Expressions{
         const auto* columnExpr = expression->AsColumn();
         const auto* table = context.GetTable(0);
         return table->MaterializeColumn(context, rangeEnd, columnExpr->columnIndex);
+    }
+
+    void ColumnExpression::BindExpression(Expression* expression){
+        auto* columnExpr = expression->AsColumn();
+
+        switch (columnExpr->returnType){
+        case DataType::String:
+            break;
+        case DataType::Bool:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<bool>;
+            break;
+        case DataType::TinyInt:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<TinyInt>;
+            break;
+        case DataType::SmallInt:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<SmallInt>;
+            break;
+        case DataType::Int:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<Int>;
+            break;
+        case DataType::BigInt:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<BigInt>;
+            break;
+        case DataType::Decimal:
+            break;
+        case DataType::DateTime:
+            break;
+        case DataType::Guid:
+            break;
+        case DataType::Json:
+            break;
+        case DataType::Null:
+            break;
+        case DataType::RowIdentifier:
+            break;
+        }
     }
 
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
@@ -1111,35 +1148,12 @@ namespace Expressions{
         return nullptr;
     }
 
-    Value* EvaluateExpression(
+    CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
         const CoreEngine::SelectionVector* selectionVector
     ){
-        switch (expression->expressionType){
-        case ExpressionType::Column:
-            return ColumnExpression::Evaluate(expression, executionContext, selectionVector);
-        case ExpressionType::Constant:
-            break;
-        case ExpressionType::Binary:
-            break;
-        case ExpressionType::Logical:
-            break;
-        case ExpressionType::Variable:
-            break;
-        case ExpressionType::Branch:
-            break;
-        case ExpressionType::Function:
-            break;
-        case ExpressionType::Json:
-            break;
-        case ExpressionType::Cast:
-            break;
-        case ExpressionType::Expression:
-            break;
-        }
-
-        return nullptr;
+        return expression->kernel(expression, executionContext, selectionVector);
     }
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(
@@ -1184,6 +1198,35 @@ namespace Expressions{
         case ExpressionType::Expression:
         default:
             return DataType::Null;
+        }
+    }
+
+    void BindExpressionKernel(Expression* expression){
+        if (expression == nullptr)
+            return;
+
+        switch (expression->expressionType){
+        case ExpressionType::Expression:
+            break;
+        case ExpressionType::Column:
+            ColumnExpression::BindExpression(expression);
+            break;
+        case ExpressionType::Constant:
+            break;
+        case ExpressionType::Binary:
+            break;
+        case ExpressionType::Logical:
+            break;
+        case ExpressionType::Variable:
+            break;
+        case ExpressionType::Branch:
+            break;
+        case ExpressionType::Function:
+            break;
+        case ExpressionType::Json:
+            break;
+        case ExpressionType::Cast:
+            break;
         }
     }
 }

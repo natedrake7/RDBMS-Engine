@@ -149,6 +149,11 @@ namespace Pages{
             Int columnIndex
         );
 
+        const object_t* GetColumnAt(
+            const CoreEngine::StorageTypes::RID* row,
+            Int columnIndex
+        ) const;
+
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
     };
 }

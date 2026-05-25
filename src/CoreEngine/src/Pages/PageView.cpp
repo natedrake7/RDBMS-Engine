@@ -507,6 +507,24 @@ namespace Pages{
         );
     }
 
+    const object_t* PageView::GetColumnAt(
+        const CoreEngine::StorageTypes::RID* row,
+        const Int columnIndex
+    ) const{
+        const auto slot = this->GetSlotDirectory(row->_index);
+        const auto* frame = this->GetFrame();
+        const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
+
+        const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
+            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+        );
+
+        if (rowEntry.IsNull())
+            return nullptr;
+
+        return rowDataPtr + rowEntry._offset;
+    }
+
     RawRowReference PageView::RawRowData(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return RawRowReference(this->_frame->_data + slot.AbsoluteDataOffset(), slot.DataSize());

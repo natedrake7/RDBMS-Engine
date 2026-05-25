@@ -399,31 +399,18 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     if (result.selectionVector->selectedRidsCount == 0)
         return result;
 
-    result.vectorBatch.AllocateColumns(
-        context.GetAllocator(),
-        this->resultExpressions.Size()
-    );
+    // result.vectorBatch.AllocateColumns(
+    //     context.GetAllocator(),
+    //     this->resultExpressions.Size()
+    // );
 
     result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
-    if (result.selectionVector->isIdentity){
-        for (Int i = 0;i < this->resultExpressions.Size(); i++){
-            auto* columnValues = Expressions::EvaluateExpression(
-                this->resultExpressions[i],
-                context,
-                result.selectionVector->selectedRidsCount
-            );
-            result.vectorBatch._columns[i] = columnValues;
-        }
-    }
-    else{
-        for (Int i = 0;i < this->resultExpressions.Size(); i++){
-            auto* columnValues = Expressions::EvaluateExpression(
-                this->resultExpressions[i],
-                context,
-                result.selectionVector
-            );
-            result.vectorBatch._columns[i] = columnValues;
-        }
+    for (Int i = 0;i < this->resultExpressions.Size(); i++){
+        result.vectorBatch._columns[i] = Expressions::EvaluateExpression(
+            this->resultExpressions[i],
+            context,
+            result.selectionVector
+        );
     }
 
     return result;

@@ -377,6 +377,21 @@ namespace CoreEngine::StorageTypes
             static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
             QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
+
+            void MaterializeColumnFromIndexPage(
+                const ExecutionContext& context,
+                const SelectionVector* sv,
+                void* __restrict__ _data,
+                Int dataSize,
+                column_index_t columnIndex
+            )const;
+            void MaterializeColumnFromPage(
+                const ExecutionContext& context,
+                Int rangeEnd,
+                void* __restrict__ _data,
+                Int dataSize,
+                column_index_t columnIndex
+            )const;
         /** @} End of: Materialization Functions*/
 
         /**

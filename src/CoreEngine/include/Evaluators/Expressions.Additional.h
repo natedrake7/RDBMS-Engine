@@ -224,5 +224,4 @@ namespace Expressions {
         Pair(Constants::FunctionType::Coalesce,
         FunctionInfo(DataTypes::StringView("COALESCE"), 2, UNLIMITED_ARGS, {DataType::String}, DataType::String, false, true)),
     };
-
 }

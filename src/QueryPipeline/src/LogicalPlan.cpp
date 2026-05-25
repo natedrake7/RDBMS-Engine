@@ -28,6 +28,7 @@ namespace QueryPipeline {
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalDeclareVariable::ToPhysical(QueryContext& context) {
+        Expressions::BindExpressionKernel(this->expression);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
     }
 
@@ -67,11 +68,12 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders)
         : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
 
-    LogicalProject::~LogicalProject(){
-        delete this->child;
-    }
+    LogicalProject::~LogicalProject() = default;
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
+        for (auto* expression : this->resultExpressions)
+            Expressions::BindExpressionKernel(expression);
+
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
             (this->child != nullptr) ? this->child->ToPhysical(context) : nullptr,
             this->resultExpressions,
@@ -110,12 +112,14 @@ namespace QueryPipeline {
             if (firstIndex.isClustered)
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, true);
 
+            Expressions::BindExpressionKernel(this->expression);
             return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
         }
 
         Optimizer optimizer(context);
         // else use optimizer to choose index seek/scan
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
+        Expressions::BindExpressionKernel(this->expression);
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);
@@ -252,13 +256,15 @@ namespace QueryPipeline {
     }
 
     PhysicalPlan::PlanNode* LogicalJoin::ToPhysical(QueryContext& context){
-        Optimizer optimizer(context);
+        const Optimizer optimizer(context);
 
         auto analysisResult = optimizer.ChooseJoinAlgorithm(
             this->leftTableId,
             this->rightTableId,
             this->condition
         );
+
+        Expressions::BindExpressionKernel(this->condition);
 
         switch (this->type) {
             case JoinType::Inner:
@@ -278,6 +284,7 @@ namespace QueryPipeline {
         : child(child), filter(filter) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
+        Expressions::BindExpressionKernel(this->filter);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter);
     }
 

@@ -130,10 +130,10 @@ Pages::Frame* StorageManager::GetFrame(
 ){
     MultiThreading::ReaderGuard lock(&this->tableMutex);
 
-    if (fileKey.databaseId >= _pageTable.Size())
+    if (fileKey.databaseId >= this->_pageTable.Size())
         return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
 
-    auto* dbTable = _pageTable[fileKey.databaseId];
+    auto* dbTable = this->_pageTable[fileKey.databaseId];
     if (dbTable == nullptr)
         return this->HandlePageCacheMiss(fileKey, filename, pageId, table, lock);
 
