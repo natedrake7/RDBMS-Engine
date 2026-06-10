@@ -22,28 +22,49 @@ namespace CoreEngine {
 } // namespace DatabaseEngine
 
 namespace Storage {
-    static auto constexpr SEGMENT_SIZE = 4096;
-    static auto constexpr FILE_TABLE_SIZE = 2;
-    static auto constexpr INVALID_FRAME = -1;
+    static constexpr Int MAX_DATABASES = 100;
+    static constexpr Int FILE_TABLE_SIZE = 2;
+    static constexpr Int INVALID_FRAME = -1;
+
+    struct PageAddress{
+        static constexpr Int SEGMENT_BITS = 12;
+        static constexpr Int GROUP_BITS = 10;
+        static constexpr Int DIRECTORY_BITS = 10;
+
+        static constexpr Int SEGMENT_SIZE = 1 << SEGMENT_BITS;
+        static constexpr Int GROUP_SIZE = 1 << GROUP_BITS;
+        static constexpr Int DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
+
+        [[nodiscard]] static Int DirectorySlot(page_id_t pageId);
+        [[nodiscard]] static Int GroupSlot(page_id_t pageId);
+        [[nodiscard]] static Int SegmentSlot(page_id_t pageId);
+        [[nodiscard]] static Int PageSlot(page_id_t pageId);
+    };
 
     struct Segment{
-        Pages::FrameId frames[SEGMENT_SIZE];
+        std::atomic<Pages::FrameId> frames[PageAddress::SEGMENT_SIZE];
         Segment();
     };
 
-    struct FileTable{
-        DataStructures::PolymorphicArray<Segment*> segments;
+    struct SegmentGroup{
+        std::atomic<Segment*> segments[PageAddress::GROUP_SIZE];
+        SegmentGroup(){ for (auto& slot : segments) slot.store(nullptr, std::memory_order_relaxed); }
+    };
+
+    struct FileDirectory{
+        std::atomic<SegmentGroup*> groups[PageAddress::DIRECTORY_SIZE];
+        FileDirectory(){ for (auto& slot : groups) slot.store(nullptr, std::memory_order_relaxed); }
     };
 
     struct DatabaseTable{
-        FileTable files[FILE_TABLE_SIZE];
+        FileDirectory files[FILE_TABLE_SIZE];
     };
 
     class StorageManager final{
         FileManager fileManager;
         mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
 
-        DataStructures::PolymorphicArray<DatabaseTable*> _pageTable;
+        std::atomic<DatabaseTable*> _pageTable[MAX_DATABASES];
         const CoreEngine::Memory::PersistentAllocator _allocator;
         CoreEngine::BufferPoolMemoryManager* _memoryManager;
 
@@ -64,17 +85,17 @@ namespace Storage {
         void CacheFrameToPageTableNoLock(FileKey key, page_id_t pageId, Pages::FrameId frameId);
         Pages::Frame* CreateFrame(FileKey fileKey, page_id_t pageId, const CoreEngine::StorageTypes::Table *table);
 
+        Segment* GetSegmentNoLock(FileKey fileKey, page_id_t pageId) const;
+
         void EnsureDatabaseTableExistsNoLock(FileKey fileKey);
-        void EnsureSegmentExistsNoLock(FileKey fileKey, page_id_t pageId);
+        Segment* EnsureSegmentExistsNoLock(FileKey fileKey, page_id_t pageId) const;
         Pages::Frame* HandlePageCacheMiss(
             FileKey fileKey,
             page_id_t pageId,
-            const CoreEngine::StorageTypes::Table *table,
-            MultiThreading::ReaderGuard& readGuard
+            const CoreEngine::StorageTypes::Table *table
         );
 
         Pages::FrameId AcquireFrameId();
-
         Pages::Frame* GetFrame(
             FileKey fileKey,
             page_id_t pageId,

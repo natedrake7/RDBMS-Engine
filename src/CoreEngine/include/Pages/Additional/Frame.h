@@ -15,7 +15,6 @@ namespace Pages{
     using FrameId = Int;
 
     struct PageHeader;
-
     struct Frame{
         mutable MultiThreading::Mutex latch;
 
@@ -38,5 +37,10 @@ namespace Pages{
 
         [[nodiscard]] PageHeader* Header() const;
         [[nodiscard]] bool IsValid()const;
+
+        [[nodiscard]] bool TryPin();
+        void Unpin();
+
+        [[nodiscard]] bool TryClaimForEviction();
     };
 }

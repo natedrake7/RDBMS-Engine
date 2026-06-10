@@ -100,7 +100,6 @@ namespace Pages{
 
     PageView::PageView(Frame* framePtr){
         this->_frame = framePtr;
-        this->_frame->pinCount.fetch_add(1, std::memory_order_relaxed);
         this->initialOffset = Constants::PAGE_HEADER_SIZE;
     }
 
@@ -109,7 +108,7 @@ namespace Pages{
             return *this;
 
         if (this->IsValid())
-            this->_frame->pinCount.fetch_sub(1, std::memory_order_relaxed);
+            this->_frame->Unpin();
 
         this->_frame = other._frame;
         other._frame = nullptr;
@@ -123,7 +122,7 @@ namespace Pages{
 
     PageView::~PageView(){
         if (this->IsValid())
-            this->_frame->pinCount.fetch_sub(1, std::memory_order_relaxed);
+            this->_frame->Unpin();
     }
 
     PageHeader* PageView::GetHeader() const{

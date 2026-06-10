@@ -9,13 +9,30 @@
 #include <iostream>
 
 namespace Storage {
-Segment::Segment(){
-    std::memset(frames, INVALID_FRAME, sizeof(Pages::FrameId) * SEGMENT_SIZE);
+    Int PageAddress::DirectorySlot(page_id_t pageId){
+        const auto segmentId = PageAddress::SegmentSlot(pageId);
+        return (segmentId >> PageAddress::GROUP_BITS) & (PageAddress::DIRECTORY_SIZE - 1);
+    }
+
+    Int PageAddress::GroupSlot(const page_id_t pageId){
+        const auto segmentId = PageAddress::SegmentSlot(pageId);
+        return segmentId & (PageAddress::GROUP_SIZE - 1);
+    }
+
+    Int PageAddress::SegmentSlot(const page_id_t pageId){
+        return pageId >> PageAddress::SEGMENT_BITS;
+    }
+
+    Int PageAddress::PageSlot(const page_id_t pageId){
+        return pageId & (PageAddress::SEGMENT_SIZE - 1);
+    }
+
+    Segment::Segment(){
+    std::memset(frames, INVALID_FRAME, sizeof(Pages::FrameId) * PageAddress::SEGMENT_SIZE);
 }
 
 StorageManager::StorageManager(){
     this->_memoryManager = &CoreEngine::BufferPoolMemoryManager::Get();
-    this->_pageTable.SetAllocator(&this->_allocator);
     this->capacity = this->_memoryManager->Capacity();
     this->clockHand = 0;
 }
@@ -31,9 +48,7 @@ void StorageManager::EvictPageNoLock() {
         if (!frame->IsValid())
             continue;
 
-        MultiThreading::WriterGuard pageLock(&frame->latch);
-
-        if (frame->pinCount.load() > 0 || frame->priority.load() >= Constants::PagePriority::HIGH)
+        if (frame->priority.load() >= Constants::PagePriority::HIGH)
             continue;
 
         if (frame->hasSecondChance){
@@ -41,16 +56,16 @@ void StorageManager::EvictPageNoLock() {
             continue;
         }
 
+        if (!frame->TryClaimForEviction())
+            continue;
+
         victim = frame;
         victimId = candidateId;
     }
 
     this->TryFlushFrameToDiskNoLock(victim);
-
-    const auto& victimKey = victim->fileKey;
-    const auto segmentId = victim->Header()->pageId / SEGMENT_SIZE;
-    const auto segmentOffset = victim->Header()->pageId % SEGMENT_SIZE;
-    this->_pageTable[victimKey.databaseId]->files[static_cast<size_t>(victimKey.type)].segments[segmentId]->frames[segmentOffset] = INVALID_FRAME;
+    auto* segment = this->GetSegmentNoLock(victim->fileKey, victim->Header()->pageId);
+    segment->frames[PageAddress::PageSlot(victim->Header()->pageId)].store(INVALID_FRAME, std::memory_order_release);
     this->_memoryManager->PushStackNoLock(victimId);
 }
 
@@ -79,13 +94,11 @@ Pages::Frame* StorageManager::OpenExtentNoLock(
     Pages::Frame* framePtr = nullptr;
     for (Int i = 0; i < Constants::EXTENT_SIZE; i++){
         const page_id_t currentPageId = firstExtentPageId + i;
-        const auto segmentId = static_cast<Int>(currentPageId / SEGMENT_SIZE);
-        const auto segmentOffset = static_cast<Int>(currentPageId % SEGMENT_SIZE);
 
-        this->EnsureSegmentExistsNoLock(fileKey, currentPageId);
-        auto* segment = this->_pageTable[fileKey.databaseId]->files[static_cast<size_t>(fileKey.type)].segments[segmentId];
+        Segment* segment = this->EnsureSegmentExistsNoLock(fileKey, currentPageId);
+        const auto pageSlot = PageAddress::PageSlot(currentPageId);
 
-        if (segment->frames[segmentOffset] != INVALID_FRAME)
+        if (segment->frames[pageSlot].load(std::memory_order_acquire) != INVALID_FRAME)
             continue;
 
         const auto frameId = this->AcquireFrameId();
@@ -100,19 +113,21 @@ Pages::Frame* StorageManager::OpenExtentNoLock(
         if (bytesRead < Constants::PAGE_SIZE)
             std::memset(destination, 0, Constants::PAGE_SIZE - bytesRead);
 
+        const auto isRequestedPage = (currentPageId == pageId);
+
         auto* newFramePtr = this->_memoryManager->AllocateFrame(frameId);
         newFramePtr->_data = destination;
         newFramePtr->fileKey = fileKey;
         newFramePtr->isDirty = false;
         newFramePtr->hasSecondChance = false;
-        newFramePtr->pinCount.store(0);
+        newFramePtr->pinCount.store(isRequestedPage ? 1 : 0);   // producer pins the page it hands back
         newFramePtr->priority.store(Constants::PagePriority::LOW);
         newFramePtr->table = table;
 
-        if (currentPageId == pageId)
+        if (isRequestedPage)
             framePtr = newFramePtr;
 
-        segment->frames[segmentOffset] = frameId;
+        segment->frames[pageSlot].store(frameId, std::memory_order_release);
     }
 
     return framePtr;
@@ -123,32 +138,28 @@ Pages::Frame* StorageManager::GetFrame(
     const page_id_t pageId,
     const CoreEngine::StorageTypes::Table *table
 ){
-    MultiThreading::ReaderGuard lock(&this->tableMutex);
-
-    if (fileKey.databaseId >= this->_pageTable.Size())
-        return this->HandlePageCacheMiss(fileKey, pageId, table, lock);
-
-    auto* dbTable = this->_pageTable[fileKey.databaseId];
-    if (dbTable == nullptr)
-        return this->HandlePageCacheMiss(fileKey, pageId, table, lock);
-
-    auto& [segments] = dbTable->files[static_cast<size_t>(fileKey.type)];
-
-    const auto segmentId = pageId / SEGMENT_SIZE;
-    const auto offset = pageId % SEGMENT_SIZE;
-
-    if (segmentId >= segments.Size())
-        return this->HandlePageCacheMiss(fileKey, pageId, table, lock);
-
-    const auto* segment = segments[segmentId];
+    auto* segment = this->GetSegmentNoLock(fileKey, pageId);
     if (segment == nullptr)
-        return this->HandlePageCacheMiss(fileKey, pageId, table, lock);
+        return this->HandlePageCacheMiss(fileKey, pageId, table);
 
-    const auto frameId = segment->frames[offset];
+    auto frameId = segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire);
+
     if (frameId == INVALID_FRAME)
-        return this->HandlePageCacheMiss(fileKey, pageId, table, lock);
+        return this->HandlePageCacheMiss(fileKey, pageId, table);
 
     auto* frame = _memoryManager->GetFrame(frameId);
+
+    if (!frame->TryPin())
+        return this->HandlePageCacheMiss(fileKey, pageId, table);
+
+    if (frame->fileKey != fileKey
+        || frame->Header()->pageId != pageId
+        || segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire) != frameId
+    ){
+        frame->Unpin();
+        return this->HandlePageCacheMiss(fileKey, pageId, table);
+    }
+
     frame->hasSecondChance = true;
     return frame;
 }
@@ -305,7 +316,7 @@ Pages::Frame* StorageManager::CreateFrame(
     framePtr->fileKey = fileKey;
     framePtr->isDirty = true;
     framePtr->hasSecondChance = false;
-    framePtr->pinCount.store(0);
+    framePtr->pinCount.store(1);   // producer pins the page it hands back
     framePtr->priority.store(Constants::PagePriority::LOW);
     framePtr->Header()->pageId = pageId;
 
@@ -314,36 +325,57 @@ Pages::Frame* StorageManager::CreateFrame(
     return framePtr;
 }
 
-void StorageManager::EnsureDatabaseTableExistsNoLock(const FileKey fileKey){
-    if (this->_pageTable.Size() < fileKey.databaseId + 1)
-        this->_pageTable.Resize(fileKey.databaseId + 1);
+Segment* StorageManager::GetSegmentNoLock(FileKey fileKey, const page_id_t pageId) const{
+        if (fileKey.databaseId >= MAX_DATABASES)
+            return nullptr;
 
-    if (this->_pageTable[fileKey.databaseId] == nullptr){
-        auto* databaseTable = this->_allocator.Allocate<DatabaseTable>();
-        this->_pageTable[fileKey.databaseId] = databaseTable;
-        databaseTable->files[0].segments.SetAllocator(&this->_allocator);
-        databaseTable->files[1].segments.SetAllocator(&this->_allocator);
-    }
+        const auto* db = this->_pageTable[fileKey.databaseId].load(std::memory_order_acquire);
+        if (db == nullptr)
+            return nullptr;
+
+        const auto& directory = db->files[static_cast<size_t>(fileKey.type)];
+        auto* group = directory.groups[PageAddress::DirectorySlot(pageId)].load(std::memory_order_acquire);
+        if (group == nullptr)
+            return nullptr;
+
+        return group->segments[PageAddress::GroupSlot(pageId)].load(std::memory_order_acquire);
 }
 
-void StorageManager::EnsureSegmentExistsNoLock(const FileKey fileKey, const page_id_t pageId){
-    auto& [segments] = this->_pageTable[fileKey.databaseId]->files[static_cast<size_t>(fileKey.type)];
-    const auto segmentId = static_cast<Int>(pageId / SEGMENT_SIZE);
+void StorageManager::EnsureDatabaseTableExistsNoLock(const FileKey fileKey){
+    if (this->_pageTable[fileKey.databaseId].load(std::memory_order_relaxed) == nullptr)
+        this->_pageTable[fileKey.databaseId].store(
+            this->_allocator.Allocate<DatabaseTable>(),
+            std::memory_order_release
+        );
+}
 
-    if (segments.Size() < segmentId + 1)
-        segments.Resize(segmentId + 1);
+Segment* StorageManager::EnsureSegmentExistsNoLock(const FileKey fileKey, const page_id_t pageId) const{
+    auto& directory = this->_pageTable[fileKey.databaseId].load(std::memory_order_relaxed)
+                                   ->files[static_cast<size_t>(fileKey.type)];
 
-    if (segments[segmentId] == nullptr)
-        segments[segmentId] = this->_allocator.Allocate<Segment>();
+    auto& groupSlot = directory.groups[PageAddress::DirectorySlot(pageId)];
+    auto* group = groupSlot.load(std::memory_order_relaxed);
+    if (group == nullptr){
+        group = this->_allocator.Allocate<SegmentGroup>();
+        groupSlot.store(group, std::memory_order_release);
+    }
+
+    auto& segmentSlot = group->segments[PageAddress::GroupSlot(pageId)];
+    auto* segment = segmentSlot.load(std::memory_order_relaxed);
+    if (segment == nullptr){
+        segment = this->_allocator.Allocate<Segment>();
+        segmentSlot.store(segment, std::memory_order_release);
+    }
+
+    return segment;
 }
 
 Pages::Frame* StorageManager::HandlePageCacheMiss(
     const FileKey fileKey,
     const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table* table,
-    MultiThreading::ReaderGuard& readGuard
+    const CoreEngine::StorageTypes::Table* table
 ){
-    MultiThreading::WriterGuard::Promote(&this->tableMutex, readGuard);
+    MultiThreading::WriterGuard guard(&this->tableMutex);
     this->EnsureDatabaseTableExistsNoLock(fileKey);
     this->EnsureSegmentExistsNoLock(fileKey, pageId);
 
@@ -400,8 +432,7 @@ Pages::GlobalAllocationPageView StorageManager::GetGlobalAllocationMapPage(const
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
 void StorageManager::CacheFrameToPageTableNoLock(FileKey key, const page_id_t pageId, const Pages::FrameId frameId){
-    const auto segmentId = pageId / SEGMENT_SIZE;
-    const auto offset = pageId % SEGMENT_SIZE;
-    this->_pageTable[key.databaseId]->files[static_cast<size_t>(key.type)].segments[segmentId]->frames[offset] = frameId;
+    Segment* segment = this->GetSegmentNoLock(key, pageId);   // exists: caller ran EnsureSegmentExistsNoLock
+    segment->frames[PageAddress::PageSlot(pageId)].store(frameId, std::memory_order_release);
 }
 } // namespace Storage
