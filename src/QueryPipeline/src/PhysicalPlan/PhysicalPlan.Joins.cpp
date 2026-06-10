@@ -34,6 +34,16 @@ namespace QueryPipeline::PhysicalPlan {
         // result.rows.Push(outerCopy);
     }
 
+    void VectorBatch::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){
+        this->_columns = static_cast<CoreEngine::DataVector**>(
+            allocator->AllocateRaw(sizeof(CoreEngine::DataVector*)*numberOfColumns)
+        );
+    }
+
+    void VectorBatch::SetColumn(CoreEngine::DataVector* columnData, const Int columnIndex) const{
+        this->_columns[columnIndex] = columnData;
+    }
+
     ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
         CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult

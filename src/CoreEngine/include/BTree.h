@@ -197,7 +197,7 @@ namespace Indexing{
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
-        void UpdatePfsPage(const Pages::IndexPageView& node)const;
+        void UpdatePfsPage(const Pages::IndexPageView& page)const;
 
     public:
         explicit BTree(

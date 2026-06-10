@@ -46,33 +46,32 @@ namespace Storage{
     constexpr size_t MAX_OPEN_FILES = 2;
 
     struct File{
-        file_descriptor_t fd;
+        DataTypes::StringView _filename;
+        file_descriptor_t _fd;
 
-        explicit File(file_descriptor_t fd);
-        [[nodiscard]] Int Read(void* data, size_t size, size_t offSet) const;
-        Int Write(const void* data, size_t size, size_t offSet) const;
-        void Flush() const;
+        explicit File(const DataTypes::StringView& filename, file_descriptor_t fd);
+        [[nodiscard]] static Int Read(file_descriptor_t fd, void* data, size_t size, size_t offSet);
+        [[nodiscard]] static Int Write(file_descriptor_t fd, const void* data, size_t size, size_t offSet);
+        static void Flush(file_descriptor_t fd);
     };
 
     class FileManager final {
-        Dictionary<FileKey, file_descriptor_t> fileTable;
+        Dictionary<FileKey, File> fileTable;
         mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
 
         static constexpr Int DIRECTORY_SIZE = 512;
-        protected:
-            file_descriptor_t OpenFile(FileKey key, const DataTypes::StringView& fileName);
-            // void RemoveFile();
-        
+
         public:
             explicit FileManager();
             FileManager(const FileManager& other) = delete;
             ~FileManager();
             void CreateFile(
                 FileKey key,
-                const DataTypes::StringView& fileName,
+                const DataTypes::StringView& filename,
                 const DataTypes::StringView& extension
             );
-            [[nodiscard]] File GetFile(FileKey key, const DataTypes::StringView& fileName);
+            void OpenFile(FileKey key, const DataTypes::StringView& filename);
+            [[nodiscard]] file_descriptor_t GetFile(FileKey key);
             void CloseFile(FileKey key);
 
             [[nodiscard]] static bool FileExists(const DataTypes::StringView& fileName);

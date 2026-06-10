@@ -26,11 +26,14 @@ namespace CoreEngine {
 
         this->CreateKeys();
 
+        Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
+        Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
+
         if (!this->VersionDatabaseExists(dbName.ToView()))
             CoreEngine::CreateDatabase(Constants::VERSION_DATABASE_ID, dbName);
 
         this->lastUsedPageId = INVALID_PAGE_ID;
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey, this->systemFilenameView);
+        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
         this->header = *headerPage.GetDatabaseHeaderPtr();
     }
 
@@ -91,10 +94,7 @@ namespace CoreEngine {
     }
 
     void VersionDatabase::WriteHeaderToFile() const{
-        auto headerPage = Storage::StorageManager::Get().GetHeaderPage(
-            this->systemFileKey,
-            this->systemFilenameView
-        );
+        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
         headerPage.SetDatabaseHeader(this->header);
     }
 
@@ -108,7 +108,6 @@ namespace CoreEngine {
 
             auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
                 this->systemFileKey,
-                this->systemFilenameView,
                 this->header.lastGamPageId
             );
 
@@ -117,7 +116,6 @@ namespace CoreEngine {
 
                 gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(
                     this->systemFileKey,
-                    this->systemFilenameView,
                     nextGamPageId
                 );
 
@@ -142,7 +140,6 @@ namespace CoreEngine {
             if (pfsPageId > this->header.lastPageFreeSpacePageId) {
                 Storage::StorageManager::Get().CreatePageFreeSpacePage(
                     this->systemFileKey,
-                    this->systemFilenameView,
                     pfsPageId
                 );
                 this->header.lastPageFreeSpacePageId = pfsPageId;
@@ -169,7 +166,6 @@ namespace CoreEngine {
 
         auto lastUsedPage = Storage::StorageManager::Get().GetPage(
             this->dataFileKey,
-            this->filenameView,
             pageId,
             table
         );
@@ -196,14 +192,13 @@ namespace CoreEngine {
         for (page_id_t pageId = newPageId; pageId < newPageId + Constants::EXTENT_SIZE; pageId++){
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                 this->systemFileKey,
-                this->systemFilenameView,
-                pageId);
+                pageId
+            );
 
             MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
 
             auto undoPage = Storage::StorageManager::Get().CreatePage(
                 this->dataFileKey,
-                this->filenameView,
                 nullptr,
                 pageId
             );
@@ -213,7 +208,6 @@ namespace CoreEngine {
 
         return Storage::StorageManager::Get().GetPage(
             this->dataFileKey,
-            this->filenameView,
             newPageId,
             nullptr
         );
@@ -226,8 +220,8 @@ namespace CoreEngine {
     ) {
         const auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
             this->systemFileKey,
-            this->systemFilenameView,
-            this->header.lastGamPageId);
+            this->header.lastGamPageId
+        );
 
         auto cachedPage = this->TryGetLastUndoPage(table, size);
         if (cachedPage.IsValid())
@@ -241,8 +235,8 @@ namespace CoreEngine {
                     const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
                     const auto pageFreeSpace = Storage::StorageManager::Get().GetPageFreeSpacePage(
                         this->systemFileKey,
-                        this->systemFilenameView,
-                        correspondingPfsPageId);
+                        correspondingPfsPageId
+                    );
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpace.Latch());
 
@@ -254,7 +248,6 @@ namespace CoreEngine {
 
                 auto undoPage = Storage::StorageManager::Get().GetPage(
                     this->dataFileKey,
-                    this->filenameView,
                     pageId,
                     table
                 );
@@ -305,7 +298,6 @@ namespace CoreEngine {
         {
             const auto page = Storage::StorageManager::Get().GetPage(
                 this->dataFileKey,
-                this->filenameView,
                 rowHeader._oldVersionPageId,
                 table
             );
@@ -319,7 +311,6 @@ namespace CoreEngine {
     std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
         const auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
             this->systemFileKey,
-            this->systemFilenameView,
             this->header.lastGamPageId
         );
         return gamPage.GetAllocatedExtents(startingExtentId);
@@ -339,7 +330,6 @@ namespace CoreEngine {
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
                 auto pfsPage = Database::GetAssociatedPfsPage(
                     this->systemFileKey,
-                    this->systemFilenameView,
                     pageId
                 );
 
@@ -352,7 +342,6 @@ namespace CoreEngine {
 
                 auto page = storageManager.GetPage(
                     this->dataFileKey,
-                    this->filenameView,
                     pageId,
                     nullptr
                 );
@@ -384,7 +373,6 @@ namespace CoreEngine {
             if (isExtentEmpty) {
                 auto gamPage = storageManager.GetGlobalAllocationMapPage(
                     this->systemFileKey,
-                    this->systemFilenameView,
                     this->header.lastGamPageId
                 );
 

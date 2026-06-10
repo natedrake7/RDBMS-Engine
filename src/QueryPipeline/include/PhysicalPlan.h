@@ -50,7 +50,7 @@ namespace QueryPipeline::PhysicalPlan {
             : _columns(nullptr), _numberOfColumns(0), _numberOfRows(0) {}
 
         void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
-        void SetColumn(CoreEngine::DataVector* columnData, Int column) const;
+        void SetColumn(CoreEngine::DataVector* columnData, Int columnIndex) const;
     };
 
     struct ExecutionResult {
@@ -78,7 +78,6 @@ namespace QueryPipeline::PhysicalPlan {
         ExecutionResult& operator=(ExecutionResult&& other) noexcept;
 
         ~ExecutionResult();
-
         [[nodiscard]] bool IsOk() const;
     };
 
@@ -314,8 +313,13 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<Headers::ColumnHeader> columnHeaders;
         PlanNode* child;
 
+        inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
+        inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
+
         [[nodiscard]] inline ExecutionResult ExecuteStatement(CoreEngine::ExecutionContext& context) const;
         [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(const CoreEngine::ExecutionContext& context) const;
+
+
     public:
         PhysicalProject(
             PlanNode* child,

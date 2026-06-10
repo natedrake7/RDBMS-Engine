@@ -18,12 +18,13 @@ namespace Pages{
             IndexPageView();
             explicit IndexPageView(Frame* framePtr);
 
-
             IndexPageView& operator=(const IndexPageView& other) = delete;
             IndexPageView(const IndexPageView& other) = delete;
         
             IndexPageView(IndexPageView&& other) noexcept;
             IndexPageView& operator=(IndexPageView&& other) noexcept;
+
+            IndexPageAdditionalHeader* GetAdditionalHeader() const;
 
             void SetTreeType(Constants::TreeType treeType) const;
             void SetTreeId(page_id_t treeId) const;

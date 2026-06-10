@@ -36,7 +36,6 @@ namespace Pages{
         page_size_t bytesLeft;
 
         PageHeader();
-        ~PageHeader();
     };
 
     class PageView{
@@ -44,7 +43,6 @@ namespace Pages{
         Frame* _frame;
         UnsignedSmallInt initialOffset;
 
-        void SetFileName(const DataTypes::StringView& otherFilename) const;
         void SetPageId(page_id_t pageId) const;
 
         [[nodiscard]] page_offset_t NewInsertOffset() const;
@@ -149,10 +147,12 @@ namespace Pages{
             Int columnIndex
         );
 
-        const object_t* GetColumnAt(
-            const CoreEngine::StorageTypes::RID* row,
-            Int columnIndex
-        ) const;
+        const object_t* GetColumnAt(Int rowIndex, Int columnIndex) const;
+
+        // Same as the above, but also reports the stored byte length (rowEntry.Size()).
+        // Required for variable-length columns (Decimal/String/Json). Returns nullptr
+        // and outSize == 0 when the column value is NULL.
+        const object_t* GetColumnAt(Int rowIndex, Int columnIndex, UnsignedSmallInt& outSize) const;
 
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
     };

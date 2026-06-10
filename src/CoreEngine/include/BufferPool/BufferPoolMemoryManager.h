@@ -1,26 +1,22 @@
 ﻿#pragma once
-#include <atomic>
-
-#include "../DatabaseConstants.h"
-
-namespace Pages
-{
-    struct Frame;
-}
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "../Pages/Additional/Frame.h"
 
 namespace CoreEngine{
     class BufferPoolMemoryManager{
         object_t* _data;
         Pages::Frame* _framesData;
+        Pages::FrameId* _freeStack;
+        Int _freeTopId;
 
         Int _capacity;
-        std::atomic<Int> _size;
 
         explicit BufferPoolMemoryManager();
         ~BufferPoolMemoryManager();
 
         void AllocatePagePool();
         void AllocateFramePool();
+        void AllocateFreeStack();
 
         public:
             static BufferPoolMemoryManager& Get();
@@ -29,15 +25,16 @@ namespace CoreEngine{
 
             [[nodiscard]] Int Capacity() const;
             [[nodiscard]] object_t* Data() const;
-
-            [[nodiscard]] bool IsFull() const;
+            [[nodiscard]] object_t* Data(UnsignedBigInt offset) const;
 
             object_t* CopyToMemory(const char* buffer, UnsignedBigInt offset, page_offset_t bufferOffset) const;
 
-            [[nodiscard]] Pages::Frame* AllocateFrame(Int index);
+            [[nodiscard]] Pages::Frame* AllocateFrame(Int index) const;
 
-            void EvictFrame();
             [[nodiscard]] Pages::Frame* GetFrame(Int index) const;
+
+            [[nodiscard]] bool PopStackNoLock(Pages::FrameId& frameId);
+            void PushStackNoLock(Pages::FrameId frameId);
     };
 
 }

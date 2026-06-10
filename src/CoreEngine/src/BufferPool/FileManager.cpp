@@ -21,15 +21,14 @@
 #endif
 
 namespace Storage{
-    File::File(const file_descriptor_t fd)
-        : fd(fd){}
+    File::File(const DataTypes::StringView& filename, const file_descriptor_t fd)
+        : _filename(filename), _fd(fd){}
 
-    Int File::Read(void* data, const size_t size, const size_t offSet) const{
-        lseek(this->fd, offSet, SEEK_SET);
-        const auto result = ::read(this->fd, data, size);
+    Int File::Read(const file_descriptor_t fd, void* data, const size_t size, const size_t offSet){
+        lseek(fd, offSet, SEEK_SET);
+        const auto result = ::read(fd, data, size);
 
-        if (result < 0)
-        {
+        if (result < 0){
             perror("File::Read: Failed to read from file");
             throw std::runtime_error("File::Read: Failed to read from file");
         }
@@ -37,9 +36,9 @@ namespace Storage{
         return result;
     }
 
-    Int File::Write(const void* data, const size_t size, const size_t offSet) const{
-        lseek(this->fd, offSet, SEEK_SET);
-        const auto result = ::write(this->fd, data, size);
+    Int File::Write(const file_descriptor_t fd, const void* data, const size_t size, const size_t offSet){
+        lseek(fd, offSet, SEEK_SET);
+        const auto result = ::write(fd, data, size);
 
         if (result != size)
             throw std::runtime_error("File::Write: Failed to write to file");
@@ -47,31 +46,30 @@ namespace Storage{
         return result;
     }
 
-    void File::Flush() const{ ::flush(this->fd); }
+    void File::Flush(const file_descriptor_t fd){ ::flush(fd); }
 
-    file_descriptor_t FileManager::OpenFile(const FileKey key, const DataTypes::StringView& fileName){
+    void FileManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){
         char path[DIRECTORY_SIZE];
-        std::snprintf(path, sizeof(path), "%.*s", fileName.Size(), fileName.Data());
+        std::snprintf(path, sizeof(path), "%.*s", filename.Size(), filename.Data());
 
         const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
         if (fd < 0)
             throw std::runtime_error("FileManager::Open: File could not be opened");
 
         MultiThreading::WriterGuard lock(&this->tableMutex);
-        this->fileTable.Add(key, fd);
-        return fd;
+        this->fileTable.Add(key, File(filename, fd));
     }
 
     FileManager::FileManager() = default;
 
     FileManager::~FileManager(){
-        for(const auto file : this->fileTable | std::views::values)
-            ::close(file);
+        for(const auto& file : this->fileTable | std::views::values)
+            ::close(file._fd);
     }
 
     void FileManager::CreateFile(
         const FileKey key,
-        const DataTypes::StringView& fileName,
+        const DataTypes::StringView& filename,
         const DataTypes::StringView& extension
     ){
         {
@@ -83,7 +81,7 @@ namespace Storage{
         char path[DIRECTORY_SIZE];
         std::snprintf(
             path, sizeof(path), "%.*s%.*s",
-            fileName.Size(), fileName.Data(),
+            filename.Size(), filename.Data(),
             extension.Size(), extension.Data()
         );
 
@@ -117,30 +115,19 @@ namespace Storage{
         if (this->fileTable.Contains(key))
             return;
 
-        this->fileTable.Add(key, fd);
+        this->fileTable.Add(key, File(filename, fd));
     }
 
-    File FileManager::GetFile(
-        const FileKey key,
-        const DataTypes::StringView& fileName
-    ){
-        {
-            MultiThreading::ReaderGuard lock(&this->tableMutex);
-
-            Int fd = 0;
-            if (this->fileTable.TryGetValue(key, fd))
-                return File(fd);
-        }
-
-        return File(this->OpenFile(key, fileName));
+    file_descriptor_t FileManager::GetFile(const FileKey key){
+        MultiThreading::ReaderGuard lock(&this->tableMutex);
+        return this->fileTable.Get(key)._fd;
     }
+
 
     void FileManager::CloseFile(const FileKey key){
         MultiThreading::WriterGuard lock(&this->tableMutex);
-
-        file_descriptor_t fd = 0;
-        if (!this->fileTable.TryGetValue(key, fd)) return;
-        ::close(fd);
+        const auto* file = &this->fileTable.Get(key);
+        ::close(file->_fd);
         this->fileTable.Remove(key);
     }
 

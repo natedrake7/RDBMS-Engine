@@ -399,7 +399,6 @@ namespace Indexing
     Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
         return Storage::StorageManager::Get().GetIndexPage(
             this->database->GetDataFileKey(),
-            this->database->GetFileName(),
             pageId,
             this->table
         );
@@ -925,17 +924,16 @@ namespace Indexing
         tableStatistics.averageRowSize = static_cast<Int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
-    void BTree::UpdatePfsPage(const Pages::IndexPageView& node) const{
+    void BTree::UpdatePfsPage(const Pages::IndexPageView& page) const{
         const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
             this->database->GetSystemFileKey(),
-            this->database->GetSystemFilename(),
-            node.PageId()
+            page.PageId()
         );
 
         MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage.Latch());
-        MultiThreading::WriterGuard pageLock(&node.Latch());
+        MultiThreading::WriterGuard pageLock(&page.Latch());
 
-        pageFreeSpacePage.SetPageMetaData(&node);
+        pageFreeSpacePage.SetPageMetaData(&page);
     }
 
     BTree::BTree(

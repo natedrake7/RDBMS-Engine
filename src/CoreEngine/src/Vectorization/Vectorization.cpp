@@ -11,9 +11,9 @@ namespace CoreEngine{
         this->isIdentity = false;
     }
 
-    DataVector::DataVector()
+    DataVector::DataVector(const DataType type)
         :   _data{nullptr}, _validity{nullptr},
-            _count(0), _type(DataType::Null),
+            _count(0), _type(type),
             _kind(DataVectorKind::Flat) {}
 
     // void VectorBatch::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){

@@ -9,10 +9,7 @@ namespace Pages{
         this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
-        this->headerPtr = nullptr;
         this->type = Constants::PageType::DATA;
-        this->additionalHeader.indexHeaderPtr = nullptr;
-        this->additionalHeader.allocationHeaderPtr = nullptr;
     }
 
     Frame::Frame(object_t* data, const CoreEngine::StorageTypes::Table* table){
@@ -23,10 +20,7 @@ namespace Pages{
         this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
-        this->headerPtr = reinterpret_cast<PageHeader*>(data);
         this->type = Constants::PageType::DATA;
-        this->additionalHeader.indexHeaderPtr = nullptr;
-        this->additionalHeader.allocationHeaderPtr = nullptr;
     }
 
     Frame& Frame::operator=(const Frame& other){
@@ -41,11 +35,12 @@ namespace Pages{
         this->hasSecondChance = other.hasSecondChance;
         this->logSequenceNumber = other.logSequenceNumber;
         this->type = other.type;
-        this->headerPtr = other.headerPtr;
-        this->additionalHeader.indexHeaderPtr = other.additionalHeader.indexHeaderPtr;
-        this->additionalHeader.allocationHeaderPtr = other.additionalHeader.allocationHeaderPtr;
 
         return *this;
+    }
+
+    PageHeader* Frame::Header() const{
+        return reinterpret_cast<PageHeader*>(this->_data);
     }
 
     bool Frame::IsValid() const{

@@ -4,25 +4,25 @@
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
-        const Snapshot& snapshot,
+        Snapshot& snapshot,
         const Int batchSize,
         const Dictionary<DataTypes::String, Variable>& variables,
+        const QueryPipeline::PipelineConstants::ExecutionMode mode,
         const Int initialAllocatorSize
-    )   : snapshot(snapshot),
-          allocator(initialAllocatorSize),
-          batchSize(batchSize){
-        this->variables = &variables;
-    }
+    )   :   snapshot(std::move(snapshot)),
+            allocator(initialAllocatorSize),
+            variables(&variables),
+            batchSize(batchSize), mode(mode){}
 
     ExecutionContext::ExecutionContext()
-    : variables(nullptr), batchSize(0){}
+    : variables(nullptr), batchSize(0), mode(QueryPipeline::PipelineConstants::ExecutionMode::Row){}
 
     ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept
-        : snapshot(std::move(other.snapshot)),
-          allocator(std::move(other.allocator)),
-          variables(other.variables),
-          batchSize(other.batchSize)
-    {
+        :   snapshot(std::move(other.snapshot)),
+            allocator(std::move(other.allocator)),
+            variables(other.variables),
+            batchSize(other.batchSize),
+            mode(other.mode){
         other.variables = nullptr;
     }
 
@@ -35,6 +35,7 @@ namespace CoreEngine{
         this->batchSize = other.batchSize;
         this->variables = other.variables;
         this->allocator = std::move(other.allocator);
+        this->mode = other.mode;
 
         other.variables = nullptr;
 
@@ -85,6 +86,10 @@ namespace CoreEngine{
 
     const StorageTypes::RID* ExecutionContext::GetRid(const UnsignedInt scanHandleIndex, const UnsignedInt ridIndex) const{
         return &this->scanContext.scanHandles[scanHandleIndex].rids[ridIndex];
+    }
+
+    QueryPipeline::PipelineConstants::ExecutionMode ExecutionContext::GetMode() const{
+        return this->mode;
     }
 
     void ExecutionContext::ResetAllocator() const{

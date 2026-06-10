@@ -21,8 +21,9 @@ namespace Pages{
         );
         this->InsertNewSlot(newSlot);
 
-        this->_frame->headerPtr->size++;
-        this->_frame->headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        auto* headerPtr = this->_frame->Header();
+        headerPtr->size++;
+        headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -30,18 +31,19 @@ namespace Pages{
         const ::Memory::IAllocator* allocator,
         page_offset_t& offSet
     ) const {
+        const auto* additionalHeader = this->GetAdditionalHeader();
         return DataTypes::Indexing::Key::Deserialize(
             allocator,
             this->_frame->_data,
             offSet,
-            this->_frame->additionalHeader.indexHeaderPtr->SubKeys(),
-            this->_frame->additionalHeader.indexHeaderPtr->keyTypes
+            additionalHeader->SubKeys(),
+            additionalHeader->keyTypes
         );
     }
 
     key_size_t IndexPageView::GetKeySize(const page_offset_t offSet) const{
         key_size_t size = 0;
-        for (int i = 0; i < this->_frame->additionalHeader.indexHeaderPtr->SubKeys(); i++){
+        for (Int i = 0; i < this->GetAdditionalHeader()->SubKeys(); i++){
             const auto keyDataSize = *reinterpret_cast<key_size_t*>(this->_frame->_data + offSet + size);
             size += keyDataSize + sizeof(key_size_t);
         }
@@ -74,60 +76,68 @@ namespace Pages{
         return *this;
     }
 
+    IndexPageAdditionalHeader* IndexPageView::GetAdditionalHeader() const{
+        return reinterpret_cast<IndexPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+    }
+
     void IndexPageView::SetTreeType(const Constants::TreeType treeType) const{
-        this->_frame->additionalHeader.indexHeaderPtr->SetTreeType(treeType);
+        this->GetAdditionalHeader()->SetTreeType(treeType);
     }
 
     void IndexPageView::SetTreeId(const page_id_t treeId) const{
-        this->_frame->additionalHeader.indexHeaderPtr->treeId = treeId;
+        this->GetAdditionalHeader()->treeId = treeId;
     }
 
     void IndexPageView::SetKeyTypes(const DataStructures::StaticArray<DataType, 10>& keyTypes) const{
+        auto* additionalHeader = this->GetAdditionalHeader();
         for (int i = 0;i < keyTypes.Size(); i++)
-            this->_frame->additionalHeader.indexHeaderPtr->keyTypes[i] = keyTypes[i];
+            additionalHeader->keyTypes[i] = keyTypes[i];
     }
 
     bool IndexPageView::IsEmpty() const{
-        return this->_frame->headerPtr->size == 0;
+        return this->_frame->Header()->size == 0;
         // return this->framePtr->additionalHeader.indexHeaderPtr->IsEmpty();
     }
 
     bool IndexPageView::IsLeaf() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->IsLeaf();
+        return this->GetAdditionalHeader()->IsLeaf();
     }
 
     bool IndexPageView::IsRoot() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->IsRoot();
+        return this->GetAdditionalHeader()->IsRoot();
     }
 
     UnsignedTinyInt IndexPageView::SubKeys() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->SubKeys();
+        return this->GetAdditionalHeader()->SubKeys();
     }
 
     UnsignedSmallInt IndexPageView::Keys() const{
         return this->IsLeaf()
-                   ? this->_frame->headerPtr->size
-                   : this->_frame->headerPtr->size - 1;
+                   ? this->_frame->Header()->size
+                   : this->_frame->Header()->size - 1;
     }
 
     void IndexPageView::SetIsLeaf(const bool isLeaf) const{
-        this->_frame->additionalHeader.indexHeaderPtr->SetIsLeaf(isLeaf);
-        this->_frame->additionalHeader.indexHeaderPtr->SetIsEmpty(false);
+        auto* additionalHeader = this->GetAdditionalHeader();
+        additionalHeader->SetIsLeaf(isLeaf);
+        additionalHeader->SetIsEmpty(false);
         this->_frame->isDirty = true;
     }
 
     void IndexPageView::SetIsRoot(const bool isRoot) const{
-        this->_frame->additionalHeader.indexHeaderPtr->SetIsRoot(isRoot);
-        this->_frame->additionalHeader.indexHeaderPtr->SetIsEmpty(false);
+        auto* additionalHeader = this->GetAdditionalHeader();
+        additionalHeader->SetIsRoot(isRoot);
+        additionalHeader->SetIsEmpty(false);
         this->_frame->isDirty = true;
     }
 
     void IndexPageView::SetSubKeys(const UnsignedTinyInt numberOfKeys) const{
-        this->_frame->additionalHeader.indexHeaderPtr->SetNumberOfSubKeys(numberOfKeys);
+        this->GetAdditionalHeader()->SetNumberOfSubKeys(numberOfKeys);
     }
 
     void IndexPageView::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key) const{
-        if (this->_frame->headerPtr->size == 0){
+        auto* headerPtr = this->_frame->Header();
+        if (headerPtr->size == 0){
             this->InsertFirstChild(child);
             return;
         }
@@ -145,9 +155,9 @@ namespace Pages{
         );
         this->InsertNewSlot(newSlot);
 
-        this->_frame->headerPtr->size++;
+        headerPtr->size++;
         this->_frame->isDirty = true;
-        this->_frame->headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
     }
 
     void IndexPageView::InsertChild(
@@ -168,8 +178,9 @@ namespace Pages{
 
         this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->size);
 
-        this->_frame->headerPtr->bytesLeft -= (sizeof(page_id_t) + key->size + SlotDirectory::SIZE);
-        this->_frame->headerPtr->size++;
+
+        this->_frame->Header()->bytesLeft -= (sizeof(page_id_t) + key->size + SlotDirectory::SIZE);
+        this->_frame->Header()->size++;
         this->_frame->isDirty = true;
     }
 
@@ -181,33 +192,33 @@ namespace Pages{
         const auto newSlot = SlotDirectory(nextOffset, 0, sizeof(page_id_t), 0, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
-        this->_frame->headerPtr->size++;
+        this->_frame->Header()->size++;
         this->_frame->isDirty = true;
-        this->_frame->headerPtr->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
     }
 
     void IndexPageView::SetLeftSibling(const page_id_t previousPage) const{
-        this->_frame->additionalHeader.indexHeaderPtr->previousNode = previousPage;
+        this->GetAdditionalHeader()->previousNode = previousPage;
     }
 
     void IndexPageView::SetRightSibling(const page_id_t nextPage) const{
-        this->_frame->additionalHeader.indexHeaderPtr->nextNode = nextPage;
+        this->GetAdditionalHeader()->nextNode = nextPage;
     }
 
     page_id_t IndexPageView::LeftSibling() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->previousNode;
+        return this->GetAdditionalHeader()->previousNode;
     }
 
     page_id_t IndexPageView::RightSibling() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->nextNode;
+        return this->GetAdditionalHeader()->nextNode;
     }
 
     bool IndexPageView::HasLeftSibling() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->previousNode != INVALID_PAGE_ID;
+        return this->GetAdditionalHeader()->previousNode != INVALID_PAGE_ID;
     }
 
     bool IndexPageView::HasRightSibling() const{
-        return this->_frame->additionalHeader.indexHeaderPtr->nextNode != INVALID_PAGE_ID;
+        return this->GetAdditionalHeader()->nextNode != INVALID_PAGE_ID;
     }
 
     void IndexPageView::InsertTuple(const IndexInsertTuple& tuple) const{
@@ -226,8 +237,9 @@ namespace Pages{
         );
         this->InsertNewSlot(newSlot);
 
-        this->_frame->headerPtr->size++;
-        this->_frame->headerPtr->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
+        auto* headerPtr = this->_frame->Header();
+        headerPtr->size++;
+        headerPtr->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -247,8 +259,9 @@ namespace Pages{
 
         this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.size);
 
-        this->_frame->headerPtr->bytesLeft -= (size + tuple.key.size + SlotDirectory::SIZE);
-        this->_frame->headerPtr->size++;
+        auto* headerPtr = this->_frame->Header();
+        headerPtr->bytesLeft -= (size + tuple.key.size + SlotDirectory::SIZE);
+        headerPtr->size++;
         this->_frame->isDirty = true;
     }
 
@@ -261,16 +274,17 @@ namespace Pages{
     Comparators::Comparator IndexPageView::ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto offSet = slot.Offset();
+        const auto* additionalHeader = this->GetAdditionalHeader();
 
         const auto numOfKeys = std::min(
             static_cast<UnsignedTinyInt>(key.subKeys.Size()),
-            this->_frame->additionalHeader.indexHeaderPtr->SubKeys()
+            additionalHeader->SubKeys()
         );
 
         auto* dataPtr = this->_frame->_data + offSet;
 
         for (int i = 0; i < numOfKeys; i++){
-            const auto type = this->_frame->additionalHeader.indexHeaderPtr->keyTypes[i];
+            const auto type = additionalHeader->keyTypes[i];
 
             const auto size = *reinterpret_cast<key_size_t*>(dataPtr);
             auto* data = dataPtr + sizeof(key_size_t);
@@ -355,12 +369,12 @@ namespace Pages{
     ) const{
         if (this->IsLeaf()){
             os << "Rows: ";
-            for (int i = 0;i < this->_frame->headerPtr->size; i++){
+            for (int i = 0;i < this->_frame->Header()->size; i++){
                 os << this->MaterializeRow(allocator, i) << " ";
             }
             os << std::endl;
             os << "Keys: ";
-            for (int i = 0;i < this->_frame->headerPtr->size; i++){
+            for (int i = 0;i < this->_frame->Header()->size; i++){
                 os << this->GetKeyByIndex(allocator, i).ToString(allocator) << " ";
             }
             os << std::endl;
@@ -368,13 +382,13 @@ namespace Pages{
         }
 
         os << "Children: ";
-        for (int i = 0;i < this->_frame->headerPtr->size; i++){
+        for (int i = 0;i < this->_frame->Header()->size; i++){
             const auto tuple = this->GetInternalNodeTuple(allocator, i);
             os << tuple.pageId << " ";
         }
         os << std::endl;
         os << "Keys: ";
-        for (int i = 0;i < this->_frame->headerPtr->size; i++){
+        for (int i = 0;i < this->_frame->Header()->size; i++){
             const auto tuple = this->GetInternalNodeTuple(allocator, i);
             os  << tuple.key.ToString(allocator) << " ";
         }

@@ -87,11 +87,9 @@ namespace Tests{
 
         auto* frameData = static_cast<object_t*>(allocator.AllocateRaw(Constants::PAGE_SIZE));
         auto frame = Pages::Frame(frameData, &table);
-        frame.additionalHeader.indexHeaderPtr = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frameData + Constants::PAGE_HEADER_SIZE);
-        frame.headerPtr = reinterpret_cast<Pages::PageHeader*>(frame._data);
-        frame.headerPtr->pageId = 0;
-        frame.headerPtr->size = 0;
-        frame.headerPtr->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
+        frame.Header()->pageId = 0;
+        frame.Header()->size = 0;
+        frame.Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
         Pages::IndexPageView page(&frame);
         page.SetSubKeys(1);
 

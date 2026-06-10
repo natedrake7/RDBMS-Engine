@@ -17,7 +17,7 @@ namespace DataTypes {
 
 
     class Guid {
-        std::array<UnsignedTinyInt, GUID_SIZE> _data;
+        UnsignedTinyInt _data[GUID_SIZE];
 
         static bool Validate(const char* str, Int size);
         static Guid Parse(const char* str, Int size);
@@ -28,9 +28,8 @@ namespace DataTypes {
         Guid();
         Guid(const unsigned char* data, Int size);
         explicit Guid(const std::array<UnsignedTinyInt, GUID_SIZE>& data);
-        ~Guid();
-        [[nodiscard]] std::array<UnsignedTinyInt, GUID_SIZE>& GetDataUnsafe();
-        [[nodiscard]] const std::array<UnsignedTinyInt, GUID_SIZE>& GetData() const;
+        [[nodiscard]] UnsignedTinyInt* GetDataUnsafe();
+        [[nodiscard]] const UnsignedTinyInt* GetData() const;
 
         [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] StringBuffer ToStringBuffer() const;
@@ -52,29 +51,28 @@ namespace DataTypes {
 
         [[nodiscard]] long double Interpolate() const;
 
-        constexpr static Int Size() { return GUID_SIZE; };
+        friend bool operator==(const Guid& guid1, const Guid& guid2);
+        friend bool operator!=(const Guid& guid1, const Guid& guid2);
+        friend bool operator<(const Guid& guid1, const Guid& guid2);
+        friend bool operator>(const Guid& guid1, const Guid& guid2);
+        friend bool operator<=(const Guid& guid1, const Guid& guid2);
+        friend bool operator>=(const Guid& guid1, const Guid& guid2);
     };
-
-    bool operator==(const Guid& guid1, const Guid& guid2);
-    bool operator!=(const Guid& guid1, const Guid& guid2);
-    bool operator<(const Guid& guid1, const Guid& guid2);
-    bool operator>(const Guid& guid1, const Guid& guid2);
-    bool operator<=(const Guid& guid1, const Guid& guid2);
-    bool operator>=(const Guid& guid1, const Guid& guid2);
 }
 
-template<>
-  struct std::hash<DataTypes::Guid> {
-    size_t operator()(const DataTypes::Guid& guid) const noexcept {
-      size_t result = 0;
+    template<>
+    struct std::hash<DataTypes::Guid> {
+        size_t operator()(const DataTypes::Guid& guid) const noexcept {
+            size_t result = 0;
 
-      if constexpr (requires { guid.GetData(); }) {
-        for (const auto byte : guid.GetData()) {
-          result ^= std::hash<UnsignedTinyInt>{}(byte)
-                    + 0x9e3779b97f4a7c15ULL + (result << 6) + (result >> 2);
+            if constexpr (requires { guid.GetData(); }) {
+                const auto* data = guid.GetData();
+                for (auto i = 0; i < DataTypes::GUID_SIZE; i++){
+                    result ^= std::hash<UnsignedTinyInt>{}(data[i])
+                        + 0x9e3779b97f4a7c15ULL + (result << 6) + (result >> 2);
+                }
+            }
+
+            return result;
         }
-      }
-
-      return result;
-    }
-  };
+    };

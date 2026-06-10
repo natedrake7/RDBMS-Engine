@@ -27,7 +27,7 @@ namespace QueryPipeline::PipelineConstants {
         CrossJoin = 3
     };
 
-    static constexpr ConstexprDictionary<DataTypes::StringView, JoinType, 4> JoinTypeDictionary{
+    static constexpr ConstexprDictionary JoinTypeDictionary{
         Pair(DataTypes::StringView("inner"), JoinType::Inner),
         Pair(DataTypes::StringView("left"), JoinType::Left),
         Pair(DataTypes::StringView("right"), JoinType::Right),
@@ -43,5 +43,12 @@ namespace QueryPipeline::PipelineConstants {
 
     static constexpr ConstexprHashSet<DataType, 2> ValidTableStringConversions{
         DataType::String,
+    };
+
+    constexpr Int VECTORIZATION_THRESHOLD = 128;
+
+    enum class ExecutionMode : UnsignedTinyInt{
+        Row = 0,
+        Vectorized = 1
     };
 }

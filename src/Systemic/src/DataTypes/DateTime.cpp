@@ -17,8 +17,6 @@ namespace DataTypes{
 		this->timeStamp = timestamp;
 	}
 
-	DateTime::~DateTime() = default;
-
 	int DateTime::GetYears() const{
 		const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
 

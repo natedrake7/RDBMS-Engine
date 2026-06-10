@@ -383,7 +383,7 @@ namespace Expressions{
     CoreEngine::SelectionVector* EvaluateFilterExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
-        CoreEngine::SelectionVector* selectionVector
+        const CoreEngine::SelectionVector* selectionVector
     );
 
     DataType GetExpressionReturnType(const Expression* expression);

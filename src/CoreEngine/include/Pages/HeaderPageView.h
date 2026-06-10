@@ -4,6 +4,10 @@
 
 namespace CoreEngine{
     struct DatabaseHeader;
+
+    namespace StorageTypes{
+        struct TableHeader;
+    }
 }
 
 namespace Pages{

@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <string>
-#include <vector>
-
 #include "InsertPayload.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
@@ -378,18 +376,30 @@ namespace CoreEngine::StorageTypes
             QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
-            void MaterializeColumnFromIndexPage(
+            template<typename T>
+            void MaterializeColumnFromPage(
                 const ExecutionContext& context,
                 const SelectionVector* sv,
-                void* __restrict__ _data,
-                Int dataSize,
+                object_t* __restrict__ _data,
                 column_index_t columnIndex
             )const;
+            template<typename T>
             void MaterializeColumnFromPage(
                 const ExecutionContext& context,
                 Int rangeEnd,
-                void* __restrict__ _data,
-                Int dataSize,
+                object_t* __restrict__ _data,
+                column_index_t columnIndex
+            )const;
+            void MaterializeStringFromPage(
+                const ExecutionContext& context,
+                const SelectionVector* sv,
+                object_t* __restrict__ _data,
+                column_index_t columnIndex
+            )const;
+            void MaterializeJsonFromPage(
+                const ExecutionContext& context,
+                const SelectionVector* sv,
+                object_t* __restrict__ _data,
                 column_index_t columnIndex
             )const;
         /** @} End of: Materialization Functions*/

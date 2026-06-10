@@ -95,7 +95,8 @@ namespace QueryPipeline{
     Parser::Parser() = default;
 
     QueryContext::QueryContext()
-        : status(this->_compileContext.GetAllocator()), hasMore(false){
+        :   status(this->_compileContext.GetAllocator()), hasMore(false),
+            _executionMode(PipelineConstants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
@@ -111,31 +112,28 @@ namespace QueryPipeline{
      QueryContext::QueryContext(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
+        this->_executionMode = PipelineConstants::ExecutionMode::Row;
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
-        // this->columns.SetAllocator(this->_context.GetAllocator());
-        // this->rows.SetAllocator(this->_context.GetAllocator());
     }
 
     QueryContext::QueryContext(QueryContext&& other) noexcept{
-         this->status = other.status;
-         this->hasMore = other.hasMore;
-         this->_scope = std::move(other._scope);
-         // this->columns = std::move(other.columns);
-         // this->rows = std::move(other.rows);
-         this->cursors = std::move(other.cursors);
+        this->status = other.status;
+        this->hasMore = other.hasMore;
+        this->_scope = std::move(other._scope);
+        this->_executionMode = other._executionMode;
+        this->cursors = std::move(other.cursors);
     }
 
     QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
-         if (this == &other) return *this;
+        if (this == &other) return *this;
 
-         this->status = other.status;
-         this->hasMore = other.hasMore;
-         this->_scope = std::move(other._scope);
-         // this->columns = std::move(other.columns);
-         // this->rows = std::move(other.rows);
-         this->cursors = std::move(other.cursors);
+        this->status = other.status;
+        this->hasMore = other.hasMore;
+        this->_scope = std::move(other._scope);
+        this->_executionMode = other._executionMode;
+        this->cursors = std::move(other.cursors);
 
-         return *this;
+        return *this;
     }
 
     void Parser::CreateStatements(
@@ -155,10 +153,8 @@ namespace QueryPipeline{
 
              Statements::Statement* statement = handler(query);
 
-            if (session == nullptr) {
-                // statement->CleanUp();
+            if (session == nullptr)
                 continue;
-            }
 
             statement->databaseId = session->databaseId;
             statement->sessionId = session->sessionId;
@@ -264,14 +260,18 @@ namespace QueryPipeline{
             if (queryContext.status.hasError)
                 break;
 
-            const auto snapshot = transactionManager.BeginTransaction(sessionId);
+            auto snapshot = transactionManager.BeginTransaction(sessionId);
 
             std::cout   << "Executing transaction: " << snapshot.transactionId
                         << " by thread: " << std::this_thread::get_id()
                         << std::endl;
 
-            //set batch size correctly
-            CoreEngine::ExecutionContext executionContext(snapshot, 10000, session->variables);
+            //TODO set batch size correctly
+            CoreEngine::ExecutionContext executionContext(
+                snapshot, 10000,
+                session->variables, queryContext._executionMode
+            );
+
             queryContext.cursors.Push(server.CreateCursor(
                 sessionId, queryContext._compileContext,
                 executionContext, physicalPlan

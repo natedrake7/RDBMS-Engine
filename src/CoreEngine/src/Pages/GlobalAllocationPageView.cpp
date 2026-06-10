@@ -61,7 +61,7 @@ namespace Pages{
 
             allocatedExtents++;
 
-            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->headerPtr->pageId) + extentId);
+            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId) + extentId);
         }
 
         return allocatedExtents;
@@ -90,7 +90,7 @@ namespace Pages{
             if (!this->GetBit(id))
                 continue;
 
-            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->headerPtr->pageId) + id);
+            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId) + id);
         }
 
         return allocatedExtents;

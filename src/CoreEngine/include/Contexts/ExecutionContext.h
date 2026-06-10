@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../DatabaseConstants.h"
+#include "../../../QueryPipeline/include/DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
@@ -93,13 +94,16 @@ namespace CoreEngine {
         const Dictionary<DataTypes::String, Variable>* variables;
         Int batchSize;
 
+        QueryPipeline::PipelineConstants::ExecutionMode mode;
+
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 
         public:
             ExecutionContext(
-                const Snapshot &snapshot,
+                Snapshot& snapshot,
                 Int batchSize,
                 const Dictionary<DataTypes::String, Variable>& variables,
+                QueryPipeline::PipelineConstants::ExecutionMode mode,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -123,6 +127,8 @@ namespace CoreEngine {
             const ScanHandle& GetScanHandle(UnsignedInt index) const;
 
             [[nodiscard]] const StorageTypes::RID* GetRid(UnsignedInt scanHandleIndex, UnsignedInt ridIndex) const;
+
+            QueryPipeline::PipelineConstants::ExecutionMode GetMode()const;
 
             void ResetAllocator()const;
             bool IsAllocatorEmpty()const;

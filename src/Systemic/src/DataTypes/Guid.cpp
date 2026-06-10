@@ -46,20 +46,20 @@ namespace DataTypes {
     }
 
     Guid::Guid() {
-        this->_data = {};
+        std::memset(this->_data, 0, GUID_SIZE);
     }
 
     Guid::Guid(const unsigned char *data, const Int size){
-        std::memcpy(this->_data.data(), data, size);
+        std::memcpy(this->_data, data, size);
     }
 
-    Guid::Guid(const std::array<UnsignedTinyInt, 16> &data) : _data(data){}
+    Guid::Guid(const std::array<UnsignedTinyInt, GUID_SIZE> &data){
+        std::memcpy(this->_data, data.data(), GUID_SIZE);
+    }
 
-    Guid::~Guid() = default;
+    UnsignedTinyInt* Guid::GetDataUnsafe(){ return this->_data; }
 
-    std::array<UnsignedTinyInt, GUID_SIZE>& Guid::GetDataUnsafe(){ return this->_data; }
-
-    const std::array<UnsignedTinyInt, GUID_SIZE> & Guid::GetData() const{ return this->_data; }
+    const UnsignedTinyInt* Guid::GetData() const{ return this->_data; }
 
     String Guid::ToString(const ::Memory::IAllocator* allocator) const {
         auto buffer = this->ToStringBuffer();
@@ -93,11 +93,11 @@ namespace DataTypes {
     bool Guid::Validate(const std::string_view& str) { return Guid::Validate(str.data(), static_cast<Int>(str.size())); }
     bool Guid::Validate(const char* str) { return Guid::Validate(str, static_cast<Int>(std::strlen(str)));}
 
-    bool operator==(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) == 0; }
+    bool operator==(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1._data, guid2._data, GUID_SIZE) == 0; }
 
     bool operator!=(const Guid &guid1, const Guid &guid2){ return !(guid1 == guid2); }
 
-    bool operator<(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1.GetData().data(), guid2.GetData().data(), GUID_SIZE) < 0; }
+    bool operator<(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1._data, guid2._data, GUID_SIZE) < 0; }
 
     bool operator>(const Guid &guid1, const Guid &guid2){ return guid2 < guid1; }
 

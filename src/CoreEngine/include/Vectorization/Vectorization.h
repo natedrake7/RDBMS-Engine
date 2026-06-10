@@ -36,6 +36,6 @@ namespace CoreEngine{
         DataType _type;
         DataVectorKind _kind;
 
-        DataVector();
+        explicit DataVector(DataType type);
     };
 }

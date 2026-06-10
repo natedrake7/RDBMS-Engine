@@ -59,11 +59,7 @@ namespace CoreEngine::StorageTypes {
         if (remainingBlockSize + Constants::OBJECT_METADATA_SIZE_T < pageSize){
             page.SetData(data + offset, remainingBlockSize);
 
-            const auto pfsPage = Database::GetAssociatedPfsPage(
-                this->GetSystemFileKey(),
-                this->GetSystemFileNameView(),
-                page.PageId()
-            );
+            const auto pfsPage = Database::GetAssociatedPfsPage(this->GetSystemFileKey(),page.PageId());
             pfsPage.SetPageMetaData(&page);
 
             if (previousDataObject != nullptr){
@@ -78,15 +74,9 @@ namespace CoreEngine::StorageTypes {
         // blockSize < pageSize
         const auto bytesToBeInserted = pageSize - Constants::OBJECT_METADATA_SIZE_T;
         remainingBlockSize -= bytesToBeInserted;
-        page.SetData(
-            data + offset, bytesToBeInserted
-        );
+        page.SetData(data + offset, bytesToBeInserted);
 
-        const auto pfsPage = Database::GetAssociatedPfsPage(
-            this->GetSystemFileKey(),
-            this->GetSystemFileNameView(),
-            page.PageId()
-        );
+        const auto pfsPage = Database::GetAssociatedPfsPage(this->GetSystemFileKey(), page.PageId());
         pfsPage.SetPageMetaData(&page);
 
         if (previousDataObject != nullptr)
@@ -138,7 +128,6 @@ namespace CoreEngine::StorageTypes {
     Pages::LargeObjectView Table::GetLargeDataPage(const page_id_t pageId) const {
         return Storage::StorageManager::Get().GetLargeDataPage(
             this->database->GetDataFileKey(),
-            this->database->GetFileName(),
             pageId,
             this
         );
@@ -147,7 +136,6 @@ namespace CoreEngine::StorageTypes {
     Pages::OverflowPageView Table::GetOverflowPage(const page_id_t pageId) const{
         return Storage::StorageManager::Get().GetOverflowPage(
             this->database->GetDataFileKey(),
-            this->database->GetFileName(),
             pageId,
             this
         );

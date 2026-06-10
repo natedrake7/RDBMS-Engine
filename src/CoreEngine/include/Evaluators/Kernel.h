@@ -28,20 +28,21 @@ namespace CoreEngine::Kernel{
         const SelectionVector* sv
     ){
         const auto* columnExpression = self->AsColumn();
-        auto* table = context.GetTable(columnExpression->tableId);
-        auto* dataVector = context.Allocate<DataVector>();
+        auto* table = context.GetTable(0);
+        auto* dataVector = context.Allocate<DataVector>(columnExpression->returnType);
 
         dataVector->_data = static_cast<object_t*>(context.Allocate(sizeof(T) * sv->selectedRidsCount));
         if (sv->isIdentity){
-            table->MaterializeColumnFromPage(
-                context, sv->selectedRidsCount, dataVector->_data,
-                sizeof(T), columnExpression->columnIndex
+            table->MaterializeColumnFromPage<T>(
+                context, sv->selectedRidsCount,
+                dataVector->_data,
+                columnExpression->columnIndex
             );
         }
         else{
-            table->MaterializeColumnFromIndexPage(
+            table->MaterializeColumnFromPage<T>(
                 context, sv, dataVector->_data,
-                sizeof(T), columnExpression->columnIndex
+                columnExpression->columnIndex
             );
         }
 
@@ -61,14 +62,13 @@ namespace CoreEngine::Kernel{
     ){
         const auto* columnExpression = self->AsColumn();
         auto* table = context.GetTable(columnExpression->tableId);
-        auto* dataVector = context.Allocate<DataVector>();
-
+        auto* dataVector = context.Allocate<DataVector>(columnExpression->returnType);
 
         dataVector->_data = static_cast<object_t*>(context.Allocate(sizeof(T) * sv->selectedRidsCount));
-        table->MaterializeColumnFromIndexPage(
-            context, sv, dataVector->_data,
-            sizeof(T), columnExpression->columnIndex
-        );
+        // table->MaterializeColumnFromIndexPage(
+        //     context, sv, dataVector->_data,
+        //     sizeof(T), columnExpression->columnIndex
+        // );
 
         return dataVector;
     }

@@ -1,35 +1,31 @@
 ﻿#pragma once
 #include <atomic>
-#include "../../BTree.h"
-#include "../../../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../BufferPool/FileManager.h"
 
-namespace Pages{
-    struct IndexAllocationPageAdditionalHeader;
-}
+#include "../../DatabaseConstants.h"
+#include "../../../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../../../Systemic/include/DataTypes/StringView.h"
+#include "../../../../Systemic/include/Guards/Mutex.h"
+#include "../../BufferPool/FileManager.h"
 
 namespace CoreEngine::StorageTypes{
     class Table;
 }
 
 namespace Pages{
+    using FrameId = Int;
+
+    struct PageHeader;
+
     struct Frame{
         mutable MultiThreading::Mutex latch;
-        DataTypes::StringView filename;
-
-        union{
-            IndexPageAdditionalHeader* indexHeaderPtr;
-            IndexAllocationPageAdditionalHeader* allocationHeaderPtr;
-        }additionalHeader;
 
         object_t* _data;
 
         const CoreEngine::StorageTypes::Table* table;
-        PageHeader* headerPtr;
         log_sequence_number_t logSequenceNumber;
 
         Storage::FileKey fileKey;
-        std::atomic<int> pinCount;
+        std::atomic<Int> pinCount;
 
         std::atomic<Constants::PagePriority> priority;
         Constants::PageType type;
@@ -40,6 +36,7 @@ namespace Pages{
         Frame(object_t* data, const CoreEngine::StorageTypes::Table* table);
         Frame& operator=(const Frame& other);
 
+        [[nodiscard]] PageHeader* Header() const;
         [[nodiscard]] bool IsValid()const;
     };
 }

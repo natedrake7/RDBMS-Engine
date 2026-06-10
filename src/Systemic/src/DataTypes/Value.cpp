@@ -363,11 +363,11 @@ Value::Value(
     const Memory::IAllocator* allocator,
     const column_index_t index
 ){
-    this->data = static_cast<object_t*>(allocator->AllocateRaw(DataTypes::Guid::Size()));
-    std::memcpy(this->data, data.GetData().data(), DataTypes::Guid::Size());
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(DataTypes::GUID_SIZE));
+    std::memcpy(this->data, data.GetData(), DataTypes::GUID_SIZE);
 
     this->_allocator = allocator;
-    this->size = DataTypes::Guid::Size();
+    this->size = DataTypes::GUID_SIZE;
     this->columnIndex = index;
     this->type = DataType::Guid;
 }
@@ -489,10 +489,10 @@ void Value::SetData(const DataTypes::DateTime &otherData) {
 }
 
 void Value::SetData(const DataTypes::Guid &otherData){
-    this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(DataTypes::Guid::Size()));
-    std::memcpy(this->data, otherData.GetData().data(), this->size);
+    this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(DataTypes::GUID_SIZE));
+    std::memcpy(this->data, otherData.GetData(), this->size);
 
-    this->size = DataTypes::Guid::Size();
+    this->size = DataTypes::GUID_SIZE;
     this->type = DataType::Guid;
 }
 

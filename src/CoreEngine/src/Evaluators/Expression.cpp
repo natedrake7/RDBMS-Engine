@@ -286,7 +286,6 @@ namespace Expressions{
 
     void ColumnExpression::BindExpression(Expression* expression){
         auto* columnExpr = expression->AsColumn();
-
         switch (columnExpr->returnType){
         case DataType::String:
             break;
@@ -308,13 +307,14 @@ namespace Expressions{
         case DataType::Decimal:
             break;
         case DataType::DateTime:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<DataTypes::DateTime>;
             break;
         case DataType::Guid:
+            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<DataTypes::Guid>;
             break;
         case DataType::Json:
             break;
         case DataType::Null:
-            break;
         case DataType::RowIdentifier:
             break;
         }
@@ -1159,7 +1159,7 @@ namespace Expressions{
     CoreEngine::SelectionVector* EvaluateFilterExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
-        CoreEngine::SelectionVector* selectionVector
+        const CoreEngine::SelectionVector* selectionVector
     ){
         auto* result = executionContext.Allocate<CoreEngine::SelectionVector>();
         result->AllocateRids(executionContext.GetAllocator(), 0, selectionVector->selectedRidsCount);

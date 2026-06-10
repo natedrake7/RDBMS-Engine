@@ -60,8 +60,6 @@ namespace DataTypes {
 	    DateTime(DateTime&& other) = default;
 	    DateTime& operator=(DateTime&& other) = default;
 
-	    ~DateTime();
-
 		[[nodiscard]] Int GetYears() const;
 		[[nodiscard]] UnsignedInt GetMonths() const;
 		[[nodiscard]] UnsignedInt  GetDays() const;

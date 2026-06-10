@@ -78,343 +78,676 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
   void PlanNode::InsertPostProjectionResultsToTemporaryDatabase(
-    const CoreEngine::ExecutionContext& context,
-    ExecutionResult& result,
-    DataTypes::RowIdentifier& firstRowId
+      const CoreEngine::ExecutionContext& context,
+      ExecutionResult& result,
+      DataTypes::RowIdentifier& firstRowId
   ){
-    static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
+      static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
-    auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
-          ? tempDb.CreateTable()
-          : tempDb.OpenTable(this->temporaryTableId);
+      auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
+                        ? tempDb.CreateTable()
+                        : tempDb.OpenTable(this->temporaryTableId);
 
-    //table ordinal and table id are the same rn
-    this->temporaryTableId = table->GetTableId();
+      //table ordinal and table id are the same rn
+      this->temporaryTableId = table->GetTableId();
 
-    const auto& columns = table->GetColumns();
-    // result.status = table->BatchInsert(context, result.results);
+      const auto& columns = table->GetColumns();
+      // result.status = table->BatchInsert(context, result.results);
 
-    // firstRowId = result.status.rowId;
+      // firstRowId = result.status.rowId;
   }
 
   ExecutionResult PlanNode::StreamFromTemporaryDatabase(
-    const CoreEngine::ExecutionContext& context,
-    CoreEngine::ScanState& state
+      const CoreEngine::ExecutionContext& context,
+      CoreEngine::ScanState& state
   ) const
   {
-    static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
+      static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    if (this->temporaryTableId == INVALID_TABLE_ID)
+      if (this->temporaryTableId == INVALID_TABLE_ID)
+          return result;
+
+      const auto* table = tempDb.OpenTable(this->temporaryTableId);
+
+      // table->TemporaryDatabaseHeapScan(&result.rows, state, context.GetBatchSize());
+
+      // result.results.Reserve(result.rows.Size());
+
+      // for (const auto& row: result.rows)
+      //   result.results.Push(row->Materialize(context.GetAllocator()));
+
       return result;
-
-    const auto* table = tempDb.OpenTable(this->temporaryTableId);
-
-    // table->TemporaryDatabaseHeapScan(&result.rows, state, context.GetBatchSize());
-
-    // result.results.Reserve(result.rows.Size());
-
-    // for (const auto& row: result.rows)
-    //   result.results.Push(row->Materialize(context.GetAllocator()));
-
-    return result;
   }
 
   void PlanNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
 
   bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
-  PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
-    : PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
-
-  ExecutionResult PhysicalDeclareVariable::Execute(CoreEngine::ExecutionContext& context) {
-    auto result = ExecutionResult(context);
-
-    const Expressions::EvaluationContext evaluationContext(
-        Expressions::EvaluationContext::EvaluationContextType::Constant,
-        context
-    );
-
-    auto value = Expressions::EvaluateExpression(this->expression, evaluationContext);
-    this->variable.SetValue(value);
-
-    if (!this->server->AddOrSetVariable(this->sessionId, this->variable)){
-        result.status = Errors::RuntimeStatus(
-            Errors::RuntimeError::Error,
-            Messages::FAILED_TO_ADD_VARIABLE,
-            context.GetAllocator()
-        );
-        return result;
-    }
-
-    result.status = Errors::RuntimeStatus(
-        Errors::RuntimeError::Ok,
-        Messages::ADDED_VARIABLE(this->variable.GetName().ToView(), context.GetAllocator())
-    );
-    return result;
-  }
-
   PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
-   : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
+      : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
   ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
-        result.status = Errors::RuntimeStatus(
-            Errors::RuntimeError::Error,
-            Messages::FAILED_TO_CREATE_USER,
-            context.GetAllocator()
-        );
+      if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
+          result.status = Errors::RuntimeStatus(
+              Errors::RuntimeError::Error,
+              Messages::FAILED_TO_CREATE_USER,
+              context.GetAllocator()
+          );
 
-    return result;
+      return result;
   }
 
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
-    : PlanNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
+      : PlanNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
   ExecutionResult PhysicalGrantRole::Execute(CoreEngine::ExecutionContext& context) {
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
       const auto* role = this->server->GetRole(this->roleName);
-    if (role == nullptr) {
-        result.status = Errors::RuntimeStatus(
-            Errors::RuntimeError::Error,
-            Messages::FAILED_TO_GET_ROLE(this->roleName.ToView(), context.GetAllocator())
-        );
-        return result;
-    }
+      if (role == nullptr) {
+          result.status = Errors::RuntimeStatus(
+              Errors::RuntimeError::Error,
+              Messages::FAILED_TO_GET_ROLE(this->roleName.ToView(), context.GetAllocator())
+          );
+          return result;
+      }
 
-    result.status = this->server->GrantRole(context, this->sessionId, this->username, role);
-    return result;
+      result.status = this->server->GrantRole(context, this->sessionId, this->username, role);
+      return result;
   }
 
   PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
 
   ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
-    if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
+      if (this->session == nullptr || this->session->user == nullptr)
+          return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
 
-    const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
+      const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
 
-    const auto result = this->catalog->InsertDbToMasterDb(
-        context,
-    this->dbName.ToView(),
-    path.ToView(),
-    false,
-    this->session->user->name.ToView()
-    );
+      const auto result = this->catalog->InsertDbToMasterDb(
+          context,
+          this->dbName.ToView(),
+          path.ToView(),
+          false,
+          this->session->user->name.ToView()
+      );
 
-    const auto databaseId = result.primaryKey.AsInt();
+      const auto databaseId = result.primaryKey.AsInt();
 
-    const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
+      const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
-    CoreEngine::CreateDatabase(databaseId, this->dbName);
+      CoreEngine::CreateDatabase(databaseId, this->dbName);
 
-    return ExecutionResult(context);
+      return ExecutionResult(context);
   }
 
   PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
-    : sessionId(sessionId), databaseId(databaseId){}
+      : sessionId(sessionId), databaseId(databaseId){}
 
   ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
-        result.status = Errors::RuntimeStatus(
-            Errors::RuntimeError::Ok,
-            Messages::USE_DATABASE_SUCCESS,
-            context.GetAllocator()
-        );
-        return result;
-    }
+      if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
+          result.status = Errors::RuntimeStatus(
+              Errors::RuntimeError::Ok,
+              Messages::USE_DATABASE_SUCCESS,
+              context.GetAllocator()
+          );
+          return result;
+      }
 
-    result.status = Errors::RuntimeStatus(
-        Errors::RuntimeError::Error,
-        Messages::USE_DATABASE_FAIL,
-        context.GetAllocator()
-    );
-    return result;
+      result.status = Errors::RuntimeStatus(
+          Errors::RuntimeError::Error,
+          Messages::USE_DATABASE_FAIL,
+          context.GetAllocator()
+      );
+      return result;
   }
 
-PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
-  : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
+  PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
+      : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult PhysicalSchemaCreate::Execute(CoreEngine::ExecutionContext& context){
-    if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-          Errors::RuntimeError::Error,
-          Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-          context.GetAllocator()
-        );
+      if (this->session == nullptr || this->session->user == nullptr)
+          return ExecutionResult(
+              Errors::RuntimeError::Error,
+              Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+              context.GetAllocator()
+          );
 
-    const auto insertResult = this->catalog->InsertSchemaToMasterDb(
-        context,
-        this->databaseId,
-        this->schemaName.ToView(),
-        this->session->user->name.ToView()
-    );
-    return ExecutionResult(insertResult.code, insertResult.message);
+      const auto insertResult = this->catalog->InsertSchemaToMasterDb(
+          context,
+          this->databaseId,
+          this->schemaName.ToView(),
+          this->session->user->name.ToView()
+      );
+      return ExecutionResult(insertResult.code, insertResult.message);
+  }
+
+PhysicalTableCreate::PhysicalTableCreate(
+    const DataTypes::Guid& sessionId,
+    Statements::DataSource*  table,
+    DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
+    const Headers::Index& primaryKey,
+    DataTypes::String& constraintName
+): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
+   columns(std::move(columns)), primaryKey(primaryKey) {}
+
+  PhysicalTableCreate::~PhysicalTableCreate() = default;
+
+  ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
+      if (this->session == nullptr || this->session->user == nullptr)
+          return ExecutionResult(
+              Errors::RuntimeError::Error,
+              Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+              context.GetAllocator()
+          );
+
+      const auto* allocator = context.GetAllocator();
+
+      auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+
+      const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
+
+      const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
+
+      const auto tableResult = this->catalog->InsertTableToMasterDb(
+          context,
+          this->table->databaseId,
+          this->table->schemaId,
+          this->table->name.ToView(),
+          index,
+          false,
+          this->session->user->name.ToView()
+      );
+
+      const auto tableId = tableResult.primaryKey.AsInt(1);
+
+      auto* tablePtr = db->CreateTable(tableId, index);
+
+      const auto tableStatsResult = this->catalog->InsertTableStatisticsToMasterDb(
+          context,
+          tableId
+      );
+
+      Dictionary<int, Int> columnIdsDict;
+      for (const auto* column: this->columns){
+          const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
+          auto* columnPtr =
+              tablePtr->AddColumn(
+                  column->name.name.ToView(),
+                  ColumnTypesDictionary.Get(normalizedTableName.ToView()),
+                  column->type.size,
+                  column->index,
+                  column->isNullable
+              );
+
+          const auto columnResult =
+              this->catalog->InsertColumnToMasterDb(
+                  context,
+                  tableId,
+                  column->name.name.ToView(),
+                  ColumnTypesDictionary.Get(normalizedTableName.ToView()),
+                  column->type.size,
+                  column->type.decimal.precision,
+                  column->type.decimal.scale,
+                  column->isNullable,
+                  column->index,
+                  false,
+                  this->session->user->name.ToView()
+              );
+
+          const auto columnId = columnResult.primaryKey.AsInt(1);
+          columnPtr->SetColumnId(columnId);
+
+          const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
+          columnIdsDict.Add(column->index, columnId);
+
+          if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
+              const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
+                  context,
+                  columnId,
+                  column->defaultValue
+              );
+          }
+
+          //insert identity columns
+          if (column->identity == nullptr) continue;
+
+          const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
+              context,
+              tableId,
+              columnId,
+              column->identity->seed,
+              column->identity->incrementFactor,
+              column->identity->seed,
+              true,
+              static_cast<Int>(column->identity->cacheBlock)
+          );
+      }
+
+      DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
+      for (const auto& column: this->primaryKey.columns) {
+          if (this->constraintName.Empty()){
+              this->constraintName.SetAllocator(allocator);
+
+              const auto& columnName = this->columns[column]->name.name;
+              this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
+          }
+
+          primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
+      }
+
+      static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
+      if (primaryKeyColumnIdsArray.Empty()) {
+          tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+          tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+          return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
+      }
+
+      const auto indexResult = this->catalog->InsertIndexToMasterDb(
+          context,
+          tableId,
+          this->constraintName.ToView(),
+          true,
+          false,
+          this->session->user->name.ToView()
+      );
+
+      const auto indexId = indexResult.primaryKey.AsInt(1);
+
+      const auto constraintResult = this->catalog->InsertConstraintToMasterDb(
+          context,
+          tableResult.primaryKey.AsInt(),
+          this->constraintName.ToView(),
+          Headers::ConstraintType::PrimaryKey,
+          false,
+          &indexId,
+          this->session->user->name.ToView()
+      );
+
+      const auto constraintId = constraintResult.primaryKey.AsInt(1);
+
+      for(int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
+          auto _ = this->catalog->InsertIndexColumnToMasterDb(
+              context,
+              indexResult.primaryKey.AsInt(),
+              primaryKeyColumnIdsArray[i],
+              this->primaryKey.columns[i],
+              true
+          );
+
+
+          _ = this->catalog->InsertConstraintColumnToMasterDb(
+              context,
+              constraintId,
+              primaryKeyColumnIdsArray[i],
+              this->primaryKey.columns[i]
+          );
+      }
+
+      const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+          context,
+          tableId,
+          indexId
+      );
+
+      tablePtr->RetrieveIndexesFromCatalog(allocator);
+      tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+      tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+
+      return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
+  }
+
+  PhysicalIndexCreate::PhysicalIndexCreate(
+      const DataTypes::Guid& sessionId,
+      Statements::DataSource *table,
+      DataTypes::String& constraintName,
+      DataStructures::PolymorphicArray<column_index_t> &columns
+  ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
+
+  ExecutionResult PhysicalIndexCreate::Execute(CoreEngine::ExecutionContext& context){
+      auto result = ExecutionResult(context);
+
+      const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+      const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->tableId);
+
+      const auto indexResult =this->catalog->InsertIndexToMasterDb(
+          context,
+          this->table->tableId,
+          this->constraintName.ToView(),
+          false,
+          false,
+          this->session->user->name.ToView()
+      );
+
+      const auto indexId = indexResult.primaryKey.AsInt(1);
+
+      const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
+          context,
+          this->table->tableId,
+          this->constraintName.ToView(),
+          Headers::ConstraintType::IndexKey,
+          false,
+          &indexId,
+          this->session->user->name.ToView()
+      );
+
+      const auto constraintId = constraintResult.primaryKey.AsInt(1);
+
+      for (const auto& columnPos : this->columns) {
+          const auto& header = columnsHeaders[columnPos];
+
+          const auto indexColumnResult =
+              this->catalog->InsertIndexColumnToMasterDb(
+                  context,
+                  indexId,
+                  header.id,
+                  columnPos,
+                  true
+              );
+
+          const auto constraintColumnResult =
+              this->catalog->InsertConstraintColumnToMasterDb(
+                  context,
+                  constraintId,
+                  header.id,
+                  columnPos
+              );
+      }
+
+      const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+          context,
+          this->table->tableId,
+          indexId
+      );
+
+      const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
+
+      const auto pages = 1;
+      tablePtr->NonClusteredIndexInsertExistingRows(indexPos, pages);
+
+      //if there are rows in the table update the index
+      //do stuff here
+
+      return result;
   }
 
   PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
-    : table(table), expression(expression) {}
+      : table(table), expression(expression) {}
 
   PhysicalTableScan::~PhysicalTableScan() = default;
 
-  ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
-    auto result = ExecutionResult(context);
+    ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
+        auto result = ExecutionResult(context);
 
-    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+        const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
-    const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->GetConstantColumns(&result.columns);
+        tablePtr->GetConstantColumns(&result.columns);
 
-    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-    tablePtr->HeapScan(context, &rows, this->state);
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+        tablePtr->HeapScan(context, &rows, this->state);
 
-    result.canFetchMore = this->state.canFetchMore;
+        result.canFetchMore = this->state.canFetchMore;
 
-    if (result.canFetchMore == false)
-      this->state.Reset();
+        if (result.canFetchMore == false)
+            this->state.Reset();
 
-    context.AddScanHandle(rows.Data(), rows.Size());
-    return result;
-  }
+        context.AddScanHandle(rows.Data(), rows.Size());
+        return result;
+    }
 
-  void PhysicalTableScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->state.lastFetchedRowId = rowId;
-  }
+    void PhysicalTableScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->state.lastFetchedRowId = rowId;
+    }
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
-    : table(table), expression(nullptr), isClustered(isClustered) {}
+      : table(table), expression(nullptr), isClustered(isClustered) {}
 
-    PhysicalIndexScan::PhysicalIndexScan(
-        Statements::DataSource *table,
-        Expressions::Expression *expression,
-        const bool isClustered
-    ): table(table), expression(expression), isClustered(isClustered) {}
+  PhysicalIndexScan::PhysicalIndexScan(
+      Statements::DataSource *table,
+      Expressions::Expression *expression,
+      const bool isClustered
+  ): table(table), expression(expression), isClustered(isClustered) {}
 
-    PhysicalIndexScan::~PhysicalIndexScan() = default;
+  PhysicalIndexScan::~PhysicalIndexScan() = default;
 
   ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->GetConstantColumns(&result.columns);
+      tablePtr->GetConstantColumns(&result.columns);
 
-    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-    if (this->isClustered)
-        tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
-    else
-        tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
+      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+      if (this->isClustered)
+          tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
+      else
+          tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
 
-    result.canFetchMore = this->state.canFetchMore;
-    if (result.canFetchMore == false)
-        this->state.Reset();
+      result.canFetchMore = this->state.canFetchMore;
+      if (result.canFetchMore == false)
+          this->state.Reset();
 
-    context.AddTable(tablePtr);
-    context.AddScanHandle(rows.Data(), rows.Size());
+      context.AddTable(tablePtr);
+      context.AddScanHandle(rows.Data(), rows.Size());
 
-    result.selectionVector->selectedRidsCount = rows.Size();
-    result.selectionVector->isIdentity = true;
-    return result;
+      result.selectionVector->selectedRidsCount = rows.Size();
+      result.selectionVector->isIdentity = true;
+      return result;
   }
 
   void PhysicalIndexScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-    this->state.pageId = rowId.pageId;
-    this->state.lastFetchedKeyIndex = rowId.indexId;
+      this->state.pageId = rowId.pageId;
+      this->state.lastFetchedKeyIndex = rowId.indexId;
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(
-    Statements::DataSource* table,
-    DataTypes::Indexing::Key& key,
-    Expressions::Expression* expression
+      Statements::DataSource* table,
+      DataTypes::Indexing::Key& key,
+      Expressions::Expression* expression
   ) : table(table), expression(expression), key(std::move(key)) {}
 
   PhysicalIndexSeek::~PhysicalIndexSeek() = default;
 
   ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->GetConstantColumns(&result.columns);
+      tablePtr->GetConstantColumns(&result.columns);
 
-    //select if to use clustered or non clustered index here
-    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-    tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
+      //select if to use clustered or non clustered index here
+      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+      tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
 
-    context.AddTable(tablePtr);
-    context.AddScanHandle(rows.Data(), rows.Size());
+      context.AddTable(tablePtr);
+      context.AddScanHandle(rows.Data(), rows.Size());
 
-    result.selectionVector->selectedRidsCount = rows.Size();
-    result.selectionVector->isIdentity = true;
-    return result;
+      result.selectionVector->selectedRidsCount = rows.Size();
+      result.selectionVector->isIdentity = true;
+      return result;
   }
 
   PhysicalIndexSeekRange::PhysicalIndexSeekRange(
-    Statements::DataSource* table,
-    DataTypes::Indexing::Key& minKey,
-    DataTypes::Indexing::Key& maxKey,
-    Expressions::Expression* expression
+      Statements::DataSource* table,
+      DataTypes::Indexing::Key& minKey,
+      DataTypes::Indexing::Key& maxKey,
+      Expressions::Expression* expression
   ):    table(table), expression(expression),
         minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
 
   PhysicalIndexSeekRange::~PhysicalIndexSeekRange() = default;
 
   ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
-    auto result = ExecutionResult(context);
+      auto result = ExecutionResult(context);
 
-    const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    tablePtr->GetConstantColumns(&result.columns);
+      tablePtr->GetConstantColumns(&result.columns);
 
-    //select if to use clustered or non clustered index here
-    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-    tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
+      //select if to use clustered or non clustered index here
+      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+      tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
 
-    context.AddTable(tablePtr);
-    context.AddScanHandle(rows.Data(), rows.Size());
+      context.AddTable(tablePtr);
+      context.AddScanHandle(rows.Data(), rows.Size());
 
-    result.selectionVector->selectedRidsCount = rows.Size();
-    result.selectionVector->isIdentity = true;
-    return result;
+      result.selectionVector->selectedRidsCount = rows.Size();
+      result.selectionVector->isIdentity = true;
+      return result;
   }
 
-  ExecutionResult PhysicalProject::ExecuteStatement(CoreEngine::ExecutionContext& context) const{
-    auto result = this->child->Execute(context);
-
-    for (const auto& expression : this->resultExpressions)
-        result.displayColumnNames.Push(expression->name);
-
-    if (result.selectionVector->selectedRidsCount == 0)
-        return result;
-
-    // result.vectorBatch.AllocateColumns(
-    //     context.GetAllocator(),
-    //     this->resultExpressions.Size()
-    // );
-
-    result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
-    for (Int i = 0;i < this->resultExpressions.Size(); i++){
-        result.vectorBatch._columns[i] = Expressions::EvaluateExpression(
-            this->resultExpressions[i],
-            context,
-            result.selectionVector
-        );
+    void PhysicalProject::ExecuteVectorizedMode(
+        const ExecutionResult& result,
+        const CoreEngine::ExecutionContext& context
+    ) const{
+        for (Int i = 0;i < this->resultExpressions.Size(); i++){
+            result.vectorBatch.SetColumn(
+                Expressions::EvaluateExpression(
+                    this->resultExpressions[i],
+                    context,
+                    result.selectionVector
+                ),
+                i
+            );
+        }
     }
 
-    return result;
-  }
+    namespace {
+        // Byte size of one slot in a DataVector for a given logical type.
+        // NOTE: this is the *storage* representation inside a DataVector, not the
+        // on-page record size. Strings live as a (ptr,len) StringView, not raw bytes.
+        Int DataVectorSlotSize(const DataType type){
+            switch (type){
+                case DataType::Bool:     return sizeof(bool);
+                case DataType::TinyInt:  return sizeof(TinyInt);
+                case DataType::SmallInt: return sizeof(SmallInt);
+                case DataType::Int:      return sizeof(Int);
+                case DataType::BigInt:   return sizeof(BigInt);
+                case DataType::DateTime: return sizeof(DataTypes::DateTime);
+                case DataType::Guid:     return sizeof(DataTypes::Guid);
+                case DataType::Decimal:  return sizeof(DataTypes::Decimal);
+                case DataType::String:   return sizeof(DataTypes::StringView);
+                default:                 return 0;
+            }
+        }
+
+        // Unbox a scalar Value into slot `index` of a typed DataVector column.
+        // This is the single seam that lets row-at-a-time evaluation feed the SAME
+        // columnar VectorBatch the vectorized kernels produce.
+        void StoreValueAt(CoreEngine::DataVector* column, const Int index, const Value& value){
+            // TODO: when the validity bitmap is wired, set/clear column->_validity here
+            //       instead of writing a default for nulls.
+
+            switch (column->_type){
+                case DataType::Bool:
+                    reinterpret_cast<bool*>(column->_data)[index] = !value.IsNull() && value.AsBool();
+                    break;
+                case DataType::TinyInt:
+                    reinterpret_cast<TinyInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsTinyInt();
+                    break;
+                case DataType::SmallInt:
+                    reinterpret_cast<SmallInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsSmallInt();
+                    break;
+                case DataType::Int:
+                    reinterpret_cast<Int*>(column->_data)[index] = value.IsNull() ? 0 : value.AsInt();
+                    break;
+                case DataType::BigInt:
+                    reinterpret_cast<BigInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsBigInt();
+                    break;
+                case DataType::DateTime:
+                    reinterpret_cast<DataTypes::DateTime*>(column->_data)[index] = value.AsDateTime();
+                    break;
+                case DataType::Guid:
+                    reinterpret_cast<DataTypes::Guid*>(column->_data)[index] = value.AsGuid();
+                    break;
+                case DataType::Decimal:
+                    reinterpret_cast<DataTypes::Decimal*>(column->_data)[index] = value.AsDecimal();
+                    break;
+                case DataType::String:
+                    reinterpret_cast<DataTypes::StringView*>(column->_data)[index] = value.AsStringView();
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
+    void PhysicalProject::ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context) const{
+        const Int rowCount    = result.selectionVector->selectedRidsCount;
+        const Int columnCount = this->resultExpressions.Size();
+
+        // 1. Allocate one flat DataVector per projected column -- exactly the shape the
+        //    vectorized kernels return, so the output VectorBatch is identical either way.
+        for (Int j = 0; j < columnCount; j++){
+            const auto type = static_cast<DataType>(this->columnHeaders[j].dataType);
+
+            auto* column = context.Allocate<CoreEngine::DataVector>(type);
+            column->_count = rowCount;
+            column->_kind  = CoreEngine::DataVectorKind::Flat;
+            column->_data  = static_cast<object_t*>(
+                context.Allocate(DataVectorSlotSize(type) * rowCount)
+            );
+
+            result.vectorBatch.SetColumn(column, j);
+        }
+
+        // 2. Transpose: evaluate each row scalar-wise, scatter every Value into its column slot.
+        Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            context.GetAllocator(),
+            context.GetTable(0)
+        );
+
+        for (Int i = 0; i < rowCount; i++){
+            // evaluationContext.row = &result.selectionVector->selectedRids[0][i];
+            for (Int j = 0; j < columnCount; j++){
+                const auto value = Expressions::EvaluateExpression(this->resultExpressions[j], evaluationContext);
+                StoreValueAt(result.vectorBatch._columns[j], i, value);
+            }
+        }
+    }
+
+    ExecutionResult PhysicalProject::ExecuteStatement(CoreEngine::ExecutionContext& context) const{
+        auto result = this->child->Execute(context);
+
+        for (const auto& expression : this->resultExpressions)
+            result.displayColumnNames.Push(expression->name);
+
+        if (result.selectionVector->selectedRidsCount == 0)
+            return result;
+
+        result.vectorBatch.AllocateColumns(
+            context.GetAllocator(),
+            this->resultExpressions.Size()
+        );
+
+        result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
+        result.vectorBatch._numberOfColumns = this->resultExpressions.Size();
+
+        if (context.GetMode() == PipelineConstants::ExecutionMode::Vectorized){
+            this->ExecuteVectorizedMode(result, context);
+        }
+        else
+            this->ExecuteRowMode(result, context);
+
+        return result;
+    }
 
     ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
         auto result = ExecutionResult(context);
@@ -448,8 +781,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
     ExecutionResult PhysicalProject::Execute(CoreEngine::ExecutionContext& context){
         return (this->child == nullptr)
-            ? this->ExecuteConstantStatement(context)
-            : this->ExecuteStatement(context);
+                   ? this->ExecuteConstantStatement(context)
+                   : this->ExecuteStatement(context);
     }
 
     void PhysicalProject::UpdateScanState(const DataTypes::RowIdentifier& rowId){
@@ -469,7 +802,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         // ) return result;
 
         Expressions::EvaluationContext evaluationContext(
-        Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
@@ -561,6 +894,98 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         this->child->UpdateScanState(rowId);
     }
 
+    bool PhysicalOrderBy::CanBeSortedInMemory(const bool canFetchMore) const{
+        return !canFetchMore && !this->UsesExternalStorage();
+    }
+
+    PhysicalOrderBy::PhysicalOrderBy(
+        PlanNode *child,
+        DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
+    )   : child(child)
+          , expressions(std::move(expressions))
+          , comparator(&this->expressions, nullptr)
+          , priorityQueue(this->comparator){}
+
+    PhysicalOrderBy::~PhysicalOrderBy() = default;
+
+    ExecutionResult PhysicalOrderBy::Execute(CoreEngine::ExecutionContext& context){
+        if (!this->comparator.HasProperties())
+            this->comparator.SetExecutionContext(&context);
+
+        auto result = this->child->Execute(context);
+
+        // Case 1: In-memory sort (no external storage needed)
+        // if (!result.canFetchMore && !this->UsesExternalStorage()){
+        //     SortingFunctions::OrderBy(context, result.results, this->expressions);
+        //     return result;
+        // }
+
+        // Case 2: Build phase - collect and sort batches
+        // while (result.canFetchMore || (result.canFetchMore == false && this->priorityQueue.Empty())) {
+        //     SortingFunctions::OrderBy(context, result.results, this->expressions);
+
+        //     DataTypes::RowIdentifier rowId;
+        //     this->InsertPostProjectionResultsToTemporaryDatabase(context, result, rowId);
+        //
+        //     auto element = MergeElement(
+        //         result.results[0],
+        //         static_cast<int>(this->priorityQueue.Size()),
+        //         rowId
+        //     );
+        //
+        //     this->priorityQueue.Add(std::move(element));
+        //
+        //     if (!result.canFetchMore)
+        //         break;
+        //
+        //     result = this->child->Execute(context);
+        // }
+        //
+        // // Case 3: Merge phase - k-way merge
+        // result.results.Clear();
+        //
+        // DataStructures::PolymorphicArray<DataStructures::PolymorphicArray<QueryResult>> batches;
+        // batches.Resize(this->priorityQueue.Size());
+        //
+        // while (!this->priorityQueue.Empty()){
+        //     auto top = this->priorityQueue.Top();
+        //     this->priorityQueue.Remove();
+        //
+        //     result.results.Push(std::move(top.value));
+        //
+        //     const auto batchId = top.batchId;
+        //
+        //     // Lazy load batch if needed
+        //     if (batches[batchId].Empty()) {
+        //         auto state = CoreEngine::ScanState();
+        //         state.lastFetchedRowId = top.rowId;
+        //         state.extentId = CoreEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
+        //
+        //         auto batchResult = this->StreamFromTemporaryDatabase(context, state);
+        //         batches[batchId] = std::move(batchResult.results);
+        //     }
+        //
+        //     // Remove consumed element
+        //     batches[batchId].Remove(0);
+        //
+        //     // Add next element from same batch if available
+        //     if (!batches[batchId].Empty()) {
+        //         auto nextElement = MergeElement(
+        //             batches[batchId][0],
+        //             batchId,
+        //             top.rowId // Update with proper next rowId if needed
+        //         );
+        //         this->priorityQueue.Add(std::move(nextElement));
+        //     }
+        // }
+
+        return result;
+    }
+
+    void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
+        this->child->UpdateScanState(rowId);
+    }
+
     bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){
         return lhs.GetColumnIndex() < rhs.GetColumnIndex();
     }
@@ -615,8 +1040,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     ExecutionResult PhysicalInsert::InsertFromFields(
-      CoreEngine::StorageTypes::Table* tablePtr,
-      CoreEngine::ExecutionContext& context
+        CoreEngine::StorageTypes::Table* tablePtr,
+        CoreEngine::ExecutionContext& context
     ) const{
         auto result = ExecutionResult(context);
 
@@ -625,7 +1050,7 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
 
             result.status = tablePtr->InsertRow(context, values);
             if (! result.status.IsOk())
-              return result;
+                return result;
         }
 
         result.status = Errors::RuntimeStatus(
@@ -650,59 +1075,8 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
         return (this->child != nullptr)
-            ? this->InsertFromChild(tablePtr, context)
-            : this->InsertFromFields(tablePtr, context);
-    }
-
-    PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
-    : table(table), expression(expression) {}
-
-    PhysicalHeapDelete::~PhysicalHeapDelete() = default;
-
-    ExecutionResult PhysicalHeapDelete::Execute(CoreEngine::ExecutionContext& context){
-        auto result = ExecutionResult(context);
-
-        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
-
-        const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-        tablePtr->HeapDelete(context, this->expression);
-
-        return result;
-    }
-
-    PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
-    : table(table), expression(expression) {}
-
-    PhysicalIndexScanDelete::~PhysicalIndexScanDelete() = default;
-
-    ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
-        auto result = ExecutionResult(context);
-
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-        tablePtr->ClusteredIndexScanDelete(context, this->expression, state);
-
-        return result;
-    }
-
-    PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
-    : table(table), expression(expression) {}
-
-    PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete() = default;
-
-    ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
-        auto result = ExecutionResult(context);
-
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
-
-        tablePtr->ClusteredIndexSeekDelete(context, this->expression, this->state);
-
-        return result;
+                   ? this->InsertFromChild(tablePtr, context)
+                   : this->InsertFromFields(tablePtr, context);
     }
 
     PhysicalHeapUpdate::PhysicalHeapUpdate(
@@ -724,9 +1098,9 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     PhysicalIndexScanUpdate::PhysicalIndexScanUpdate(
-      Statements::DataSource *table,
-      Expressions::Expression *expression,
-      DataStructures::PolymorphicArray<Expressions::Expression*>& updates
+        Statements::DataSource *table,
+        Expressions::Expression *expression,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate() = default;
@@ -742,368 +1116,105 @@ PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, con
     }
 
     PhysicalIndexSeekUpdate::PhysicalIndexSeekUpdate(
-      Statements::DataSource *table,
-      Expressions::Expression *expression,
-      DataStructures::PolymorphicArray<Expressions::Expression*>& updates
+        Statements::DataSource *table,
+        Expressions::Expression *expression,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
-  PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
+    PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
 
   ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
-    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+      const auto* db = this->server->UseDatabase(context, this->table->databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    DataTypes::Indexing::Key key;
+      DataTypes::Indexing::Key key;
 
-    const auto updateResult = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
+      const auto updateResult = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
 
-    // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
+      // tablePtr->ClusteredIndexSeekUpdate(this->expression, &key, &key, this->fields);
 
-    return ExecutionResult(updateResult.code, updateResult.message);
+      return ExecutionResult(updateResult.code, updateResult.message);
   }
 
-  PhysicalTableCreate::PhysicalTableCreate(
-      const DataTypes::Guid& sessionId,
-      Statements::DataSource*  table,
-      DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
-      const Headers::Index& primaryKey,
-      DataTypes::String& constraintName
-    ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
-      columns(std::move(columns)), primaryKey(primaryKey) {}
+  PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
+      : table(table), expression(expression) {}
 
-  PhysicalTableCreate::~PhysicalTableCreate() = default;
+  PhysicalHeapDelete::~PhysicalHeapDelete() = default;
 
-  ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
-    if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-          Errors::RuntimeError::Error,
-          Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-          context.GetAllocator()
-    );
+  ExecutionResult PhysicalHeapDelete::Execute(CoreEngine::ExecutionContext& context){
+      auto result = ExecutionResult(context);
 
-    const auto* allocator = context.GetAllocator();
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-    auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+      const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-    const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
+      tablePtr->HeapDelete(context, this->expression);
 
-    const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
-
-    const auto tableResult = this->catalog->InsertTableToMasterDb(
-        context,
-        this->table->databaseId,
-        this->table->schemaId,
-        this->table->name.ToView(),
-        index,
-        false,
-        this->session->user->name.ToView()
-    );
-
-    const auto tableId = tableResult.primaryKey.AsInt(1);
-
-    auto* tablePtr = db->CreateTable(tableId, index);
-
-    const auto tableStatsResult = this->catalog->InsertTableStatisticsToMasterDb(
-      context,
-      tableId
-    );
-
-    Dictionary<int, Int> columnIdsDict;
-    for (const auto* column: this->columns){
-        const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
-        auto* columnPtr =
-            tablePtr->AddColumn(
-                column->name.name.ToView(),
-                ColumnTypesDictionary.Get(normalizedTableName.ToView()),
-                column->type.size,
-                column->index,
-                column->isNullable
-            );
-
-      const auto columnResult =
-          this->catalog->InsertColumnToMasterDb(
-            context,
-            tableId,
-            column->name.name.ToView(),
-            ColumnTypesDictionary.Get(normalizedTableName.ToView()),
-            column->type.size,
-            column->type.decimal.precision,
-            column->type.decimal.scale,
-            column->isNullable,
-            column->index,
-            false,
-            this->session->user->name.ToView()
-          );
-
-      const auto columnId = columnResult.primaryKey.AsInt(1);
-      columnPtr->SetColumnId(columnId);
-
-      const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
-      columnIdsDict.Add(column->index, columnId);
-
-      if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
-        const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
-          context,
-          columnId,
-          column->defaultValue
-        );
-      }
-
-      //insert identity columns
-      if (column->identity == nullptr) continue;
-
-      const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
-          context,
-          tableId,
-          columnId,
-          column->identity->seed,
-          column->identity->incrementFactor,
-          column->identity->seed,
-          true,
-          static_cast<Int>(column->identity->cacheBlock)
-        );
-    }
-
-    DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
-    for (const auto& column: this->primaryKey.columns) {
-      if (this->constraintName.Empty()){
-          this->constraintName.SetAllocator(allocator);
-
-          const auto& columnName = this->columns[column]->name.name;
-          this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
-      }
-
-      primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
-    }
-
-    static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
-    if (primaryKeyColumnIdsArray.Empty()) {
-        tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-        tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
-        return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
-    }
-
-    const auto indexResult = this->catalog->InsertIndexToMasterDb(
-         context,
-        tableId,
-        this->constraintName.ToView(),
-        true,
-        false,
-        this->session->user->name.ToView()
-      );
-
-    const auto indexId = indexResult.primaryKey.AsInt(1);
-
-    const auto constraintResult = this->catalog->InsertConstraintToMasterDb(
-        context,
-      tableResult.primaryKey.AsInt(),
-        this->constraintName.ToView(),
-        Headers::ConstraintType::PrimaryKey,
-        false,
-        &indexId,
-        this->session->user->name.ToView()
-    );
-
-    const auto constraintId = constraintResult.primaryKey.AsInt(1);
-
-    for(int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
-      auto _ = this->catalog->InsertIndexColumnToMasterDb(
-        context,
-        indexResult.primaryKey.AsInt(),
-        primaryKeyColumnIdsArray[i],
-        this->primaryKey.columns[i],
-        true
-      );
-
-
-      _ = this->catalog->InsertConstraintColumnToMasterDb(
-          context,
-          constraintId,
-          primaryKeyColumnIdsArray[i],
-      this->primaryKey.columns[i]
-        );
-    }
-
-    const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
-      context,
-      tableId,
-      indexId
-    );
-
-    tablePtr->RetrieveIndexesFromCatalog(allocator);
-    tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-    tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
-
-    return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
+      return result;
   }
 
-  bool PhysicalOrderBy::CanBeSortedInMemory(const bool canFetchMore) const{
-    return !canFetchMore && !this->UsesExternalStorage();
+  PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
+      : table(table), expression(expression) {}
+
+  PhysicalIndexScanDelete::~PhysicalIndexScanDelete() = default;
+
+  ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
+      auto result = ExecutionResult(context);
+
+      const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+
+      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+
+      tablePtr->ClusteredIndexScanDelete(context, this->expression, state);
+
+      return result;
   }
 
-  PhysicalOrderBy::PhysicalOrderBy(
-      PlanNode *child,
-      DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
-  )   : child(child)
-   , expressions(std::move(expressions))
-   , comparator(&this->expressions, nullptr)
-   , priorityQueue(this->comparator){}
+  PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
+      : table(table), expression(expression) {}
 
-  PhysicalOrderBy::~PhysicalOrderBy() = default;
+  PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete() = default;
 
-  ExecutionResult PhysicalOrderBy::Execute(CoreEngine::ExecutionContext& context){
-    if (!this->comparator.HasProperties())
-        this->comparator.SetExecutionContext(&context);
-
-    auto result = this->child->Execute(context);
-
-    // Case 1: In-memory sort (no external storage needed)
-    // if (!result.canFetchMore && !this->UsesExternalStorage()){
-    //     SortingFunctions::OrderBy(context, result.results, this->expressions);
-    //     return result;
-    // }
-
-    // Case 2: Build phase - collect and sort batches
-    // while (result.canFetchMore || (result.canFetchMore == false && this->priorityQueue.Empty())) {
-    //     SortingFunctions::OrderBy(context, result.results, this->expressions);
-
-    //     DataTypes::RowIdentifier rowId;
-    //     this->InsertPostProjectionResultsToTemporaryDatabase(context, result, rowId);
-    //
-    //     auto element = MergeElement(
-    //         result.results[0],
-    //         static_cast<int>(this->priorityQueue.Size()),
-    //         rowId
-    //     );
-    //
-    //     this->priorityQueue.Add(std::move(element));
-    //
-    //     if (!result.canFetchMore)
-    //         break;
-    //
-    //     result = this->child->Execute(context);
-    // }
-    //
-    // // Case 3: Merge phase - k-way merge
-    // result.results.Clear();
-    //
-    // DataStructures::PolymorphicArray<DataStructures::PolymorphicArray<QueryResult>> batches;
-    // batches.Resize(this->priorityQueue.Size());
-    //
-    // while (!this->priorityQueue.Empty()){
-    //     auto top = this->priorityQueue.Top();
-    //     this->priorityQueue.Remove();
-    //
-    //     result.results.Push(std::move(top.value));
-    //
-    //     const auto batchId = top.batchId;
-    //
-    //     // Lazy load batch if needed
-    //     if (batches[batchId].Empty()) {
-    //         auto state = CoreEngine::ScanState();
-    //         state.lastFetchedRowId = top.rowId;
-    //         state.extentId = CoreEngine::Database::CalculateExtentId(state.lastFetchedRowId.pageId);
-    //
-    //         auto batchResult = this->StreamFromTemporaryDatabase(context, state);
-    //         batches[batchId] = std::move(batchResult.results);
-    //     }
-    //
-    //     // Remove consumed element
-    //     batches[batchId].Remove(0);
-    //
-    //     // Add next element from same batch if available
-    //     if (!batches[batchId].Empty()) {
-    //         auto nextElement = MergeElement(
-    //             batches[batchId][0],
-    //             batchId,
-    //             top.rowId // Update with proper next rowId if needed
-    //         );
-    //         this->priorityQueue.Add(std::move(nextElement));
-    //     }
-    // }
-
-    return result;
-  }
-
-    void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
-    }
-
-    PhysicalIndexCreate::PhysicalIndexCreate(
-        const DataTypes::Guid& sessionId,
-        Statements::DataSource *table,
-        DataTypes::String& constraintName,
-        DataStructures::PolymorphicArray<column_index_t> &columns
-    ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)), columns(std::move(columns)) {}
-
-    ExecutionResult PhysicalIndexCreate::Execute(CoreEngine::ExecutionContext& context){
+    ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-        const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->tableId);
+        tablePtr->ClusteredIndexSeekDelete(context, this->expression, this->state);
 
-        const auto indexResult =this->catalog->InsertIndexToMasterDb(
-            context,
-            this->table->tableId,
-            this->constraintName.ToView(),
-            false,
-            false,
-            this->session->user->name.ToView()
+        return result;
+    }
+
+    PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
+        : PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
+
+    ExecutionResult PhysicalDeclareVariable::Execute(CoreEngine::ExecutionContext& context) {
+        auto result = ExecutionResult(context);
+
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::Constant,
+            context
         );
 
-        const auto indexId = indexResult.primaryKey.AsInt(1);
+        auto value = Expressions::EvaluateExpression(this->expression, evaluationContext);
+        this->variable.SetValue(value);
 
-        const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
-            context,
-            this->table->tableId,
-            this->constraintName.ToView(),
-            Headers::ConstraintType::IndexKey,
-            false,
-            &indexId,
-            this->session->user->name.ToView()
-        );
-
-        const auto constraintId = constraintResult.primaryKey.AsInt(1);
-
-        for (const auto& columnPos : this->columns) {
-            const auto& header = columnsHeaders[columnPos];
-
-            const auto indexColumnResult =
-                this->catalog->InsertIndexColumnToMasterDb(
-                    context,
-                    indexId,
-                    header.id,
-                    columnPos,
-                    true
-                );
-
-            const auto constraintColumnResult =
-            this->catalog->InsertConstraintColumnToMasterDb(
-                context,
-                constraintId,
-                header.id,
-                columnPos
-                );
+        if (!this->server->AddOrSetVariable(this->sessionId, this->variable)){
+            result.status = Errors::RuntimeStatus(
+                Errors::RuntimeError::Error,
+                Messages::FAILED_TO_ADD_VARIABLE,
+                context.GetAllocator()
+            );
+            return result;
         }
 
-        const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
-            context,
-            this->table->tableId,
-            indexId
+        result.status = Errors::RuntimeStatus(
+            Errors::RuntimeError::Ok,
+            Messages::ADDED_VARIABLE(this->variable.GetName().ToView(), context.GetAllocator())
         );
-
-        const auto indexPos = tablePtr->CreateNonClusteredIndex(this->columns);
-
-        const auto pages = 1;
-        tablePtr->NonClusteredIndexInsertExistingRows(indexPos, pages);
-
-        //if there are rows in the table update the index
-        //do stuff here
-
         return result;
     }
 }

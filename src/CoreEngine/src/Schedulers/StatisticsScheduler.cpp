@@ -240,14 +240,10 @@ namespace CoreEngine {
     ) {
 
         const auto dataKey = table->GetDataFileKey();
-        const auto filename = table->GetFileNameView();
-
         const auto systemKey = table->GetSystemFileKey();
-        const auto systemFilename = table->GetSystemFileNameView();
 
         const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(
             dataKey,
-            filename,
             iamPageId,
             table
         );
@@ -267,7 +263,6 @@ namespace CoreEngine {
 
             const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
                 systemKey,
-                systemFilename,
                 extentFirstPageId
             );
 
@@ -285,7 +280,6 @@ namespace CoreEngine {
 
                 auto page = Storage::StorageManager::Get().GetPage(
                     dataKey,
-                    filename,
                     extentPageId,
                     table
                 );

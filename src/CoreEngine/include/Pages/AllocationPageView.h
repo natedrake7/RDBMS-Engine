@@ -21,6 +21,7 @@ namespace Pages{
         [[nodiscard]] inline bool GetBit(std::size_t bitIndex) const noexcept;
         inline void SetBit(std::size_t bitIndex) const noexcept;
         inline void ClearBit(std::size_t bitIndex) const noexcept;
+        [[nodiscard]] IndexAllocationPageAdditionalHeader* GetAdditionalHeader() const;
 
         public:
             AllocationPageView();

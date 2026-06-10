@@ -119,7 +119,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::Guid &src){
-        this->SetData(src.GetData().data(), DataTypes::GUID_SIZE);
+        this->SetData(src.GetData(), DataTypes::GUID_SIZE);
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::DateTime &src){

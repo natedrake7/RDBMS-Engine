@@ -84,7 +84,6 @@ namespace CoreEngine {
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
             this->dataFileKey,
-            this->filenameView,
             tableHeader.allocationPageId,
             table
         );
@@ -96,17 +95,12 @@ namespace CoreEngine {
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
             for(page_id_t nextIndexPageId = firstExtentPageId; nextIndexPageId < firstExtentPageId + Constants::EXTENT_SIZE; nextIndexPageId++){
-                if (
-                    nextIndexPageId == parentPageId
+                if (nextIndexPageId == parentPageId
                     || nextIndexPageId == splitChildPageId
                 ) continue;
 
                 {
-                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
-                        this->systemFileKey,
-                        this->systemFilenameView,
-                        nextIndexPageId
-                    );
+                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, nextIndexPageId);
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpacePage.Latch());
 
@@ -122,7 +116,6 @@ namespace CoreEngine {
 
                 auto indexPage = Storage::StorageManager::Get().GetIndexPage(
                     this->dataFileKey,
-                    this->filenameView,
                     nextIndexPageId,
                     table
                 );

@@ -30,8 +30,11 @@ template<typename Key, typename Value, size_t N, typename Hasher = ConstexprHash
 class ConstexprDictionary{
     static constexpr size_t Capacity = N * 2;
 
-    std::array<Pair<Key, Value>, Capacity> buckets{};
-    std::array<bool, Capacity> occupied{};
+
+    Pair<Key, Value> buckets[Capacity] {};
+    bool occupied[Capacity] {};
+    // std::array<Pair<Key, Value>, Capacity> buckets{};
+    // std::array<bool, Capacity> occupied{};
 
     constexpr void Insert(const Pair<Key, Value>& pair) {
         const auto idx = Hasher::Hash(pair.key) % Capacity;

@@ -148,7 +148,6 @@ public:
 
     [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(
         Storage::FileKey sysFileKey,
-        const DataTypes::StringView& filenameView,
         page_id_t pageId
     );
 
