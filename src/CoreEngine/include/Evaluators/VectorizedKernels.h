@@ -16,7 +16,7 @@ namespace CoreEngine{
     struct DataVector;
 }
 
-namespace CoreEngine::Kernel{
+namespace CoreEngine::VectorizedKernels{
     template<typename T>
     concept PrimitiveColumn = std::is_trivially_copyable_v<T>
                            && !std::is_pointer_v<T>;

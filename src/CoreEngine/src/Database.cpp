@@ -20,7 +20,11 @@
 
 namespace CoreEngine{
     void Database::WriteHeaderToFile() const{
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
+            this->systemFileKey,
+            Constants::HEADER_PAGE_ID,
+            nullptr
+        );
         headerPage.SetDatabaseHeader(this->header);
     }
 
@@ -154,7 +158,7 @@ namespace CoreEngine{
         Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
         Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
 
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
         this->header = *headerPage.GetDatabaseHeaderPtr();
         this->_tables.SetAllocator(&this->_allocator);
@@ -185,7 +189,7 @@ namespace CoreEngine{
         Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
         Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
 
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
         this->header = *headerPage.GetDatabaseHeaderPtr();
         this->_tables.SetAllocator(&this->_allocator);
@@ -208,7 +212,7 @@ namespace CoreEngine{
 
     Database::~Database(){
         // save db header;
-        const auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->systemFileKey);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
 
         for (const auto* dbTable : this->_tables){
@@ -429,7 +433,7 @@ namespace CoreEngine{
 
         const auto extentId = Database::CalculateExtentId(tableHeader.allocationPageId);
 
-        // const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, tableHeader.indexAllocationMapPageId, table);
+        // const auto indexAllocationMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(this->filename, tableHeader.indexAllocationMapPageId, table);
         //
         // if (indexAllocationMapPage.Get() == nullptr)
         // {
@@ -440,7 +444,7 @@ namespace CoreEngine{
 
         const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(tableHeader.allocationPageId);
 
-        const auto globalAllocationMapPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
+        const auto globalAllocationMapPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
             this->dataFileKey,
                         globalAllocationMapPageId
         );
@@ -472,15 +476,15 @@ namespace CoreEngine{
 
         Storage::StorageManager::Get().CreateFile(sysKey, sysDbNameView, Constants::DATA_FILE_EXTENSION);
 
-        static constexpr page_id_t firstGamPageId = 2;
-        static constexpr page_id_t firstPfsPageId = 1;
+        static constexpr page_id_t FIRST_PFS_PAGE_ID = 1;
+        static constexpr page_id_t FIRST_GAM_PAGE_ID = 2;
 
         const auto sysDbFileName = sysDbName.Concat(Constants::DATA_FILE_EXTENSION);
-        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysKey, firstGamPageId);
-        Storage::StorageManager::Get().CreatePageFreeSpacePage(sysKey, firstPfsPageId);
+        Storage::StorageManager::Get().CreateGlobalAllocationMapPage(sysKey, FIRST_GAM_PAGE_ID);
+        Storage::StorageManager::Get().CreatePageFreeSpacePage(sysKey, FIRST_PFS_PAGE_ID);
 
-        auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysKey);
-        headerPage.SetDatabaseHeader(DatabaseHeader(0, firstPfsPageId, firstGamPageId));
+        const auto headerPage = Storage::StorageManager::Get().CreateHeaderPage(sysKey);
+        headerPage.SetDatabaseHeader(DatabaseHeader(0, FIRST_PFS_PAGE_ID, FIRST_GAM_PAGE_ID));
     }
 
     void Database::DeleteDatabase() const{
@@ -503,7 +507,7 @@ namespace CoreEngine{
                 if (pageFreeSpacePage.GetPageSizeCategory(nextLeafPageId) == 0)
                     continue;
 
-                page = Storage::StorageManager::Get().GetPage(
+                page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     this->dataFileKey,
                                         nextLeafPageId,
                     &table
@@ -529,7 +533,7 @@ namespace CoreEngine{
         const page_id_t pageId
     ){
         const auto pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
-        return Storage::StorageManager::Get().GetPageFreeSpacePage(sysFileKey, pageFreeSpacePageId);
+        return Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(sysFileKey, pageFreeSpacePageId);
     }
 
     void Database::TruncateTable(const table_id_t  tableId) const{
@@ -541,14 +545,14 @@ namespace CoreEngine{
         // {
         //     const auto iamExtentId = Database::CalculateExtentId(indexAllocationMapPageId);
         //
-        //     const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(this->filename, indexAllocationMapPageId, table);
+        //     const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(this->filename, indexAllocationMapPageId, table);
         //
         //     std::vector<extent_id_t> allocatedExtents;
         //     tableMapPage.GetAllocatedExtents(&allocatedExtents);
         //
         //     const page_id_t globalAllocationMapPageId = Database::GetGamAssociatedPage(indexAllocationMapPageId);
         //
-        //     auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(this->filename, globalAllocationMapPageId);
+        //     auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(this->filename, globalAllocationMapPageId);
         //
         //     indexAllocationMapPageId = tableMapPage.NextPageId();
         //
@@ -560,7 +564,7 @@ namespace CoreEngine{
         //         {
         //             const page_id_t pageFreeSpacePageId = Database::GetPfsAssociatedPage(pageId);
         //
-        //             auto pageFreeSpacePage = Storage::StorageManager::Get().GetPageFreeSpacePage(this->systemFilename, pageFreeSpacePageId);
+        //             auto pageFreeSpacePage = Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(this->systemFilename, pageFreeSpacePageId);
         //
         //             pageFreeSpacePage.SetPageFreed(pageId);
         //         }
@@ -766,7 +770,7 @@ namespace CoreEngine{
         page_id_t newPageId = 0;
         extent_id_t newExtentId = 0;
         {
-            auto gamPage = Storage::StorageManager::Get().GetGlobalAllocationMapPage(
+            auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
                 this->systemFileKey,
                                 this->header.lastGamPageId
             );
@@ -828,7 +832,7 @@ namespace CoreEngine{
                 lowerLimit = newPageId;
 
                 if (newGamPageCreated && !isFirstExtent) {
-                    const auto previousIamPage = Storage::StorageManager::Get().GetAllocationPage(
+                    const auto previousIamPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
                         this->dataFileKey,
                                                 indexAllocationMapPageId,
                         table
@@ -855,7 +859,7 @@ namespace CoreEngine{
             }
             else {
                 // Table already has IAM page - get it
-                tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+                tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
                     this->dataFileKey,
                                         indexAllocationMapPageId,
                     table
@@ -922,7 +926,7 @@ namespace CoreEngine{
 
         const auto iamExtentId = Database::CalculateExtentId(tableMapPageId);
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             this->dataFileKey,
                         tableMapPageId,
             table
@@ -939,7 +943,7 @@ namespace CoreEngine{
             {
                 const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
 
-                const auto pageFreeSpace = Storage::StorageManager::Get().GetPageFreeSpacePage(
+                const auto pageFreeSpace = Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(
                     this->systemFileKey,
                                         correspondingPfsPageId
                 );
@@ -947,7 +951,7 @@ namespace CoreEngine{
                 if (pageFreeSpace.GetPageType(pageId) != Constants::PageType::LOB)
                     break;
 
-                auto lastLargeDataPage = Storage::StorageManager::Get().GetLargeDataPage(
+                auto lastLargeDataPage = Storage::StorageManager::Get().GetPage<Pages::LargeObjectView>(
                     this->dataFileKey,
                                         pageId,
                     this->_tables[tableId]
@@ -978,7 +982,7 @@ namespace CoreEngine{
 
         const auto iamExtentId = Database::CalculateExtentId(allocationPageId);
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             this->dataFileKey,
                         allocationPageId,
             table
@@ -994,7 +998,7 @@ namespace CoreEngine{
             {
                 const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
 
-                const auto pageFreeSpace = Storage::StorageManager::Get().GetPageFreeSpacePage(
+                const auto pageFreeSpace = Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(
                     this->systemFileKey,
                                         correspondingPfsPageId
                 );
@@ -1007,7 +1011,7 @@ namespace CoreEngine{
                 if(pageFreeSpace.GetPageSizeCategory(pageId) <= categorySize)
                     continue;
 
-                auto lastOverflowPage = Storage::StorageManager::Get().GetOverflowPage(
+                auto lastOverflowPage = Storage::StorageManager::Get().GetPage<Pages::OverflowPageView>(
                     this->dataFileKey,
                                         pageId,
                     table
@@ -1025,7 +1029,7 @@ namespace CoreEngine{
     {
         const auto extentId = Database::CalculateExtentId(pageId);
 
-        return Storage::StorageManager::Get().GetLargeDataPage(
+        return Storage::StorageManager::Get().GetPage<Pages::LargeObjectView>(
             this->dataFileKey,
             pageId,
             this->_tables[tableId]
@@ -1056,7 +1060,7 @@ namespace CoreEngine{
 //        }
 //
 //        return (extentFound)
-//                   ? StorageManager::Get().GetLargeDataPage(this->filename, pageId, associatedExtentId, this->_tables[tableId])
+//                   ? StorageManager::Get().GetPage<Pages::LargeObjectView>(this->filename, pageId, associatedExtentId, this->_tables[tableId])
 //                   : nullptr;
     }
 

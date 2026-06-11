@@ -126,7 +126,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Pages::LargeObjectView Table::GetLargeDataPage(const page_id_t pageId) const {
-        return Storage::StorageManager::Get().GetLargeDataPage(
+        return Storage::StorageManager::Get().GetPage<Pages::LargeObjectView>(
             this->database->GetDataFileKey(),
             pageId,
             this
@@ -134,7 +134,15 @@ namespace CoreEngine::StorageTypes {
     }
 
     Pages::OverflowPageView Table::GetOverflowPage(const page_id_t pageId) const{
-        return Storage::StorageManager::Get().GetOverflowPage(
+        return Storage::StorageManager::Get().GetPage<Pages::OverflowPageView>(
+            this->database->GetDataFileKey(),
+            pageId,
+            this
+        );
+    }
+
+    Pages::PageView Table::GetPage(const page_id_t pageId) const{
+        return Storage::StorageManager::Get().GetPage<Pages::PageView>(
             this->database->GetDataFileKey(),
             pageId,
             this

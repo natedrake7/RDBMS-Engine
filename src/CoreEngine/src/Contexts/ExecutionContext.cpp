@@ -7,7 +7,7 @@ namespace CoreEngine{
         Snapshot& snapshot,
         const Int batchSize,
         const Dictionary<DataTypes::String, Variable>& variables,
-        const QueryPipeline::PipelineConstants::ExecutionMode mode,
+        const Constants::ExecutionMode mode,
         const Int initialAllocatorSize
     )   :   snapshot(std::move(snapshot)),
             allocator(initialAllocatorSize),
@@ -15,7 +15,7 @@ namespace CoreEngine{
             batchSize(batchSize), mode(mode){}
 
     ExecutionContext::ExecutionContext()
-    : variables(nullptr), batchSize(0), mode(QueryPipeline::PipelineConstants::ExecutionMode::Row){}
+    : variables(nullptr), batchSize(0), mode(Constants::ExecutionMode::Row){}
 
     ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept
         :   snapshot(std::move(other.snapshot)),
@@ -88,7 +88,7 @@ namespace CoreEngine{
         return &this->scanContext.scanHandles[scanHandleIndex].rids[ridIndex];
     }
 
-    QueryPipeline::PipelineConstants::ExecutionMode ExecutionContext::GetMode() const{
+    Constants::ExecutionMode ExecutionContext::GetMode() const{
         return this->mode;
     }
 

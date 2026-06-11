@@ -5,6 +5,7 @@
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
+#include "../Pages/PageView.h"
 
 namespace DataTypes{
     struct JsonPathStep;
@@ -57,6 +58,8 @@ namespace Expressions{
         QueryResult materializedRow;
 
         const CoreEngine::StorageTypes::RID* row;
+
+        Pages::PageView page;
         const CoreEngine::StorageTypes::RID* joinRow;
 
         const Memory::IAllocator* allocator;
@@ -96,10 +99,17 @@ namespace Expressions{
         );
     };
 
-    using KernelFunction = CoreEngine::DataVector* (*)(
+    using VectorizedKernelFunction = CoreEngine::DataVector* (*)(
         const Expression* self,
         const CoreEngine::ExecutionContext& context,
         const CoreEngine::SelectionVector* selectionVector
+    );
+
+    using RowKernelFunction = void(*)(
+            const Expression* self,
+            const EvaluationContext& evaluationContext,
+            void* outVal,
+            bool* outNull
     );
 
     class Expression {
@@ -108,11 +118,13 @@ namespace Expressions{
 
     public:
         DataTypes::String name;
-        KernelFunction kernel;
+
+        VectorizedKernelFunction vectorizedKernel;
+        RowKernelFunction rowKernel;
+
         column_index_t columnIndex;
         ExpressionType expressionType;
 
-        virtual ~Expression() = default;
         Expression();
 
         [[nodiscard]] bool IsBinary()const;
@@ -151,6 +163,10 @@ namespace Expressions{
 
     class ColumnExpression final : public Expression {
         Value EvaluateSingleRow(const EvaluationContext& context)const;
+
+        void BindVectorizedKernel();
+        void BindRowKernel();
+
     public:
         DataTypes::String alias;
         DataTypes::String tableAlias;
@@ -177,7 +193,7 @@ namespace Expressions{
             Int rangeEnd
         );
 
-        static void BindExpression(Expression* expression);
+        static void BindExpression(Expression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
@@ -185,14 +201,14 @@ namespace Expressions{
 
     class ConstantExpression final : public Expression {
     public:
-      Value value;
+        Value value;
 
         explicit ConstantExpression(const Value& value);
         explicit ConstantExpression(Value& value);
         explicit ConstantExpression(Value&& value);
 
-      [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
-      [[nodiscard]] DataType GetReturnType() const;
+        [[nodiscard]] Value Evaluate()const;
+        [[nodiscard]] DataType GetReturnType() const;
     };
 
     class BinaryExpression final : public Expression {
@@ -209,7 +225,6 @@ namespace Expressions{
         BinaryOperator operation;
 
         BinaryExpression(Expression* left, Expression* right, BinaryOperator operation);
-        ~BinaryExpression()override;
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
         [[nodiscard]] DataType GetReturnType() const;
@@ -379,6 +394,11 @@ namespace Expressions{
         const CoreEngine::ExecutionContext& executionContext,
         const CoreEngine::SelectionVector* selectionVector
     );
+    void EvaluateExpression(
+        const Expression* expression,
+        const EvaluationContext& context,
+        void* outVal
+    );
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(
         const Expression* expression,
@@ -388,5 +408,5 @@ namespace Expressions{
 
     DataType GetExpressionReturnType(const Expression* expression);
 
-    void BindExpressionKernel(Expression* expression);
+    void BindExpressionKernel(Expression* expression, Constants::ExecutionMode mode);
 }

@@ -16,7 +16,7 @@ namespace Pages{
     class HeaderPageView final : public PageView{
         CoreEngine::DatabaseHeader* databaseHeaderPtr;
 
-        inline object_t* GetTableHeaderDataOffset(Int ordinalPosition) const;
+        [[nodiscard]] inline object_t* GetTableHeaderDataOffset(Int ordinalPosition) const;
 
         public:
             explicit HeaderPageView(Frame* framePtr);

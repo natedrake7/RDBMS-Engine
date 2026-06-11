@@ -48,18 +48,6 @@ namespace Storage{
 
     void File::Flush(const file_descriptor_t fd){ ::flush(fd); }
 
-    void FileManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){
-        char path[DIRECTORY_SIZE];
-        std::snprintf(path, sizeof(path), "%.*s", filename.Size(), filename.Data());
-
-        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
-        if (fd < 0)
-            throw std::runtime_error("FileManager::Open: File could not be opened");
-
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-        this->fileTable.Add(key, File(filename, fd));
-    }
-
     FileManager::FileManager() = default;
 
     FileManager::~FileManager(){
@@ -115,6 +103,18 @@ namespace Storage{
         if (this->fileTable.Contains(key))
             return;
 
+        this->fileTable.Add(key, File(filename, fd));
+    }
+
+    void FileManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){
+        char path[DIRECTORY_SIZE];
+        std::snprintf(path, sizeof(path), "%.*s", filename.Size(), filename.Data());
+
+        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
+        if (fd < 0)
+            throw std::runtime_error("FileManager::Open: File could not be opened");
+
+        MultiThreading::WriterGuard lock(&this->tableMutex);
         this->fileTable.Add(key, File(filename, fd));
     }
 

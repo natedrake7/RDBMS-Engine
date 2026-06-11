@@ -28,7 +28,7 @@ namespace QueryPipeline {
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalDeclareVariable::ToPhysical(QueryContext& context) {
-        Expressions::BindExpressionKernel(this->expression);
+        Expressions::BindExpressionKernel(this->expression, context._executionMode);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
     }
 
@@ -72,7 +72,7 @@ namespace QueryPipeline {
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
         for (auto* expression : this->resultExpressions)
-            Expressions::BindExpressionKernel(expression);
+            Expressions::BindExpressionKernel(expression, context._executionMode);
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
             (this->child != nullptr) ? this->child->ToPhysical(context) : nullptr,
@@ -112,7 +112,7 @@ namespace QueryPipeline {
             if (firstIndex.isClustered)
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, true);
 
-            Expressions::BindExpressionKernel(this->expression);
+            Expressions::BindExpressionKernel(this->expression, context._executionMode);
             return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
         }
 
@@ -121,7 +121,7 @@ namespace QueryPipeline {
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
         
 
-        Expressions::BindExpressionKernel(this->expression);
+        Expressions::BindExpressionKernel(this->expression, context._executionMode);
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);
@@ -266,7 +266,7 @@ namespace QueryPipeline {
             this->condition
         );
 
-        Expressions::BindExpressionKernel(this->condition);
+        Expressions::BindExpressionKernel(this->condition, context._executionMode);
 
         switch (this->type) {
             case JoinType::Inner:
@@ -286,7 +286,7 @@ namespace QueryPipeline {
         : child(child), filter(filter) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
-        Expressions::BindExpressionKernel(this->filter);
+        Expressions::BindExpressionKernel(this->filter, context._executionMode);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter);
     }
 

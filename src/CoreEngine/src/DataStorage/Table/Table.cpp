@@ -86,7 +86,7 @@ namespace CoreEngine::StorageTypes {
         const auto filename = this->database->GetFileName();
         const auto dataKey = this->database->GetDataFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
             this->header.allocationPageId,
             this
@@ -114,7 +114,7 @@ namespace CoreEngine::StorageTypes {
             if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
-            auto page = Storage::StorageManager::Get().GetPage(dataKey, extentPageId, this);
+            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
 
             if (page.PageSize() == 0)
               continue;
@@ -145,7 +145,7 @@ namespace CoreEngine::StorageTypes {
     void Table::RemoveColumnByHeap(const column_index_t index)const{
         // const auto& filename = this->GetFileNameView();
         //
-        // const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(filename, this->header.allocationPageId, this);
+        // const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(filename, this->header.allocationPageId, this);
         //
         // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
         // tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
@@ -164,7 +164,7 @@ namespace CoreEngine::StorageTypes {
         // if (pageFreeSpacePage.GetPageType(pageId) != PageType::DATA)
         // break;
         //
-        // auto page = Storage::StorageManager::Get().GetPage(filename, pageId, this);
+        // auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(filename, pageId, this);
         //
         // // for (auto& row: page.DataRowsNoLock(this))
         // //   Table::HandleRemoveColumn(page.Get(), &row, index);
@@ -539,7 +539,7 @@ namespace CoreEngine::StorageTypes {
         const auto dataKey = this->database->GetDataFileKey();
         const auto systemFileKey = this->database->GetSystemFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, this->header.allocationPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         tableMapPage.GetAllocatedExtents(&tableExtentIds, state.extentId);
@@ -560,7 +560,7 @@ namespace CoreEngine::StorageTypes {
             if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
-            auto page = Storage::StorageManager::Get().GetPage(dataKey, extentPageId, this);
+            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
@@ -588,7 +588,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     QueryResult Table::MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const{
-          const auto page = Storage::StorageManager::Get().GetIndexPage(
+          const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 this->database->GetDataFileKey(),
                 row->_pageId,
                 this
@@ -598,7 +598,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     QueryResult Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
-          const auto page = Storage::StorageManager::Get().GetPage(
+          const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                   this->database->GetDataFileKey(),
                   row->_pageId,
                   this
@@ -627,7 +627,7 @@ namespace CoreEngine::StorageTypes {
         const auto systemFileKey = this->database->GetSystemFileKey();
 
         const auto tableMapPage =
-            Storage::StorageManager::Get().GetAllocationPage(
+            Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
                 dataKey,
                 this->header.allocationPageId,
                 this
@@ -652,7 +652,7 @@ namespace CoreEngine::StorageTypes {
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
-                auto page = Storage::StorageManager::Get().GetPage(dataKey, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
 
                 // const auto rows = page.DataRowsNoLock(this);
                 //
@@ -703,7 +703,7 @@ namespace CoreEngine::StorageTypes {
           return status;
       }
 
-      const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, this->header.allocationPageId, this);
+      const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
 
       DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
       tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
@@ -732,7 +732,7 @@ namespace CoreEngine::StorageTypes {
               // find potential candidate
               if (rowCategory <= pageSizeCategory)
               {
-                  auto page = Storage::StorageManager::Get().GetPage(dataKey, pageId, this);
+                  auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId, this);
 
                   MultiThreading::WriterGuard pageLock(&page.Latch());
 
@@ -772,7 +772,7 @@ namespace CoreEngine::StorageTypes {
         const auto dataKey = this->database->GetDataFileKey();
         const auto systemFileKey = this->database->GetSystemFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
             this->header.allocationPageId,
             this
@@ -799,7 +799,7 @@ namespace CoreEngine::StorageTypes {
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
-                auto page = Storage::StorageManager::Get().GetPage(dataKey, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
 
                 if (page.PageSize() == 0)
                     continue;
@@ -831,7 +831,7 @@ namespace CoreEngine::StorageTypes {
         const auto dataKey = this->database->GetDataFileKey();
         const auto systemFileKey = this->database->GetSystemFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
             this->header.allocationPageId,
             this
@@ -858,7 +858,7 @@ namespace CoreEngine::StorageTypes {
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                   break;
 
-                auto page = Storage::StorageManager::Get().GetPage(dataKey, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto row = RID(extentPageId, i);
@@ -1353,7 +1353,7 @@ namespace CoreEngine::StorageTypes {
     const auto dataKey = this->database->GetDataFileKey();
     const auto systemKey = this->database->GetSystemFileKey();
 
-    const auto tableMapPage = Storage::StorageManager::Get().GetAllocationPage(dataKey, this->header.allocationPageId, this);
+    const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
 
     DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
     tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
@@ -1372,7 +1372,7 @@ namespace CoreEngine::StorageTypes {
           if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
             break;
 
-          auto page = Storage::StorageManager::Get().GetPage(dataKey, pageId, this);
+          auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId, this);
 
           // for (auto& row: page.DataRowsNoLock(this))
           //   this->HandleAddColumn(page.Get(), &row, index, defaultValue);
@@ -1480,7 +1480,7 @@ namespace CoreEngine::StorageTypes {
   }
 
   void Table::Rollback(const Snapshot& snapshot, const DataTypes::RowIdentifier& rowId) const{
-        // auto page = Storage::StorageManager::Get().GetPage(this->database->GetFileName(), rowId.pageId, this);
+        // auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(this->database->GetFileName(), rowId.pageId, this);
 
         // MultiThreading::WriterGuard guard(&page.Latch());
 

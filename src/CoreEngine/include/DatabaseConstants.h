@@ -49,12 +49,12 @@ namespace Constants{
         MAX = 5
     };
 
-    enum class PageType : UnsignedTinyInt{
+    enum class PageType : UnsignedSmallInt{
         DATA = 0,
         IAM = 1,
         LOB = 2,
         INDEX = 3,
-        METADATA = 4,
+        HEADER = 4,
         GAM = 5,
         FREESPACE = 6,
         OVERFLOWTYPE = 7,
@@ -76,6 +76,13 @@ namespace Constants{
     enum TreeType : UnsignedTinyInt {
         Clustered = 0,
         NonClustered = 1
+    };
+
+    static constexpr Int VECTORIZATION_THRESHOLD = 128;
+
+    enum class ExecutionMode : UnsignedTinyInt{
+        Row = 0,
+        Vectorized = 1
     };
 
     static constexpr size_t MAX_QUERY_JOINS = 10;

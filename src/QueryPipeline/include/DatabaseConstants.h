@@ -44,11 +44,4 @@ namespace QueryPipeline::PipelineConstants {
     static constexpr ConstexprHashSet<DataType, 2> ValidTableStringConversions{
         DataType::String,
     };
-
-    constexpr Int VECTORIZATION_THRESHOLD = 128;
-
-    enum class ExecutionMode : UnsignedTinyInt{
-        Row = 0,
-        Vectorized = 1
-    };
 }

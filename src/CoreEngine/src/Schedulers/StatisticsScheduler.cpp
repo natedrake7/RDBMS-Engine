@@ -242,7 +242,7 @@ namespace CoreEngine {
         const auto dataKey = table->GetDataFileKey();
         const auto systemKey = table->GetSystemFileKey();
 
-        const auto iamPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto iamPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
             iamPageId,
             table
@@ -278,7 +278,7 @@ namespace CoreEngine {
                     && pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA
                 ) break;
 
-                auto page = Storage::StorageManager::Get().GetPage(
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     dataKey,
                     extentPageId,
                     table

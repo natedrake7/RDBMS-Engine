@@ -94,7 +94,7 @@ namespace CoreEngine {
         const Dictionary<DataTypes::String, Variable>* variables;
         Int batchSize;
 
-        QueryPipeline::PipelineConstants::ExecutionMode mode;
+        Constants::ExecutionMode mode;
 
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 
@@ -103,7 +103,7 @@ namespace CoreEngine {
                 Snapshot& snapshot,
                 Int batchSize,
                 const Dictionary<DataTypes::String, Variable>& variables,
-                QueryPipeline::PipelineConstants::ExecutionMode mode,
+                Constants::ExecutionMode mode,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -128,7 +128,7 @@ namespace CoreEngine {
 
             [[nodiscard]] const StorageTypes::RID* GetRid(UnsignedInt scanHandleIndex, UnsignedInt ridIndex) const;
 
-            QueryPipeline::PipelineConstants::ExecutionMode GetMode()const;
+            Constants::ExecutionMode GetMode()const;
 
             void ResetAllocator()const;
             bool IsAllocatorEmpty()const;

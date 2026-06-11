@@ -27,7 +27,6 @@ namespace Pages{
         std::atomic<Int> pinCount;
 
         std::atomic<Constants::PagePriority> priority;
-        Constants::PageType type;
         bool hasSecondChance;
         bool isDirty;
 

@@ -2483,7 +2483,7 @@ namespace QueryPipeline::Statements {
 
             if (!branch->IsConstant()) return;
 
-            const auto value = branch->AsConstant()->Evaluate(Expressions::EvaluationContext(context.GetAllocator()));
+            const auto value = branch->AsConstant()->Evaluate();
             if (value.AsBool()) {
                 PropagateExpression(expression, castExpr->results[i]);
                 FoldExpression(context, expression);

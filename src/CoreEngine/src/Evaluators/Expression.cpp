@@ -13,7 +13,8 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
-#include "Evaluators/Kernel.h"
+#include "Evaluators/RowKernels.h"
+#include "Evaluators/VectorizedKernels.h"
 #include "Pages/Additional/Frame.h"
 #include "Vectorization/Vectorization.h"
 
@@ -145,10 +146,8 @@ namespace Expressions{
         // return Value::Null();
     }
 
-    Expression::Expression(){
-        this->expressionType = ExpressionType::Expression;
-        this->columnIndex = 0;
-    }
+    Expression::Expression()
+        : columnIndex(0), expressionType(ExpressionType::Expression) {}
 
     bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
     bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
@@ -187,23 +186,77 @@ namespace Expressions{
     void Expression::SetIndex(const column_index_t index){ this->columnIndex = index; }
 
     Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
-        // auto previousColumns = context.row->numberOfColumns;
-        // if (this->columnIndex < previousColumns)
-        //     return context.row->PartialMaterialize(context.allocator, this->columnIndex);
-        //
-        // for (const auto& joinedRow : context.row->logicalState->joinedRows) {
-        //     const auto joinRowColumns = joinedRow->numberOfColumns;
-        //
-        //     if (this->columnIndex < previousColumns + joinRowColumns)
-        //         return joinedRow->PartialMaterialize(
-        //             context.allocator,
-        //             this->columnIndex - previousColumns
-        //         );
-        //
-        //     previousColumns += joinRowColumns;
-        // }
-        //
-        // return Value::Null(context.allocator);
+        return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
+    }
+
+    void ColumnExpression::BindVectorizedKernel(){
+        switch (this->returnType){
+        case DataType::String:
+            break;
+        case DataType::Bool:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<bool>;
+            break;
+        case DataType::TinyInt:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<TinyInt>;
+            break;
+        case DataType::SmallInt:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<SmallInt>;
+            break;
+        case DataType::Int:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<Int>;
+            break;
+        case DataType::BigInt:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<BigInt>;
+            break;
+        case DataType::Decimal:
+            break;
+        case DataType::DateTime:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
+            break;
+        case DataType::Guid:
+            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
+            break;
+        case DataType::Json:
+            break;
+        case DataType::Null:
+        case DataType::RowIdentifier:
+            break;
+        }
+    }
+
+    void ColumnExpression::BindRowKernel(){
+        switch (this->returnType){
+        case DataType::String:
+            break;
+        case DataType::Bool:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<bool>;
+            break;
+        case DataType::TinyInt:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<TinyInt>;
+            break;
+        case DataType::SmallInt:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<SmallInt>;
+            break;
+        case DataType::Int:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<Int>;
+            break;
+        case DataType::BigInt:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<BigInt>;
+            break;
+        case DataType::Decimal:
+            break;
+        case DataType::DateTime:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
+            break;
+        case DataType::Guid:
+            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
+            break;
+        case DataType::Json:
+            break;
+        case DataType::Null:
+        case DataType::RowIdentifier:
+            break;
+        }
     }
 
     ColumnExpression::ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias){
@@ -284,38 +337,15 @@ namespace Expressions{
         return table->MaterializeColumn(context, rangeEnd, columnExpr->columnIndex);
     }
 
-    void ColumnExpression::BindExpression(Expression* expression){
+    void ColumnExpression::BindExpression(Expression* expression, const Constants::ExecutionMode mode){
         auto* columnExpr = expression->AsColumn();
-        switch (columnExpr->returnType){
-        case DataType::String:
+
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            columnExpr->BindRowKernel();
             break;
-        case DataType::Bool:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<bool>;
-            break;
-        case DataType::TinyInt:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<TinyInt>;
-            break;
-        case DataType::SmallInt:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<SmallInt>;
-            break;
-        case DataType::Int:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<Int>;
-            break;
-        case DataType::BigInt:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<BigInt>;
-            break;
-        case DataType::Decimal:
-            break;
-        case DataType::DateTime:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<DataTypes::DateTime>;
-            break;
-        case DataType::Guid:
-            columnExpr->kernel = &CoreEngine::Kernel::PrimitiveColumnScanKernel<DataTypes::Guid>;
-            break;
-        case DataType::Json:
-            break;
-        case DataType::Null:
-        case DataType::RowIdentifier:
+        case Constants::ExecutionMode::Vectorized:
+            columnExpr->BindVectorizedKernel();
             break;
         }
     }
@@ -339,7 +369,7 @@ namespace Expressions{
         this->expressionType = ExpressionType::Constant;
     }
 
-    Value ConstantExpression::Evaluate(const EvaluationContext &context) const{
+    Value ConstantExpression::Evaluate() const{
         return this->value;
     }
 
@@ -444,8 +474,6 @@ namespace Expressions{
         this->operation = operation;
         this->expressionType = ExpressionType::Binary;
     }
-
-    BinaryExpression::~BinaryExpression() = default;
 
     //TODO Implement field logical operations.
     Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
@@ -1095,7 +1123,7 @@ namespace Expressions{
         case ExpressionType::Column:
             return expression->AsColumn()->Evaluate(context);
         case ExpressionType::Constant:
-            return expression->AsConstant()->Evaluate(context);
+            return expression->AsConstant()->Evaluate();
         case ExpressionType::Binary:
             return expression->AsBinary()->Evaluate(context);
         case ExpressionType::Logical:
@@ -1153,7 +1181,16 @@ namespace Expressions{
         const CoreEngine::ExecutionContext& executionContext,
         const CoreEngine::SelectionVector* selectionVector
     ){
-        return expression->kernel(expression, executionContext, selectionVector);
+        return expression->vectorizedKernel(expression, executionContext, selectionVector);
+    }
+
+    void EvaluateExpression(
+        const Expression* expression,
+        const EvaluationContext& context,
+        void* outVal
+    ){
+        bool outNull = false;
+        expression->rowKernel(expression, context, outVal, &outNull);
     }
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(
@@ -1201,7 +1238,7 @@ namespace Expressions{
         }
     }
 
-    void BindExpressionKernel(Expression* expression){
+    void BindExpressionKernel(Expression* expression, const Constants::ExecutionMode mode){
         if (expression == nullptr)
             return;
 
@@ -1209,7 +1246,7 @@ namespace Expressions{
         case ExpressionType::Expression:
             break;
         case ExpressionType::Column:
-            ColumnExpression::BindExpression(expression);
+            ColumnExpression::BindExpression(expression, mode);
             break;
         case ExpressionType::Constant:
             break;

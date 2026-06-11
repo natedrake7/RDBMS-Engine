@@ -434,6 +434,7 @@ namespace CoreEngine::StorageTypes
 
             [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId) const;
             [[nodiscard]] Pages::OverflowPageView GetOverflowPage(page_id_t pageId) const;
+            [[nodiscard]] Pages::PageView GetPage(page_id_t pageId) const;
 
         /** @} End of: Page and Index Management Functions*/
 

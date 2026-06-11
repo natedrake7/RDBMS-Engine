@@ -96,7 +96,7 @@ namespace QueryPipeline{
 
     QueryContext::QueryContext()
         :   status(this->_compileContext.GetAllocator()), hasMore(false),
-            _executionMode(PipelineConstants::ExecutionMode::Row){
+            _executionMode(Constants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
@@ -112,7 +112,7 @@ namespace QueryPipeline{
      QueryContext::QueryContext(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;
-        this->_executionMode = PipelineConstants::ExecutionMode::Row;
+        this->_executionMode = Constants::ExecutionMode::Row;
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 

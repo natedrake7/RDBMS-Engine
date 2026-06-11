@@ -49,7 +49,7 @@ namespace Pages{
         }
         return size;
     }
-    IndexPageView::IndexPageView() : PageView() {}
+    IndexPageView::IndexPageView() {}
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;

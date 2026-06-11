@@ -21,7 +21,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        return Storage::StorageManager::Get().GetIndexPage(this->database->GetDataFileKey(), indexPageId, this);
+        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->GetDataFileKey(), indexPageId, this);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
@@ -238,7 +238,7 @@ namespace CoreEngine::StorageTypes {
         if (expression != nullptr) {
 
             for (const auto& rowId : rowIds) {
-                const auto page = Storage::StorageManager::Get().GetPage(
+                const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     fileKey,
                     rowId.pageId,
                     this
@@ -261,7 +261,7 @@ namespace CoreEngine::StorageTypes {
         }
 
         for (const auto& rowId : rowIds) {
-            const auto page = Storage::StorageManager::Get().GetPage(
+            const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                 fileKey,
                 rowId.pageId,
                 this
@@ -323,7 +323,7 @@ namespace CoreEngine::StorageTypes {
         const RID* row,
         const column_index_t columnIndex
     ) const{
-        const auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+        const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
             this->database->GetDataFileKey(),
             row->_pageId,
             this
@@ -346,7 +346,7 @@ namespace CoreEngine::StorageTypes {
         for (Int i = 0; i < rangeEnd; i++){
             const auto* row = context.GetRid(0, i);
 
-            const auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+            const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 fileKey,
                 row->_pageId,
                 this

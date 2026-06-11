@@ -14,6 +14,14 @@ namespace Pages{
         this->bytesLeft = static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
     }
 
+    Constants::PageType PageHeader::Type() const{
+        return static_cast<Constants::PageType>(this->type);
+    }
+
+    void PageHeader::SetType(const Constants::PageType pageType){
+        this->type = static_cast<page_size_t>(pageType);
+    }
+
     void PageView::SetPageId(const page_id_t pageId) const{
         this->_frame->Header()->pageId = pageId;
     }
@@ -21,8 +29,8 @@ namespace Pages{
     page_offset_t PageView::NewInsertOffset() const{
         const auto* headerPtr = this->_frame->Header();
         return Constants::PAGE_SIZE
-                - headerPtr->bytesLeft
-                - headerPtr->size * SlotDirectory::SIZE;
+            - headerPtr->bytesLeft
+            - headerPtr->size * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){
@@ -70,7 +78,7 @@ namespace Pages{
     }
 
     Int PageView::RawDataSize() const{
-        return this->_frame->type == Constants::PageType::INDEX
+        return this->IsIndexPage()
                    ? Constants::INDEX_PAGE_DEFAULT_SIZE
                    : Constants::PAGE_SIZE_WITHOUT_HEADER;
     }
@@ -90,7 +98,7 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->_frame->type == Constants::PageType::INDEX;
+        return this->_frame->Header()->Type() == Constants::PageType::INDEX;
     }
 
     PageView::PageView(){
@@ -117,6 +125,7 @@ namespace Pages{
 
     PageView::PageView(PageView&& other) noexcept{
         this->_frame = other._frame;
+        this->initialOffset = other.initialOffset;
         other._frame = nullptr;
     }
 
@@ -397,35 +406,6 @@ namespace Pages{
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
-    void PageView::Delete(const Int indexPosition) const{
-        auto slot = this->GetSlotDirectory(indexPosition);
-        slot.SetFlag(SlotDirectory::SLOT_DEAD);
-    }
-
-    page_id_t PageView::PageId() const{
-        return this->_frame->Header()->pageId;
-    }
-
-    page_size_t PageView::PageSize() const{
-        return this->_frame->Header()->size;
-    }
-
-    page_size_t PageView::BytesLeft() const{
-        return this->_frame->Header()->bytesLeft;
-    }
-
-    object_t* PageView::GetData() const{
-        return this->_frame->_data;
-    }
-
-    Frame* PageView::GetFrame() const{
-        return this->_frame;
-    }
-
-    MultiThreading::Mutex& PageView::Latch() const{
-        return this->_frame->latch;
-    }
-
     QueryResult PageView::MaterializeRow(
         const Memory::IAllocator* allocator,
         const Int indexPosition
@@ -465,12 +445,41 @@ namespace Pages{
         return result;
     }
 
+    void PageView::Delete(const Int indexPosition) const{
+        auto slot = this->GetSlotDirectory(indexPosition);
+        slot.SetFlag(SlotDirectory::SLOT_DEAD);
+    }
+
+    page_id_t PageView::PageId() const{
+        return this->_frame->Header()->pageId;
+    }
+
+    page_size_t PageView::PageSize() const{
+        return this->_frame->Header()->size;
+    }
+
+    page_size_t PageView::BytesLeft() const{
+        return this->_frame->Header()->bytesLeft;
+    }
+
+    object_t* PageView::GetData() const{
+        return this->_frame->_data;
+    }
+
+    Frame* PageView::GetFrame() const{
+        return this->_frame;
+    }
+
+    MultiThreading::Mutex& PageView::Latch() const{
+        return this->_frame->latch;
+    }
+
     bool PageView::IsValid() const{
         return this->_frame != nullptr;
     }
 
     Constants::PageType PageView::GetPageType() const{
-        return this->_frame->type;
+        return this->_frame->Header()->Type();
     }
 
     bool PageView::Filter(const Frame* frame, const CoreEngine::StorageTypes::RID* rowId, Int columnIndex){
@@ -540,4 +549,34 @@ namespace Pages{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return RawRowReference(this->_frame->_data + slot.AbsoluteDataOffset(), slot.DataSize());
     }
+
+    template <typename T>
+    T PageView::GetColumnAt(
+        const Int index,
+        const Int columnIndex,
+        bool* outNull
+    ) const{
+        const auto slot = this->GetSlotDirectory(index);
+        const auto* rowDataPtr = this->_frame->_data + slot.AbsoluteDataOffset();
+
+        const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
+            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+        );
+
+        *outNull = rowEntry.IsNull();
+        auto out = T();
+
+        if (*outNull) return out;
+
+        std::memcpy(&out, rowDataPtr + rowEntry._offset, sizeof(T));
+        return out;
+    }
+
+    template bool PageView::GetColumnAt<bool>(Int index, Int columnIndex, bool* outNull) const;
+    template TinyInt PageView::GetColumnAt<TinyInt>(Int index, Int columnIndex, bool* outNull) const;
+    template SmallInt PageView::GetColumnAt<SmallInt>(Int index, Int columnIndex, bool* outNull) const;
+    template BigInt PageView::GetColumnAt<BigInt>(Int index, Int columnIndex, bool* outNull) const;
+    template Int PageView::GetColumnAt<Int>(Int index, Int columnIndex, bool* outNull) const;
+    template DataTypes::DateTime PageView::GetColumnAt<DataTypes::DateTime>(Int index, Int columnIndex, bool* outNull) const;
+    template DataTypes::Guid PageView::GetColumnAt<DataTypes::Guid>(Int index, Int columnIndex, bool* outNull) const;
 }

@@ -1,5 +1,7 @@
 ﻿#include "../../../include/Pages/Additional/Frame.h"
 
+#include "Pages/PageView.h"
+
 namespace Pages{
     Frame::Frame(){
         this->_data = nullptr;
@@ -9,7 +11,6 @@ namespace Pages{
         this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
-        this->type = Constants::PageType::DATA;
     }
 
     Frame::Frame(object_t* data, const CoreEngine::StorageTypes::Table* table){
@@ -20,7 +21,6 @@ namespace Pages{
         this->priority = Constants::PagePriority::LOW;
         this->hasSecondChance = true;
         this->logSequenceNumber = 0;
-        this->type = Constants::PageType::DATA;
     }
 
     Frame& Frame::operator=(const Frame& other){
@@ -34,7 +34,6 @@ namespace Pages{
         this->priority = other.priority.load();
         this->hasSecondChance = other.hasSecondChance;
         this->logSequenceNumber = other.logSequenceNumber;
-        this->type = other.type;
 
         return *this;
     }

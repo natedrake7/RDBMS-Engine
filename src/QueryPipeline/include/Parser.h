@@ -39,7 +39,7 @@ namespace QueryPipeline{
         Errors::Error status;
         bool hasMore;
 
-        PipelineConstants::ExecutionMode _executionMode;
+        Constants::ExecutionMode _executionMode;
 
         QueryContext();
         explicit QueryContext(const Errors::Error& error);

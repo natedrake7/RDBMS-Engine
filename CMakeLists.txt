@@ -190,8 +190,9 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Memory/PersistentAllocator.cpp
         src/CoreEngine/src/Extensions/StringExtensions.cpp
         src/CoreEngine/src/Vectorization/Vectorization.cpp
-        src/CoreEngine/src/Evaluators/Kernel.cpp
+        src/CoreEngine/src/Evaluators/VectorizedKernels.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Vectorized.cpp
+        src/CoreEngine/src/Evaluators/RowKernels.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

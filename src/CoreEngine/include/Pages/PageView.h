@@ -2,6 +2,7 @@
 #include "../DatabaseConstants.h"
 #include "../../Systemic/include/QueryResult.h"
 #include "../DataStorage/Row.h"
+#include "Additional/Frame.h"
 #include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"
 
@@ -32,11 +33,16 @@ namespace Pages{
 
     struct PageHeader{
         page_id_t pageId;
-        page_size_t size;
+        page_size_t size: 12;
+        page_size_t type: 4;
         page_size_t bytesLeft;
 
         PageHeader();
+
+        Constants::PageType Type() const;
+        void SetType(Constants::PageType pageType);
     };
+    static_assert(sizeof(PageHeader) == Constants::PAGE_HEADER_SIZE);
 
     class PageView{
     protected:
@@ -74,7 +80,7 @@ namespace Pages{
         PageView& operator=(PageView&& other) noexcept;
         PageView(PageView&& other) noexcept;
 
-        virtual ~PageView();
+        ~PageView();
 
         [[nodiscard]] PageHeader* GetHeader()const;
 
@@ -147,7 +153,14 @@ namespace Pages{
             Int columnIndex
         );
 
-        const object_t* GetColumnAt(Int rowIndex, Int columnIndex) const;
+        template<typename T>
+        [[nodiscard]] T GetColumnAt(
+            Int index,
+            Int columnIndex,
+            bool* outNull
+        )const;
+
+        [[nodiscard]] const object_t* GetColumnAt(Int rowIndex, Int columnIndex) const;
 
         // Same as the above, but also reports the stored byte length (rowEntry.Size()).
         // Required for variable-length columns (Decimal/String/Json). Returns nullptr

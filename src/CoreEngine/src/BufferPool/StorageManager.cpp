@@ -142,7 +142,7 @@ Pages::Frame* StorageManager::GetFrame(
     if (segment == nullptr)
         return this->HandlePageCacheMiss(fileKey, pageId, table);
 
-    auto frameId = segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire);
+    const auto frameId = segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire);
 
     if (frameId == INVALID_FRAME)
         return this->HandlePageCacheMiss(fileKey, pageId, table);
@@ -197,53 +197,20 @@ Pages::PageView StorageManager::CreatePage(
     const CoreEngine::StorageTypes::Table *table,
     const page_id_t pageId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, table);
-    frame->type = Constants::PageType::DATA;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::DATA, table);
     frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
-    return Pages::PageView(frame);
-}
-
-Pages::PageView StorageManager::GetPage(
-    const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table *table
-){
-    auto* frame = this->GetFrame(fileKey, pageId, table);
-    frame->type = Constants::PageType::DATA;
     return Pages::PageView(frame);
 }
 
 Pages::LargeObjectView StorageManager::CreateLargeDataPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, nullptr);
-    frame->type = Constants::PageType::LOB;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::LOB, nullptr);
     frame->Header()->bytesLeft = Constants::LARGE_OBJECT_PAGE_SIZE;
     return Pages::LargeObjectView(frame);
 }
 
-Pages::LargeObjectView StorageManager::GetLargeDataPage(
-    const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table *table
-){
-    auto* frame = this->GetFrame(fileKey, pageId, table);
-    frame->type = Constants::PageType::LOB;
-    return Pages::LargeObjectView(frame);
-}
-
 Pages::OverflowPageView StorageManager::CreateOverflowPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, nullptr);
-    frame->type = Constants::PageType::OVERFLOWTYPE;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::OVERFLOWTYPE, nullptr);
     frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
-    return Pages::OverflowPageView(frame);
-}
-
-Pages::OverflowPageView StorageManager::GetOverflowPage(
-    const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table *table
-){
-    auto* frame = this->GetFrame(fileKey, pageId, table);
-    frame->type = Constants::PageType::OVERFLOWTYPE;
     return Pages::OverflowPageView(frame);
 }
 
@@ -252,14 +219,12 @@ Pages::OverflowPageView StorageManager::GetOverflowPage(
 //////////////////////////////////////////////////
 
 Pages::HeaderPageView StorageManager::CreateHeaderPage(const FileKey fileKey){
-    auto* frame = this->CreateFrame(fileKey, Constants::HEADER_PAGE_ID, nullptr);
-    frame->type = Constants::PageType::METADATA;
+    auto* frame = this->CreateFrame(fileKey, Constants::HEADER_PAGE_ID, Constants::PageType::HEADER, nullptr);
     return Pages::HeaderPageView(frame);
 }
 
 Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, nullptr);
-    frame->type = Constants::PageType::GAM;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM, nullptr);
     return Pages::GlobalAllocationPageView(frame);
 }
 
@@ -269,15 +234,13 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
     const page_id_t pageId,
     const extent_id_t startingExtentId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, nullptr);
-    frame->type = Constants::PageType::IAM;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::IAM, nullptr);
     return Pages::AllocationPageView(frame);
 }
 
 
 Pages::PageFreeSpaceView StorageManager::CreatePageFreeSpacePage(const FileKey fileKey,const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, nullptr);
-    frame->type = Constants::PageType::FREESPACE;
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREESPACE, nullptr);
     return Pages::PageFreeSpaceView(frame);
 }
 
@@ -286,11 +249,9 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
     const CoreEngine::StorageTypes::Table* table,
     const page_id_t pageId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, table);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::INDEX, table);
 
-    frame->type = Constants::PageType::INDEX;
     frame->Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
-
     auto* additionalHeader = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
     additionalHeader->nextNode = INVALID_PAGE_ID;
     additionalHeader->previousNode = INVALID_PAGE_ID;
@@ -301,6 +262,7 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
 Pages::Frame* StorageManager::CreateFrame(
     const FileKey fileKey,
     const page_id_t pageId,
+    const Constants::PageType type,
     const CoreEngine::StorageTypes::Table *table
 ){
     MultiThreading::WriterGuard lock(&this->tableMutex);
@@ -318,10 +280,12 @@ Pages::Frame* StorageManager::CreateFrame(
     framePtr->hasSecondChance = false;
     framePtr->pinCount.store(1);   // producer pins the page it hands back
     framePtr->priority.store(Constants::PagePriority::LOW);
-    framePtr->Header()->pageId = pageId;
+
+    auto* header = framePtr->Header();
+    header->pageId = pageId;
+    header->SetType(type);
 
     this->CacheFrameToPageTableNoLock(fileKey, pageId, frameId);
-
     return framePtr;
 }
 
@@ -334,7 +298,7 @@ Segment* StorageManager::GetSegmentNoLock(FileKey fileKey, const page_id_t pageI
             return nullptr;
 
         const auto& directory = db->files[static_cast<size_t>(fileKey.type)];
-        auto* group = directory.groups[PageAddress::DirectorySlot(pageId)].load(std::memory_order_acquire);
+        const auto* group = directory.groups[PageAddress::DirectorySlot(pageId)].load(std::memory_order_acquire);
         if (group == nullptr)
             return nullptr;
 
@@ -393,46 +357,15 @@ Pages::FrameId StorageManager::AcquireFrameId(){
     return frameId;
 }
 
-
-Pages::HeaderPageView StorageManager::GetHeaderPage(const FileKey fileKey){
-    auto* frame = this->GetFrame(fileKey, Constants::HEADER_PAGE_ID, nullptr);
-    auto view =  Pages::HeaderPageView(frame);
-    return view;
-}
-
-Pages::PageFreeSpaceView StorageManager::GetPageFreeSpacePage(const FileKey fileKey, const page_id_t pageId){
-    auto* page = this->GetFrame(fileKey, pageId, nullptr);
-    return Pages::PageFreeSpaceView(page);
-}
-
-Pages::IndexPageView StorageManager::GetIndexPage(
-  const FileKey fileKey,
-  const page_id_t pageId,
-  const CoreEngine::StorageTypes::Table* table
-){
-    auto* frame = this->GetFrame(fileKey, pageId, table);
-    return Pages::IndexPageView(frame);
-}
-
-Pages::AllocationPageView StorageManager::GetAllocationPage(
-    const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table *table
-){
-    auto* frame = this->GetFrame(fileKey, pageId, table);
-    return Pages::AllocationPageView(frame);
-}
-
-Pages::GlobalAllocationPageView StorageManager::GetGlobalAllocationMapPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->GetFrame(fileKey, pageId, nullptr);
-    return Pages::GlobalAllocationPageView(frame);
-}
-
 ////////////////////////////////////////////////////////////////////
 /////////////////////////Globally Used Functions///////////////////
 //////////////////////////////////////////////////////////////////
-void StorageManager::CacheFrameToPageTableNoLock(FileKey key, const page_id_t pageId, const Pages::FrameId frameId){
-    Segment* segment = this->GetSegmentNoLock(key, pageId);   // exists: caller ran EnsureSegmentExistsNoLock
+void StorageManager::CacheFrameToPageTableNoLock(
+    const FileKey key,
+    const page_id_t pageId,
+    const Pages::FrameId frameId
+) const{
+    auto* segment = this->GetSegmentNoLock(key, pageId);   // exists: caller ran EnsureSegmentExistsNoLock
     segment->frames[PageAddress::PageSlot(pageId)].store(frameId, std::memory_order_release);
 }
 } // namespace Storage

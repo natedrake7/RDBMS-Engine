@@ -14,6 +14,7 @@
 #include "Contexts/ExecutionContext.h"
 #include "SystemDatabases/TemporaryDatabase.h"
 #include "../../../CoreEngine/include/Vectorization/Vectorization.h"
+#include "BufferPool/StorageManager.h"
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
@@ -694,8 +695,8 @@ PhysicalTableCreate::PhysicalTableCreate(
 
         // 1. Allocate one flat DataVector per projected column -- exactly the shape the
         //    vectorized kernels return, so the output VectorBatch is identical either way.
-        for (Int j = 0; j < columnCount; j++){
-            const auto type = static_cast<DataType>(this->columnHeaders[j].dataType);
+        for (Int i = 0;i < columnCount; i++){
+            const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
 
             auto* column = context.Allocate<CoreEngine::DataVector>(type);
             column->_count = rowCount;
@@ -704,22 +705,49 @@ PhysicalTableCreate::PhysicalTableCreate(
                 context.Allocate(DataVectorSlotSize(type) * rowCount)
             );
 
-            result.vectorBatch.SetColumn(column, j);
+            result.vectorBatch.SetColumn(column, i);
         }
+
+        auto* table = context.GetTable(0);
 
         // 2. Transpose: evaluate each row scalar-wise, scatter every Value into its column slot.
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context.GetAllocator(),
-            context.GetTable(0)
+            table
         );
 
-        for (Int i = 0; i < rowCount; i++){
-            // evaluationContext.row = &result.selectionVector->selectedRids[0][i];
-            for (Int j = 0; j < columnCount; j++){
-                const auto value = Expressions::EvaluateExpression(this->resultExpressions[j], evaluationContext);
-                StoreValueAt(result.vectorBatch._columns[j], i, value);
+        const auto& scanHandle = context.GetScanHandle(0);
+
+        page_id_t currentPageId = INVALID_PAGE_ID;
+        if (result.selectionVector->isIdentity){
+            for (Int i = 0; i < rowCount; i++){
+                evaluationContext.row = &scanHandle.rids[i];
+
+                if (currentPageId != evaluationContext.row->_pageId){
+                    evaluationContext.page = table->GetPage(evaluationContext.row->_pageId);
+                    currentPageId = evaluationContext.row->_pageId;
+                }
+
+                for (Int j = 0; j < columnCount; j++)
+                    Expressions::EvaluateExpression(
+                        this->resultExpressions[j],
+                        evaluationContext,
+                        &result.vectorBatch._columns[j]->_data[i]
+                    );
             }
+
+            return;
+        }
+
+        for (Int i = 0; i < rowCount; i++){
+            evaluationContext.row = &scanHandle.rids[result.selectionVector->selectedRids[0][i]];
+            for (Int j = 0; j < columnCount; j++)
+                Expressions::EvaluateExpression(
+                    this->resultExpressions[j],
+                    evaluationContext,
+                    &result.vectorBatch._columns[j][i]
+                );
         }
     }
 
@@ -740,9 +768,8 @@ PhysicalTableCreate::PhysicalTableCreate(
         result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
         result.vectorBatch._numberOfColumns = this->resultExpressions.Size();
 
-        if (context.GetMode() == PipelineConstants::ExecutionMode::Vectorized){
+        if (context.GetMode() == Constants::ExecutionMode::Vectorized)
             this->ExecuteVectorizedMode(result, context);
-        }
         else
             this->ExecuteRowMode(result, context);
 

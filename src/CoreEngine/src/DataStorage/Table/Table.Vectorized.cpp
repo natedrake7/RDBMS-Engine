@@ -17,9 +17,9 @@ namespace CoreEngine::StorageTypes{
         const auto& scanHandle = context.GetScanHandle(0);
 
         for (auto i = 0; i < sv->selectedRidsCount; i++){
-            const auto rid = scanHandle.rids[i];
+            const auto rid = scanHandle.rids[sv->selectedRids[0][i]];
 
-            const auto page = Storage::StorageManager::Get().GetIndexPage(
+            const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 this->database->GetDataFileKey(),
                 rid._pageId,
                 this
@@ -45,7 +45,7 @@ namespace CoreEngine::StorageTypes{
         for (auto i = 0; i < rangeEnd; i++){
             const auto rid = scanHandle.rids[i];
 
-            const auto page = Storage::StorageManager::Get().GetIndexPage(
+            const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 this->database->GetDataFileKey(),
                 rid._pageId,
                 this

@@ -82,7 +82,7 @@ namespace CoreEngine {
                 pagesToAllocate, treeType, indexId
             );
 
-        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetAllocationPage(
+        const auto indexAllocationMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             this->dataFileKey,
             tableHeader.allocationPageId,
             table
@@ -114,7 +114,7 @@ namespace CoreEngine {
                     if(pageFreeSpacePage.GetPageSizeCategory(nextIndexPageId) < 6) continue;
                 }
 
-                auto indexPage = Storage::StorageManager::Get().GetIndexPage(
+                auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                     this->dataFileKey,
                     nextIndexPageId,
                     table

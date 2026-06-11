@@ -397,7 +397,7 @@ namespace Indexing
     }
 
     Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
-        return Storage::StorageManager::Get().GetIndexPage(
+        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
             this->database->GetDataFileKey(),
             pageId,
             this->table
