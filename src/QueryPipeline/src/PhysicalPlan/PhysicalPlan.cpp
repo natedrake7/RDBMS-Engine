@@ -281,7 +281,7 @@ PhysicalTableCreate::PhysicalTableCreate(
           auto* columnPtr =
               tablePtr->AddColumn(
                   column->name.name.ToView(),
-                  ColumnTypesDictionary.Get(normalizedTableName.ToView()),
+                  COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
                   column->type.size,
                   column->index,
                   column->isNullable
@@ -292,7 +292,7 @@ PhysicalTableCreate::PhysicalTableCreate(
                   context,
                   tableId,
                   column->name.name.ToView(),
-                  ColumnTypesDictionary.Get(normalizedTableName.ToView()),
+                  COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
                   column->type.size,
                   column->type.decimal.precision,
                   column->type.decimal.scale,
@@ -629,82 +629,13 @@ PhysicalTableCreate::PhysicalTableCreate(
         }
     }
 
-    namespace {
-        // Byte size of one slot in a DataVector for a given logical type.
-        // NOTE: this is the *storage* representation inside a DataVector, not the
-        // on-page record size. Strings live as a (ptr,len) StringView, not raw bytes.
-        Int DataVectorSlotSize(const DataType type){
-            switch (type){
-                case DataType::Bool:     return sizeof(bool);
-                case DataType::TinyInt:  return sizeof(TinyInt);
-                case DataType::SmallInt: return sizeof(SmallInt);
-                case DataType::Int:      return sizeof(Int);
-                case DataType::BigInt:   return sizeof(BigInt);
-                case DataType::DateTime: return sizeof(DataTypes::DateTime);
-                case DataType::Guid:     return sizeof(DataTypes::Guid);
-                case DataType::Decimal:  return sizeof(DataTypes::Decimal);
-                case DataType::String:   return sizeof(DataTypes::StringView);
-                default:                 return 0;
-            }
-        }
-
-        // Unbox a scalar Value into slot `index` of a typed DataVector column.
-        // This is the single seam that lets row-at-a-time evaluation feed the SAME
-        // columnar VectorBatch the vectorized kernels produce.
-        void StoreValueAt(CoreEngine::DataVector* column, const Int index, const Value& value){
-            // TODO: when the validity bitmap is wired, set/clear column->_validity here
-            //       instead of writing a default for nulls.
-
-            switch (column->_type){
-                case DataType::Bool:
-                    reinterpret_cast<bool*>(column->_data)[index] = !value.IsNull() && value.AsBool();
-                    break;
-                case DataType::TinyInt:
-                    reinterpret_cast<TinyInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsTinyInt();
-                    break;
-                case DataType::SmallInt:
-                    reinterpret_cast<SmallInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsSmallInt();
-                    break;
-                case DataType::Int:
-                    reinterpret_cast<Int*>(column->_data)[index] = value.IsNull() ? 0 : value.AsInt();
-                    break;
-                case DataType::BigInt:
-                    reinterpret_cast<BigInt*>(column->_data)[index] = value.IsNull() ? 0 : value.AsBigInt();
-                    break;
-                case DataType::DateTime:
-                    reinterpret_cast<DataTypes::DateTime*>(column->_data)[index] = value.AsDateTime();
-                    break;
-                case DataType::Guid:
-                    reinterpret_cast<DataTypes::Guid*>(column->_data)[index] = value.AsGuid();
-                    break;
-                case DataType::Decimal:
-                    reinterpret_cast<DataTypes::Decimal*>(column->_data)[index] = value.AsDecimal();
-                    break;
-                case DataType::String:
-                    reinterpret_cast<DataTypes::StringView*>(column->_data)[index] = value.AsStringView();
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
-
     void PhysicalProject::ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context) const{
         const Int rowCount    = result.selectionVector->selectedRidsCount;
-        const Int columnCount = this->resultExpressions.Size();
+        const Int projectCount = this->resultExpressions.Size();
 
-        // 1. Allocate one flat DataVector per projected column -- exactly the shape the
-        //    vectorized kernels return, so the output VectorBatch is identical either way.
-        for (Int i = 0;i < columnCount; i++){
+        for (Int i = 0;i < projectCount; i++){
             const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
-
-            auto* column = context.Allocate<CoreEngine::DataVector>(type);
-            column->_count = rowCount;
-            column->_kind  = CoreEngine::DataVectorKind::Flat;
-            column->_data  = static_cast<object_t*>(
-                context.Allocate(DataVectorSlotSize(type) * rowCount)
-            );
-
+            auto* column = CoreEngine::DataVector::FlatVector(context.GetAllocator(), type, rowCount);
             result.vectorBatch.SetColumn(column, i);
         }
 
@@ -720,6 +651,7 @@ PhysicalTableCreate::PhysicalTableCreate(
         const auto& scanHandle = context.GetScanHandle(0);
 
         page_id_t currentPageId = INVALID_PAGE_ID;
+        bool outNull = false;
         if (result.selectionVector->isIdentity){
             for (Int i = 0; i < rowCount; i++){
                 evaluationContext.row = &scanHandle.rids[i];
@@ -729,12 +661,15 @@ PhysicalTableCreate::PhysicalTableCreate(
                     currentPageId = evaluationContext.row->_pageId;
                 }
 
-                for (Int j = 0; j < columnCount; j++)
+                for (Int j = 0; j < projectCount; j++){
                     Expressions::EvaluateExpression(
                         this->resultExpressions[j],
                         evaluationContext,
-                        &result.vectorBatch._columns[j]->_data[i]
+                        result.vectorBatch._columns[j]->SlotAt(i),
+                        &outNull
                     );
+                    result.vectorBatch._columns[j]->SetNullValue(i, outNull);
+                }
             }
 
             return;
@@ -742,12 +677,14 @@ PhysicalTableCreate::PhysicalTableCreate(
 
         for (Int i = 0; i < rowCount; i++){
             evaluationContext.row = &scanHandle.rids[result.selectionVector->selectedRids[0][i]];
-            for (Int j = 0; j < columnCount; j++)
+            for (Int j = 0; j < projectCount; j++){
                 Expressions::EvaluateExpression(
                     this->resultExpressions[j],
                     evaluationContext,
-                    &result.vectorBatch._columns[j][i]
+                    result.vectorBatch._columns[j]->_data + result.vectorBatch._columns[j]->_dataEntrySize * i,
+                    &outNull
                 );
+            }
         }
     }
 

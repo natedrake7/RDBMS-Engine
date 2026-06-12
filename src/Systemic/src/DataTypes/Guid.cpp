@@ -93,17 +93,14 @@ namespace DataTypes {
     bool Guid::Validate(const std::string_view& str) { return Guid::Validate(str.data(), static_cast<Int>(str.size())); }
     bool Guid::Validate(const char* str) { return Guid::Validate(str, static_cast<Int>(std::strlen(str)));}
 
-    bool operator==(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1._data, guid2._data, GUID_SIZE) == 0; }
+    bool operator==(const Guid &lhs, const Guid &rhs) { return std::memcmp(lhs._data, rhs._data, GUID_SIZE) == 0; }
+    bool operator!=(const Guid &lhs, const Guid &rhs){ return std::memcmp(lhs._data, rhs._data, GUID_SIZE) != 0; }
 
-    bool operator!=(const Guid &guid1, const Guid &guid2){ return !(guid1 == guid2); }
+    bool operator<=(const Guid &lhs, const Guid &rhs){ return std::memcmp(lhs._data, rhs._data, GUID_SIZE) <= 0; }
+    bool operator<(const Guid &lhs, const Guid &rhs) { return std::memcmp(lhs._data, rhs._data, GUID_SIZE) < 0; }
 
-    bool operator<(const Guid &guid1, const Guid &guid2) { return std::memcmp(guid1._data, guid2._data, GUID_SIZE) < 0; }
-
-    bool operator>(const Guid &guid1, const Guid &guid2){ return guid2 < guid1; }
-
-    bool operator<=(const Guid &guid1, const Guid &guid2){ return guid2 >= guid1; }
-
-    bool operator>=(const Guid &guid1, const Guid &guid2){ return !(guid1 < guid2); }
+    bool operator>=(const Guid &lhs, const Guid &rhs){ return std::memcmp(lhs._data, rhs._data, GUID_SIZE) >= 0; }
+    bool operator>(const Guid &lhs, const Guid &rhs){ return std::memcmp(lhs._data, rhs._data, GUID_SIZE) > 0; }
 
     std::ostream & operator<<(std::ostream &os, const Guid &guid){
         auto buffer = guid.ToStringBuffer();

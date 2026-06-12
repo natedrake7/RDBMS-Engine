@@ -674,7 +674,7 @@ namespace QueryPipeline {
         const auto normalizedText = Functions::String::NormalizeString(text);
         const auto view = DataTypes::StringView(normalizedText.c_str(), normalizedText.size());
 
-        if (!ColumnTypesDictionary.TryGetValue(view, type))
+        if (!COLUMN_TYPENAMES_TO_ENUMS.TryGetValue(view, type))
             throw SyntaxError("Datatype: " + text + " does not exist", CreatePositionErrorMessage(context));
 
         return std::any(type);

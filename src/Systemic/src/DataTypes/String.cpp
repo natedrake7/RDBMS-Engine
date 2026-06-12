@@ -4,6 +4,7 @@
 #include <cstring>
 #include <ostream>
 
+#include "Comparators.h"
 #include "../../../Server/include/ConnectionManager.h"
 
 
@@ -523,8 +524,6 @@ namespace DataTypes{
         this->_size = size;
     }
 
-    String::~String() = default;
-
     std::ostream& operator<<(std::ostream& os, const String& sv){
         os.write(sv._data, sv._size);
         return os;
@@ -534,15 +533,6 @@ namespace DataTypes{
 
     char& String::operator[](const Int index){
         return this->_data[index];
-    }
-
-    bool String::operator==(const String& other) const{
-        return this->_size == other._size
-            && std::memcmp(this->_data, other._data, this->_size) == 0;
-    }
-
-    bool String::operator!=(const String& other) const{
-        return !(*this == other);
     }
 
     String::operator std::string_view() const{
@@ -587,6 +577,30 @@ namespace DataTypes{
 
     String operator+(const std::string& lhs, const String& rhs){
         return rhs.Concat(lhs);
+    }
+
+    bool operator==(const String& lhs, const String& rhs){
+        return lhs.Equals(rhs.Data(), rhs.Size());
+    }
+
+    bool operator!=(const String& lhs, const String& rhs){
+        return !lhs.Equals(rhs.Data(), rhs.Size());
+    }
+
+    bool operator<=(const String& lhs, const String& rhs){
+        return Comparators::Compare(lhs, rhs) <= Comparators::Comparator::Equal;
+    }
+
+    bool operator<(const String& lhs, const String& rhs){
+        return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Less;
+    }
+
+    bool operator>=(const String& lhs, const String& rhs){
+        return Comparators::Compare(lhs, rhs) >= Comparators::Comparator::Equal;
+    }
+
+    bool operator>(const String& lhs, const String& rhs){
+        return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Greater;
     }
 
     String& String::operator+=(const String& other){
@@ -675,48 +689,6 @@ namespace DataTypes{
         return String(newString, newSize, this->_allocator);
     }
 
-    String String::Concat(
-        const StringView &lhs,
-        const StringView &rhs,
-        const Memory::IAllocator *allocator
-    ){
-        const auto size = lhs.Size() + rhs.Size();
-        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
-        std::memcpy(newString, lhs.Data(), lhs.Size());
-        std::memcpy(newString + lhs.Size(), rhs.Data(), rhs.Size());
-
-        return String(newString, size, allocator);
-    }
-
-    String String::Concat(
-        const String &lhs,
-        const String &rhs,
-        const Memory::IAllocator *allocator
-    ){
-        const auto size = lhs._size + rhs._size;
-        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
-        std::memcpy(newString, lhs._data, lhs._size);
-        std::memcpy(newString + lhs._size, rhs._data, rhs._size);
-
-        return String(newString, size, allocator);
-    }
-
-    String String::Concat(
-        const char *lhs,
-        const char *rhs,
-        const Memory::IAllocator *allocator
-    ) {
-        const auto lhsSize = static_cast<Int>(std::strlen(lhs));
-        const auto rhsSize = static_cast<Int>(std::strlen(rhs));
-        const auto size = lhsSize + rhsSize;
-
-        auto* newString = static_cast<char*>(allocator->AllocateRaw(size));
-        std::memcpy(newString, lhs, lhsSize);
-        std::memcpy(newString + lhsSize, rhs, rhsSize);
-
-        return String(newString, size, allocator);
-    }
-
     String& String::Append(const String& other){
         return this->Append(other.Data(), other.Size());
     }
@@ -771,10 +743,10 @@ namespace DataTypes{
         return -1;
     }
 
-    bool String::Contains(const String& other, const StringComparisonType type) const{
+    bool String::Compare(const String& other, const StringComparisonType type) const{
         switch (type) {
         case StringComparisonType::Equals:
-            return *this == other;
+            return this->Equals(other._data, other._size);
         case StringComparisonType::EqualsIgnoreOrdinalCase:
             return this->EqualsIgnoreCase(other._data, other._size);
         case StringComparisonType::StartsWith:
@@ -794,7 +766,7 @@ namespace DataTypes{
         }
     }
 
-    bool String::Contains(const char* other, const StringComparisonType type) const{
+    bool String::Compare(const char* other, const StringComparisonType type) const{
         const auto otherSize = static_cast<Int>(std::strlen(other));
         switch (type) {
         case StringComparisonType::Equals:
@@ -818,7 +790,7 @@ namespace DataTypes{
         }
     }
 
-    bool String::Contains(const StringView& other, const StringComparisonType type) const{
+    bool String::Compare(const StringView& other, const StringComparisonType type) const{
         switch (type) {
         case StringComparisonType::Equals:
             return this->Equals(other.Data(), other.Size());
@@ -841,7 +813,7 @@ namespace DataTypes{
         }
     }
 
-    bool String::Contains(const std::string_view other, const StringComparisonType type) const{
+    bool String::Compare(const std::string_view other, const StringComparisonType type) const{
         switch (type) {
         case StringComparisonType::Equals:
             return this->Equals(other.data(), static_cast<Int>(other.size()));
@@ -864,7 +836,7 @@ namespace DataTypes{
         }
     }
 
-    bool String::Contains(const std::string& other, const StringComparisonType type) const{
+    bool String::Compare(const std::string& other, const StringComparisonType type) const{
         switch (type) {
         case StringComparisonType::Equals:
             return this->Equals(other.data(), static_cast<Int>(other.size()));

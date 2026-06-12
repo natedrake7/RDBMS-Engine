@@ -8,7 +8,6 @@
 namespace CoreEngine::StorageTypes{
     class Table;
     class Block;
-    class Row;
 
     struct ColumnHeader{
         Headers::DefaultValuesHeader defaultValue;

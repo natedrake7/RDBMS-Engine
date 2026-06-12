@@ -89,13 +89,14 @@ namespace DataTypes {
 
 		// friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
 	    void Print(std::ostream& os, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
+
+	    friend bool operator==(const DateTime& lhs, const DateTime& rhs);
+	    friend bool operator!=(const DateTime& lhs, const DateTime& rhs);
+	    friend bool operator>=(const DateTime& lhs, const DateTime& rhs);
+	    friend bool operator<=(const DateTime& lhs, const DateTime& rhs);
+	    friend bool operator>(const DateTime& lhs, const DateTime& rhs);
+	    friend bool operator<(const DateTime& lhs, const DateTime& rhs);
 	};
 }
 
 
-bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
-bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
-bool operator>=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
-bool operator<=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
-bool operator>(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);
-bool operator<(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate);

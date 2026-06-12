@@ -106,10 +106,10 @@ namespace Expressions{
     );
 
     using RowKernelFunction = void(*)(
-            const Expression* self,
-            const EvaluationContext& evaluationContext,
-            void* outVal,
-            bool* outNull
+        const Expression* self,
+        const EvaluationContext& evaluationContext,
+        void* outVal,
+        bool* outNull
     );
 
     class Expression {
@@ -119,8 +119,8 @@ namespace Expressions{
     public:
         DataTypes::String name;
 
-        VectorizedKernelFunction vectorizedKernel;
-        RowKernelFunction rowKernel;
+        VectorizedKernelFunction vectorizedKernel = nullptr;
+        RowKernelFunction rowKernel = nullptr;
 
         column_index_t columnIndex;
         ExpressionType expressionType;
@@ -162,7 +162,7 @@ namespace Expressions{
     };
 
     class ColumnExpression final : public Expression {
-        Value EvaluateSingleRow(const EvaluationContext& context)const;
+        [[nodiscard]] Value EvaluateSingleRow(const EvaluationContext& context)const;
 
         void BindVectorizedKernel();
         void BindRowKernel();
@@ -193,19 +193,23 @@ namespace Expressions{
             Int rangeEnd
         );
 
-        static void BindExpression(Expression* expression, Constants::ExecutionMode mode);
+        static void BindExpressionKernel(ColumnExpression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
     };
 
     class ConstantExpression final : public Expression {
+
+        void BindRowKernel();
     public:
         Value value;
 
         explicit ConstantExpression(const Value& value);
         explicit ConstantExpression(Value& value);
         explicit ConstantExpression(Value&& value);
+
+        static void BindExpressionKernel(ConstantExpression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] Value Evaluate()const;
         [[nodiscard]] DataType GetReturnType() const;
@@ -218,6 +222,9 @@ namespace Expressions{
         [[nodiscard]] bool ValidateDivision()const;
         [[nodiscard]] bool ValidateModulo()const;
 
+        void BindVectorizedKernel();
+        void BindRowKernel();
+
     public:
         Expression* left;
         Expression* right;
@@ -226,14 +233,6 @@ namespace Expressions{
 
         BinaryExpression(Expression* left, Expression* right, BinaryOperator operation);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
-        [[nodiscard]] DataType GetReturnType() const;
-
-        [[nodiscard]] static Value* Evaluate(
-            const Expression* expression,
-            const CoreEngine::ExecutionContext& context,
-            const CoreEngine::SelectionVector* selectionVector
-        );
         [[nodiscard]] static Value* Evaluate(
             const Expression* expression,
             const CoreEngine::ExecutionContext& context,
@@ -241,6 +240,11 @@ namespace Expressions{
         );
 
         [[nodiscard]] bool ValidateOperation()const;
+
+        static void BindExpressionKernel(BinaryExpression* expression, Constants::ExecutionMode mode);
+
+        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
+        [[nodiscard]] DataType GetReturnType() const;
     };
 
     class FunctionExpression final : public Expression {
@@ -397,7 +401,8 @@ namespace Expressions{
     void EvaluateExpression(
         const Expression* expression,
         const EvaluationContext& context,
-        void* outVal
+        void* outVal,
+        bool* outNull
     );
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(

@@ -4,10 +4,15 @@
 #include "../../Systemic/include/DataStructures/SortedDictionary.h"
 
 #include "DatabaseConstants.h"
-#include "../../QueryPipeline/include/PhysicalPlan.h"
-
+#include "../../Systemic/include/Errors.h"
 #include "DataStorage/Row.h"
 #include "Pages/IndexPageView.h"
+
+namespace Headers{
+    struct ColumnStatistics;
+    struct TableStatistics;
+    struct IndexStatistics;
+}
 
 namespace Pages{
     struct IndexInsertTuple;
@@ -23,6 +28,8 @@ namespace MultiThreading {
 }
 
 namespace CoreEngine{
+    struct IndexState;
+    class ExecutionContext;
     class Database;
 }
 

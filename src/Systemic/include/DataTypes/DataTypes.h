@@ -63,20 +63,25 @@ typedef uint16_t large_page_index_t;
 typedef uint32_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
+static constexpr Int DATATYPE_COUNT = 12;
+
 enum class DataType: UnsignedTinyInt {
-    String = 1,
-    Bool = 2,
-    TinyInt=  3,
-    SmallInt = 4,
-    Int = 5,
-    BigInt = 6,
-    Decimal = 7,
-    DateTime = 8,
-    Guid = 9,
-    Json = 10,
-    Null = 11,
-    RowIdentifier = 12
+    String = 0,
+    Bool = 1,
+    TinyInt = 2,
+    SmallInt = 3,
+    Int = 4,
+    BigInt = 5,
+    Decimal = 6,
+    DateTime = 7,
+    Guid = 8,
+    Json = 9,
+    Null = 10,
+    RowIdentifier = 11
 };
+
+static_assert(static_cast<UnsignedTinyInt>(DataType::RowIdentifier) == DATATYPE_COUNT - 1,
+              "DataType must be 0-based and contiguous so it can index tables of size DATATYPE_COUNT");
 
 enum class StringComparisonType: UnsignedTinyInt{
     Equals = 0,

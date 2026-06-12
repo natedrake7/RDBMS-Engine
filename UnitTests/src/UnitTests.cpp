@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include "../../CoreEngine/include/DataStorage/Table.h"
+#include "../../CoreEngine/include/DataStorage/Column.h"
 #include "../../CoreEngine/include/Pages/Additional/Frame.h"
 #include "../../src/Systemic/include/Serialization/JsonParser.h"
 #include "../../src/Systemic/include/Serialization/JsonBuilder.h"

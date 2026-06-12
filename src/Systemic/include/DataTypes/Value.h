@@ -1,22 +1,19 @@
 #pragma once
 #include <string>
-#include <tuple>
+#include <type_traits>
 #include <vector>
 
 #include "DataTypes.h"
 #include "StringView.h"
+#include "DateTime.h"
+#include "Decimal.h"
+#include "JsonBinary.h"
+#include "Guid.h"
 #include "../Serialization/JsonParser.h"
 
 namespace Memory{
     class IAllocator;
 }
-
-namespace DataTypes {
-    class Decimal;
-    class DateTime;
-    class Guid;
-}
-
 
 class Value{
     object_t* data;
@@ -165,7 +162,41 @@ class Value{
 
         [[nodiscard]] BigInt Hash()const;
         [[nodiscard]] long double Interpolate()const;
+
+        template<typename T>
+        [[nodiscard]] T Get() const;
 };
+
+// Typed unbox: maps a compile-time T to the matching runtime accessor. The
+// discarded `if constexpr` branches are never instantiated, so forward-declared
+// return types (Decimal/DateTime/Guid) only need to be complete in the TU that
+// actually instantiates that branch.
+template <typename T>
+T Value::Get() const{
+    if constexpr (std::is_same_v<T, bool>)
+        return this->AsBool();
+    else if constexpr (std::is_same_v<T, TinyInt>)
+        return this->AsTinyInt();
+    else if constexpr (std::is_same_v<T, SmallInt>)
+        return this->AsSmallInt();
+    else if constexpr (std::is_same_v<T, Int>)
+        return this->AsInt();
+    else if constexpr (std::is_same_v<T, BigInt>)
+        return this->AsBigInt();
+    else if constexpr (std::is_same_v<T, DataTypes::DateTime>)
+        return this->AsDateTime();
+    else if constexpr (std::is_same_v<T, DataTypes::Guid>)
+        return this->AsGuid();
+    else if constexpr (std::is_same_v<T, DataTypes::Decimal>)
+        return this->AsDecimal();
+    else if constexpr (std::is_same_v<T, DataTypes::JsonBinary>)
+        return this->AsJson();
+    else if constexpr (std::is_same_v<T, DataTypes::String>)
+        return this->AsString();
+    else static_assert(sizeof(T) == 0, "Value::Get<T>: unsupported type");
+
+    return {};
+}
 
 struct ValueComparator {
     bool operator()(const Value& a, const Value& b) const {

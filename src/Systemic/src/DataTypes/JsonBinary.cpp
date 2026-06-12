@@ -196,12 +196,6 @@ namespace DataTypes{
     JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, const Int size)
         : _allocator(allocator), _data(data), _size(size){}
 
-    JsonBinary::JsonBinary(const JsonBinary& other) = default;
-
-    JsonBinary::JsonBinary(JsonBinary&& other) noexcept = default;
-
-    JsonBinary::~JsonBinary() = default;
-
     JsonBinary& JsonBinary::operator=(const JsonBinary& other){
         if (this == &other)
             return *this;

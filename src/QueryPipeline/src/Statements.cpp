@@ -1,7 +1,7 @@
 #include "../include/Statements.h"
 
 #include "../../CoreEngine/include/Database.h"
-#include "../../Systemic/include/Coercions.h"
+#include "../../Systemic/include/Coercions/Coercions.h"
 #include "../../Systemic/include/Functions/StringFunctions.h"
 #include "../../Server/include/Server.h"
 #include "../include/LogicalPlan.h"
@@ -454,8 +454,6 @@ namespace QueryPipeline::Statements {
         this->constraint = nullptr;
     }
 
-    CreateTableStatement::~CreateTableStatement() = default;
-
     Errors::ValidationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
         const auto& schemasDict = this->catalog->SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
         Headers::SchemaHeader schemaHeader;
@@ -481,7 +479,7 @@ namespace QueryPipeline::Statements {
         std::ostringstream os;
 
         column->type.name.ToLowerInPlace();
-        if (!ColumnTypeSizes.TryGetValue(column->type.name.ToView(), columnSize)) {
+        if (!COLUMN_SIZES_BY_TYPENAME.TryGetValue(column->type.name.ToView(), columnSize)) {
             return Errors::ValidationStatus::Error(
                 Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type.name)
             );
@@ -490,7 +488,7 @@ namespace QueryPipeline::Statements {
         if (columnSize != 0)
         column->type.size = columnSize;
 
-        const auto& dataType = ColumnTypesDictionary.Get(column->type.name.ToView());
+        const auto& dataType = COLUMN_TYPENAMES_TO_ENUMS.Get(column->type.name.ToView());
 
         if (dataType == DataType::Decimal) {
             if (!column->type.decimal.Validate()) {
@@ -590,8 +588,6 @@ namespace QueryPipeline::Statements {
         this->distinct = false;
         this->orderBy = nullptr;
     }
-
-    SelectStatement::~SelectStatement() = default;
 
     Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
         Dictionary<DataTypes::String, column_index_t> dict;
@@ -1033,8 +1029,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 columnName,
-                SqlTypesString[static_cast<Int>(columnType)],
-                SqlTypesString[static_cast<Int>(valueType)]
+                SQL_TYPES_NAMES[static_cast<Int>(columnType)],
+                SQL_TYPES_NAMES[static_cast<Int>(valueType)]
             )
         );
     }
@@ -1258,8 +1254,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 update->name.name,
-                SqlTypesString[static_cast<Int>(update->name.returnType)],
-                SqlTypesString[static_cast<Int>(valueType)]
+                SQL_TYPES_NAMES[static_cast<Int>(update->name.returnType)],
+                SQL_TYPES_NAMES[static_cast<Int>(valueType)]
             )
         );
     }
@@ -1428,7 +1424,7 @@ namespace QueryPipeline::Statements {
         DataType columnType;
         const auto columnTypeToLower = newColumn->type.name.ToLower();
         const auto columnTypeView = columnTypeToLower.ToView();
-        if (!ColumnTypesDictionary.TryGetValue(columnTypeView, columnType)) {
+        if (!COLUMN_TYPENAMES_TO_ENUMS.TryGetValue(columnTypeView, columnType)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
@@ -1438,7 +1434,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        const auto recordSize = ColumnTypeSizes.Get(&columnTypeView);
+        const auto recordSize = COLUMN_SIZES_BY_TYPENAME.Get(&columnTypeView);
 
         if (recordSize != 0)
             newColumn->type.size = recordSize;
@@ -1483,7 +1479,7 @@ namespace QueryPipeline::Statements {
         const auto columnTypeToLower = alterColumn->type.name.ToLower();
         const auto columnTypeView = columnTypeToLower.ToView();
         DataType columnType;
-        if (!ColumnTypesDictionary.TryGetValue(columnTypeView, columnType)) {
+        if (!COLUMN_TYPENAMES_TO_ENUMS.TryGetValue(columnTypeView, columnType)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
@@ -1507,7 +1503,7 @@ namespace QueryPipeline::Statements {
                 Messages::CANNOT_ALTER_COLUMN_TO_TYPE(
                         context.GetAllocator(),
                         alterColumn->name.name,
-                        SqlTypesString[header.dataType],
+                        SQL_TYPES_NAMES[header.dataType],
                         alterColumn->type.name.ToView()
                 )
             );
@@ -1519,7 +1515,7 @@ namespace QueryPipeline::Statements {
                 Messages::CANNOT_ALTER_COLUMN_TO_NEW_SIZE(
                     context.GetAllocator(),
                     alterColumn->name.name,
-                    SqlTypesString[header.dataType],
+                    SQL_TYPES_NAMES[header.dataType],
                     alterColumn->type.size
                 )
             );
@@ -2020,6 +2016,7 @@ namespace QueryPipeline::Statements {
 
             return CompileWildcard(context, column, statementValidationScope, selectStatement);
         }
+
         return column->HasTableAlias()
             ? CompileColumnWhenTableAliasExists(context, column, statementValidationScope)
             : CompileColumnWhenNoTableAliasExists(context, column, statementValidationScope);
@@ -2389,6 +2386,7 @@ namespace QueryPipeline::Statements {
             columnExpression->columnId = header.id;
             columnExpression->tableId = header.tableId;
             columnExpression->columnIndex = header.ordinalPosition;
+            columnExpression->returnType = static_cast<DataType>(header.dataType);
 
             const auto insertPos = *statementValidationScope.indexPos + header.ordinalPosition;
 
@@ -2416,17 +2414,20 @@ namespace QueryPipeline::Statements {
             case Expressions::ExpressionType::Variable:
             case Expressions::ExpressionType::Json:
                 break;
+            case Expressions::ExpressionType::Cast:
+                FoldExpression(context, expression->AsCast(), expression);
+                break;
         }
     }
 
     void FoldExpression(
         const QueryContext& context,
-        const Expressions::BinaryExpression *castExpr,
+        const Expressions::BinaryExpression *binaryExpr,
         Expressions::Expression *&expression
     ){
         if (
-            !castExpr->left->IsConstant()
-            || !castExpr->right->IsConstant()
+            !binaryExpr->left->IsConstant()
+            || !binaryExpr->right->IsConstant()
         ) return;
 
         EvaluateExpression(context, expression);
@@ -2434,31 +2435,31 @@ namespace QueryPipeline::Statements {
 
     void FoldExpression(
         const QueryContext& context,
-        Expressions::LogicalExpression *castExpr,
+        Expressions::LogicalExpression *logicalExpr,
         Expressions::Expression *&expression
     ){
         //If expression is of type OR and either right or left is a constant, it will always be true
-        if (castExpr->IsOr()) {
-            if (castExpr->left->IsConstant()) {
-                PropagateExpression(expression, castExpr->left);
+        if (logicalExpr->IsOr()) {
+            if (logicalExpr->left->IsConstant()) {
+                PropagateExpression(expression, logicalExpr->left);
                 return;
             }
 
-            if (castExpr->right->IsConstant())
-                PropagateExpression(expression, castExpr->right);
+            if (logicalExpr->right->IsConstant())
+                PropagateExpression(expression, logicalExpr->right);
 
             return;
         }
 
         //if expression is and and it has one constant propagate child
         //keep the right
-        if (castExpr->left->IsConstant()) {
-            TryPropagateChildExpression(expression, castExpr->left, castExpr->right);
+        if (logicalExpr->left->IsConstant()) {
+            TryPropagateChildExpression(expression, logicalExpr->left, logicalExpr->right);
             return;
         }
 
-        if (castExpr->right->IsConstant())
-            TryPropagateChildExpression(expression, castExpr->right, castExpr->left);
+        if (logicalExpr->right->IsConstant())
+            TryPropagateChildExpression(expression, logicalExpr->right, logicalExpr->left);
     }
 
     void FoldExpression(
@@ -2490,6 +2491,16 @@ namespace QueryPipeline::Statements {
                 return;
             }
         }
+    }
+
+    void FoldExpression(
+        const QueryContext& context,
+        Expressions::CastExpression* castExpr,
+        Expressions::Expression*& expression
+    ){
+        FoldExpression(context, castExpr->expression);
+        if (castExpr->expression->IsConstant())
+            EvaluateExpression(context, expression);
     }
 
     void PropagateExpression(Expressions::Expression *&expression, Expressions::Expression *&childExpr) {
@@ -2533,9 +2544,9 @@ namespace QueryPipeline::Statements {
             case Expressions::ExpressionType::Json:
                 AssignColumnIndicesToColumnExpression(columnIndicesDictionary, expression->AsJson()->columnPtr);
                 break;
-            case Expressions::ExpressionType::Variable:
-            case Expressions::ExpressionType::Expression:
-            case Expressions::ExpressionType::Constant:
+            case Expressions::ExpressionType::Cast:
+                AssignColumnIndicesToCastExpression(columnIndicesDictionary, expression->AsCast());
+                break;
             default:
                 break;
         }
@@ -2558,8 +2569,8 @@ namespace QueryPipeline::Statements {
     }
 
     void AssignColumnIndicesToBranchExpression(
-    const Dictionary<Int, column_index_t> &columnIndicesDictionary,
-    const Expressions::BranchExpression *expression
+        const Dictionary<Int, column_index_t> &columnIndicesDictionary,
+        const Expressions::BranchExpression *expression
     ) {
         for (const auto& argument : expression->arguments)
             AssignColumnIndicesToExpression(columnIndicesDictionary, argument);
@@ -2589,6 +2600,13 @@ namespace QueryPipeline::Statements {
         expression->columnIndex = columnIndicesDictionary.Get(expression->columnId);
     }
 
+    void AssignColumnIndicesToCastExpression(
+        const Dictionary<Int, column_index_t>& columnIndicesDictionary,
+        const Expressions::CastExpression* castExpr
+    ){
+        AssignColumnIndicesToExpression(columnIndicesDictionary, castExpr->expression);
+    }
+
     Errors::ValidationStatus CompilePostProjectionExpression(
         const QueryContext& context,
         Expressions::Expression *expression,
@@ -2605,9 +2623,12 @@ namespace QueryPipeline::Statements {
                 return CompilePostProjectionFunctionExpression(context, expression->AsFunction(), postProjectionAliases);
             case Expressions::ExpressionType::Column:
                 return CompilePostProjectionColumnExpression(context, expression->AsColumn(), postProjectionAliases);
-            case Expressions::ExpressionType::Variable:
-            case Expressions::ExpressionType::Constant:
-            case Expressions::ExpressionType::Expression:
+            case Expressions::ExpressionType::Json:
+                return CompilePostProjectionJsonExpression(context, expression->AsJson(), postProjectionAliases);
+                break;
+            case Expressions::ExpressionType::Cast:
+                return CompilePostProjectionCastExpression(context, expression->AsCast(), postProjectionAliases);
+                break;
             default:
                 break;
         }
@@ -2697,6 +2718,22 @@ namespace QueryPipeline::Statements {
         return Errors::ValidationStatus::Ok();
     }
 
+    Errors::ValidationStatus CompilePostProjectionJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    ){
+        return CompilePostProjectionColumnExpression(context, expression->columnPtr, postProjectionAliases);
+    }
+
+    Errors::ValidationStatus CompilePostProjectionCastExpression(
+        const QueryContext& context,
+        const Expressions::CastExpression* castExpr,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    ){
+        return CompilePostProjectionExpression(context, castExpr->expression, postProjectionAliases);
+    }
+
     void AssignPostProjectionIndicesToExpression(
         const Dictionary<DataTypes::String, column_index_t> &columnIndicesDictionary,
         Expressions::Expression *expression
@@ -2716,6 +2753,12 @@ namespace QueryPipeline::Statements {
                 break;
             case Expressions::ExpressionType::Column:
                 AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsColumn());
+                break;
+            case Expressions::ExpressionType::Json:
+                AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsJson()->columnPtr);
+                break;
+            case Expressions::ExpressionType::Cast:
+                AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->AsCast()->expression);
                 break;
             case Expressions::ExpressionType::Expression:
             case Expressions::ExpressionType::Constant:
@@ -2791,7 +2834,7 @@ namespace QueryPipeline::Statements {
       return Errors::ValidationStatus::Error(
         Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
             context._compileContext.GetAllocator(),
-            SqlTypesString[static_cast<Int>(type)]
+            SQL_TYPES_NAMES[static_cast<Int>(type)]
         )
       );
     }

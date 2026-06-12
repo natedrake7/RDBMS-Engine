@@ -1,7 +1,7 @@
-#include "../include/Coercions.h"
+#include "../../include/Coercions/Coercions.h"
 
-#include "../include/Converter.h"
-#include "../include/Functions/StringFunctions.h"
+#include "../../include/Converter.h"
+#include "../../include/Functions/StringFunctions.h"
 #include "DataTypes/DataTypes.StaticData.h"
 #include "DataTypes/DateTime.h"
 
@@ -17,8 +17,8 @@ namespace DataTypes {
         if (type == DataType::Null)
             throw std::invalid_argument("Invalid Field Type");
 
-        const auto& typeName = SqlTypesString[static_cast<Int>(type)];
-        const auto& toTypeName = SqlTypesString[static_cast<Int>(toType)];
+        const auto& typeName = SQL_TYPES_NAMES[static_cast<Int>(type)];
+        const auto& toTypeName = SQL_TYPES_NAMES[static_cast<Int>(toType)];
         throw std::invalid_argument(
             "Field type " + std::string(typeName.Data(), typeName.Size())
             + " cannot be coerced to " + std::string(toTypeName.Data(), toTypeName.Size())
@@ -237,21 +237,21 @@ namespace DataTypes {
         value.SetData(integer);
     }
 
-    CoercionType Coercions::TypeCoercionMatrix[Coercions::TYPE_COUNT][Coercions::TYPE_COUNT] = {};
+    CoercionType Coercions::TypeCoercionMatrix[DATATYPE_COUNT][DATATYPE_COUNT] = {};
 
     void Coercions::InitializeTypeCoercionMatrix() {
         using DT = DataType;
         using CT = CoercionType;
 
         // 1. Default everything to NONE
-        for (int i = 0; i < TYPE_COUNT; i++) {
-            for (int j = 0; j < TYPE_COUNT; j++) {
+        for (int i = 0; i < DATATYPE_COUNT; i++) {
+            for (int j = 0; j < DATATYPE_COUNT; j++) {
                 TypeCoercionMatrix[i][j] = CT::None;
             }
         }
 
         // 2. Identity conversions (T → T)
-        for (int i = 0; i < TYPE_COUNT; i++) {
+        for (int i = 0; i < DATATYPE_COUNT; i++) {
             TypeCoercionMatrix[i][i] = CT::Implicit;
         }
 
@@ -306,7 +306,7 @@ namespace DataTypes {
         TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::BigInt)]   = CT::Implicit;
 
         // ---- JSON rules ----
-        for (int t = 0; t < TYPE_COUNT; t++) {
+        for (int t = 0; t < DATATYPE_COUNT; t++) {
             if (t == static_cast<int>(DT::Json)) continue;
             TypeCoercionMatrix[t][static_cast<int>(DT::Json)] = CT::Implicit;
         }
@@ -367,7 +367,7 @@ namespace DataTypes {
         case DataType::String:
             return Converter<TinyInt>::Stoi(value.AsString());
         case DataType::Bool:
-            return value.AsBool() ? 1 : 0;
+            return value.AsBool();
         default:
             Coercions::ThrowException(valueType, DataType::TinyInt);
         }

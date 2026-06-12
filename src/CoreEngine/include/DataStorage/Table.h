@@ -29,6 +29,7 @@ namespace Indexing{
 }
 
 namespace CoreEngine{
+    struct SelectionVector;
     class Database;
 }
 
@@ -175,12 +176,12 @@ namespace CoreEngine::StorageTypes
                 InsertPayload& payload,
                 Int pagesToAllocate
             );
-            Errors::RuntimeStatus NonClusteredIndexInsert(
-                const Row* row,
-                Int nonClusteredIndexId,
-                Int pagesToAllocate,
-                const DataTypes::RowIdentifier& data
-            );
+            // Errors::RuntimeStatus NonClusteredIndexInsert(
+            //     const Row* row,
+            //     Int nonClusteredIndexId,
+            //     Int pagesToAllocate,
+            //     const DataTypes::RowIdentifier& data
+            // );
             Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(
                 Int indexPos,
                 Int pagesToAllocate

@@ -108,12 +108,12 @@ namespace CoreEngine {
 
                 block_size_t columnSize = 0;
                 const auto strView = DataTypes::StringView(columnHeader.type);
-                if (!ColumnTypeSizes.TryGetValue(strView, columnSize))
+                if (!COLUMN_SIZES_BY_TYPENAME.TryGetValue(strView, columnSize))
                     throw std::runtime_error("Column type " + std::string(strView.Data(), strView.Size()) + " does not exist");
                 if (columnSize == 0)
                     columnSize = columnHeader.size;
 
-                const auto columnType = ColumnTypesDictionary.Get(&strView);
+                const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(&strView);
                 for (const auto& key: tableHeader.primaryKey) {
                     if (columnHeader.name != key)
                         continue;
@@ -201,12 +201,12 @@ namespace CoreEngine {
                 const auto normalizedColumnType = DataTypes::String::Normalize(column.type, baseContext.GetAllocator());
                 const auto strView = normalizedColumnType.ToView();
 
-                auto columnSize = ColumnTypeSizes.Get(&strView);
+                auto columnSize = COLUMN_SIZES_BY_TYPENAME.Get(&strView);
 
                 if (columnSize == 0)
                     columnSize = column.size;
 
-                const auto& type = ColumnTypesDictionary.Get(&strView);
+                const auto& type = COLUMN_TYPENAMES_TO_ENUMS.Get(&strView);
 
                 const auto columnResult =
                 this->InsertColumnToMasterDb(

@@ -129,13 +129,16 @@ namespace DataTypes{
             void Reserve(Int size);
             void Resize(Int size);
 
-            ~String();
-
             friend std::ostream& operator<<(std::ostream& os, const String& sv);
             [[nodiscard]] char operator[](Int index) const;
             [[nodiscard]] char& operator[](Int index);
-            bool operator==(const String& other) const;
-            bool operator!=(const String& other) const;
+
+            friend bool operator==(const String& lhs, const String& rhs);
+            friend bool operator!=(const String& lhs, const String& rhs);
+            friend bool operator<=(const String& lhs, const String& rhs);
+            friend bool operator<(const String& lhs, const String& rhs);
+            friend bool operator>=(const String& lhs, const String& rhs);
+            friend bool operator>(const String& lhs, const String& rhs);
 
             operator std::string_view() const;
             operator std::span<const char>() const;
@@ -149,6 +152,8 @@ namespace DataTypes{
             friend String operator+(std::string_view lhs, const String& rhs);
             friend String operator+(const String& lhs, const std::string& rhs);
             friend String operator+(const std::string& lhs, const String& rhs);
+
+
 
             String& operator+=(const String& other);
             String& operator+=(const char* other);
@@ -173,9 +178,9 @@ namespace DataTypes{
             [[nodiscard]] String Concat(const StringView& other) const;
             [[nodiscard]] String Concat(std::string_view other) const;
             [[nodiscard]] String Concat(const std::string& other) const;
-            [[nodiscard]] static String Concat(const StringView& lhs, const StringView& rhs, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Concat(const String& lhs, const String& rhs, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Concat(const char* lhs, const char* rhs, const ::Memory::IAllocator* allocator);
+            // [[nodiscard]] static String Concat(const StringView& lhs, const StringView& rhs, const ::Memory::IAllocator* allocator);
+            // [[nodiscard]] static String Concat(const String& lhs, const String& rhs, const ::Memory::IAllocator* allocator);
+            // [[nodiscard]] static String Concat(const char* lhs, const char* rhs, const ::Memory::IAllocator* allocator);
 
             template<typename... Args>
             [[nodiscard]] static String Join(
@@ -196,11 +201,11 @@ namespace DataTypes{
 
             [[nodiscard]] Int Size()const;
             [[nodiscard]] Int IndexOf(char c) const;
-            [[nodiscard]] bool Contains(const String& other, StringComparisonType type) const;
-            [[nodiscard]] bool Contains(const char* other, StringComparisonType type) const;
-            [[nodiscard]] bool Contains(const StringView& other, StringComparisonType type) const;
-            [[nodiscard]] bool Contains(std::string_view other, StringComparisonType type) const;
-            [[nodiscard]] bool Contains(const std::string& other, StringComparisonType type) const;
+            [[nodiscard]] bool Compare(const String& other, StringComparisonType type) const;
+            [[nodiscard]] bool Compare(const char* other, StringComparisonType type) const;
+            [[nodiscard]] bool Compare(const StringView& other, StringComparisonType type) const;
+            [[nodiscard]] bool Compare(std::string_view other, StringComparisonType type) const;
+            [[nodiscard]] bool Compare(const std::string& other, StringComparisonType type) const;
 
             template<typename TLeft, typename TRight>
             [[nodiscard]] static bool EqualsIgnoreCase(const TLeft& lhs, const TRight& rhs) noexcept;
@@ -564,12 +569,5 @@ struct std::hash<DataTypes::String> {
             hash *= 1099511628211ULL;
         }
         return hash;
-    }
-};
-
-struct StringComparator{
-    bool operator()(const DataTypes::String& lhs, const DataTypes::String& rhs) const {
-        return std::memcmp(lhs.Data(), rhs.Data(), std::min(lhs.Size(), rhs.Size())) < 0 ||
-               (lhs.Size() < rhs.Size() && std::memcmp(lhs.Data(), rhs.Data(), lhs.Size()) == 0);
     }
 };

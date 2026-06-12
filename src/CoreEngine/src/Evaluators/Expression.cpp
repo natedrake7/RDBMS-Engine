@@ -1,6 +1,6 @@
 #include "../../include/Evaluators/Expression.h"
 
-#include "../../../Systemic/include/Coercions.h"
+#include "../../../Systemic/include/Coercions/Coercions.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
@@ -13,9 +13,9 @@
 #include "../../../Systemic/include/DataTypes/Variable.h"
 #include "DataStorage/Table.h"
 #include "DataTypes/DataTypes.StaticData.h"
-#include "Evaluators/RowKernels.h"
-#include "Evaluators/VectorizedKernels.h"
-#include "Pages/Additional/Frame.h"
+#include "../../include/Evaluators/Kernels/Row/RowKernels.h"
+#include "../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
+#include "Evaluators/Kernels/Row/RowKernels.Binary.h"
 #include "Vectorization/Vectorization.h"
 
 namespace Expressions{
@@ -84,8 +84,8 @@ namespace Expressions{
     }
 
     EvaluationContext::EvaluationContext(
-      const CoreEngine::StorageTypes::RID* row,
-      const CoreEngine::ExecutionContext& executionContext
+        const CoreEngine::StorageTypes::RID* row,
+        const CoreEngine::ExecutionContext& executionContext
     ){
         this->type = EvaluationContextType::SingleRow;
         this->row = row;
@@ -227,6 +227,7 @@ namespace Expressions{
     void ColumnExpression::BindRowKernel(){
         switch (this->returnType){
         case DataType::String:
+            this->rowKernel = &CoreEngine::RowKernels::StringColumnScanKernel;
             break;
         case DataType::Bool:
             this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<bool>;
@@ -252,6 +253,7 @@ namespace Expressions{
             this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
             break;
         case DataType::Json:
+            this->rowKernel = &CoreEngine::RowKernels::JsonColumnScanKernel;
             break;
         case DataType::Null:
         case DataType::RowIdentifier:
@@ -337,15 +339,16 @@ namespace Expressions{
         return table->MaterializeColumn(context, rangeEnd, columnExpr->columnIndex);
     }
 
-    void ColumnExpression::BindExpression(Expression* expression, const Constants::ExecutionMode mode){
-        auto* columnExpr = expression->AsColumn();
-
+    void ColumnExpression::BindExpressionKernel(
+        ColumnExpression* expression,
+        const Constants::ExecutionMode mode
+    ){
         switch (mode){
         case Constants::ExecutionMode::Row:
-            columnExpr->BindRowKernel();
+            expression->BindRowKernel();
             break;
         case Constants::ExecutionMode::Vectorized:
-            columnExpr->BindVectorizedKernel();
+            expression->BindVectorizedKernel();
             break;
         }
     }
@@ -353,6 +356,43 @@ namespace Expressions{
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
 
     bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
+
+    void ConstantExpression::BindRowKernel(){
+        switch (this->value.GetType()){
+        case DataType::Bool:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<bool>;
+            break;
+        case DataType::TinyInt:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<TinyInt>;
+            break;
+        case DataType::SmallInt:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<SmallInt>;
+            break;
+        case DataType::Int:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int>;
+            break;
+        case DataType::BigInt:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<BigInt>;
+            break;
+        case DataType::DateTime:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::DateTime>;
+            break;
+        case DataType::Guid:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::Guid>;
+            break;
+        case DataType::Decimal:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::Decimal>;
+            break;
+        case DataType::String:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantStringScanKernel;
+            break;
+        case DataType::Json:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantJsonScanKernel;
+            break;
+        default:
+            break;  // TODO: String / Decimal / Json constant kernels
+        }
+    }
 
     ConstantExpression::ConstantExpression(const Value &value)
         : value(value){
@@ -367,6 +407,16 @@ namespace Expressions{
     ConstantExpression::ConstantExpression(Value&& value)
         : value(std::move(value)){
         this->expressionType = ExpressionType::Constant;
+    }
+
+    void ConstantExpression::BindExpressionKernel(ConstantExpression* expression, const Constants::ExecutionMode mode){
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            expression->BindRowKernel();
+            break;
+        case Constants::ExecutionMode::Vectorized:
+            break;
+        }
     }
 
     Value ConstantExpression::Evaluate() const{
@@ -468,67 +518,21 @@ namespace Expressions{
         }
     }
 
+    void BinaryExpression::BindVectorizedKernel(){
+    }
+
+    void BinaryExpression::BindRowKernel(){
+        const auto operandType = GetExpressionReturnType(this->left);
+        this->rowKernel = CoreEngine::RowKernels::LookupBinaryKernel(
+            this->operation, operandType
+        );
+    }
+
     BinaryExpression::BinaryExpression(Expression *left, Expression *right, const BinaryOperator operation){
         this->left = left;
         this->right = right;
         this->operation = operation;
         this->expressionType = ExpressionType::Binary;
-    }
-
-    //TODO Implement field logical operations.
-    Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
-        switch (this->operation) {
-        case BinaryOperator::Add:
-            return EvaluateExpression(this->left, context) + EvaluateExpression(this->right, context);
-        case BinaryOperator::Subtract:
-            return EvaluateExpression(this->left, context) - EvaluateExpression(this->right, context);
-        case BinaryOperator::Multiply:
-            return EvaluateExpression(this->left, context) * EvaluateExpression(this->right, context);
-        case BinaryOperator::Divide:
-            return EvaluateExpression(this->left, context) / EvaluateExpression(this->right, context);
-        case BinaryOperator::Modulo:
-            return EvaluateExpression(this->left, context) % EvaluateExpression(this->right, context);
-        case BinaryOperator::Equal:
-            return Value(EvaluateExpression(this->left, context) == EvaluateExpression(this->right, context), context.allocator);
-        case BinaryOperator::EqualIgnoreOrdinalCase:
-            return Value::EqualsIgnoreOrdinalCase(EvaluateExpression(this->left, context), EvaluateExpression(this->right, context));
-        case BinaryOperator::NotEqual:
-            return Value(EvaluateExpression(this->left, context) != EvaluateExpression(this->right, context), context.allocator);
-        case BinaryOperator::Greater:
-            return Value(EvaluateExpression(this->left, context) > EvaluateExpression(this->right, context), context.allocator);
-        case BinaryOperator::GreaterEqual:
-            return Value(EvaluateExpression(this->left, context) >= EvaluateExpression(this->right, context), context.allocator);
-        case BinaryOperator::Less:
-            return Value(EvaluateExpression(this->left, context) < EvaluateExpression(this->right, context), context.allocator);
-        case BinaryOperator::LessEqual:
-            return Value(EvaluateExpression(this->left, context) <= EvaluateExpression(this->right, context), context.allocator);
-        default:
-            throw std::runtime_error("BinaryExpression::Evaluate: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
-        }
-    }
-
-    DataType BinaryExpression::GetReturnType() const{
-        switch (this->operation) {
-        case BinaryOperator::Add:
-        case BinaryOperator::Subtract:
-        case BinaryOperator::Multiply:
-        case BinaryOperator::Divide:
-        case BinaryOperator::Modulo: {
-            const auto leftType = GetExpressionReturnType(this->left);
-            const auto rightType = GetExpressionReturnType(this->right);
-            return Value::PromoteType(leftType, rightType);
-        }
-        case BinaryOperator::Equal:
-        case BinaryOperator::EqualIgnoreOrdinalCase:
-        case BinaryOperator::NotEqual:
-        case BinaryOperator::Greater:
-        case BinaryOperator::GreaterEqual:
-        case BinaryOperator::Less:
-        case BinaryOperator::LessEqual:
-            return DataType::Bool;
-        default:
-            throw std::runtime_error("BinaryExpression::GetReturnType: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
-        }
     }
 
     Value* BinaryExpression::Evaluate(
@@ -595,6 +599,79 @@ namespace Expressions{
         }
     }
 
+    void BinaryExpression::BindExpressionKernel(
+        BinaryExpression* expression,
+        const Constants::ExecutionMode mode
+    ){
+        Expressions::BindExpressionKernel(expression->left, mode);
+        Expressions::BindExpressionKernel(expression->right, mode);
+
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            expression->BindRowKernel();
+            break;
+        case Constants::ExecutionMode::Vectorized:
+            expression->BindVectorizedKernel();
+            break;
+        }
+    }
+
+    //TODO Implement field logical operations.
+    Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
+        switch (this->operation) {
+        case BinaryOperator::Add:
+            return EvaluateExpression(this->left, context) + EvaluateExpression(this->right, context);
+        case BinaryOperator::Subtract:
+            return EvaluateExpression(this->left, context) - EvaluateExpression(this->right, context);
+        case BinaryOperator::Multiply:
+            return EvaluateExpression(this->left, context) * EvaluateExpression(this->right, context);
+        case BinaryOperator::Divide:
+            return EvaluateExpression(this->left, context) / EvaluateExpression(this->right, context);
+        case BinaryOperator::Modulo:
+            return EvaluateExpression(this->left, context) % EvaluateExpression(this->right, context);
+        case BinaryOperator::Equal:
+            return Value(EvaluateExpression(this->left, context) == EvaluateExpression(this->right, context), context.allocator);
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+            return Value::EqualsIgnoreOrdinalCase(EvaluateExpression(this->left, context), EvaluateExpression(this->right, context));
+        case BinaryOperator::NotEqual:
+            return Value(EvaluateExpression(this->left, context) != EvaluateExpression(this->right, context), context.allocator);
+        case BinaryOperator::Greater:
+            return Value(EvaluateExpression(this->left, context) > EvaluateExpression(this->right, context), context.allocator);
+        case BinaryOperator::GreaterEqual:
+            return Value(EvaluateExpression(this->left, context) >= EvaluateExpression(this->right, context), context.allocator);
+        case BinaryOperator::Less:
+            return Value(EvaluateExpression(this->left, context) < EvaluateExpression(this->right, context), context.allocator);
+        case BinaryOperator::LessEqual:
+            return Value(EvaluateExpression(this->left, context) <= EvaluateExpression(this->right, context), context.allocator);
+        default:
+            throw std::runtime_error("BinaryExpression::Evaluate: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+        }
+    }
+
+    DataType BinaryExpression::GetReturnType() const{
+        switch (this->operation) {
+        case BinaryOperator::Add:
+        case BinaryOperator::Subtract:
+        case BinaryOperator::Multiply:
+        case BinaryOperator::Divide:
+        case BinaryOperator::Modulo: {
+            const auto leftType = GetExpressionReturnType(this->left);
+            const auto rightType = GetExpressionReturnType(this->right);
+            return Value::PromoteType(leftType, rightType);
+        }
+        case BinaryOperator::Equal:
+        case BinaryOperator::EqualIgnoreOrdinalCase:
+        case BinaryOperator::NotEqual:
+        case BinaryOperator::Greater:
+        case BinaryOperator::GreaterEqual:
+        case BinaryOperator::Less:
+        case BinaryOperator::LessEqual:
+            return DataType::Bool;
+        default:
+            throw std::runtime_error("BinaryExpression::GetReturnType: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
+        }
+    }
+
     bool FunctionExpression::ValidateUnlimitedArgumentTypes(const FunctionInfo& info, DataTypes::String& errorMessage)const{
         const auto& expectedType = info.expectedTypes.First();
 
@@ -602,7 +679,7 @@ namespace Expressions{
             if (!FunctionExpression::ValidateReturnType(
                 info, errorMessage, expectedType,
                 GetExpressionReturnType(this->arguments[i]), i
-                ))
+            ))
                 return false;
 
         return true;
@@ -642,9 +719,9 @@ namespace Expressions{
                 " expects argument ",
                 std::to_string(index + 1),
                 " to be of type: ",
-                SqlTypesString[static_cast<int>(expectedType)],
+                SQL_TYPES_NAMES[static_cast<int>(expectedType)],
                 ", but got type: ",
-                SqlTypesString[static_cast<int>(returnType)]
+                SQL_TYPES_NAMES[static_cast<int>(returnType)]
             );
             return false;
         }
@@ -655,9 +732,9 @@ namespace Expressions{
     void FunctionExpression::ConstructInvalidCastMessage(DataTypes::String& errorMessage, const DataType fromType, const DataType toType) {
         errorMessage = errorMessage.ConcatInPlace(
             "Cannot cast safely type: ",
-            SqlTypesString[static_cast<int>(fromType)],
+            SQL_TYPES_NAMES[static_cast<int>(fromType)],
             " to type: ",
-            SqlTypesString[static_cast<int>(toType)]
+            SQL_TYPES_NAMES[static_cast<int>(toType)]
         );
     }
 
@@ -1187,10 +1264,10 @@ namespace Expressions{
     void EvaluateExpression(
         const Expression* expression,
         const EvaluationContext& context,
-        void* outVal
+        void* outVal,
+        bool* outNull
     ){
-        bool outNull = false;
-        expression->rowKernel(expression, context, outVal, &outNull);
+        expression->rowKernel(expression, context, outVal, outNull);
     }
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(
@@ -1246,11 +1323,13 @@ namespace Expressions{
         case ExpressionType::Expression:
             break;
         case ExpressionType::Column:
-            ColumnExpression::BindExpression(expression, mode);
+            ColumnExpression::BindExpressionKernel(expression->AsColumn(), mode);
             break;
         case ExpressionType::Constant:
+            ConstantExpression::BindExpressionKernel(expression->AsConstant(), mode);
             break;
         case ExpressionType::Binary:
+            BinaryExpression::BindExpressionKernel(expression->AsBinary(), mode);
             break;
         case ExpressionType::Logical:
             break;

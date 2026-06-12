@@ -78,7 +78,7 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/Guid.cpp
         src/Systemic/src/Key.cpp
         src/Systemic/src/QueryResult.cpp
-        src/Systemic/src/Coercions.cpp
+        src/Systemic/src/Coercions/Coercions.cpp
         src/Systemic/src/Network/Protocols/ConnectionProtocol.cpp
         src/Systemic/src/Network/Protocols/AuthorizeProtocol.cpp
         src/Systemic/src/Network/Protocols/ResponseProtocol.cpp
@@ -190,9 +190,9 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Memory/PersistentAllocator.cpp
         src/CoreEngine/src/Extensions/StringExtensions.cpp
         src/CoreEngine/src/Vectorization/Vectorization.cpp
-        src/CoreEngine/src/Evaluators/VectorizedKernels.cpp
+        src/CoreEngine/src/Evaluators/Kernels/Vectorized/VectorizedKernels.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Vectorized.cpp
-        src/CoreEngine/src/Evaluators/RowKernels.cpp
+        src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

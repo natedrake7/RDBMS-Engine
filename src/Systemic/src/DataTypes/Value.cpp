@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "../../include/Coercions.h"
+#include "../../include/Coercions/Coercions.h"
 #include "../../include/Converter.h"
 #include "../../include/Functions/StringFunctions.h"
 
@@ -71,7 +71,7 @@ Value Value::PerformBigIntAddition(const Value& lhs, const Value& rhs){
 
 Value Value::PerformStringAddition(const Value& lhs, const Value& rhs){
     return Value(
-        DataTypes::String::Concat(lhs.AsStringView(), rhs.AsStringView(), lhs.GetAllocator()),
+        DataTypes::String::Concat(lhs.GetAllocator(), lhs.AsStringView(), rhs.AsStringView()),
         lhs.GetAllocator(),
         0
     );
@@ -112,8 +112,8 @@ long double Value::InterpolateString() const{
 }
 
 void Value::BinaryOperationException(const DataType lhs, const DataType rhs) {
-    const auto& leftStr = SqlTypesString[static_cast<Int>(lhs)];
-    const auto& rightStr = SqlTypesString[static_cast<Int>(rhs)];
+    const auto& leftStr = SQL_TYPES_NAMES[static_cast<Int>(lhs)];
+    const auto& rightStr = SQL_TYPES_NAMES[static_cast<Int>(rhs)];
 
     throw std::invalid_argument("Left Operand has type: "
         + std::string(leftStr.Data(), leftStr.Size())
@@ -382,7 +382,7 @@ Value::Value(
     this->size = data.Size();
     this->_allocator = allocator;
     this->columnIndex = index;
-    this->type = JsonToSqlTypes[static_cast<Int>(data.Type())];
+    this->type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
 }
 
 Value Value::FromMove(

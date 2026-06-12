@@ -270,35 +270,20 @@ namespace DataTypes{
 			throw std::invalid_argument("Invalid date/time components.");
 	}
 
-	// std::ostream & operator<<(std::ostream &os, const DateTime &datetime){
-	// 	os << datetime.ToString();
-	// 	return os;
-	// }
+    void DateTime::Print(std::ostream& os, const StringView& format) const{
+	    const auto buffer = this->ToStringBuffer(format);
+	    os.write(buffer.Data(), buffer.Size());
+	}
+
+    bool operator==(const DateTime& lhs, const DateTime& rhs) { return lhs.timeStamp == rhs.timeStamp;}
+    bool operator!=(const DateTime& lhs, const DateTime& rhs) { return lhs.timeStamp != rhs.timeStamp; }
+
+    bool operator<=(const DateTime& lhs, const DateTime& rhs) { return !(lhs > rhs); }
+    bool operator<(const DateTime& lhs, const DateTime& rhs) { return lhs.timeStamp < rhs.timeStamp;}
+
+    bool operator>=(const DateTime& lhs, const DateTime& rhs) { return !(lhs < rhs); }
+    bool operator>(const DateTime& lhs, const DateTime& rhs) { return lhs.timeStamp > rhs.timeStamp; }
+
 
 }
 
-bool operator!=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return !(firstDate == secondDate);
-}
-
-void DataTypes::DateTime::Print(std::ostream& os, const StringView& format) const{
-    const auto buffer = this->ToStringBuffer(format);
-    os.write(buffer.Data(), buffer.Size());
-}
-
-bool operator==(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.UnixTimeStamp() == secondDate.UnixTimeStamp();
-}
-
-bool operator>=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return !(firstDate < secondDate);
-}
-bool operator<=(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return !(firstDate > secondDate);
-}
-bool operator>(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.UnixTimeStamp() > secondDate.UnixTimeStamp();
-}
-bool operator<(const DataTypes::DateTime& firstDate, const DataTypes::DateTime& secondDate) {
-	return firstDate.UnixTimeStamp() < secondDate.UnixTimeStamp();
-}

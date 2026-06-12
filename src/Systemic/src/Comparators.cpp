@@ -39,13 +39,17 @@ namespace Comparators{
     }
 
     Comparator Compare(const DataTypes::String& lhs, const DataTypes::String& rhs){
-        const auto minSize = std::min(lhs.Size(), rhs.Size());
+        return Compare(lhs, rhs.Data(), rhs.Size());
+    }
 
-        const auto cmp = std::memcmp(lhs.Data(), rhs.Data(), minSize);
+    Comparator Compare(const DataTypes::String& lhs, const char* rhs, const Int size){
+        const auto minSize = std::min(lhs.Size(), size);
 
-        const int result = cmp != 0
+        const auto cmp = std::memcmp(lhs.Data(), rhs, minSize);
+
+        const auto result = cmp != 0
             ? cmp
-            : (lhs.Size() > rhs.Size()) - (lhs.Size() < rhs.Size());
+            : (lhs.Size() > size) - (lhs.Size() < size);
 
         return static_cast<Comparator>(
             (result > 0) - (result < 0)

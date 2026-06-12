@@ -11,7 +11,9 @@
 #include "Schedulers/StatisticsScheduler.h"
 #include <cmath>
 
+#include "ScanState.h"
 #include "Contexts/ExecutionContext.h"
+#include "Evaluators/Expression.h"
 #include "Memory/Allocator.h"
 
 namespace Indexing

@@ -6,6 +6,7 @@
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "Contexts/ExecutionContext.h"
+#include "Evaluators/Expression.h"
 #include "Managers/GlobalMemoryManager.h"
 #include "Memory/PersistentAllocator.h"
 
@@ -57,43 +58,43 @@ namespace CoreEngine::StorageTypes {
         return status;
     }
 
-    Errors::RuntimeStatus Table::NonClusteredIndexInsert(
-        const StorageTypes::Row* row,
-        const Int nonClusteredIndexId,
-        const Int pagesToAllocate,
-        const DataTypes::RowIdentifier& data
-    ){
-
-        // const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
-        //
-        // auto* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
-        //
-        // const auto key = Database::CreateKey(indexedColumns, row, data);
-        //
-        // int indexPosition = 0;
-        // Errors::RuntimeStatus status;
-        //
-        // auto node = tree->InsertRow(key, pagesToAllocate, indexPosition, status);
-        //
-        // if (status.code != Errors::RuntimeError::Ok)
-        //     return status;
-        //
-        // auto* keys = node->GetKeysUnsafe();
-        //
-        // keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
-        //
-        // auto* rows = node->NonClusteredDataNoLock();
-        //
-        // rows->insert(rows->begin() + indexPosition, data);
-        //
-        // node->UpdatePageSize();
-        // node->UpdateBytesLeft();
-        //
-        // auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
-        // pageFreeSpacePage->SetPageMetaData(node.Get());
-
-        // return status;
-    }
+    // Errors::RuntimeStatus Table::NonClusteredIndexInsert(
+    //     const StorageTypes::Row* row,
+    //     const Int nonClusteredIndexId,
+    //     const Int pagesToAllocate,
+    //     const DataTypes::RowIdentifier& data
+    // ){
+    //
+    //     // const auto& indexedColumns = this->header.nonClusteredIndexes.at(nonClusteredIndexId).columns;
+    //     //
+    //     // auto* tree = this->GetNonClusteredIndexTree(nonClusteredIndexId);
+    //     //
+    //     // const auto key = Database::CreateKey(indexedColumns, row, data);
+    //     //
+    //     // int indexPosition = 0;
+    //     // Errors::RuntimeStatus status;
+    //     //
+    //     // auto node = tree->InsertRow(key, pagesToAllocate, indexPosition, status);
+    //     //
+    //     // if (status.code != Errors::RuntimeError::Ok)
+    //     //     return status;
+    //     //
+    //     // auto* keys = node->GetKeysUnsafe();
+    //     //
+    //     // keys->insert(keys->begin() + indexPosition, new DataTypes::Indexing::Key(key));
+    //     //
+    //     // auto* rows = node->NonClusteredDataNoLock();
+    //     //
+    //     // rows->insert(rows->begin() + indexPosition, data);
+    //     //
+    //     // node->UpdatePageSize();
+    //     // node->UpdateBytesLeft();
+    //     //
+    //     // auto pageFreeSpacePage =  Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), node->GetPageId());
+    //     // pageFreeSpacePage->SetPageMetaData(node.Get());
+    //
+    //     // return status;
+    // }
 
     Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const Int indexPos, const Int pagesToAllocate){
         if (this->GetType() == Constants::TableType::CLUSTERED) {

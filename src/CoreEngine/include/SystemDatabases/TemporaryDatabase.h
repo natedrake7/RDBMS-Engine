@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <atomic>
-#include "../../Systemic/include/Coercions.h"
+#include "../../../Systemic/include/Coercions/Coercions.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace CoreEngine {

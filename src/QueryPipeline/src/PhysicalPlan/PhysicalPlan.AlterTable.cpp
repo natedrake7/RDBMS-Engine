@@ -15,7 +15,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   ExecutionResult PhysicalAddColumn::Execute(CoreEngine::ExecutionContext& context){
     this->column->type.name.ToLowerInPlace();
-    const auto columnType = ColumnTypesDictionary.Get(this->column->type.name.ToView());
+    const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(this->column->type.name.ToView());
 
     auto result = ExecutionResult(context);
 

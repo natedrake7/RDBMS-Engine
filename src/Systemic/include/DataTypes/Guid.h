@@ -51,12 +51,12 @@ namespace DataTypes {
 
         [[nodiscard]] long double Interpolate() const;
 
-        friend bool operator==(const Guid& guid1, const Guid& guid2);
-        friend bool operator!=(const Guid& guid1, const Guid& guid2);
-        friend bool operator<(const Guid& guid1, const Guid& guid2);
-        friend bool operator>(const Guid& guid1, const Guid& guid2);
-        friend bool operator<=(const Guid& guid1, const Guid& guid2);
-        friend bool operator>=(const Guid& guid1, const Guid& guid2);
+        friend bool operator==(const Guid& lhs, const Guid& rhs);
+        friend bool operator!=(const Guid& lhs, const Guid& rhs);
+        friend bool operator<(const Guid& lhs, const Guid& rhs);
+        friend bool operator>(const Guid& lhs, const Guid& rhs);
+        friend bool operator<=(const Guid& lhs, const Guid& rhs);
+        friend bool operator>=(const Guid& lhs, const Guid& rhs);
     };
 }
 

@@ -14,9 +14,10 @@
 #include <string>
 
 #include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
+#include "src/CoreEngine/include/Evaluators/Kernels/Row/RowKernels.h"
 #include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
 #include "src/QueryPipeline/include/RowCursor.h"
-#include "src/Systemic/include/Coercions.h"
+#include "src/Systemic/include/Coercions/Coercions.h"
 #include "src/Systemic/include/Memory/Functions.h"
 #include "UnitTests/include/UnitTests.h"
 
@@ -118,6 +119,7 @@
 
 int main(){
     DataTypes::Coercions::Initialize();
+    CoreEngine::RowKernels::RegisterKernels();
 
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 

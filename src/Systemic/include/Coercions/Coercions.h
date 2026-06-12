@@ -1,8 +1,8 @@
 #pragma once
-#include "DataStructures/ConstexprHashSet.h"
-#include "DataTypes/Value.h"
-#include "DataTypes/Guid.h"
-#include "DataTypes/JsonBinary.h"
+#include "../DataStructures/ConstexprHashSet.h"
+#include "../DataTypes/Value.h"
+#include "../DataTypes/Guid.h"
+#include "../DataTypes/JsonBinary.h"
 
 namespace DataTypes{
     enum class CoercionType : UnsignedTinyInt {
@@ -12,8 +12,7 @@ namespace DataTypes{
     };
 
     class Coercions {
-    static constexpr Int TYPE_COUNT = 12;
-    static CoercionType TypeCoercionMatrix[TYPE_COUNT][TYPE_COUNT];
+    static CoercionType TypeCoercionMatrix[DATATYPE_COUNT][DATATYPE_COUNT];
 
     static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
         StringView("true"),

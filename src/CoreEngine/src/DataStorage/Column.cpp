@@ -31,9 +31,9 @@ namespace CoreEngine::StorageTypes {
 
         this->SetColumnName(DataTypes::StringView(header.name));
         this->allowNulls = false;
-        this->header.columnType = ColumnTypesDictionary.Get(&strView);
+        this->header.columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(&strView);
 
-        const auto size = ColumnTypeSizes.Get(&strView);
+        const auto size = COLUMN_SIZES_BY_TYPENAME.Get(&strView);
 
         this->header.recordSize = size == 0 ? header.size : size;
         this->header.columnIndex = ordinalPosition;

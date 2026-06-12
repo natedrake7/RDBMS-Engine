@@ -242,9 +242,6 @@ namespace QueryPipeline::Statements {
         DataTypes::String password;
         DataTypes::String role;
 
-        CreateUserStatement() = default;
-        ~CreateUserStatement() override = default;
-
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
@@ -254,9 +251,6 @@ namespace QueryPipeline::Statements {
         DataTypes::String username;
         DataTypes::String role;
 
-        GrantRoleStatement() = default;
-        ~GrantRoleStatement() override = default;
-
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
@@ -264,8 +258,6 @@ namespace QueryPipeline::Statements {
 
     struct DeleteStatement final : Statement {
         WhereClause where;
-
-        ~DeleteStatement() override = default;
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
@@ -294,7 +286,6 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<column_index_t> primaryKey;
 
         CreateTableStatement();
-        ~CreateTableStatement() override;
 
         Errors::ValidationStatus CompileSchema(const QueryContext& context) const;
         Errors::ValidationStatus CompileColumnExpression(
@@ -319,7 +310,6 @@ namespace QueryPipeline::Statements {
         bool distinct;
 
         explicit SelectStatement(const ::Memory::IAllocator* allocator);
-        ~SelectStatement() override;
 
         [[nodiscard]] Dictionary<DataTypes::String, column_index_t> CreatePostProjectionIndicesDictionary() const;
         [[nodiscard]] bool HasTopStatement() const;
@@ -628,13 +618,15 @@ namespace QueryPipeline::Statements {
 
     static void FoldExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, const Expressions::BinaryExpression* castExpr, Expressions::Expression*& expression);
+    static void FoldExpression(const QueryContext& context, const Expressions::BinaryExpression* binaryExpr, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, Expressions::LogicalExpression* castExpr, Expressions::Expression*& expression);
+    static void FoldExpression(const QueryContext& context, Expressions::LogicalExpression* logicalExpr, Expressions::Expression*& expression);
 
     static void FoldExpression(const QueryContext& context, const Expressions::FunctionExpression* castExpr, Expressions::Expression*& expression);
 
     static void FoldExpression(const QueryContext& context, Expressions::BranchExpression* castExpr, Expressions::Expression*& expression);
+
+    static void FoldExpression(const QueryContext& context, Expressions::CastExpression* castExpr, Expressions::Expression*& expression);
 
     /** @} End of Folding-Optimization Functions */
 
@@ -702,6 +694,11 @@ namespace QueryPipeline::Statements {
         Expressions::ColumnExpression* expression
     );
 
+    static void AssignColumnIndicesToCastExpression(
+        const Dictionary<Int, column_index_t>& columnIndicesDictionary,
+        const Expressions::CastExpression* castExpr
+    );
+
     /** @} End of Index Assignment Functions */
 
     /**
@@ -743,6 +740,18 @@ namespace QueryPipeline::Statements {
     static Errors::ValidationStatus CompilePostProjectionBranchExpression(
         const QueryContext& context,
         const Expressions::BranchExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
+
+    static Errors::ValidationStatus CompilePostProjectionJsonExpression(
+        const QueryContext& context,
+        const Expressions::JsonExpression* expression,
+        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+    );
+
+    static Errors::ValidationStatus CompilePostProjectionCastExpression(
+        const QueryContext& context,
+        const Expressions::CastExpression* castExpr,
         const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
     );
 

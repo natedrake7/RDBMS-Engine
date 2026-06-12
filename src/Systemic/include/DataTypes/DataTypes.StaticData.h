@@ -2,6 +2,10 @@
 #include "../DataStructures/ConstexprDictionary.h"
 #include "DataTypes.h"
 #include "StringView.h"
+#include "Decimal.h"
+#include "JsonBinary.h"
+#include "DateTime.h"
+#include "Guid.h"
 
 static constexpr DataTypes::StringView TrueStrings[] = {
     DataTypes::StringView("true"),
@@ -13,7 +17,7 @@ static constexpr DataTypes::StringView FalseStrings[] = {
     DataTypes::StringView("0")
 };
 
-static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10, CaseInsensitiveHash<DataTypes::StringView>> ColumnTypeSizes = std::initializer_list{
+static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10, CaseInsensitiveHash<DataTypes::StringView>> COLUMN_SIZES_BY_TYPENAME = std::initializer_list{
     Pair(DataTypes::StringView("tinyint"), static_cast<block_size_t>(sizeof(TinyInt))),
     Pair(DataTypes::StringView("smallint"), static_cast<block_size_t>(sizeof(SmallInt))),
     Pair(DataTypes::StringView("int"), static_cast<block_size_t>(sizeof(Int))),
@@ -26,7 +30,21 @@ static constexpr ConstexprDictionary<DataTypes::StringView, block_size_t, 10, Ca
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
-static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseInsensitiveHash<DataTypes::StringView>> ColumnTypesDictionary{
+static block_size_t COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT] = {
+    sizeof(DataTypes::String),
+    sizeof(bool),
+    sizeof(TinyInt),
+    sizeof(SmallInt),
+    sizeof(Int),
+    sizeof(BigInt),
+    sizeof(DataTypes::Decimal),
+    sizeof(DataTypes::DateTime),
+    sizeof(DataTypes::Guid),
+    sizeof(DataTypes::JsonBinary),
+};
+
+
+static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseInsensitiveHash<DataTypes::StringView>> COLUMN_TYPENAMES_TO_ENUMS{
     Pair(DataTypes::StringView("tinyint"), DataType::TinyInt),
     Pair(DataTypes::StringView("smallint"), DataType::SmallInt),
     Pair(DataTypes::StringView("int"), DataType::Int),
@@ -39,7 +57,7 @@ static constexpr ConstexprDictionary<DataTypes::StringView, DataType, 10, CaseIn
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
-static constexpr DataTypes::StringView SqlTypesString[] = {
+static constexpr DataTypes::StringView SQL_TYPES_NAMES[] = {
     DataTypes::StringView(""),         // 0  - Unknown
     DataTypes::StringView("String"),   // 1
     DataTypes::StringView("Bool"),     // 2
@@ -55,7 +73,7 @@ static constexpr DataTypes::StringView SqlTypesString[] = {
     DataTypes::StringView(""),         // 12 - RowIdentifier (not displayable)
 };
 
-static constexpr DataType JsonToSqlTypes[] = {
+static constexpr DataType JSON_TYPES_NAMES[] = {
     DataType::Null, //NULL
     DataType::Bool,
     DataType::Decimal,

@@ -1,5 +1,6 @@
 ﻿#include <cmath>
 #include "../../../include/DataStorage/Table.h"
+#include "DataStorage/Column.h"
 #include "DataStorage/InsertPayload.h"
 
 namespace CoreEngine::StorageTypes{

@@ -621,56 +621,56 @@ namespace CoreEngine::StorageTypes {
     const ExecutionContext& executionContext,
     const Expressions::Expression* expression
     ) const{
-        if (this->header.allocationPageId == INVALID_PAGE_ID) return;
-
-        const auto dataKey = this->database->GetDataFileKey();
-        const auto systemFileKey = this->database->GetSystemFileKey();
-
-        const auto tableMapPage =
-            Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-                dataKey,
-                this->header.allocationPageId,
-                this
-            );
-
-        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
-
-        DataStructures::PolymorphicArray<Row*> rowsToBeInserted;
-        Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
-
-        for (const auto &extentId : tableExtentIds){
-            const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
-
-            auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
-
-            const auto pageId = (tableMapPage.PageId() != extentFirstPageId)
-                   ? extentFirstPageId
-                   : extentFirstPageId + 1;
-
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
-                    break;
-
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
-
-                // const auto rows = page.DataRowsNoLock(this);
-                //
-                // for (int i = 0; i < rows.size(); i++) {
-                //   const auto& row = rows.at(i);
-                //
-                //   executionContext.row = &row;
-                //
-                //   if (expression->Evaluate(executionContext).GetBool())
-                //     page.Delete(i);
-                // }
-
-                // page.UpdateBytesLeft();
-                // page.UpdatePageSize();
-
-                pageFreeSpacePage.SetPageMetaData(&page);
-            }
-        }
+        // if (this->header.allocationPageId == INVALID_PAGE_ID) return;
+        //
+        // const auto dataKey = this->database->GetDataFileKey();
+        // const auto systemFileKey = this->database->GetSystemFileKey();
+        //
+        // const auto tableMapPage =
+        //     Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
+        //         dataKey,
+        //         this->header.allocationPageId,
+        //         this
+        //     );
+        //
+        // DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
+        // tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
+        //
+        // DataStructures::PolymorphicArray<Row*> rowsToBeInserted;
+        // Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
+        //
+        // for (const auto &extentId : tableExtentIds){
+        //     const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
+        //
+        //     auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
+        //
+        //     const auto pageId = (tableMapPage.PageId() != extentFirstPageId)
+        //            ? extentFirstPageId
+        //            : extentFirstPageId + 1;
+        //
+        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+        //         if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
+        //             break;
+        //
+        //         auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
+        //
+        //         // const auto rows = page.DataRowsNoLock(this);
+        //         //
+        //         // for (int i = 0; i < rows.size(); i++) {
+        //         //   const auto& row = rows.at(i);
+        //         //
+        //         //   executionContext.row = &row;
+        //         //
+        //         //   if (expression->Evaluate(executionContext).GetBool())
+        //         //     page.Delete(i);
+        //         // }
+        //
+        //         // page.UpdateBytesLeft();
+        //         // page.UpdatePageSize();
+        //
+        //         pageFreeSpacePage.SetPageMetaData(&page);
+        //     }
+        // }
     }
 
     Errors::RuntimeStatus Table::HeapInsert(

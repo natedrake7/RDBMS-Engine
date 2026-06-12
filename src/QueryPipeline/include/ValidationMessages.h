@@ -78,9 +78,9 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid conversion from ",
-            SqlTypesString[static_cast<Int>(fromType)],
+            SQL_TYPES_NAMES[static_cast<Int>(fromType)],
             " to ",
-            SqlTypesString[static_cast<Int>(toType)]
+            SQL_TYPES_NAMES[static_cast<Int>(toType)]
         );
     }
 
@@ -222,9 +222,9 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid operation on datatypes: ",
-            SqlTypesString[static_cast<Int>(leftType)],
+            SQL_TYPES_NAMES[static_cast<Int>(leftType)],
             " and ",
-            SqlTypesString[static_cast<Int>(rightType)]
+            SQL_TYPES_NAMES[static_cast<Int>(rightType)]
         );
     }
 
@@ -234,7 +234,7 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid expression type: ",
-            SqlTypesString[static_cast<Int>(type)],
+            SQL_TYPES_NAMES[static_cast<Int>(type)],
             " specified for branch expression"
         );
     }

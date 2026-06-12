@@ -133,7 +133,6 @@ namespace DataTypes {
         explicit constexpr Decimal(Int value);
         explicit constexpr Decimal(BigInt value);
         explicit constexpr Decimal(const StringView& value);
-        constexpr ~Decimal() = default;
 
         [[nodiscard]] constexpr bool IsPositive() const;
         [[nodiscard]] constexpr fraction_index_t GetFractionIndex() const;

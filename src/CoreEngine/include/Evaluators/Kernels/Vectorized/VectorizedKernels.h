@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <type_traits>
 
-#include "Expression.h"
+#include "../../Expression.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStorage/Table.h"
 #include "Vectorization/Vectorization.h"

@@ -2,6 +2,8 @@
 
 #include "PhysicalPlan.h"
 #include "Vectorization/Vectorization.h"
+#include "../../Systemic/include/DataTypes/String.h"
+#include "../../Systemic/include/DataTypes/JsonBinary.h"
 
 namespace QueryPipeline{
     RowCursor::RowCursor(const PhysicalPlan::VectorBatch* batch)
@@ -17,9 +19,19 @@ namespace QueryPipeline{
 
     void RowCursor::PrintColumn(std::ostream& os, const Int rowIndex, const Int columnIndex) const{
         const auto* columnData = this->_batch->_columns[columnIndex];
+
+        if (columnData->GetNullValue(rowIndex)){
+            os  << "NULL"
+                << " || ";
+            return;
+        }
+
         switch (columnData->_type){
-        case DataType::String:
+        case DataType::String:{
+            auto* str = reinterpret_cast<const DataTypes::String*>(columnData->_data + rowIndex * sizeof(DataTypes::String));
+            os << *str;
             break;
+        }
         case DataType::Bool:
             os << (*reinterpret_cast<const bool*>(columnData->_data + rowIndex * sizeof(bool)) == 1 ? "true" : "false");
             break;
@@ -37,15 +49,21 @@ namespace QueryPipeline{
             break;
         case DataType::Decimal:
             break;
-        case DataType::DateTime:
+        case DataType::DateTime:{
+            const auto time = DataTypes::DateTime(*reinterpret_cast<const BigInt*>(columnData->_data + rowIndex * sizeof(BigInt)));
+            time.Print(os);
             break;
+        }
         case DataType::Guid:
+            // const auto guid = DataTypes::Guid(*reinterpret_cast<const UInt*>(columnData->_data + rowIndex * sizeof(UInt)));
             break;
-        case DataType::Json:
+        case DataType::Json:{
+            auto* json = reinterpret_cast<const DataTypes::JsonBinary*>(columnData->_data + rowIndex * sizeof(DataTypes::JsonBinary));
+            os << json->ToString();
             break;
+        }
+        default:
         case DataType::Null:
-            os << "NULL";
-            break;
         case DataType::RowIdentifier:
             break;
         }

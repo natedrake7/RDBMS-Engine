@@ -4,8 +4,7 @@
 #include "../DataTypes/Decimal.h"
 #include "../DataStructures/SortedDictionary.h"
 
-namespace DataTypes
-{
+namespace DataTypes{
     class JsonBinary;
 }
 
@@ -45,7 +44,7 @@ namespace Serialization{
     };
 
     using JsonArray = DataStructures::PolymorphicArray<JsonValue>;
-    using JsonObject = SortedDictionary<DataTypes::String, JsonValue, StringComparator>;
+    using JsonObject = SortedDictionary<DataTypes::String, JsonValue, std::equal_to<DataTypes::String>>;
     using JsonString = DataTypes::String;
     using JsonNumber = DataTypes::Decimal;
     using JsonBool = bool;

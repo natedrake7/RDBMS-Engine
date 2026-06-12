@@ -160,12 +160,24 @@ namespace Pages{
             bool* outNull
         )const;
 
+        DataTypes::String GetStringColumnAt(
+            const ::Memory::IAllocator* allocator,
+            Int index,
+            Int columnIndex,
+            bool* outNull
+        )const;
+
         [[nodiscard]] const object_t* GetColumnAt(Int rowIndex, Int columnIndex) const;
 
         // Same as the above, but also reports the stored byte length (rowEntry.Size()).
         // Required for variable-length columns (Decimal/String/Json). Returns nullptr
         // and outSize == 0 when the column value is NULL.
-        const object_t* GetColumnAt(Int rowIndex, Int columnIndex, UnsignedSmallInt& outSize) const;
+        const object_t* GetColumnAt(
+            Int rowIndex,
+            Int columnIndex,
+            UnsignedSmallInt& outSize,
+            bool* outNull
+        ) const;
 
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
     };
