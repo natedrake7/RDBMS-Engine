@@ -193,6 +193,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Evaluators/Kernels/Vectorized/VectorizedKernels.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Vectorized.cpp
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.cpp
+        src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.Binary.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

@@ -981,6 +981,23 @@ namespace Expressions{
         return this->functionType == Constants::FunctionType::Plugin;
     }
 
+    void LogicalExpression::BindRowKernel(){
+        switch (logicalType) {
+        case LogicalType::And:
+            this->rowKernel = &CoreEngine::RowKernels::LogicalAndKernel;
+            break;
+        case LogicalType::Or:
+            this->rowKernel = &CoreEngine::RowKernels::LogicalOrKernel;
+            break;
+        case LogicalType::Invalid:
+            break;
+        }
+
+    }
+
+    void LogicalExpression::BindVectorizedKernel(){
+    }
+
     LogicalExpression::LogicalExpression(
         Expression *leftExpression,
         Expression *RightExpression,
@@ -1004,6 +1021,23 @@ namespace Expressions{
     bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
 
     bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
+
+    void LogicalExpression::BindExpressionKernel(
+        LogicalExpression* expression,
+        const Constants::ExecutionMode mode
+    ){
+        Expressions::BindExpressionKernel(expression->left, mode);
+        Expressions::BindExpressionKernel(expression->right, mode);
+
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            expression->BindRowKernel();
+            break;
+        case Constants::ExecutionMode::Vectorized:
+            expression->BindVectorizedKernel();
+            break;
+        }
+    }
 
     Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
         switch (this->logicalType) {
@@ -1309,7 +1343,6 @@ namespace Expressions{
             return expression->AsFunction()->GetReturnType();
         case ExpressionType::Json:
             return expression->AsJson()->GetReturnType();
-        case ExpressionType::Expression:
         default:
             return DataType::Null;
         }
@@ -1320,8 +1353,6 @@ namespace Expressions{
             return;
 
         switch (expression->expressionType){
-        case ExpressionType::Expression:
-            break;
         case ExpressionType::Column:
             ColumnExpression::BindExpressionKernel(expression->AsColumn(), mode);
             break;
@@ -1332,6 +1363,7 @@ namespace Expressions{
             BinaryExpression::BindExpressionKernel(expression->AsBinary(), mode);
             break;
         case ExpressionType::Logical:
+            LogicalExpression::BindExpressionKernel(expression->AsLogical(), mode);
             break;
         case ExpressionType::Variable:
             break;
@@ -1342,6 +1374,8 @@ namespace Expressions{
         case ExpressionType::Json:
             break;
         case ExpressionType::Cast:
+            break;
+        default:
             break;
         }
     }

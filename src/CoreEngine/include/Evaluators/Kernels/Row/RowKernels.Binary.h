@@ -23,8 +23,8 @@ namespace CoreEngine::RowKernels{
         bool leftNull = false, rightNull = false;
         T left, right;
 
-        Expressions::EvaluateExpression(binaryExpr->left, context, &left, &leftNull);
-        Expressions::EvaluateExpression(binaryExpr->right, context, &right, &rightNull);
+        binaryExpr->left->rowKernel(binaryExpr->left, context, &left, &leftNull);
+        binaryExpr->right->rowKernel(binaryExpr->right, context, &right, &rightNull);
 
         if (leftNull || rightNull){
             *outNull = true;
@@ -48,8 +48,8 @@ namespace CoreEngine::RowKernels{
         bool leftNull = false, rightNull = false;
         T left, right;
 
-        Expressions::EvaluateExpression(binaryExpr->left, context, &left, &leftNull);
-        Expressions::EvaluateExpression(binaryExpr->right, context, &right, &rightNull);
+        binaryExpr->left->rowKernel(binaryExpr->left, context, &left, &leftNull);
+        binaryExpr->right->rowKernel(binaryExpr->right, context, &right, &rightNull);
 
         if (leftNull || rightNull || right == T{}){
             *outNull = true;
@@ -71,8 +71,8 @@ namespace CoreEngine::RowKernels{
         bool leftNull = false, rightNull = false;
         T left, right;
 
-        Expressions::EvaluateExpression(binaryExpr->left, context, &left, &leftNull);
-        Expressions::EvaluateExpression(binaryExpr->right, context, &right, &rightNull);
+        binaryExpr->left->rowKernel(binaryExpr->left, context, &left, &leftNull);
+        binaryExpr->right->rowKernel(binaryExpr->right, context, &right, &rightNull);
 
         if (leftNull || rightNull || right == T{}){
             *outNull = true;
@@ -97,8 +97,8 @@ namespace CoreEngine::RowKernels{
         T left, right;
         bool leftNull = false, rightNull = false;
 
-        Expressions::EvaluateExpression(binaryExpr->left, context, &left, &leftNull);
-        Expressions::EvaluateExpression(binaryExpr->right, context, &right, &rightNull);
+        binaryExpr->left->rowKernel(binaryExpr->left, context, &left, &leftNull);
+        binaryExpr->right->rowKernel(binaryExpr->right, context, &right, &rightNull);
 
         if (leftNull || rightNull){
             *outNull = true;

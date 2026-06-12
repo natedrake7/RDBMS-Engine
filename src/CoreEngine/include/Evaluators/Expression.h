@@ -305,6 +305,9 @@ namespace Expressions{
     };
 
     class LogicalExpression final : public Expression{
+        void BindRowKernel();
+        void BindVectorizedKernel();
+
     public:
         LogicalType logicalType;
 
@@ -321,6 +324,8 @@ namespace Expressions{
         [[nodiscard]] bool IsOr()const;
         [[nodiscard]] bool IsAnd()const;
         [[nodiscard]] bool HasAtLeastOneConstant()const;
+
+        static void BindExpressionKernel(LogicalExpression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
         [[nodiscard]] DataType GetReturnType() const;

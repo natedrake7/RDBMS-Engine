@@ -67,4 +67,18 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     );
+
+    void LogicalAndKernel(
+        const Expressions::Expression* self,
+        const Expressions::EvaluationContext& context,
+        void* outVal,
+        bool* outNull
+    );
+
+    void LogicalOrKernel(
+        const Expressions::Expression* self,
+        const Expressions::EvaluationContext& context,
+        void* outVal,
+        bool* outNull
+    );
 }
