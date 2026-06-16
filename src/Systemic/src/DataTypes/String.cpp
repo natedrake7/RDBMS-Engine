@@ -402,6 +402,13 @@ namespace DataTypes{
         this->_capacity = size;
     }
 
+    String::String(object_t* str, const Int size, const ::Memory::IAllocator* allocator){
+        this->_allocator = allocator;
+        this->_data = reinterpret_cast<char*>(str);
+        this->_size = size;
+        this->_capacity = size;
+    }
+
     String::String(const char* str, const Int size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
@@ -1340,5 +1347,9 @@ namespace DataTypes{
         if (this->_size == 0)
             throw std::out_of_range("String is empty.");
         this->_size--;
+    }
+
+    bool StringEqualsIgnoreCase::operator()(const String& lhs, const String& rhs) const {
+        return lhs.Compare(rhs, StringComparisonType::EqualsIgnoreOrdinalCase);
     }
 }

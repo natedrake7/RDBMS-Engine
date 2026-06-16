@@ -1,8 +1,6 @@
 ﻿#include "../../include/Managers/GlobalMemoryManager.h"
 
 #include "DatabaseConstants.h"
-#include "Guards/ReaderGuard.h"
-#include "Guards/WriterGuard.h"
 #include "Memory/Functions.h"
 
 namespace CoreEngine{
@@ -28,33 +26,35 @@ namespace CoreEngine{
     }
 
     bool GlobalMemoryManager::TryReserveForExecution(const UnsignedBigInt size){
-        MultiThreading::WriterGuard lock(&this->_executionPoolMutex);
+        auto current = this->_executionUsed.load(std::memory_order_relaxed);
+        do{
+            if (current + size > this->_executionCapacity)
+                return false;
+        } while (!this->_executionUsed.compare_exchange_weak(
+                    current, current + size,
+                    std::memory_order_relaxed, std::memory_order_relaxed));
 
-        if (this->_executionUsed + size > this->_executionCapacity)
-            return false;
-
-        this->_executionUsed += size;
         return true;
     }
 
     void GlobalMemoryManager::ReleaseExecutionReservation(const UnsignedBigInt size){
-        MultiThreading::WriterGuard lock(&this->_executionPoolMutex);
-        this->_executionUsed -= size;
+        this->_executionUsed.fetch_sub(size, std::memory_order_relaxed);
     }
 
     bool GlobalMemoryManager::TryReserveForMisc(const UnsignedBigInt size){
-        MultiThreading::WriterGuard lock(&this->_miscPoolMutex);
+        auto current = this->_miscUsed.load(std::memory_order_relaxed);
+        do{
+            if (current + size > this->_miscCapacity)
+                return false;
+        } while (!this->_miscUsed.compare_exchange_weak(
+                    current, current + size,
+                    std::memory_order_relaxed, std::memory_order_relaxed));
 
-        if (this->_miscUsed + size > this->_miscCapacity)
-            return false;
-
-        this->_miscUsed += size;
         return true;
     }
 
     void GlobalMemoryManager::ReleaseMiscReservation(const UnsignedBigInt size){
-        MultiThreading::WriterGuard lock(&this->_miscPoolMutex);
-        this->_miscUsed -= size;
+        this->_miscUsed.fetch_sub(size, std::memory_order_relaxed);
     }
 
     UnsignedBigInt GlobalMemoryManager::GetDbCapacity() const{ return this->_dbCapacity; }
@@ -62,52 +62,53 @@ namespace CoreEngine{
     UnsignedBigInt GlobalMemoryManager::GetMiscCapacity() const{ return this->_miscCapacity; }
 
     UnsignedBigInt GlobalMemoryManager::GetMiscReservation() const{
-        MultiThreading::ReaderGuard lock(&this->_miscPoolMutex);
-        return this->_miscUsed;
+        return this->_miscUsed.load(std::memory_order_relaxed);
     }
 
     UnsignedBigInt GlobalMemoryManager::GetExecutionCapacity() const{ return this->_executionCapacity; }
     UnsignedBigInt GlobalMemoryManager::GetExecutionReservation() const{
-        MultiThreading::ReaderGuard lock(&this->_executionPoolMutex);
-        return this->_executionUsed;
+        return this->_executionUsed.load(std::memory_order_relaxed);
     }
 
     void GlobalMemoryManager::Log(std::ostream& os, const ::Memory::MemoryLogLevel level) const{
+        const UnsignedBigInt executionUsed = this->_executionUsed.load(std::memory_order_relaxed);
+        const UnsignedBigInt miscUsed = this->_miscUsed.load(std::memory_order_relaxed);
+
         switch (level){
             case ::Memory::MemoryLogLevel::Bytes:{
                 os << "Total Database Memory: " << this->_dbCapacity << " Bytes\n";
                 os << "Total Buffer Pool Memory: " << this->_bufferPoolCapacity << " Bytes\n";
                 os << "Total Execution Pipeline Memory: " << this->_executionCapacity << " Bytes\n";
-                os << "Total Execution Pipeline Memory Used: " << this->_executionUsed << " Bytes\n";
+                os << "Total Execution Pipeline Memory Used: " << executionUsed << " Bytes\n";
                 os << "Total Miscellaneous Memory: " << this->_miscCapacity << " Bytes\n";
-                os << "Total Miscellaneous Memory Used: " << this->_miscUsed << " Bytes\n";
+                os << "Total Miscellaneous Memory Used: " << miscUsed << " Bytes\n";
                 break;
             }
             case ::Memory::MemoryLogLevel::KiloBytes:{
                 os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
                 os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
                 os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (this->_executionUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
+                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
                 os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (this->_miscUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
+                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
                 break;
             }
             case ::Memory::MemoryLogLevel::MegaBytes:{
                 os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
                 os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
                 os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (this->_executionUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
+                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
                 os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (this->_miscUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
+                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
                 break;
             }
             case ::Memory::MemoryLogLevel::GigaBytes:{
                 os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
                 os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
                 os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (this->_executionUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
+                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
                 os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (this->_miscUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
+                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
                 break;
             }
             default: break;

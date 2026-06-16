@@ -60,29 +60,26 @@ namespace Expressions{
     };
 
     EvaluationContext::EvaluationContext(const Memory::IAllocator* allocator)
-        :   row(nullptr), joinRow(nullptr),
-            allocator(allocator), table(nullptr),
-            variables(nullptr), type(EvaluationContextType::Constant) {}
+        :   row(nullptr), page(nullptr),
+            joinRow(nullptr), allocator(allocator),
+            table(nullptr), variables(nullptr),
+            type(EvaluationContextType::Constant) {}
 
     EvaluationContext::EvaluationContext(
         const EvaluationContextType type,
         const Memory::IAllocator* allocator,
         const CoreEngine::StorageTypes::Table* table
-    ):  row(nullptr), joinRow(nullptr),
-        allocator(allocator), table(table),
-        variables(nullptr), type(type){}
+    ):  row(nullptr), page(nullptr),
+        joinRow(nullptr), allocator(allocator),
+        table(table), variables(nullptr),
+        type(type){}
 
     EvaluationContext::EvaluationContext(
         const EvaluationContextType type,
         const CoreEngine::ExecutionContext& executionContext
-    ){
-        this->type = type;
-        this->table = executionContext.GetTable(0);
-        this->allocator = executionContext.GetAllocator();
-        this->variables = executionContext.GetVariables();
-        this->row = nullptr;
-        this->joinRow = nullptr;
-    }
+    ) : row(nullptr), page(nullptr),
+        joinRow(nullptr), allocator(executionContext.GetAllocator()),
+        table(executionContext.GetTable(0)), variables(executionContext.GetVariables()), type(type){}
 
     EvaluationContext::EvaluationContext(
         const CoreEngine::StorageTypes::RID* row,
@@ -394,8 +391,11 @@ namespace Expressions{
         case DataType::Json:
             this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::JsonBinary>;
             break;
+        case DataType::Null:
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanNullKernel;
+            break;
         default:
-            break;  // TODO: String / Decimal / Json constant kernels
+            break;
         }
     }
 
@@ -1336,6 +1336,15 @@ namespace Expressions{
         default:
             break;
         }
+    }
+
+    bool RowModeFilter(
+        const Expression* expression,
+        const EvaluationContext& context
+    ){
+        bool keep = false, isNull = false;
+        expression->rowKernel(expression, context, &keep, &isNull);
+        return !isNull && keep;
     }
 
     DataType GetExpressionReturnType(const Expression* expression){

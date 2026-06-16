@@ -18,7 +18,6 @@ namespace QueryPipeline {
       CoreEngine::ExecutionContext& executionContext,
       PhysicalPlan::PlanNode* plan
     );
-    ~Cursor();
 
     [[nodiscard]] PhysicalPlan::ExecutionResult FetchNextBatch();
     [[nodiscard]] bool CanFetch()const;

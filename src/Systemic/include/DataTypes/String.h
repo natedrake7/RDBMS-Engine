@@ -112,6 +112,7 @@ namespace DataTypes{
             String(const String& str, const ::Memory::IAllocator* allocator);
             String(const StringView& str, const ::Memory::IAllocator* allocator);
             String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
+            String(object_t* str, Int size, const ::Memory::IAllocator* allocator);
             String(const char* str, const ::Memory::IAllocator* allocator);
             String(const std::string& str, const ::Memory::IAllocator* allocator);
             String(char* str, Int size, const ::Memory::IAllocator* allocator);
@@ -153,8 +154,6 @@ namespace DataTypes{
             friend String operator+(const String& lhs, const std::string& rhs);
             friend String operator+(const std::string& lhs, const String& rhs);
 
-
-
             String& operator+=(const String& other);
             String& operator+=(const char* other);
             String& operator+=(const StringView& other);
@@ -177,10 +176,7 @@ namespace DataTypes{
             [[nodiscard]] String Concat(const char* other) const;
             [[nodiscard]] String Concat(const StringView& other) const;
             [[nodiscard]] String Concat(std::string_view other) const;
-            [[nodiscard]] String Concat(const std::string& other) const;
-            // [[nodiscard]] static String Concat(const StringView& lhs, const StringView& rhs, const ::Memory::IAllocator* allocator);
-            // [[nodiscard]] static String Concat(const String& lhs, const String& rhs, const ::Memory::IAllocator* allocator);
-            // [[nodiscard]] static String Concat(const char* lhs, const char* rhs, const ::Memory::IAllocator* allocator);
+            [[nodiscard]] String Concat(const std::string& other) const;\
 
             template<typename... Args>
             [[nodiscard]] static String Join(
@@ -362,6 +358,10 @@ namespace DataTypes{
             //Constant Evaluation Functions
             [[nodiscard]] static constexpr char ToLower(char c) noexcept;
 
+    };
+
+    struct StringEqualsIgnoreCase {
+        bool operator()(const String& lhs, const String& rhs) const;
     };
 
     constexpr char String::ToLower(const char c) noexcept{

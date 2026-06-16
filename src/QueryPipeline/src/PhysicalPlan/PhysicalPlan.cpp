@@ -638,15 +638,17 @@ PhysicalTableCreate::PhysicalTableCreate(
 
         const auto& scanHandle = context.GetScanHandle(0);
 
-        page_id_t currentPageId = INVALID_PAGE_ID;
         bool outNull = false;
+        Pages::PageView page;
         if (result.selectionVector->isIdentity){
             for (Int i = 0; i < rowCount; i++){
                 evaluationContext.row = &scanHandle.rids[i];
 
-                if (currentPageId != evaluationContext.row->_pageId){
-                    evaluationContext.page = table->GetPage(evaluationContext.row->_pageId);
-                    currentPageId = evaluationContext.row->_pageId;
+                if (!page.IsValid()
+                    || page.PageId() != evaluationContext.row->_pageId
+                ){
+                    page = table->GetPage(evaluationContext.row->_pageId);
+                    evaluationContext.page = &page;
                 }
 
                 for (Int j = 0; j < projectCount; j++){
@@ -760,37 +762,61 @@ PhysicalTableCreate::PhysicalTableCreate(
         this->child->UpdateScanState(rowId);
     }
 
-    PhysicalFilter::PhysicalFilter(PlanNode *child, Expressions::Expression* filter)
-        : filter(filter) , child(child) {}
+    void PhysicalFilter::ExecuteVectorizedMode(
+        const ExecutionResult& result,
+        const CoreEngine::ExecutionContext& context
+    ) const{
 
-    ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
-        auto result = this->child->Execute(context);
+    }
 
-        // if(dynamic_cast<PhysicalIndexScan*>(this->child) != nullptr
-        //   || dynamic_cast<PhysicalIndexSeekRange*>(this->child) != nullptr
-        // ) return result;
-
+    void PhysicalFilter::ExecuteRowMode(
+        const ExecutionResult& result,
+        const CoreEngine::ExecutionContext& context
+    ) const{
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
         const auto& firstHandle = context.GetScanHandle(0);
+        const auto* table = context.GetTable(0);
+
+        Pages::PageView page;
+        for (Int i = 0; i < firstHandle.size; i++){
+            evaluationContext.row = &firstHandle.rids[i];
+            if (!page.IsValid()
+                || page.PageId() != evaluationContext.row->_pageId
+            ){
+                page = table->GetPage(evaluationContext.row->_pageId);
+                evaluationContext.page = &page;
+            }
+
+            if (Expressions::RowModeFilter(this->filter, evaluationContext))
+                result.selectionVector->selectedRids[0][result.selectionVector->selectedRidsCount++] = i;
+        }
+    }
+
+    PhysicalFilter::PhysicalFilter(PlanNode *child, Expressions::Expression* filter)
+        : filter(filter) , child(child) {}
+
+    ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
+        auto result = this->child->Execute(context);
+
+        const auto& firstHandle = context.GetScanHandle(0);
+        if (firstHandle.size == 0)
+            return result;
 
         result.selectionVector->AllocateRids(
             context.GetAllocator(),
             0,
             firstHandle.size
         );
+        result.selectionVector->selectedRidsCount = 0;
 
-        for (Int i = 0; i < firstHandle.size; i++){
-            const auto& row = firstHandle.rids[i];
-            evaluationContext.row = &row;
-            if (!Expressions::EvaluateExpression(this->filter, evaluationContext).AsBool())
-                continue;
-
-            result.selectionVector->selectedRids[0][result.selectionVector->selectedRidsCount++] = i;
-        }
+        if (context.GetMode() == Constants::ExecutionMode::Vectorized)
+            this->ExecuteVectorizedMode(result, context);
+        else
+            this->ExecuteRowMode(result, context);
 
         return result;
     }

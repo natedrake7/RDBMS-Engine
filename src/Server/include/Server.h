@@ -39,7 +39,6 @@ namespace Network {
     CoreEngine::VersionDatabase *versionDatabase;
 
     Server();
-    ~Server();
 
     void CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext);
     void CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext);

@@ -109,18 +109,15 @@ namespace QueryPipeline {
 
         // No table stats yet, or small table
         if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
-            if (firstIndex.isClustered)
-                return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, true);
-
             Expressions::BindExpressionKernel(this->expression, context._executionMode);
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, firstIndex.isClustered);
         }
 
         Optimizer optimizer(context);
         // else use optimizer to choose index seek/scan
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
         
-        Expressions::BindExpressionKernel(this->expression, context._executionMode);
+        Expressions::BindExpressionKernel(result.remainingPredicate, context._executionMode);
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);

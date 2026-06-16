@@ -50,6 +50,8 @@ namespace QueryPipeline{
 
         void CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables);
         const ::Memory::IAllocator* GetAllocator()const;
+
+        void Release()const;
     };
 
     class Parser{

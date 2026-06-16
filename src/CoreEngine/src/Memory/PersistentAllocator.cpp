@@ -17,7 +17,7 @@ namespace CoreEngine::Memory{
     void PersistentAllocator::AllocateNewChunk(const UnsignedInt size) const{
         const auto newChunkSize = this->NewChunkCapacity(size);
 
-        if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){
+        if(GlobalMemoryManager::Get().TryReserveForMisc(newChunkSize) == false){
             throw std::bad_alloc();
         }
 
@@ -44,10 +44,10 @@ namespace CoreEngine::Memory{
         this->_tail = nullptr;
     }
 
-    PersistentAllocator::PersistentAllocator(const UnsignedInt capacity){
+    PersistentAllocator::PersistentAllocator(const UnsignedInt size){
         this->_head = nullptr;
         this->_tail = nullptr;
-        this->AllocateNewChunk(capacity);
+        this->AllocateNewChunk(size);
     }
 
     PersistentAllocator::~PersistentAllocator(){
@@ -66,12 +66,14 @@ namespace CoreEngine::Memory{
         if (this == &other)
             return *this;
 
+        if (this->_head != nullptr)
+            this->Release();
+
         this->_head = other._head;
         this->_tail = other._tail;
 
         other._head = nullptr;
         other._tail = nullptr;
-
         return *this;
     }
 
@@ -100,7 +102,7 @@ namespace CoreEngine::Memory{
         this->_head = nullptr;
         this->_tail = nullptr;
 
-        GlobalMemoryManager::Get().ReleaseExecutionReservation(totalMemoryFreed);
+        GlobalMemoryManager::Get().ReleaseMiscReservation(totalMemoryFreed);
     }
 
     void PersistentAllocator::Reset() const{

@@ -18,8 +18,6 @@ namespace Network {
     this->versionDatabase = nullptr;
   }
 
-  Server::~Server() = default;
-
   void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
     const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
@@ -207,9 +205,12 @@ namespace Network {
     return this->sessionManager.CreateCursor(id, compileContext, executionContext, physicalPlan);
   }
 
-  bool Server::CloseCursor(const DataTypes::Guid &id, const QueryPipeline::PipelineConstants::cursor_id_t cursorId) const {
-    return this->sessionManager.CloseCursor(id, cursorId);
-  }
+    bool Server::CloseCursor(
+        const DataTypes::Guid &id,
+        const QueryPipeline::PipelineConstants::cursor_id_t cursorId
+    ) const {
+        return this->sessionManager.CloseCursor(id, cursorId);
+    }
 
   void Server::Shutdown(){
     const CoreEngine::Memory::Allocator allocator;

@@ -59,7 +59,7 @@ namespace Expressions{
 
         const CoreEngine::StorageTypes::RID* row;
 
-        Pages::PageView page;
+        const Pages::PageView* page;
         const CoreEngine::StorageTypes::RID* joinRow;
 
         const Memory::IAllocator* allocator;
@@ -410,6 +410,11 @@ namespace Expressions{
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
         const CoreEngine::SelectionVector* selectionVector
+    );
+
+    [[nodiscard]] bool RowModeFilter(
+        const Expression* expression,
+        const EvaluationContext& context
     );
 
     DataType GetExpressionReturnType(const Expression* expression);

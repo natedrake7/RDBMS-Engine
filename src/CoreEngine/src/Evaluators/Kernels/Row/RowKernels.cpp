@@ -2,6 +2,15 @@
 #include "Evaluators/Kernels/Row/RowKernels.Binary.h"
 
 namespace CoreEngine::RowKernels{
+    void ConstantScanNullKernel(
+        const Expressions::Expression*,
+        const Expressions::EvaluationContext&,
+        void*,
+        bool* outNull
+    ){
+        *outNull = true;
+    }
+
     void LogicalAndKernel(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context,

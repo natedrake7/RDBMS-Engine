@@ -1739,9 +1739,14 @@ namespace QueryPipeline::Statements {
 
         if (!result.IsOk()) return result;
 
+
         //validate binary expression action
         const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
         const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
+        if (leftType == DataType::Null || rightType == DataType::Null){
+            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null(nullptr));
+            return Errors::ValidationStatus::Ok();
+        }
 
         if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
             return Errors::ValidationStatus::Error(
@@ -1788,6 +1793,10 @@ namespace QueryPipeline::Statements {
 
         const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
         const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
+        if (leftType == DataType::Null || rightType == DataType::Null){
+            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null(nullptr));
+            return Errors::ValidationStatus::Ok();
+        }
 
         if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
             return Errors::ValidationStatus::Error(

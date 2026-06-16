@@ -131,6 +131,7 @@ namespace CoreEngine {
             Constants::ExecutionMode GetMode()const;
 
             void ResetAllocator()const;
+            void ReleaseAllocator()const;
             bool IsAllocatorEmpty()const;
 
             void* Allocate(Int size) const;

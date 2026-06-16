@@ -109,6 +109,10 @@ namespace QueryPipeline{
         return this->_compileContext.GetAllocator();
      }
 
+     void QueryContext::Release() const{
+        this->_compileContext.GetAllocator()->Release();
+     }
+
      QueryContext::QueryContext(const Errors::Error &error){
         this->status = error;
         this->hasMore = false;

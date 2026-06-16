@@ -677,10 +677,11 @@ Value operator+(const Value &lhs, const Value &rhs){
         return Value::PerformStringAddition(lhs, rhs);
     case DataType::Bool:
         return Value(lhs.AsBool() + rhs.AsBool(), lhs.GetAllocator(), 0);
+    case DataType::Null:
+        return Value::Null(nullptr);
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -705,12 +706,13 @@ Value operator-(const Value &lhs, const Value &rhs){
         }
         case DataType::Decimal:
             return Value::PerformDecimalSubtraction(lhs, rhs);
+        case DataType::Null:
+            return Value::Null(nullptr);
         case DataType::String:
         case DataType::Bool:
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::RowIdentifier:
-        case DataType::Null:
         default:
             Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -736,11 +738,12 @@ Value operator%(const Value &lhs, const Value &rhs){
         return Value(lhs.AsBool() % rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::Decimal:
     // return Field(lhs.GetDecimal() % rhs.GetDecimal(), 0);WWW
+    case DataType::Null:
+        return Value::Null(nullptr);
     case DataType::String:
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }
@@ -762,11 +765,12 @@ Value operator*(const Value &lhs, const Value &rhs){
         return Value(lhs.AsBool() * rhs.AsBool(), lhs.GetAllocator(), 0);
     case DataType::Decimal:
         return Value(lhs.AsDecimal() * rhs.AsDecimal(), lhs.GetAllocator(), 0);
+    case DataType::Null:
+        return Value::Null(nullptr);
     case DataType::String:
     case DataType::DateTime:
     case DataType::Guid:
     case DataType::RowIdentifier:
-    case DataType::Null:
     default:
         Value::BinaryOperationException(lhs.type, rhs.type);
     }

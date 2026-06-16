@@ -34,6 +34,10 @@ namespace CoreEngine::RowKernels{
         table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::less_equal<bool>>;
     }
 
+    // Case-insensitive string equality, shaped like std::equal_to so it plugs straight
+    // into BinaryComparisonKernel. Routes through String::Compare -- the same public
+    // entry the Value path uses for EqualsIgnoreOrdinalCase.
+
     constexpr void RegisterString(BinaryKernelTable& table){
         constexpr auto CAST_STR_TYPE = static_cast<Int>(DataType::String);
         table.cells[static_cast<Int>(Expressions::BinaryOperator::Add)][CAST_STR_TYPE] = &BinaryStringAdditionKernel;
@@ -43,8 +47,9 @@ namespace CoreEngine::RowKernels{
         table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater_equal<DataTypes::String>>;
         table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less<DataTypes::String>>;
         table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less_equal<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::EqualIgnoreOrdinalCase)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, DataTypes::StringEqualsIgnoreCase>;
 
-        //TODO add ignore ordinal case, starts with etc kernel
+        //TODO add starts with / ends with / contains kernels
     }
 
     constexpr void RegisterDateTime(BinaryKernelTable& table){

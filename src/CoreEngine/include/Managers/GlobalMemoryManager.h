@@ -1,6 +1,6 @@
 ﻿#pragma once
+#include <atomic>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/Guards/Mutex.h"
 #include "../../Systemic/include/Memory/Functions.h"
 
 namespace Memory{
@@ -9,16 +9,13 @@ namespace Memory{
 
 namespace CoreEngine{
     class GlobalMemoryManager{
-        mutable MultiThreading::Mutex _executionPoolMutex;
-        mutable MultiThreading::Mutex _miscPoolMutex;
-
         UnsignedBigInt _dbCapacity;
         UnsignedBigInt _bufferPoolCapacity;
         UnsignedBigInt _executionCapacity;
         UnsignedBigInt _miscCapacity;
 
-        UnsignedBigInt _executionUsed;
-        UnsignedBigInt _miscUsed;
+        std::atomic<UnsignedBigInt> _executionUsed;
+        std::atomic<UnsignedBigInt> _miscUsed;
 
         static constexpr Int DB_RATIO_NUMERATOR = 60;
         static constexpr Int DB_RATIO_DENOMINATOR = 100;

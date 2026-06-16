@@ -119,7 +119,7 @@ namespace Network::Sessions {
             return false;
 
         const auto* cursor = session->cursors.Get(cursorId);
-        cursor->GetExecutionContext().ResetAllocator();
+        cursor->GetExecutionContext().ReleaseAllocator();
 
         session->cursors.Remove(cursorId);
         return true;

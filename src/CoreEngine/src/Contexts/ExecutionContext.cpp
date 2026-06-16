@@ -96,6 +96,10 @@ namespace CoreEngine{
         this->allocator.Reset();
     }
 
+    void ExecutionContext::ReleaseAllocator() const{
+        this->allocator.Release();
+    }
+
     bool ExecutionContext::IsAllocatorEmpty() const{
         return this->allocator.IsEmpty();
     }

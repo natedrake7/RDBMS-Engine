@@ -301,7 +301,6 @@ namespace QueryPipeline::PhysicalPlan {
         [[nodiscard]] inline ExecutionResult ExecuteStatement(CoreEngine::ExecutionContext& context) const;
         [[nodiscard]] inline ExecutionResult ExecuteConstantStatement(const CoreEngine::ExecutionContext& context) const;
 
-
     public:
         PhysicalProject(
             PlanNode* child,
@@ -315,6 +314,10 @@ namespace QueryPipeline::PhysicalPlan {
     class PhysicalFilter final : public PlanNode {
         Expressions::Expression* filter;
         PlanNode* child;
+
+        inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
+        inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
+
     public:
         PhysicalFilter(PlanNode* child, Expressions::Expression* filter);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;

@@ -14,7 +14,7 @@ namespace CoreEngine::RowKernels{
         const auto* columnExpr = self->AsColumn();
         if constexpr (DataTypes::NonPrimitiveType<T>){
             UnsignedSmallInt size = 0;
-            auto* data = context.page.GetColumnAt(context.row->_index, columnExpr->columnIndex, size, outNull);
+            auto* data = context.page->GetColumnAt(context.row->_index, columnExpr->columnIndex, size, outNull);
             if (*outNull) return;
 
             if constexpr (DataTypes::IsString<T>)
@@ -26,7 +26,7 @@ namespace CoreEngine::RowKernels{
         }
         else if constexpr (DataTypes::PrimitiveColumn<T>) {
             *static_cast<T*>(outVal) =
-                context.page.GetColumnAt<T>(context.row->_index, columnExpr->columnIndex, outNull);
+                context.page->GetColumnAt<T>(context.row->_index, columnExpr->columnIndex, outNull);
         }
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ColumnScanKernel: unsupported type");
@@ -56,6 +56,13 @@ namespace CoreEngine::RowKernels{
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }
+
+    void ConstantScanNullKernel(
+        const Expressions::Expression*,
+        const Expressions::EvaluationContext&,
+        void*,
+        bool* outNull
+    );
 
     template<typename T>
     void VariableScanKernel(
@@ -96,4 +103,29 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     );
+
+    template<typename T>
+    void ValueFallbackKernel(
+        const Expressions::Expression* self,
+        const Expressions::EvaluationContext& context,
+        void* outVal,
+        bool* outNull
+    ){
+        const auto value = EvaluateExpression(self, context);   // existing Value path
+        *outNull = value.IsNull();
+        if (*outNull) return;
+
+        if constexpr (DataTypes::NonPrimitiveType<T>){
+            if constexpr (DataTypes::IsString<T>)
+                new (outVal) DataTypes::String(value.DataUnsafe(), value.Size(), context.allocator);
+            else if constexpr (DataTypes::IsJson<T>)
+                new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
+            else if constexpr (DataTypes::IsDecimal<T>)
+                new (outVal) DataTypes::Decimal(value.Data(), value.Size());
+        }
+        else if constexpr (DataTypes::PrimitiveColumn<T>)
+            *static_cast<T*>(outVal) = value.Get<T>();
+        else
+            static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
+    }
 }
