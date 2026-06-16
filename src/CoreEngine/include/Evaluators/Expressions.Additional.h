@@ -49,7 +49,7 @@ namespace Expressions {
         Cast = 9
     };
 
-    static constexpr ConstexprDictionary ExpressionOperatorsDictionary{
+    static constexpr ConstexprDictionary EXPRESSION_OPERATORS_DICT{
         Pair(DataTypes::StringView("="), BinaryOperator::Equal),
         Pair(DataTypes::StringView("!="), BinaryOperator::NotEqual),
         Pair(DataTypes::StringView("<>"), BinaryOperator::NotEqual),
@@ -64,7 +64,7 @@ namespace Expressions {
         Pair(DataTypes::StringView("%"), BinaryOperator::Modulo),
     };
 
-    static constexpr ConstexprDictionary FunctionTypeDictionary{
+    static constexpr ConstexprDictionary FUNCTION_TYPE_DICT{
         Pair(DataTypes::StringView("getdate"),   Constants::FunctionType::GetDate),
         Pair(DataTypes::StringView("newid"),     Constants::FunctionType::NewGuid),
         Pair(DataTypes::StringView("concat"),    Constants::FunctionType::Concat),

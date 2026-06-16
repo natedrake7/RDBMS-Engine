@@ -190,6 +190,9 @@ namespace DataTypes{
         }
     }
 
+    JsonBinary::JsonBinary()
+        : _allocator(nullptr), _data(nullptr), _size(0){}
+
     JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator)
         : _allocator(allocator), _data(nullptr), _size(0){}
 

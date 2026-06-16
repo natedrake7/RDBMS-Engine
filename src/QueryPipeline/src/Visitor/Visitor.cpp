@@ -754,13 +754,18 @@ namespace QueryPipeline {
             return std::any(wrapper);
         }
 
+        if (context->castExpression()){
+            wrapper.expression = std::any_cast<Expressions::CastExpression*>(visit(context->castExpression()));
+            return std::any(wrapper);
+        }
+
         throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitFunctionCall(SQLParser::FunctionCallContext *context){
         const auto name = std::any_cast<DataTypes::String>(visit(context->functionName()));
         Constants::FunctionType type;
-        if (!Expressions::FunctionTypeDictionary.TryGetValue(DataTypes::String::Normalize(name).ToView(), type))
+        if (!Expressions::FUNCTION_TYPE_DICT.TryGetValue(DataTypes::String::Normalize(name).ToView(), type))
             throw SyntaxError("Failed to parse function name: " + name, CreatePositionErrorMessage(context));
 
         if (!context->LAPRENT() || !context->RAPRENT())
@@ -845,7 +850,7 @@ namespace QueryPipeline {
             const auto operation = std::any_cast<std::string>(visit(context->atomicOperator().at(i - 1)));
 
             Expressions::BinaryOperator operationType;
-            if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(DataTypes::StringView(operation), operationType))
+            if (!Expressions::EXPRESSION_OPERATORS_DICT.TryGetValue(DataTypes::StringView(operation), operationType))
                 throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
             expression = this->_compileContext->Allocate<Expressions::BinaryExpression>(expression, right, operationType);
@@ -871,7 +876,7 @@ namespace QueryPipeline {
             const auto operation = std::any_cast<std::string>(visit(context->relationalOperator().at(i - 1)));
 
             Expressions::BinaryOperator operationType;
-            if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(DataTypes::StringView(operation), operationType))
+            if (!Expressions::EXPRESSION_OPERATORS_DICT.TryGetValue(DataTypes::StringView(operation), operationType))
                 throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
             expression = this->_compileContext->Allocate<Expressions::BinaryExpression>(expression, right, operationType);
@@ -913,7 +918,7 @@ namespace QueryPipeline {
             const auto operation = std::any_cast<std::string>(visit(context->additiveOperator().at(i - 1)));
 
             Expressions::BinaryOperator operationType;
-            if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(DataTypes::StringView(operation), operationType))
+            if (!Expressions::EXPRESSION_OPERATORS_DICT.TryGetValue(DataTypes::StringView(operation), operationType))
                 throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
             expression = this->_compileContext->Allocate<Expressions::BinaryExpression>(expression, right, operationType);
@@ -941,7 +946,7 @@ namespace QueryPipeline {
             const auto operation = std::any_cast<std::string>(visit(context->multiplicativeOperator().at(i - 1)));
 
             Expressions::BinaryOperator operationType;
-            if (!Expressions::ExpressionOperatorsDictionary.TryGetValue(DataTypes::StringView(operation), operationType))
+            if (!Expressions::EXPRESSION_OPERATORS_DICT.TryGetValue(DataTypes::StringView(operation), operationType))
                 throw SyntaxError("Invalid Operation Type specified: " + operation, CreatePositionErrorMessage(context));
 
             expression = this->_compileContext->Allocate<Expressions::BinaryExpression>(expression, right, operationType);
@@ -973,5 +978,28 @@ namespace QueryPipeline {
         return context->resultExpression()
             ? visit(context->resultExpression())
             : visit(context->resultValue());
+    }
+
+    antlrcpp::Any SQLVisitorImplementation::visitCastExpression(SQLParser::CastExpressionContext* context){
+        const auto& [childExpr] = std::any_cast<ExpressionWrapper>(visit(context->resultExpression()));
+
+        if (!childExpr)
+            throw SyntaxError("Visitor: Failed to parse casting expression", CreatePositionErrorMessage(context));
+
+        if (!context->dataType())
+            throw SyntaxError("No target type was provide on Cast expression", CreatePositionErrorMessage(context));
+
+        const auto columnType = std::any_cast<Statements::ColumnType>(visit(context->dataType()));
+        const auto nameView = columnType.name.ToView();
+        if (!COLUMN_TYPENAMES_TO_ENUMS.Contains(nameView))
+            throw SyntaxError("Datatype: " + std::string(nameView.Data(), nameView.Size()) + " does not exist", CreatePositionErrorMessage(context));
+
+        const auto datatype = COLUMN_TYPENAMES_TO_ENUMS.Get(&nameView);
+        auto* castExpression = this->_compileContext->Allocate<Expressions::CastExpression>(
+            childExpr,
+            datatype,
+            this->_compileContext->GetAllocator()
+        );
+        return std::any(castExpression);
     }
 }

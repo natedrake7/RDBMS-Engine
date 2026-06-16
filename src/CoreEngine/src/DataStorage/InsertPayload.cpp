@@ -157,7 +157,7 @@ namespace CoreEngine::StorageTypes{
 
     Int InsertPayload::SetDateTime(const Value &value){
         this->CopyToBuffer(value.AsDateTime());
-        return DATETIME_SIZE;
+        return sizeof(DataTypes::DateTime);
     }
 
     Int InsertPayload::SetGuid(const Value &value){

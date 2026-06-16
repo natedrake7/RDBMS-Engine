@@ -120,7 +120,6 @@ namespace QueryPipeline {
         // else use optimizer to choose index seek/scan
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
         
-
         Expressions::BindExpressionKernel(this->expression, context._executionMode);
 
         if (result.hasRange)

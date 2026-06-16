@@ -16,6 +16,7 @@
 #include "../../include/Evaluators/Kernels/Row/RowKernels.h"
 #include "../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
 #include "Evaluators/Kernels/Row/RowKernels.Binary.h"
+#include "Evaluators/Kernels/Row/RowKernels.Cast.h"
 #include "Vectorization/Vectorization.h"
 
 namespace Expressions{
@@ -227,33 +228,34 @@ namespace Expressions{
     void ColumnExpression::BindRowKernel(){
         switch (this->returnType){
         case DataType::String:
-            this->rowKernel = &CoreEngine::RowKernels::StringColumnScanKernel;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::String>;
             break;
         case DataType::Bool:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<bool>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<bool>;
             break;
         case DataType::TinyInt:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<TinyInt>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<TinyInt>;
             break;
         case DataType::SmallInt:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<SmallInt>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<SmallInt>;
             break;
         case DataType::Int:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<Int>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int>;
             break;
         case DataType::BigInt:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<BigInt>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<BigInt>;
             break;
         case DataType::Decimal:
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::Decimal>;
             break;
         case DataType::DateTime:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::DateTime>;
             break;
         case DataType::Guid:
-            this->rowKernel = &CoreEngine::RowKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::Guid>;
             break;
         case DataType::Json:
-            this->rowKernel = &CoreEngine::RowKernels::JsonColumnScanKernel;
+            this->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::JsonBinary>;
             break;
         case DataType::Null:
         case DataType::RowIdentifier:
@@ -357,6 +359,9 @@ namespace Expressions{
 
     bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
 
+    void ConstantExpression::BindVectorizedKernel(){
+    }
+
     void ConstantExpression::BindRowKernel(){
         switch (this->value.GetType()){
         case DataType::Bool:
@@ -384,10 +389,10 @@ namespace Expressions{
             this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::Decimal>;
             break;
         case DataType::String:
-            this->rowKernel = &CoreEngine::RowKernels::ConstantStringScanKernel;
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::String>;
             break;
         case DataType::Json:
-            this->rowKernel = &CoreEngine::RowKernels::ConstantJsonScanKernel;
+            this->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::JsonBinary>;
             break;
         default:
             break;  // TODO: String / Decimal / Json constant kernels
@@ -415,6 +420,7 @@ namespace Expressions{
             expression->BindRowKernel();
             break;
         case Constants::ExecutionMode::Vectorized:
+            expression->BindVectorizedKernel();
             break;
         }
     }
@@ -533,45 +539,6 @@ namespace Expressions{
         this->right = right;
         this->operation = operation;
         this->expressionType = ExpressionType::Binary;
-    }
-
-    Value* BinaryExpression::Evaluate(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& context,
-        const Int rangeEnd
-    ){
-        auto* binaryExpr = expression->AsBinary();
-        const auto* left = EvaluateExpression(binaryExpr->left, context, rangeEnd);
-        const auto* right = EvaluateExpression(binaryExpr->right, context, rangeEnd);
-
-        switch (binaryExpr->operation){
-        case BinaryOperator::Equal:
-            break;
-        case BinaryOperator::NotEqual:
-            break;
-        case BinaryOperator::Greater:
-            break;
-        case BinaryOperator::GreaterEqual:
-            break;
-        case BinaryOperator::Less:
-            break;
-        case BinaryOperator::LessEqual:
-            break;
-        case BinaryOperator::Add:
-            break;
-        case BinaryOperator::Subtract:
-            break;
-        case BinaryOperator::Multiply:
-            break;
-        case BinaryOperator::Divide:
-            break;
-        case BinaryOperator::Modulo:
-            break;
-        case BinaryOperator::EqualIgnoreOrdinalCase:
-            break;
-        }
-
-        return nullptr;
     }
 
     bool BinaryExpression::ValidateOperation() const {
@@ -1118,11 +1085,65 @@ namespace Expressions{
         }
     }
 
+    void VariableExpression::BindVectorizedKernel(){
+    }
+
+    void VariableExpression::BindRowKernel(){
+        switch (this->dataType){
+        case DataType::String:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::String>;
+            break;
+        case DataType::Bool:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<bool>;
+            break;
+        case DataType::TinyInt:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<TinyInt>;
+            break;
+        case DataType::SmallInt:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<SmallInt>;
+            break;
+        case DataType::Int:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int>;
+            break;
+        case DataType::BigInt:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<BigInt>;
+            break;
+        case DataType::Decimal:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::Decimal>;
+            break;
+        case DataType::DateTime:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<BigInt>;
+            break;
+        case DataType::Guid:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::Guid>;
+            break;
+        case DataType::Json:
+            this->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::JsonBinary>;
+            break;
+        default:
+            break;
+        }
+    }
+
     VariableExpression::VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator) {
         this->name = name;
-        this->normalizedName = DataTypes::String::Normalize(this->name, allocator);
+        this->normalizedName = this->name.ToLower();
         this->dataType = DataType::Null;
         this->expressionType = ExpressionType::Variable;
+    }
+
+    void VariableExpression::BindExpressionKernel(
+        VariableExpression* expression,
+        const Constants::ExecutionMode mode
+    ){
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            expression->BindRowKernel();
+            break;
+        case Constants::ExecutionMode::Vectorized:
+            expression->BindVectorizedKernel();
+            break;
+        }
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
@@ -1181,50 +1202,74 @@ namespace Expressions{
         return this->type;
     }
 
+    void CastExpression::BindVectorizedKernel(){
+    }
+
+    void CastExpression::BindRowKernel(){
+        const auto childExprType = GetExpressionReturnType(this->childExpr);
+        this->rowKernel = CoreEngine::RowKernels::LookupCastKernel(childExprType, this->targetType);
+    }
+
     CastExpression::CastExpression(Expression* expression, const DataType targetType, const bool isTryCast)
-        : expression(expression), targetType(targetType), isTryCast(isTryCast) {
+        : childExpr(expression), targetType(targetType), isTryCast(isTryCast) {
         this->expressionType = ExpressionType::Cast;
     }
 
+    void CastExpression::BindExpressionKernel(
+        CastExpression* expression,
+        const Constants::ExecutionMode mode
+    ){
+        Expressions::BindExpressionKernel(expression->childExpr, mode);
+        switch (mode){
+        case Constants::ExecutionMode::Row:
+            expression->BindRowKernel();
+            break;
+        case Constants::ExecutionMode::Vectorized:
+            expression->BindVectorizedKernel();
+            break;
+        }
+    }
+
     Value CastExpression::Evaluate(const EvaluationContext& context) const{
-        auto value = EvaluateExpression(this->expression, context);
+        auto value = EvaluateExpression(this->childExpr, context);
 
         if (value.IsNull())
             return value;
 
-        // DataTypes::Coercions::CanBeParsedToType(
-        //     this->targetType,
-        //     value
-        // );
-
-        return Value::Null(nullptr);
-        //
-        // switch (this->targetType){
-        // case DataType::String:
-        //     return Value(value.AsString(), context.allocator, 0);
-        // case DataType::Bool:
-        //     return Value(value.AsBool(), context.allocator, 0);
-        // case DataType::TinyInt:
-        //     return Value(value.AsTinyInt(), context.allocator, 0);
-        // case DataType::SmallInt:
-        //     return Value(value.AsSmallInt(), context.allocator, 0);
-        // case DataType::Int:
-        //     return Value(value.AsInt(), context.allocator, 0);
-        // case DataType::BigInt:
-        //     return Value(value.AsBigInt(), context.allocator, 0);
-        // case DataType::Decimal:
-        //     return Value(value.AsDecimal(), context.allocator, 0);
-        // case DataType::DateTime:
-        //     return Value(value.AsDateTime(), context.allocator, 0);
-        // case DataType::Guid:
-        //     return Value(value.AsGuid(), context.allocator, 0);
-        // case DataType::Json:
-        //     return Value(value.AsJson(), context.allocator, 0);
-        // case DataType::Null:
-        //     return Value::Null(context.allocator);
-        // case DataType::RowIdentifier:
-        //     break;
-        // }
+        switch (this->targetType){
+        case DataType::String:
+            return Value(value.AsString(), context.allocator);
+            break;
+        case DataType::Bool:
+            return Value(value.AsBool(), context.allocator);
+            break;
+        case DataType::TinyInt:
+            return Value(value.AsTinyInt(), context.allocator);
+            break;
+        case DataType::SmallInt:
+            return Value(value.AsSmallInt(), context.allocator);
+            break;
+        case DataType::Int:
+            return Value(value.AsInt(), context.allocator);
+            break;
+        case DataType::BigInt:
+            return Value(value.AsBigInt(), context.allocator);
+            break;
+        case DataType::Decimal:
+            return Value(value.AsDecimal(), context.allocator);
+            break;
+        case DataType::DateTime:
+            return Value(value.AsDateTime(), context.allocator);
+            break;
+        case DataType::Guid:
+            return Value(value.AsGuid(), context.allocator);
+            break;
+        case DataType::Json:
+            return Value(value.AsJson(), context.allocator);
+            break;
+        default:
+            throw std::runtime_error("CastExpression::Evaluate: Unknown cast target type");
+        }
     }
 
     DataType CastExpression::GetReturnType() const{ return this->targetType; }
@@ -1253,38 +1298,6 @@ namespace Expressions{
         default:
             return Value::Null(context.allocator);
         }
-    }
-
-    Value* EvaluateExpression(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& executionContext,
-        const Int rangeEnd
-    ){
-        switch (expression->expressionType){
-        case ExpressionType::Column:
-            return ColumnExpression::Evaluate(expression, executionContext, rangeEnd);
-        case ExpressionType::Constant:
-            break;
-        case ExpressionType::Binary:
-            break;
-        case ExpressionType::Logical:
-            break;
-        case ExpressionType::Variable:
-            break;
-        case ExpressionType::Branch:
-            break;
-        case ExpressionType::Function:
-            break;
-        case ExpressionType::Json:
-            break;
-        case ExpressionType::Cast:
-            break;
-        case ExpressionType::Expression:
-        default:
-            break;
-        }
-
-        return nullptr;
     }
 
     CoreEngine::DataVector* EvaluateExpression(
@@ -1343,6 +1356,8 @@ namespace Expressions{
             return expression->AsFunction()->GetReturnType();
         case ExpressionType::Json:
             return expression->AsJson()->GetReturnType();
+        case ExpressionType::Cast:
+            return expression->AsCast()->GetReturnType();
         default:
             return DataType::Null;
         }
@@ -1366,6 +1381,7 @@ namespace Expressions{
             LogicalExpression::BindExpressionKernel(expression->AsLogical(), mode);
             break;
         case ExpressionType::Variable:
+            VariableExpression::BindExpressionKernel(expression->AsVariable(), mode);
             break;
         case ExpressionType::Branch:
             break;
@@ -1374,6 +1390,7 @@ namespace Expressions{
         case ExpressionType::Json:
             break;
         case ExpressionType::Cast:
+            CastExpression::BindExpressionKernel(expression->AsCast(), mode);
             break;
         default:
             break;

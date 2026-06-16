@@ -124,10 +124,10 @@ resultValue
     | variableName
     | branchingExpression
     | jsonExpression
-    | castingExpression
+    | castExpression
     ;
 
-castingExpression
+castExpression
     : (CAST | TRY_CAST) LAPRENT resultExpression AS dataType RAPRENT
     ;
 

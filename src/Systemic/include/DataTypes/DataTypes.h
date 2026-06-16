@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <type_traits>
 
 typedef uint8_t UnsignedTinyInt;
 typedef uint16_t UnsignedSmallInt;
@@ -94,4 +95,29 @@ enum class StringComparisonType: UnsignedTinyInt{
     ContainsIgnoreCase = 7
 };
 
-constexpr Int DATETIME_SIZE = sizeof(BigInt);
+namespace DataTypes{
+    class String;
+    class Decimal;
+    class JsonBinary;
+
+    template<typename>
+    inline constexpr auto AlwaysFalse = false;
+
+    template<typename T>
+    concept PrimitiveColumn = std::is_trivially_copyable_v<T>
+                       && !std::is_pointer_v<T>;
+
+    template <typename T>
+    concept NonPrimitiveType = std::is_same_v<T, String>
+        || std::is_same_v<T, JsonBinary>
+        || std::is_same_v<T, Decimal>;
+
+    template <typename T>
+    concept IsString = std::is_same_v<T, String>;
+
+    template <typename T>
+    concept IsJson = std::is_same_v<T, JsonBinary>;
+
+    template <typename T>
+    concept IsDecimal = std::is_same_v<T, Decimal>;
+}

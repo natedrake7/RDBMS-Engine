@@ -6,13 +6,6 @@
 #include "DataTypes/DateTime.h"
 
 namespace DataTypes {
-    constexpr CoercionType Coercions::GetCoercionType(
-        const DataType fromType,
-        const DataType toType
-    ) {
-        return Coercions::TypeCoercionMatrix[static_cast<Int>(fromType)][static_cast<Int>(toType)];
-    }
-
     void Coercions::ThrowException(const DataType type, const DataType toType) {
         if (type == DataType::Null)
             throw std::invalid_argument("Invalid Field Type");
@@ -235,97 +228,6 @@ namespace DataTypes {
 
         const auto integer = Converter<Int>::Stoi(bigInt);
         value.SetData(integer);
-    }
-
-    CoercionType Coercions::TypeCoercionMatrix[DATATYPE_COUNT][DATATYPE_COUNT] = {};
-
-    void Coercions::InitializeTypeCoercionMatrix() {
-        using DT = DataType;
-        using CT = CoercionType;
-
-        // 1. Default everything to NONE
-        for (int i = 0; i < DATATYPE_COUNT; i++) {
-            for (int j = 0; j < DATATYPE_COUNT; j++) {
-                TypeCoercionMatrix[i][j] = CT::None;
-            }
-        }
-
-        // 2. Identity conversions (T → T)
-        for (int i = 0; i < DATATYPE_COUNT; i++) {
-            TypeCoercionMatrix[i][i] = CT::Implicit;
-        }
-
-        // ---- Numeric ladder ----
-        // TinyInt → ...
-        TypeCoercionMatrix[static_cast<int>(DT::TinyInt)][static_cast<int>(DT::SmallInt)] = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::TinyInt)][static_cast<int>(DT::Int)]      = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::TinyInt)][static_cast<int>(DT::BigInt)]   = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::TinyInt)][static_cast<int>(DT::Decimal)]  = CT::Implicit;
-
-        // SmallInt →
-        TypeCoercionMatrix[static_cast<int>(DT::SmallInt)][static_cast<int>(DT::TinyInt)] = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::SmallInt)][static_cast<int>(DT::Int)]     = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::SmallInt)][static_cast<int>(DT::BigInt)]  = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::SmallInt)][static_cast<int>(DT::Decimal)] = CT::Implicit;
-
-        // Int →
-        TypeCoercionMatrix[static_cast<int>(DT::Int)][static_cast<int>(DT::TinyInt)]  = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Int)][static_cast<int>(DT::SmallInt)] = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Int)][static_cast<int>(DT::BigInt)]   = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Int)][static_cast<int>(DT::Decimal)]  = CT::Implicit;
-
-        // BigInt →
-        TypeCoercionMatrix[static_cast<int>(DT::BigInt)][static_cast<int>(DT::TinyInt)]  = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::BigInt)][static_cast<int>(DT::SmallInt)] = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::BigInt)][static_cast<int>(DT::Int)]      = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::BigInt)][static_cast<int>(DT::Decimal)]  = CT::Implicit;
-
-        // Decimal →
-        TypeCoercionMatrix[static_cast<int>(DT::Decimal)][static_cast<int>(DT::TinyInt)]  = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Decimal)][static_cast<int>(DT::SmallInt)] = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Decimal)][static_cast<int>(DT::Int)]      = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Decimal)][static_cast<int>(DT::BigInt)]   = CT::Explicit;
-
-        // ---- String conversions ----
-        for (int t = static_cast<int>(DT::TinyInt); t <= static_cast<int>(DT::Decimal); t++) {
-            TypeCoercionMatrix[static_cast<int>(DT::String)][t] = CT::Explicit; // parse
-            TypeCoercionMatrix[t][static_cast<int>(DT::String)] = CT::Implicit; // stringify
-        }
-
-        TypeCoercionMatrix[static_cast<int>(DT::String)][static_cast<int>(DT::Bool)]     = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::String)]     = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::String)][static_cast<int>(DT::DateTime)] = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::DateTime)][static_cast<int>(DT::String)] = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::String)][static_cast<int>(DT::Guid)]     = CT::Explicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Guid)][static_cast<int>(DT::String)]     = CT::Implicit;
-
-        // ---- Bool conversions ----
-        TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::TinyInt)]  = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::SmallInt)] = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::Int)]      = CT::Implicit;
-        TypeCoercionMatrix[static_cast<int>(DT::Bool)][static_cast<int>(DT::BigInt)]   = CT::Implicit;
-
-        // ---- JSON rules ----
-        for (int t = 0; t < DATATYPE_COUNT; t++) {
-            if (t == static_cast<int>(DT::Json)) continue;
-            TypeCoercionMatrix[t][static_cast<int>(DT::Json)] = CT::Implicit;
-        }
-        TypeCoercionMatrix[static_cast<int>(DT::Json)][static_cast<int>(DT::String)] = CT::Explicit;
-    }
-
-    void Coercions::Initialize() {
-        Coercions::InitializeTypeCoercionMatrix();
-    }
-
-    bool Coercions::IsCoercionAllowed(
-        const DataType fromType,
-        const DataType toType,
-        const bool explicitCast
-    ) {
-        const auto coercionType = GetCoercionType(fromType, toType);
-        return explicitCast
-            ? (coercionType == CoercionType::Implicit || coercionType == CoercionType::Explicit)
-            : (coercionType == CoercionType::Implicit);
     }
 
     bool Coercions::ToBool(const Value& value, const bool explicitCast) {

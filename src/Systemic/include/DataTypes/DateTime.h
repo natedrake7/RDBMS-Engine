@@ -79,7 +79,6 @@ namespace DataTypes {
 		static DateTime Now();
 		static bool FromString(DateTime& outVal, const StringView& date, const StringView& format = "");
 		static bool FromString(const StringView& str);
-		static constexpr Int Size(){ return DATETIME_SIZE; }
 
 	    [[nodiscard]] StringBuffer ToStringBuffer(const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 		[[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;

@@ -54,15 +54,13 @@ namespace QueryPipeline::PhysicalPlan {
 
     struct ExecutionResult {
         //metadata structures of the query
+        Errors::RuntimeStatus status;
+
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
         DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
 
         VectorBatch vectorBatch;
-
-        Errors::RuntimeStatus status;
-
         CoreEngine::SelectionVector* selectionVector;
-
         bool canFetchMore;
 
         explicit ExecutionResult(const CoreEngine::ExecutionContext& context);
@@ -76,7 +74,6 @@ namespace QueryPipeline::PhysicalPlan {
         ExecutionResult(ExecutionResult&& other) noexcept;
         ExecutionResult& operator=(ExecutionResult&& other) noexcept;
 
-        ~ExecutionResult();
         [[nodiscard]] bool IsOk() const;
     };
 
@@ -123,7 +120,6 @@ namespace QueryPipeline::PhysicalPlan {
         DataTypes::String roleName;
     public:
         explicit PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role);
-        ~PhysicalCreateUser() override = default;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -132,7 +128,6 @@ namespace QueryPipeline::PhysicalPlan {
         DataTypes::String roleName;
     public:
         explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName);
-        ~PhysicalGrantRole() override = default;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -140,7 +135,6 @@ namespace QueryPipeline::PhysicalPlan {
         DataTypes::String dbName;
     public:
         explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name);
-        ~PhysicalCreateDatabase() override = default;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -149,7 +143,6 @@ namespace QueryPipeline::PhysicalPlan {
         Int databaseId;
     public:
         explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
-        ~PhysicalUseDatabase() override = default;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -158,7 +151,6 @@ namespace QueryPipeline::PhysicalPlan {
         Int databaseId;
     public:
         explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, DataTypes::String& schemaName);
-        ~PhysicalSchemaCreate() override = default;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -175,7 +167,6 @@ namespace QueryPipeline::PhysicalPlan {
             const Headers::Index& primaryKey,
             DataTypes::String& constraintName
         );
-        ~PhysicalTableCreate() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -206,7 +197,6 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::NewColumn* column;
     public:
         PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
-        ~PhysicalAddColumn() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -215,7 +205,6 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DropColumn* column;
     public:
         PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
-        ~PhysicalDropColumn() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -224,7 +213,6 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::RenameColumn* column;
     public:
         PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
-        ~PhysicalRenameColumn() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -233,7 +221,6 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::AlterColumn* column;
     public:
         PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
-        ~PhysicalAlterColumn() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -251,7 +238,6 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::ScanState state;
     public:
         explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
-        ~PhysicalTableScan() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -264,7 +250,6 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalIndexScan(Statements::DataSource* table, bool isClustered = false);
         explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
-        ~PhysicalIndexScan() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -279,7 +264,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataTypes::Indexing::Key& key,
             Expressions::Expression* expression
         );
-        ~PhysicalIndexSeek() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -295,7 +279,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataTypes::Indexing::Key& maxKey,
             Expressions::Expression* expression
         );
-        ~PhysicalIndexSeekRange() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -325,7 +308,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
             DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders
         );
-        ~PhysicalProject() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -335,7 +317,6 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* child;
     public:
         PhysicalFilter(PlanNode* child, Expressions::Expression* filter);
-        ~PhysicalFilter() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -345,7 +326,6 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* child;
     public:
         PhysicalTop(PlanNode* child, BigInt top);
-        ~PhysicalTop() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -354,7 +334,6 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* child;
     public:
         explicit PhysicalDistinct(PlanNode* child);
-        ~PhysicalDistinct() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -369,7 +348,6 @@ namespace QueryPipeline::PhysicalPlan {
         [[nodiscard]] bool CanBeSortedInMemory(bool canFetchMore) const;
     public:
         PhysicalOrderBy(PlanNode* child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions);
-        ~PhysicalOrderBy() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
     };
@@ -404,7 +382,6 @@ namespace QueryPipeline::PhysicalPlan {
             PlanNode* child,
             DataStructures::PolymorphicArray<column_index_t>& columnsIndices
         );
-        ~PhysicalInsert() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -418,7 +395,6 @@ namespace QueryPipeline::PhysicalPlan {
             Expressions::Expression* expression,
             DataStructures::PolymorphicArray<Expressions::Expression*>& updates
         );
-        ~PhysicalHeapUpdate() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -428,7 +404,6 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* expression;
     public:
         PhysicalIndexScanUpdate(Statements::DataSource* table, Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*>& updates);
-        ~PhysicalIndexScanUpdate() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -438,7 +413,6 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* expression;
     public:
         PhysicalIndexSeekUpdate(Statements::DataSource* table, Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*>& updates);
-        ~PhysicalIndexSeekUpdate() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -447,7 +421,6 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* expression;
     public:
         PhysicalHeapDelete(Statements::DataSource* table, Expressions::Expression* expression);
-        ~PhysicalHeapDelete() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -457,7 +430,6 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::IndexState state;
     public:
         PhysicalIndexScanDelete(Statements::DataSource* table, Expressions::Expression* expression);
-        ~PhysicalIndexScanDelete() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -467,7 +439,6 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::IndexState state;
     public:
         PhysicalIndexSeekDelete(Statements::DataSource* table, Expressions::Expression* expression);
-        ~PhysicalIndexSeekDelete() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -495,7 +466,6 @@ namespace QueryPipeline::PhysicalPlan {
             PlanNode* right,
             Expressions::Expression* joinCondition
         );
-        ~PhysicalNestedLoopInnerJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -515,7 +485,6 @@ namespace QueryPipeline::PhysicalPlan {
             PlanNode* right,
             Expressions::Expression* expression
         );
-        ~PhysicalNestedLoopLeftJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -529,7 +498,6 @@ namespace QueryPipeline::PhysicalPlan {
             PlanNode* right,
             Expressions::Expression* joinCondition
         );
-        ~PhysicalNestedLoopFullJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -555,7 +523,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
             DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
         );
-        ~PhysicalMergeInnerJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -579,7 +546,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
             DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
         );
-        ~PhysicalMergeLeftJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -603,7 +569,6 @@ namespace QueryPipeline::PhysicalPlan {
             DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
             DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
         );
-        ~PhysicalMergeFullJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -617,7 +582,6 @@ namespace QueryPipeline::PhysicalPlan {
         ) const;
     public:
         PhysicalCrossInnerJoin(PlanNode* left, PlanNode* right);
-        ~PhysicalCrossInnerJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -631,7 +595,6 @@ namespace QueryPipeline::PhysicalPlan {
         ) const;
     public:
         PhysicalCrossLeftJoin(PlanNode* left, PlanNode* right);
-        ~PhysicalCrossLeftJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -645,7 +608,6 @@ namespace QueryPipeline::PhysicalPlan {
         ) const;
     public:
         PhysicalCrossFullJoin(PlanNode* left, PlanNode* right);
-        ~PhysicalCrossFullJoin() override;
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 

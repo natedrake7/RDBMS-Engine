@@ -1681,6 +1681,8 @@ namespace QueryPipeline::Statements {
                 return CompileConstantExpression(expression->AsConstant());
             case Expressions::ExpressionType::Json:
                 return CompileJsonExpression(context, expression->AsJson());
+            case Expressions::ExpressionType::Cast:
+                return CompileCastExpression(context, expression->AsCast(), expression);
             case Expressions::ExpressionType::Expression:
             default:
                 break;
@@ -1714,7 +1716,8 @@ namespace QueryPipeline::Statements {
                 return CompileConstantExpression(expression->AsConstant());
             case Expressions::ExpressionType::Json:
                 return CompileJsonExpression(context, expression->AsJson(), statementValidationScope);
-            case Expressions::ExpressionType::Expression:
+            case Expressions::ExpressionType::Cast:
+                return CompileCastExpression(context, expression->AsCast(), expression, statementValidationScope);
             default:
                 break;
         }
@@ -1737,12 +1740,15 @@ namespace QueryPipeline::Statements {
         if (!result.IsOk()) return result;
 
         //validate binary expression action
+        const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
+        const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
+
         if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-                    Expressions::GetExpressionReturnType(binaryExpr->left),
-                    Expressions::GetExpressionReturnType(binaryExpr->right)
+                    leftType,
+                    rightType
                 )
             );
         }
@@ -1751,13 +1757,20 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_OPERATION_ON_DATATYPES(
                     context.GetAllocator(),
-                    Expressions::GetExpressionReturnType(binaryExpr->left),
-                    Expressions::GetExpressionReturnType(binaryExpr->right)
+                    leftType,
+                    rightType
                 )
             );
         }
 
-        FoldExpression(context, binaryExpr, expression);
+        const auto promotedType = Value::PromoteType(leftType, rightType);
+
+        if (leftType != promotedType)
+            InsertCastExpression(context, binaryExpr->left, promotedType);
+        if (rightType != promotedType)
+            InsertCastExpression(context, binaryExpr->right, promotedType);
+
+        FoldBinaryExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1773,12 +1786,15 @@ namespace QueryPipeline::Statements {
 
         if (!result.IsOk()) return result;
 
+        const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
+        const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
+
         if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
-                    Expressions::GetExpressionReturnType(binaryExpr->left),
-                    Expressions::GetExpressionReturnType(binaryExpr->right)
+                    leftType,
+                    rightType
                 )
             );
         }
@@ -1787,13 +1803,20 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_OPERATION_ON_DATATYPES(
                     context.GetAllocator(),
-                    Expressions::GetExpressionReturnType(binaryExpr->left),
-                    Expressions::GetExpressionReturnType(binaryExpr->right)
+                    leftType,
+                    rightType
                 )
             );
         }
 
-        FoldExpression(context, binaryExpr, expression);
+        const auto promotedType = Value::PromoteType(leftType, rightType);
+
+        if (leftType != promotedType)
+            InsertCastExpression(context, binaryExpr->left, promotedType);
+        if (rightType != promotedType)
+            InsertCastExpression(context, binaryExpr->right, promotedType);
+
+        FoldBinaryExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1813,7 +1836,7 @@ namespace QueryPipeline::Statements {
         if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
-        FoldExpression(context, logicalExpr, expression);
+        FoldLogicalExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1834,7 +1857,7 @@ namespace QueryPipeline::Statements {
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
-        FoldExpression(context, logicalExpr, expression);
+        FoldLogicalExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1853,7 +1876,7 @@ namespace QueryPipeline::Statements {
         if (!funcExpr->ValidateNumberOfArguments(errorMessage))
             return Errors::ValidationStatus::Error(std::move(errorMessage));
 
-        FoldExpression(context, funcExpr, expression);
+        FoldFunctionExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1874,7 +1897,7 @@ namespace QueryPipeline::Statements {
         if (!funcExpr->ValidateNumberOfArguments(errorMessage))
             return Errors::ValidationStatus::Error(std::move(errorMessage));
 
-        FoldExpression(context, funcExpr, expression);
+        FoldFunctionExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1932,7 +1955,7 @@ namespace QueryPipeline::Statements {
                 );
         }
 
-        FoldExpression(context, branchExpr, expression);
+        FoldBranchExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -1982,7 +2005,7 @@ namespace QueryPipeline::Statements {
                 );
         }
 
-        FoldExpression(context, branchExpr, expression);
+        FoldBranchExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -2164,6 +2187,63 @@ namespace QueryPipeline::Statements {
                 )
             );
 
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus CompileCastExpression(
+        QueryContext& context,
+        Expressions::CastExpression* castExpr,
+        Expressions::Expression*& expression
+    ){
+        auto result = CompileExpression(context, castExpr->childExpr);
+        if (!result.IsOk()) return result;
+
+        const auto childReturnType = Expressions::GetExpressionReturnType(castExpr->childExpr);
+        if (castExpr->targetType == childReturnType){
+            expression = castExpr->childExpr;
+            return Errors::ValidationStatus::Ok();
+        }
+
+        if (!ValidateExpressionCoercionTypes(castExpr->targetType, castExpr->childExpr)){
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    childReturnType,
+                    castExpr->targetType
+                )
+            );
+        }
+
+        FoldCastExpression(context, expression);
+        return Errors::ValidationStatus::Ok();
+    }
+
+    Errors::ValidationStatus CompileCastExpression(
+        QueryContext& context,
+        Expressions::CastExpression* castExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    ){
+        auto result = CompileExpression(context, statementValidationScope, castExpr->childExpr);
+        if (!result.IsOk()) return result;
+
+        const auto childReturnType = Expressions::GetExpressionReturnType(castExpr->childExpr);
+        if (castExpr->targetType == childReturnType){
+            expression = castExpr->childExpr;
+            return Errors::ValidationStatus::Ok();
+        }
+
+        if (!ValidateExpressionCoercionTypes(castExpr->targetType, castExpr->childExpr)){
+            return Errors::ValidationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    childReturnType,
+                    castExpr->targetType
+                )
+            );
+        }
+
+        FoldCastExpression(context, expression);
         return Errors::ValidationStatus::Ok();
     }
 
@@ -2397,16 +2477,16 @@ namespace QueryPipeline::Statements {
     void FoldExpression(const QueryContext& context, Expressions::Expression *&expression) {
         switch (expression->expressionType) {
             case Expressions::ExpressionType::Binary:
-                FoldExpression(context, expression->AsBinary(), expression);
+                FoldBinaryExpression(context, expression);
                 break;
             case Expressions::ExpressionType::Logical:
-                FoldExpression(context, expression->AsLogical(), expression);
+                FoldLogicalExpression(context, expression);
                 break;
             case Expressions::ExpressionType::Branch:
-                FoldExpression(context, expression->AsBranch(), expression);
+                FoldBranchExpression(context, expression);
                 break;
             case Expressions::ExpressionType::Function:
-                FoldExpression(context, expression->AsFunction(), expression);
+                FoldFunctionExpression(context, expression);
                 break;
             case Expressions::ExpressionType::Expression:
             case Expressions::ExpressionType::Column:
@@ -2415,29 +2495,31 @@ namespace QueryPipeline::Statements {
             case Expressions::ExpressionType::Json:
                 break;
             case Expressions::ExpressionType::Cast:
-                FoldExpression(context, expression->AsCast(), expression);
+                FoldCastExpression(context, expression);
                 break;
         }
     }
 
-    void FoldExpression(
+    void FoldBinaryExpression(
         const QueryContext& context,
-        const Expressions::BinaryExpression *binaryExpr,
         Expressions::Expression *&expression
     ){
-        if (
-            !binaryExpr->left->IsConstant()
+        auto* binaryExpr = expression->AsBinary();
+        FoldExpression(context, binaryExpr->left);
+        FoldExpression(context, binaryExpr->right);
+
+        if (!binaryExpr->left->IsConstant()
             || !binaryExpr->right->IsConstant()
         ) return;
 
         EvaluateExpression(context, expression);
     }
 
-    void FoldExpression(
+    void FoldLogicalExpression(
         const QueryContext& context,
-        Expressions::LogicalExpression *logicalExpr,
         Expressions::Expression *&expression
     ){
+        auto* logicalExpr = expression->AsLogical();
         //If expression is of type OR and either right or left is a constant, it will always be true
         if (logicalExpr->IsOr()) {
             if (logicalExpr->left->IsConstant()) {
@@ -2462,44 +2544,43 @@ namespace QueryPipeline::Statements {
             TryPropagateChildExpression(expression, logicalExpr->right, logicalExpr->left);
     }
 
-    void FoldExpression(
+    void FoldFunctionExpression(
         const QueryContext& context,
-        const Expressions::FunctionExpression *castExpr,
         Expressions::Expression *&expression
     ){
-        for (const auto& argument : castExpr->arguments) {
+        auto* functionExpr = expression->AsFunction();
+        for (auto& argument : functionExpr->arguments) {
+            FoldExpression(context, argument);
             if (!argument->IsConstant())
                 return;
         }
         EvaluateExpression(context, expression);
     }
 
-    void FoldExpression(
+    void FoldBranchExpression(
         const QueryContext& context,
-        Expressions::BranchExpression *castExpr,
         Expressions::Expression *&expression
     ){
-        for (int i = 0;i < castExpr->branches.Size(); i++) {
-            const auto* branch = castExpr->branches[i];
-
+        auto* branchExpr = expression->AsBranch();
+        for (auto& branch : branchExpr->branches){
+            FoldExpression(context, branch);
             if (!branch->IsConstant()) return;
 
-            const auto value = branch->AsConstant()->Evaluate();
-            if (value.AsBool()) {
-                PropagateExpression(expression, castExpr->results[i]);
+            if (branch->AsConstant()->value.AsBool()) {
+                PropagateExpression(expression, branch);
                 FoldExpression(context, expression);
                 return;
             }
         }
     }
 
-    void FoldExpression(
+    void FoldCastExpression(
         const QueryContext& context,
-        Expressions::CastExpression* castExpr,
         Expressions::Expression*& expression
     ){
-        FoldExpression(context, castExpr->expression);
-        if (castExpr->expression->IsConstant())
+        auto* castExpr = expression->AsCast();
+        FoldExpression(context, castExpr->childExpr);
+        if (castExpr->childExpr->IsConstant())
             EvaluateExpression(context, expression);
     }
 
@@ -2604,7 +2685,7 @@ namespace QueryPipeline::Statements {
         const Dictionary<Int, column_index_t>& columnIndicesDictionary,
         const Expressions::CastExpression* castExpr
     ){
-        AssignColumnIndicesToExpression(columnIndicesDictionary, castExpr->expression);
+        AssignColumnIndicesToExpression(columnIndicesDictionary, castExpr->childExpr);
     }
 
     Errors::ValidationStatus CompilePostProjectionExpression(
@@ -2731,7 +2812,7 @@ namespace QueryPipeline::Statements {
         const Expressions::CastExpression* castExpr,
         const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
     ){
-        return CompilePostProjectionExpression(context, castExpr->expression, postProjectionAliases);
+        return CompilePostProjectionExpression(context, castExpr->childExpr, postProjectionAliases);
     }
 
     void AssignPostProjectionIndicesToExpression(
@@ -2758,11 +2839,8 @@ namespace QueryPipeline::Statements {
                 AssignPostProjectionIndicesToColumnExpression(columnIndicesDictionary, expression->AsJson()->columnPtr);
                 break;
             case Expressions::ExpressionType::Cast:
-                AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->AsCast()->expression);
+                AssignPostProjectionIndicesToExpression(columnIndicesDictionary, expression->AsCast()->childExpr);
                 break;
-            case Expressions::ExpressionType::Expression:
-            case Expressions::ExpressionType::Constant:
-            case Expressions::ExpressionType::Variable:
             default:
                 break;
         }
@@ -2837,6 +2915,14 @@ namespace QueryPipeline::Statements {
             SQL_TYPES_NAMES[static_cast<Int>(type)]
         )
       );
+    }
+
+    void InsertCastExpression(
+        const QueryContext& context,
+        Expressions::Expression*& expression,
+        DataType type
+    ){
+        expression = context._compileContext.Allocate<Expressions::CastExpression>(expression, type, false);
     }
 
     void TryPropagateChildExpression(

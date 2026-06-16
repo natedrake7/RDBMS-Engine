@@ -315,7 +315,7 @@ namespace QueryPipeline {
             const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
         ) const;
 
-        JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
+        [[nodiscard]] JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
             const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
             const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
             const DataStructures::PolymorphicArray<Int>& rightKeyColumns,

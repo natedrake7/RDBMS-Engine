@@ -20,7 +20,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
         : displayColumnNames(context.GetAllocator()), columns(context.GetAllocator()),
           status(context.GetAllocator()),
-          selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(true){}
+          selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
 
     ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const DataTypes::String& message)
         : status(code, message), selectionVector(nullptr),
@@ -52,8 +52,6 @@ namespace QueryPipeline::PhysicalPlan {
         this->selectionVector = other.selectionVector;
         return *this;
     }
-
-    ExecutionResult::~ExecutionResult() = default;
 
     bool ExecutionResult::IsOk() const {
         return this->status.code == Errors::RuntimeError::Ok;
@@ -237,8 +235,6 @@ PhysicalTableCreate::PhysicalTableCreate(
     DataTypes::String& constraintName
 ): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
    columns(std::move(columns)), primaryKey(primaryKey) {}
-
-  PhysicalTableCreate::~PhysicalTableCreate() = default;
 
   ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
       if (this->session == nullptr || this->session->user == nullptr)
@@ -481,10 +477,8 @@ PhysicalTableCreate::PhysicalTableCreate(
       return result;
   }
 
-  PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
-      : table(table), expression(expression) {}
-
-  PhysicalTableScan::~PhysicalTableScan() = default;
+    PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
+        : table(table), expression(expression) {}
 
     ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
@@ -519,8 +513,6 @@ PhysicalTableCreate::PhysicalTableCreate(
       Expressions::Expression *expression,
       const bool isClustered
   ): table(table), expression(expression), isClustered(isClustered) {}
-
-  PhysicalIndexScan::~PhysicalIndexScan() = default;
 
   ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
@@ -559,8 +551,6 @@ PhysicalTableCreate::PhysicalTableCreate(
       Expressions::Expression* expression
   ) : table(table), expression(expression), key(std::move(key)) {}
 
-  PhysicalIndexSeek::~PhysicalIndexSeek() = default;
-
   ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
@@ -589,8 +579,6 @@ PhysicalTableCreate::PhysicalTableCreate(
       Expressions::Expression* expression
   ):    table(table), expression(expression),
         minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
-
-  PhysicalIndexSeekRange::~PhysicalIndexSeekRange() = default;
 
   ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
@@ -681,9 +669,11 @@ PhysicalTableCreate::PhysicalTableCreate(
                 Expressions::EvaluateExpression(
                     this->resultExpressions[j],
                     evaluationContext,
-                    result.vectorBatch._columns[j]->_data + result.vectorBatch._columns[j]->_dataEntrySize * i,
+                    result.vectorBatch._columns[j]->SlotAt(i),
                     &outNull
                 );
+
+                result.vectorBatch._columns[j]->SetNullValue(i, outNull);
             }
         }
     }
@@ -697,13 +687,13 @@ PhysicalTableCreate::PhysicalTableCreate(
         if (result.selectionVector->selectedRidsCount == 0)
             return result;
 
-        result.vectorBatch.AllocateColumns(
-            context.GetAllocator(),
-            this->resultExpressions.Size()
-        );
-
         result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
         result.vectorBatch._numberOfColumns = this->resultExpressions.Size();
+
+        result.vectorBatch.AllocateColumns(
+            context.GetAllocator(),
+            result.vectorBatch._numberOfColumns
+        );
 
         if (context.GetMode() == Constants::ExecutionMode::Vectorized)
             this->ExecuteVectorizedMode(result, context);
@@ -715,33 +705,50 @@ PhysicalTableCreate::PhysicalTableCreate(
 
     ExecutionResult PhysicalProject::ExecuteConstantStatement(const CoreEngine::ExecutionContext& context)const{
         auto result = ExecutionResult(context);
-        QueryResult resultRow(context.GetAllocator());
+
+        static constexpr Int ROW_COUNT = 1;
+        const auto projectCount = this->resultExpressions.Size();
+
+        result.vectorBatch._numberOfRows = ROW_COUNT;
+        result.vectorBatch._numberOfColumns = projectCount;
+
+        result.vectorBatch.AllocateColumns(
+            context.GetAllocator(),
+            projectCount
+        );
+
+        for (Int i = 0;i < projectCount; i++){
+            const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
+            auto* column = CoreEngine::DataVector::FlatVector(context.GetAllocator(), type, ROW_COUNT);
+            result.vectorBatch.SetColumn(column, i);
+        }
 
         const Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Constant,
             context
         );
 
-        // for (const auto& expression : this->resultExpressions) {
-        //     result.displayColumnNames.Push(expression->name);
-        //
-        //
-        //     auto field = Expressions::EvaluateExpression(expression, evaluationContext);
-        //     resultRow.AddColumn(field);
-        // }
-        //
-        // result.results.Push(std::move(resultRow));
+        auto outNull = false;
+        for (Int j = 0; j < projectCount; j++){
+            Expressions::EvaluateExpression(
+                this->resultExpressions[j],
+                evaluationContext,
+          result.vectorBatch._columns[j]->SlotAt(0),
+                &outNull
+            );
 
+            result.vectorBatch._columns[j]->SetNullValue(0, outNull);
+        }
+
+        result.canFetchMore = false;
         return result;
     }
 
     PhysicalProject:: PhysicalProject(
         PlanNode *child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders)
-        : resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
-
-    PhysicalProject::~PhysicalProject() = default;
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders
+    ): resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
 
     ExecutionResult PhysicalProject::Execute(CoreEngine::ExecutionContext& context){
         return (this->child == nullptr)
@@ -755,8 +762,6 @@ PhysicalTableCreate::PhysicalTableCreate(
 
     PhysicalFilter::PhysicalFilter(PlanNode *child, Expressions::Expression* filter)
         : filter(filter) , child(child) {}
-
-    PhysicalFilter::~PhysicalFilter() = default;
 
     ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
@@ -797,8 +802,6 @@ PhysicalTableCreate::PhysicalTableCreate(
     PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
         : top(top), child(child){}
 
-    PhysicalTop::~PhysicalTop() = default;
-
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
@@ -817,8 +820,6 @@ PhysicalTableCreate::PhysicalTableCreate(
 
     PhysicalDistinct::PhysicalDistinct(PlanNode *child)
         : child(child){}
-
-    PhysicalDistinct::~PhysicalDistinct() = default;
 
     ExecutionResult PhysicalDistinct::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
@@ -869,8 +870,6 @@ PhysicalTableCreate::PhysicalTableCreate(
           , expressions(std::move(expressions))
           , comparator(&this->expressions, nullptr)
           , priorityQueue(this->comparator){}
-
-    PhysicalOrderBy::~PhysicalOrderBy() = default;
 
     ExecutionResult PhysicalOrderBy::Execute(CoreEngine::ExecutionContext& context){
         if (!this->comparator.HasProperties())
@@ -1031,8 +1030,6 @@ PhysicalTableCreate::PhysicalTableCreate(
         DataStructures::PolymorphicArray<column_index_t>& columnsIndices
     ): table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
 
-    PhysicalInsert::~PhysicalInsert() = default;
-
     ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
@@ -1048,8 +1045,6 @@ PhysicalTableCreate::PhysicalTableCreate(
         Expressions::Expression *expression,
         DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ) : table(table), updates(std::move(updates)), expression(expression) {}
-
-    PhysicalHeapUpdate::~PhysicalHeapUpdate() = default;
 
     ExecutionResult PhysicalHeapUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
@@ -1067,8 +1062,6 @@ PhysicalTableCreate::PhysicalTableCreate(
         DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
-    PhysicalIndexScanUpdate::~PhysicalIndexScanUpdate() = default;
-
     ExecutionResult PhysicalIndexScanUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
@@ -1084,8 +1077,6 @@ PhysicalTableCreate::PhysicalTableCreate(
         Expressions::Expression *expression,
         DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ): table(table), updates(std::move(updates)), expression(expression) {}
-
-    PhysicalIndexSeekUpdate::~PhysicalIndexSeekUpdate() = default;
 
   ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
       const auto* db = this->server->UseDatabase(context, this->table->databaseId);
@@ -1104,8 +1095,6 @@ PhysicalTableCreate::PhysicalTableCreate(
   PhysicalHeapDelete::PhysicalHeapDelete(Statements::DataSource *table, Expressions::Expression *expression)
       : table(table), expression(expression) {}
 
-  PhysicalHeapDelete::~PhysicalHeapDelete() = default;
-
   ExecutionResult PhysicalHeapDelete::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
@@ -1121,8 +1110,6 @@ PhysicalTableCreate::PhysicalTableCreate(
   PhysicalIndexScanDelete::PhysicalIndexScanDelete(Statements::DataSource *table, Expressions::Expression *expression)
       : table(table), expression(expression) {}
 
-  PhysicalIndexScanDelete::~PhysicalIndexScanDelete() = default;
-
   ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
@@ -1137,8 +1124,6 @@ PhysicalTableCreate::PhysicalTableCreate(
 
   PhysicalIndexSeekDelete::PhysicalIndexSeekDelete(Statements::DataSource *table, Expressions::Expression *expression)
       : table(table), expression(expression) {}
-
-  PhysicalIndexSeekDelete::~PhysicalIndexSeekDelete() = default;
 
     ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);

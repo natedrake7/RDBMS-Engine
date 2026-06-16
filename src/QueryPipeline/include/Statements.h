@@ -571,6 +571,19 @@ namespace QueryPipeline::Statements {
         const Expressions::JsonExpression* jsonExpr
     );
 
+    static Errors::ValidationStatus CompileCastExpression(
+        QueryContext& context,
+        Expressions::CastExpression* castExpr,
+        Expressions::Expression*& expression
+    );
+
+    static Errors::ValidationStatus CompileCastExpression(
+        QueryContext& context,
+        Expressions::CastExpression* castExpr,
+        Expressions::Expression*& expression,
+        StatementValidationScope& statementValidationScope
+    );
+
     static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
         const QueryContext& context,
         Expressions::ColumnExpression* column,
@@ -618,15 +631,15 @@ namespace QueryPipeline::Statements {
 
     static void FoldExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, const Expressions::BinaryExpression* binaryExpr, Expressions::Expression*& expression);
+    static void FoldBinaryExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, Expressions::LogicalExpression* logicalExpr, Expressions::Expression*& expression);
+    static void FoldLogicalExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, const Expressions::FunctionExpression* castExpr, Expressions::Expression*& expression);
+    static void FoldFunctionExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, Expressions::BranchExpression* castExpr, Expressions::Expression*& expression);
+    static void FoldBranchExpression(const QueryContext& context, Expressions::Expression*& expression);
 
-    static void FoldExpression(const QueryContext& context, Expressions::CastExpression* castExpr, Expressions::Expression*& expression);
+    static void FoldCastExpression(const QueryContext& context, Expressions::Expression*& expression);
 
     /** @} End of Folding-Optimization Functions */
 
@@ -802,6 +815,12 @@ namespace QueryPipeline::Statements {
      */
 
     static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
+
+    static void InsertCastExpression(
+        const QueryContext& context,
+        Expressions::Expression*& expression,
+        DataType type
+    );
 
     /** @} End of Helper Functions */
 }

@@ -51,12 +51,6 @@ namespace CoreEngine::StorageTypes {
         inline Int SetGuid(const Value& value);
 
         Int SetDataByType(const Value& value, const Column* column, Errors::RuntimeStatus& status);
-        //
-        // page_offset_t DeserializeHeader(
-        //     const ::Memory::IAllocator* allocator,
-        //     Int bitmapSize,
-        //     Int numberOfColumns
-        // ) const;
 
     public:
         InsertPayload();
@@ -71,10 +65,6 @@ namespace CoreEngine::StorageTypes {
         InsertPayload(InsertPayload&& other) noexcept;
 
         static InsertPayload FromRowPtr(const Pages::RawRowReference& rowPtr);
-
-        // Copy operations perform deep copy to avoid double-free
-        // InsertPayload(const InsertPayload& other);
-        // InsertPayload& operator=(const InsertPayload& other);
 
         ~InsertPayload();
 
@@ -124,6 +114,6 @@ namespace CoreEngine::StorageTypes {
 
     void InsertPayload::CopyToBuffer(const DataTypes::DateTime &src){
         const auto dt = src.UnixTimeStamp();
-        this->SetData(&dt, DataTypes::DateTime::Size());
+        this->SetData(&dt, sizeof(DataTypes::DateTime));
     }
 }

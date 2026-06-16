@@ -13,25 +13,6 @@ namespace DataTypes{
         Scalar = 1
     };
 
-    // enum class JsonKeyType : UnsignedTinyInt{
-    //     Key = 0,
-    //     Index = 1
-    // };
-
-    // struct JsonKey{
-    //     JsonKeyType _type;
-    //
-    //     void Copy(const JsonKey& other);
-    //     void Move(JsonKey&& other) noexcept;
-    //
-    //     JsonKey();
-    //     JsonKey(const JsonKey& other);
-    //     JsonKey& operator=(const JsonKey& other);
-    //
-    //     JsonKey(JsonKey&& other) noexcept;
-    //     JsonKey& operator=(JsonKey&& other) noexcept;
-    // };
-
     struct JsonPathStep{
         String _key;
         JsonAccessorType _accessorType;
@@ -67,6 +48,7 @@ namespace DataTypes{
         )const;
 
     public:
+        JsonBinary();
         explicit JsonBinary(const ::Memory::IAllocator* allocator);
         explicit JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, Int size);
 

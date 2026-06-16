@@ -120,7 +120,12 @@ namespace DataTypes {
             fraction_index_t& fractionIndex
         );
 
-        [[nodiscard]] static constexpr byte_t CreateSignAndFractionByte(bool isPositive, fraction_index_t fractionIndex) ;
+        [[nodiscard]] static constexpr byte_t CreateSignAndFractionByte(
+            const bool isPositive,
+            const fraction_index_t fractionIndex
+        ){
+            return (isPositive << 7) | (fractionIndex & 0x7F);
+        }
 
         [[nodiscard]] static constexpr bool IsGreaterMagnitude(const DataBuffer& left, const DataBuffer& right);
 
@@ -212,7 +217,7 @@ constexpr Decimal::Decimal(const bool value){
     //the fraction index is always at a fixed position
     static constexpr fraction_index_t BOOLEAN_FRACTION_INDEX = 2;
 
-    const auto signAndFractionPoint = Decimal::CreateSignAndFractionByte(isPositive, BOOLEAN_FRACTION_INDEX);
+    constexpr auto signAndFractionPoint = Decimal::CreateSignAndFractionByte(isPositive, BOOLEAN_FRACTION_INDEX);
 
     this->_data.Push(signAndFractionPoint);
     byte_t val = 0;
@@ -301,13 +306,6 @@ constexpr Decimal::Decimal(const StringView& value){
 
 constexpr Decimal::Decimal(const byte_t* data, const Int dataSize){
     this->_data.SetData(data, dataSize);
-}
-
-constexpr byte_t Decimal::CreateSignAndFractionByte(
-    const bool isPositive,
-    const fraction_index_t fractionIndex
-) {
-    return (isPositive << 7) | (fractionIndex & 0x7F);
 }
 
 constexpr Decimal::DataBuffer Decimal::Pack(const AdditionDigitsBuffer& digits, const bool isPositive, const fraction_index_t fractionIndex){

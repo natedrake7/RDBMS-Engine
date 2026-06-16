@@ -334,12 +334,12 @@ Value::Value(
     const Memory::IAllocator* allocator,
     const column_index_t index
 ){
-    this->data = static_cast<object_t*>(allocator->AllocateRaw(DataTypes::DateTime::Size()));
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(sizeof(DataTypes::DateTime)));
     const auto dt = data.UnixTimeStamp();
-    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
+    std::memcpy(this->data, &dt, sizeof(DataTypes::DateTime));
 
     this->_allocator = allocator;
-    this->size = DataTypes::DateTime::Size();
+    this->size = sizeof(DataTypes::DateTime);
     this->columnIndex = index;
     this->type = DataType::DateTime;
 }
@@ -370,6 +370,19 @@ Value::Value(
     this->size = DataTypes::GUID_SIZE;
     this->columnIndex = index;
     this->type = DataType::Guid;
+}
+
+Value::Value(
+    const DataTypes::JsonBinary& data,
+    const Memory::IAllocator* allocator,
+    const column_index_t index
+){
+    this->data = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
+    std::memcpy(this->data, data.Data(), data.Size());
+    this->size = data.Size();
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataType::Json;
 }
 
 Value::Value(
@@ -480,11 +493,11 @@ void Value::SetData(const DataTypes::Decimal &otherData) {
 }
 
 void Value::SetData(const DataTypes::DateTime &otherData) {
-    this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(DataTypes::DateTime::Size()));
+    this->data = static_cast<object_t*>(this->_allocator->AllocateRaw(sizeof(DataTypes::DateTime)));
     const auto dt = otherData.UnixTimeStamp();
-    std::memcpy(this->data, &dt, DataTypes::DateTime::Size());
+    std::memcpy(this->data, &dt, sizeof(DataTypes::DateTime));
 
-    this->size = DataTypes::DateTime::Size();
+    this->size = sizeof(DataTypes::DateTime);
     this->type = DataType::DateTime;
 }
 

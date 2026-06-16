@@ -2,7 +2,7 @@
 #include "Evaluators/Kernels/Row/RowKernels.Binary.h"
 
 namespace CoreEngine::RowKernels{
-        void BinaryStringAdditionKernel(
+    void BinaryStringAdditionKernel(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context,
         void* outVal,
@@ -24,81 +24,96 @@ namespace CoreEngine::RowKernels{
         *outNull = false;
     }
 
-    // Single definition for the extern table declared in RowKernels.h.
-    Expressions::RowKernelFunction RowBinaryKernelTable[BINARY_OPERATIONS_COUNT][DATATYPE_COUNT] = {};
-
-    void RegisterBool(){
+    constexpr void RegisterBool(BinaryKernelTable& table){
         constexpr auto CAST_BOOL_TYPE = static_cast<Int>(DataType::Bool);
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::equal_to<bool>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::not_equal_to<bool>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::greater<bool>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::greater_equal<bool>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::less<bool>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::less_equal<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::equal_to<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::not_equal_to<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::greater<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::greater_equal<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::less<bool>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_BOOL_TYPE] = &BinaryComparisonKernel<bool, std::less_equal<bool>>;
     }
 
-    // Register the full arithmetic + comparison row for one integral type.
-
-
-    void RegisterString(){
+    constexpr void RegisterString(BinaryKernelTable& table){
         constexpr auto CAST_STR_TYPE = static_cast<Int>(DataType::String);
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Add)][CAST_STR_TYPE] = &BinaryStringAdditionKernel;
-
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::equal_to<DataTypes::String>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::not_equal_to<DataTypes::String>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater<DataTypes::String>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater_equal<DataTypes::String>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less<DataTypes::String>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less_equal<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Add)][CAST_STR_TYPE] = &BinaryStringAdditionKernel;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::equal_to<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::not_equal_to<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater_equal<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less<DataTypes::String>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less_equal<DataTypes::String>>;
 
         //TODO add ignore ordinal case, starts with etc kernel
     }
 
-    void RegisterDateTime(){
+    constexpr void RegisterDateTime(BinaryKernelTable& table){
         constexpr auto CAST_DATETIME_TYPE = static_cast<Int>(DataType::DateTime);
 
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::equal_to<DataTypes::DateTime>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::not_equal_to<DataTypes::DateTime>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::greater<DataTypes::DateTime>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::greater_equal<DataTypes::DateTime>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::less<DataTypes::DateTime>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::less_equal<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::equal_to<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::not_equal_to<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::greater<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::greater_equal<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::less<DataTypes::DateTime>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_DATETIME_TYPE] = &BinaryComparisonKernel<DataTypes::DateTime, std::less_equal<DataTypes::DateTime>>;
     }
 
-    void RegisterDecimal(){
-
-    }
-
-    void RegisterJson(){
+    constexpr void RegisterDecimal(BinaryKernelTable& table){
 
     }
 
-    void RegisterGuid(){
+    constexpr void RegisterJson(BinaryKernelTable& table){
+
+    }
+
+    constexpr void RegisterGuid(BinaryKernelTable& table){
         constexpr auto CAST_GUID_TYPE = static_cast<Int>(DataType::Guid);
 
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::equal_to<DataTypes::Guid>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::not_equal_to<DataTypes::Guid>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::greater<DataTypes::Guid>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::greater_equal<DataTypes::Guid>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::less<DataTypes::Guid>>;
-        RowBinaryKernelTable[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::less_equal<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::equal_to<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::not_equal_to<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::greater<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::greater_equal<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::less<DataTypes::Guid>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::less_equal<DataTypes::Guid>>;
     }
 
-    // Call once at engine startup, before any expression is bound.
-    void RegisterBinaryKernels(){
-        RegisterBool();
-        RegisterIntegral<TinyInt>(DataType::TinyInt);
-        RegisterIntegral<SmallInt>(DataType::SmallInt);
-        RegisterIntegral<Int>(DataType::Int);
-        RegisterIntegral<BigInt>(DataType::BigInt);
-        RegisterDecimal();
-        RegisterJson();
-        RegisterString();
-        RegisterGuid();
-        RegisterDateTime();
+    template<DataTypes::PrimitiveColumn T>
+    constexpr void RegisterIntegral(BinaryKernelTable& table, const DataType dataType){
+        const auto castType = static_cast<Int>(dataType);
 
-        // TODO: Decimal (no operator% -- arithmetic + comparison only, via its own
-        //       methods), DateTime/Guid (comparison only), String (comparison only).
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Add)][castType] = &BinaryArithmeticKernel<T, std::plus<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Subtract)][castType] = &BinaryArithmeticKernel<T, std::minus<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Multiply)][castType] = &BinaryArithmeticKernel<T, std::multiplies<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Divide)][castType] = &BinaryDivideKernel<T>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Modulo)][castType] = &BinaryModuloKernel<T>;
+
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][castType] = &BinaryComparisonKernel<T, std::equal_to<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][castType] = &BinaryComparisonKernel<T, std::not_equal_to<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][castType] = &BinaryComparisonKernel<T, std::greater<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][castType] = &BinaryComparisonKernel<T, std::greater_equal<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][castType] = &BinaryComparisonKernel<T, std::less<T>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][castType] = &BinaryComparisonKernel<T, std::less_equal<T>>;
     }
 
+
+    constexpr BinaryKernelTable RegisterBinaryKernels(){
+        BinaryKernelTable table {};
+        RegisterBool(table);
+        RegisterIntegral<TinyInt>(table, DataType::TinyInt);
+        RegisterIntegral<SmallInt>(table, DataType::SmallInt);
+        RegisterIntegral<Int>(table, DataType::Int);
+        RegisterIntegral<BigInt>(table, DataType::BigInt);
+        RegisterDecimal(table);
+        RegisterJson(table);
+        RegisterString(table);
+        RegisterGuid(table);
+        RegisterDateTime(table);
+        return table;
+    }
+
+    inline constexpr auto BINARY_KERNEL_TABLE = RegisterBinaryKernels();
+
+    Expressions::RowKernelFunction LookupBinaryKernel(Expressions::BinaryOperator op, DataType operandType){
+        return BINARY_KERNEL_TABLE.cells[static_cast<Int>(op)][static_cast<Int>(operandType)];
+    }
 }

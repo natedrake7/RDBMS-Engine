@@ -118,9 +118,6 @@
 //SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
 
 int main(){
-    DataTypes::Coercions::Initialize();
-    CoreEngine::RowKernels::RegisterKernels();
-
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 
     static auto& globalMemoryManager = CoreEngine::GlobalMemoryManager::Get();

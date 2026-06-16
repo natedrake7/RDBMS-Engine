@@ -132,4 +132,8 @@ public:
         return DataTypes::String(buffer, len, allocator);
     }
 
+    static DataTypes::String Dtos(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){
+        return input.ToString(allocator);
+    }
+
 };

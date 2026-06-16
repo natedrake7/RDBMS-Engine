@@ -84,8 +84,6 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* joinCondition
     ) : left(left), right(right), expression(joinCondition) {}
 
-    PhysicalNestedLoopInnerJoin::~PhysicalNestedLoopInnerJoin() = default;
-
     ExecutionResult PhysicalNestedLoopInnerJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
@@ -154,8 +152,6 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* expression
     ) : left(left), right(right), expression(expression) {}
 
-    PhysicalNestedLoopLeftJoin::~PhysicalNestedLoopLeftJoin() = default;
-
     ExecutionResult PhysicalNestedLoopLeftJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
@@ -168,8 +164,6 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* right,
         Expressions::Expression* joinCondition
     ) : left(left), right(right), joinCondition(joinCondition) {}
-
-    PhysicalNestedLoopFullJoin::~PhysicalNestedLoopFullJoin() = default;
 
     ExecutionResult PhysicalNestedLoopFullJoin::Execute(CoreEngine::ExecutionContext& context) {
         // auto* result = new ExecutionResult();
@@ -305,8 +299,6 @@ namespace QueryPipeline::PhysicalPlan {
     ) : left(left), right(right), expression(expression),
         leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
 
-    PhysicalMergeInnerJoin::~PhysicalMergeInnerJoin() = default;
-
     ExecutionResult PhysicalMergeInnerJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
@@ -403,8 +395,6 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
     ) : left(left), right(right), expression(expression),
         leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
-
-    PhysicalMergeLeftJoin::~PhysicalMergeLeftJoin() = default;
 
     ExecutionResult PhysicalMergeLeftJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
@@ -504,8 +494,6 @@ namespace QueryPipeline::PhysicalPlan {
     ) : left(left), right(right), expression(expression),
         leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)) {}
 
-    PhysicalMergeFullJoin::~PhysicalMergeFullJoin() = default;
-
     ExecutionResult PhysicalMergeFullJoin::Execute(CoreEngine::ExecutionContext& context) {
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
@@ -546,8 +534,6 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalCrossInnerJoin::PhysicalCrossInnerJoin(PlanNode* left, PlanNode* right)
         : left(left), right(right){}
-
-    PhysicalCrossInnerJoin::~PhysicalCrossInnerJoin() = default;
 
     ExecutionResult PhysicalCrossInnerJoin::Execute(CoreEngine::ExecutionContext& context){
         auto leftResult = this->left->Execute(context);
@@ -605,8 +591,6 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalCrossLeftJoin::PhysicalCrossLeftJoin(PlanNode* left, PlanNode* right)
         : left(left), right(right) {}
 
-    PhysicalCrossLeftJoin::~PhysicalCrossLeftJoin() = default;
-
     ExecutionResult PhysicalCrossLeftJoin::Execute(CoreEngine::ExecutionContext& context){
         auto leftResult = this->left->Execute(context);
         auto result = this->ExecuteBatchJoin(context, leftResult);
@@ -616,8 +600,6 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalCrossFullJoin::PhysicalCrossFullJoin(PlanNode* left, PlanNode* right)
         : left(left), right(right) {}
-
-    PhysicalCrossFullJoin::~PhysicalCrossFullJoin() = default;
 
     ExecutionResult PhysicalCrossFullJoin::Execute(CoreEngine::ExecutionContext& context){
         return ExecutionResult(context);

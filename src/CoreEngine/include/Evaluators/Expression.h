@@ -200,7 +200,7 @@ namespace Expressions{
     };
 
     class ConstantExpression final : public Expression {
-
+        void BindVectorizedKernel();
         void BindRowKernel();
     public:
         Value value;
@@ -232,12 +232,6 @@ namespace Expressions{
         BinaryOperator operation;
 
         BinaryExpression(Expression* left, Expression* right, BinaryOperator operation);
-
-        [[nodiscard]] static Value* Evaluate(
-            const Expression* expression,
-            const CoreEngine::ExecutionContext& context,
-            Int rangeEnd
-        );
 
         [[nodiscard]] bool ValidateOperation()const;
 
@@ -352,15 +346,19 @@ namespace Expressions{
     };
 
     class VariableExpression final : public Expression {
+        void BindVectorizedKernel();
+        void BindRowKernel();
     public:
-      DataTypes::String name;
-      DataTypes::String normalizedName;
-      DataType dataType;
+        DataTypes::String name;
+        DataTypes::String normalizedName;
+        DataType dataType;
 
-      explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
+        explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
 
-      [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
-      [[nodiscard]]DataType GetReturnType() const;
+        static void BindExpressionKernel(VariableExpression* expression, Constants::ExecutionMode mode);
+
+        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
+        [[nodiscard]]DataType GetReturnType() const;
     };
 
     class JsonExpression final : public Expression {
@@ -379,13 +377,16 @@ namespace Expressions{
     };
 
     class CastExpression final: public Expression{
+        void BindVectorizedKernel();
+        void BindRowKernel();
     public:
-        Expression* expression;
+        Expression* childExpr;
         DataType targetType;
-
         bool isTryCast;
 
         CastExpression(Expression* expression, DataType targetType, bool isTryCast);
+
+        static void BindExpressionKernel(CastExpression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context) const;
         [[nodiscard]] DataType GetReturnType() const;
@@ -393,11 +394,6 @@ namespace Expressions{
 
     Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);
 
-    Value* EvaluateExpression(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& executionContext,
-        Int rangeEnd
-    );
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,

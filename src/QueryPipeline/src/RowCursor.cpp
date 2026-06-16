@@ -33,10 +33,10 @@ namespace QueryPipeline{
             break;
         }
         case DataType::Bool:
-            os << (*reinterpret_cast<const bool*>(columnData->_data + rowIndex * sizeof(bool)) == 1 ? "true" : "false");
+            os << (*reinterpret_cast<const bool*>(columnData->_data + rowIndex * sizeof(bool)) == 1 ? "TRUE" : "FALSE");
             break;
         case DataType::TinyInt:
-            os << (*reinterpret_cast<const TinyInt*>(columnData->_data + rowIndex * sizeof(TinyInt)));
+            os << static_cast<Int>((*reinterpret_cast<const TinyInt*>(columnData->_data + rowIndex * sizeof(TinyInt))));
             break;
         case DataType::SmallInt:
             os << (*reinterpret_cast<const SmallInt*>(columnData->_data + rowIndex * sizeof(SmallInt)));

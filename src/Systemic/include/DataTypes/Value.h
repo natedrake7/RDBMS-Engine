@@ -75,6 +75,7 @@ class Value{
         Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+        Value(const DataTypes::JsonBinary& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const Serialization::JsonValue& data, const Memory::IAllocator* allocator, column_index_t index = 0);
 
         static Value FromMove(

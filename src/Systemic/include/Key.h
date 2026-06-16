@@ -6,7 +6,6 @@
 
 namespace DataTypes::Indexing {
   struct Key{
-
     enum class ComparisonResult : TinyInt {
       Less = -1,
       Equal = 0,

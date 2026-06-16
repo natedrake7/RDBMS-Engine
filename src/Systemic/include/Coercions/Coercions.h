@@ -1,4 +1,5 @@
 #pragma once
+#include "../Converter.h"
 #include "../DataStructures/ConstexprHashSet.h"
 #include "../DataTypes/Value.h"
 #include "../DataTypes/Guid.h"
@@ -7,13 +8,18 @@
 namespace DataTypes{
     enum class CoercionType : UnsignedTinyInt {
         Implicit = 0,   // Allowed automatically (safe)
-        Explicit = 1,    // Allowed but requires CAST
+        Explicit = 1,  // Allowed but requires CAST
         None = 2      // Not allowed
     };
 
-    class Coercions {
-    static CoercionType TypeCoercionMatrix[DATATYPE_COUNT][DATATYPE_COUNT];
+    struct CoercionMatrix {
+        CoercionType cells[DATATYPE_COUNT][DATATYPE_COUNT];
+        [[nodiscard]] constexpr CoercionType At(DataType from, DataType to) const {
+            return cells[static_cast<Int>(from)][static_cast<Int>(to)];
+        }
+    };
 
+    class Coercions {
     static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
         StringView("true"),
         StringView("1"),
@@ -33,6 +39,7 @@ namespace DataTypes{
     static inline void ThrowException(DataType type, DataType toType);
 
     [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
+
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
     [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
 
@@ -50,12 +57,12 @@ namespace DataTypes{
     static void DownCastFromSmallInt(Value& value);
     static void DownCastFromInt(Value& value);
     static void DownCastFromBigInt(Value& value);
-    static void InitializeTypeCoercionMatrix();
 
     public:
-        static void Initialize();
+        [[nodiscard]] constexpr static bool IsCoercionAllowed(DataType fromType, DataType toType, bool explicitCast = false);
 
-        [[nodiscard]] static bool IsCoercionAllowed(DataType fromType, DataType toType, bool explicitCast = false);
+        constexpr static CoercionMatrix BuildCoercionMatrix();
+
         [[nodiscard]] static bool ToBool(const Value& value, bool explicitCast = false);
         [[nodiscard]] static TinyInt ToTinyInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static SmallInt ToSmallInt(const Value& value, bool explicitCast = false);
@@ -68,7 +75,202 @@ namespace DataTypes{
         [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);
         [[nodiscard]] static JsonBinary ToJsonBinary(const Value& value, bool explicitCast = false);
 
+
+        template<typename T>
+        constexpr static DataType DataTypeOf();
+
+        template<typename TFrom, typename TTo>
+        [[nodiscard]] static TTo To(TFrom& input, const Memory::IAllocator* allocator);
+
         [[nodiscard]] static bool CanBeParsedToType(DataType toType, const Value& value);
         static void DeduceIntegerType(Value& value);
     };
+
+    constexpr CoercionMatrix Coercions::BuildCoercionMatrix(){
+        using DT = DataType;
+        using CT = CoercionType;
+
+        CoercionMatrix matrix = {};
+
+        // 1. Default everything to NONE
+        for (Int i = 0; i < DATATYPE_COUNT; i++) {
+            for (Int j = 0; j < DATATYPE_COUNT; j++) {
+                matrix.cells[i][j] = CT::None;
+            }
+        }
+
+        // 2. Identity conversions (T → T)
+        for (Int i = 0; i < DATATYPE_COUNT; i++)
+            matrix.cells[i][i] = CT::Implicit;
+
+        // ---- Numeric ladder ----
+        // TinyInt → ...
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Int)]      = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+
+        // SmallInt →
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Int)]     = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::BigInt)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
+
+        // Int →
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::TinyInt)]  = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+
+        // BigInt →
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::TinyInt)]  = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Int)]      = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+
+        // Decimal →
+        //TOOD make explicit
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::TinyInt)]  = CT::None;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::SmallInt)] = CT::None;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::Int)]      = CT::None;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::BigInt)]   = CT::None;
+
+        // ---- String conversions ----
+        for (Int t = static_cast<Int>(DT::TinyInt); t <= static_cast<Int>(DT::Decimal); t++) {
+            matrix.cells[static_cast<Int>(DT::String)][t] = CT::Explicit; // parse
+            matrix.cells[t][static_cast<Int>(DT::String)] = CT::Implicit; // stringify
+        }
+
+        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Bool)]     = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::String)]     = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::DateTime)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::DateTime)][static_cast<Int>(DT::String)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Guid)]     = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Guid)][static_cast<Int>(DT::String)]     = CT::Implicit;
+
+        // ---- Bool conversions ----
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::TinyInt)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::Int)]      = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
+
+        // ---- JSON rules ----
+        for (Int t = 0; t < DATATYPE_COUNT; t++) {
+            if (t == static_cast<Int>(DT::Json)) continue;
+            matrix.cells[t][static_cast<Int>(DT::Json)] = CT::None;
+        }
+        matrix.cells[static_cast<Int>(DT::Json)][static_cast<Int>(DT::String)] = CT::Explicit;
+
+        return matrix;
+    }
+
+    inline constexpr CoercionMatrix TYPE_COERCION_MATRIX = Coercions::BuildCoercionMatrix();
+
+     template <typename T>
+     constexpr DataType Coercions::DataTypeOf(){
+         if constexpr (std::is_same_v<T, bool>)
+             return DataType::Bool;
+         else if constexpr (std::is_same_v<T, TinyInt>)
+             return DataType::TinyInt;
+         else if constexpr (std::is_same_v<T, SmallInt>)
+             return DataType::SmallInt;
+         else if constexpr (std::is_same_v<T, Int>)
+             return DataType::Int;
+         else if constexpr (std::is_same_v<T, BigInt>)
+             return DataType::BigInt;
+         else if constexpr (std::is_same_v<T, Decimal>)
+             return DataType::Decimal;
+         else if constexpr (std::is_same_v<T, String>)
+             return DataType::String;
+         else if constexpr (std::is_same_v<T, DateTime>)
+             return DataType::DateTime;
+         else if constexpr (std::is_same_v<T, Guid>)
+             return DataType::Guid;
+         else if constexpr (std::is_same_v<T, JsonBinary>)
+             return DataType::Json;
+         else
+             static_assert(false, "DataTypeOf: unmapped cast type");
+
+         return DataType::Null;
+     }
+
+    constexpr CoercionType Coercions::GetCoercionType(const DataType fromType, const DataType toType){
+        return TYPE_COERCION_MATRIX.At(fromType, toType);
+    }
+
+    constexpr bool Coercions::IsCoercionAllowed(
+        const DataType fromType,
+        const DataType toType,
+        const bool explicitCast
+    ){
+        const auto coercionType = GetCoercionType(fromType, toType);
+        return explicitCast
+            ? (coercionType == CoercionType::Implicit || coercionType == CoercionType::Explicit)
+            : (coercionType == CoercionType::Implicit);
+    }
+
+    template <typename TFrom, typename TTo>
+    TTo Coercions::To(TFrom& input, const Memory::IAllocator* allocator){
+        // identity (covers String->String, Decimal->Decimal, Guid->Guid, ...)
+        if constexpr (std::is_same_v<TFrom, TTo>)
+            return input;
+
+        // --- bool needs special-casing BEFORE the generic numeric/string arms ---
+        else if constexpr (std::is_same_v<TFrom, bool> && std::is_same_v<TTo, String>)   // Bool -> String
+            return input ? String("true", allocator) : String("false", allocator);
+
+        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, bool>) {            // String -> Bool
+            const auto view = input.ToView();
+            if (TrueStrings.Contains(view))  return true;
+            if (FalseStrings.Contains(view)) return false;
+            return false;
+        }
+
+        // --- numeric ladder ---
+        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_arithmetic_v<TTo>)      // num <-> num
+            return static_cast<TTo>(input);
+
+        // --- string <-> numeric ---
+        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, String>)    // num -> String
+            return Converter<TFrom>::Itos(input, allocator);
+
+        else if constexpr (IsString<TFrom> && std::is_arithmetic_v<TTo>)              // String -> num
+            return Converter<TTo>::Stoi(input);
+
+        // --- Decimal ---
+        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal
+            return Decimal(input);
+
+        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, Decimal>)           // String -> Decimal
+            return Decimal(input.ToView());
+
+        else if constexpr (std::is_same_v<TFrom, Decimal> && std::is_same_v<TTo, String>) // Decimal -> String
+            return input.ToString(allocator);
+
+        // --- DateTime ---
+        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, DateTime>) {        // String -> DateTime
+            DateTime out;
+            DateTime::FromString(out, input.ToView());
+            return out;
+        }
+        else if constexpr (std::is_same_v<TFrom, DateTime> && std::is_same_v<TTo, String>)// DateTime -> String
+            return input.ToString(allocator);
+
+        // --- Guid ---
+        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, Guid>)              // String -> Guid
+            return Guid::Parse(input);                                                    // has String & StringView overloads
+        else if constexpr (std::is_same_v<TFrom, Guid> && std::is_same_v<TTo, String>)    // Guid -> String
+            return input.ToString(allocator);
+
+        // --- JSON ---
+        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, JsonBinary>) {      // String -> Json
+            Serialization::JsonParser parser(allocator, input.ToView());
+            return parser.Parse();
+        }
+        else if constexpr (std::is_same_v<TFrom, JsonBinary> && std::is_same_v<TTo, String>) // Json -> String
+            return input.ToString();
+
+        else
+            static_assert(AlwaysFalse<TFrom>, "Coercions::To<TFrom,TTo>: unsupported pair");
+    }
 }

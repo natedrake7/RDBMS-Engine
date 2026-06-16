@@ -11,8 +11,6 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalAddColumn::PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::NewColumn *column)
     : PlanNode(sessionId), table(table), column(column){}
 
-  PhysicalAddColumn::~PhysicalAddColumn() = default;
-
   ExecutionResult PhysicalAddColumn::Execute(CoreEngine::ExecutionContext& context){
     this->column->type.name.ToLowerInPlace();
     const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(this->column->type.name.ToView());
@@ -86,8 +84,6 @@ namespace QueryPipeline::PhysicalPlan{
   PhysicalDropColumn::PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::DropColumn *column)
     : PlanNode(sessionId), table(table), column(column){}
 
-  PhysicalDropColumn::~PhysicalDropColumn() = default;
-
   ExecutionResult PhysicalDropColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
 
@@ -111,8 +107,6 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalRenameColumn::PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::RenameColumn *column)
   : PlanNode(sessionId), table(table), column(column){}
-
-  PhysicalRenameColumn::~PhysicalRenameColumn() = default;
 
   ExecutionResult PhysicalRenameColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
@@ -144,8 +138,6 @@ namespace QueryPipeline::PhysicalPlan{
 
   PhysicalAlterColumn::PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource *table, Statements::AlterColumn *column)
     : PlanNode(sessionId), table(table), column(column){}
-
-  PhysicalAlterColumn::~PhysicalAlterColumn() = default;
 
   ExecutionResult PhysicalAlterColumn::Execute(CoreEngine::ExecutionContext& context){
     auto result = ExecutionResult(context);
