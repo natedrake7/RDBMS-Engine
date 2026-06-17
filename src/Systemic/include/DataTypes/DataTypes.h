@@ -130,7 +130,9 @@ namespace DataTypes{
         std::is_same_v<T, String>
         || std::is_same_v<T, StringView>
         || std::is_same_v<T, std::string>
-        || std::is_same_v<T, std::string_view>;
+        || std::is_same_v<T, std::string_view>
+        || std::is_same_v<T, char*>
+        || std::is_same_v<T, const char*>;
 
     template <typename T>
     concept IsJson = std::is_same_v<T, JsonBinary>;

@@ -112,14 +112,16 @@ namespace DataTypes{
             String();
             String(const ::Memory::IAllocator* allocator);
             String(const ::Memory::IAllocator* allocator, Int size);
-            String(const String& str, const ::Memory::IAllocator* allocator);
-            String(const StringView& str, const ::Memory::IAllocator* allocator);
+
+            template<IsStringLike T>
+            String(const T& str, const ::Memory::IAllocator* allocator);
+            String(const char* str, Int size, const ::Memory::IAllocator* allocator);
+
             String(const object_t* str, Int size, const ::Memory::IAllocator* allocator);
             String(object_t* str, Int size, const ::Memory::IAllocator* allocator);
-            String(const char* str, const ::Memory::IAllocator* allocator);
-            String(const std::string& str, const ::Memory::IAllocator* allocator);
+
             String(char* str, Int size, const ::Memory::IAllocator* allocator);
-            String(const char* str, Int size, const ::Memory::IAllocator* allocator);
+
             String(const String& other);
             String& operator=(const String& other);
             String(String&& other) noexcept;
@@ -179,7 +181,7 @@ namespace DataTypes{
             [[nodiscard]] String Concat(const char* other) const;
             [[nodiscard]] String Concat(const StringView& other) const;
             [[nodiscard]] String Concat(std::string_view other) const;
-            [[nodiscard]] String Concat(const std::string& other) const;\
+            [[nodiscard]] String Concat(const std::string& other) const;
 
             template<typename... Args>
             [[nodiscard]] static String Join(
@@ -363,25 +365,29 @@ namespace DataTypes{
         const char* lhsData = nullptr;
         Int lhsSize = 0;
 
-        if constexpr (std::is_same_v<std::decay_t<T>, String>) {
+        if constexpr (
+            std::is_same_v<std::decay_t<T>, String>
+            || std::is_same_v<std::decay_t<T>, StringView>
+        ) {
             lhsData = str.Data();
             lhsSize = str.Size();
-        } else if constexpr (std::is_same_v<std::decay_t<T>, StringView>) {
-            lhsData = str.Data();
-            lhsSize = str.Size();
-        } else if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+        }
+        else if constexpr (
+            std::is_same_v<std::decay_t<T>, std::string>
+            || std::is_same_v<std::decay_t<T>, std::string_view>
+        ){
             lhsData = str.data();
             lhsSize = static_cast<Int>(str.size());
-        } else if constexpr (std::is_same_v<std::decay_t<T>, std::string_view>) {
-            lhsData = str.data();
-            lhsSize = static_cast<Int>(str.size());
-        } else if constexpr (
+        }
+        else if constexpr(
             std::is_same_v<std::decay_t<T>, char*> ||
             std::is_same_v<std::decay_t<T>, const char*>
         ) {
             lhsData = str;
             lhsSize = static_cast<Int>(std::strlen(str));
         }
+        else
+            static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for String::ToView");
 
         return StringView(lhsData, lhsSize);
     }
@@ -392,6 +398,35 @@ namespace DataTypes{
 
     constexpr char String::ToLower(const char c) noexcept{
         return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
+    }
+
+    template <IsStringLike T>
+    String::String(const T& str, const Memory::IAllocator* allocator){
+        if constexpr (
+            std::is_same_v<std::decay_t<T>, String>
+            || std::is_same_v<std::decay_t<T>, StringView>
+        ) {
+            this->_size = str.Size();
+            this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
+            std::memcpy(this->_data, str.Data(), this->_size);
+        } else if constexpr (
+            std::is_same_v<std::decay_t<T>, std::string>
+            || std::is_same_v<std::decay_t<T>, std::string_view>
+        ) {
+            this->_size = static_cast<Int>(str.size());
+            this->_data = static_cast<char*>(allocator->AllocateRaw( this->_size));
+            std::memcpy(this->_data, str.data(),  this->_size);
+        }
+        else if constexpr (std::is_same_v<std::decay_t<T>, const char*>){
+            this->_size = static_cast<Int>(std::strlen(str));
+            this->_data = static_cast<char*>(allocator->AllocateRaw( this->_size));
+            std::memcpy(this->_data, str,  this->_size);
+        }
+        else
+            static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for String constructor");
+
+        this->_capacity = this->_size;
+        this->_allocator = allocator;
     }
 
     template <typename...Args>

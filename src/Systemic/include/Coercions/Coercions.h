@@ -4,6 +4,7 @@
 #include "../DataTypes/Value.h"
 #include "../DataTypes/Guid.h"
 #include "../DataTypes/JsonBinary.h"
+#include "../DataTypes/DataTypes.StaticData.h"
 
 namespace DataTypes{
     enum class CoercionType : UnsignedTinyInt {
@@ -185,7 +186,7 @@ namespace DataTypes{
 
         // --- bool needs special-casing BEFORE the generic numeric/string arms ---
         else if constexpr (std::is_same_v<TFrom, bool> && std::is_same_v<TTo, String>)   // Bool -> String
-            return input ? String("true", allocator) : String("false", allocator);
+            return input ? String(TRUE_STRING, allocator) : String(FALSE_STRING, allocator);
 
         else if constexpr (IsString<TFrom> && std::is_same_v<TTo, bool>) {            // String -> Bool
             const auto view = input.ToView();

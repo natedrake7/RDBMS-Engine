@@ -52,11 +52,11 @@ namespace DataTypes {
             case DataType::TinyInt:
                 return true;
             case DataType::SmallInt:
-                return Converter<TinyInt>::TryStoi(value.AsSmallInt());
+                return Converter<TinyInt>::TryDownCast(value.AsSmallInt());
             case DataType::Int:
-                return Converter<TinyInt>::TryStoi(value.AsInt());
+                return Converter<TinyInt>::TryDownCast(value.AsInt());
             case DataType::BigInt:
-                return Converter<TinyInt>::TryStoi(value.AsBigInt());
+                return Converter<TinyInt>::TryDownCast(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
@@ -69,13 +69,13 @@ namespace DataTypes {
     bool Coercions::CanGetBool(const Value& value) {
         switch (value.GetType()) {
             case DataType::TinyInt:
-                return Converter<bool>::TryStoi(value.AsTinyInt());
+                return Converter<bool>::TryDownCast(value.AsTinyInt());
             case DataType::SmallInt:
-                return Converter<bool>::TryStoi(value.AsSmallInt());
+                return Converter<bool>::TryDownCast(value.AsSmallInt());
             case DataType::Int:
-                return Converter<bool>::TryStoi(value.AsInt());
+                return Converter<bool>::TryDownCast(value.AsInt());
             case DataType::BigInt:
-                return Converter<bool>::TryStoi(value.AsBigInt());
+                return Converter<bool>::TryDownCast(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String: {
@@ -96,9 +96,9 @@ namespace DataTypes {
             case DataType::SmallInt:
                 return true;
             case DataType::Int:
-                return Converter<SmallInt>::TryStoi(value.AsInt());
+                return Converter<SmallInt>::TryDownCast(value.AsInt());
             case DataType::BigInt:
-                return Converter<SmallInt>::TryStoi(value.AsBigInt());
+                return Converter<SmallInt>::TryDownCast(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
@@ -116,7 +116,7 @@ namespace DataTypes {
             case DataType::Int:
                 return true;
             case DataType::BigInt:
-                return Converter<Int>::TryStoi(value.AsBigInt());
+                return Converter<Int>::TryDownCast(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
@@ -185,48 +185,48 @@ namespace DataTypes {
 
     void Coercions::DownCastFromSmallInt(Value& value) {
         const auto smallInt = value.AsSmallInt();
-        if (!Converter<TinyInt>::TryStoi(smallInt))
+        if (!Converter<TinyInt>::TryDownCast(smallInt))
             return;
 
-        const auto tinyInt = Converter<TinyInt>::Stoi(smallInt);
+        const auto tinyInt = Converter<TinyInt>::DownCast(smallInt);
         value.Set(tinyInt);
     }
 
     void Coercions::DownCastFromInt(Value& value) {
         const auto integer = value.AsInt();
 
-        if (Converter<TinyInt>::TryStoi(integer)) {
-            const auto tinyInt = Converter<TinyInt>::Stoi(integer);
+        if (Converter<TinyInt>::TryDownCast(integer)) {
+            const auto tinyInt = Converter<TinyInt>::DownCast(integer);
             value.Set(tinyInt);
             return;
         }
 
-        if (!Converter<SmallInt>::TryStoi(integer))
+        if (!Converter<SmallInt>::TryDownCast(integer))
             return;
 
-        const auto smallInt = Converter<SmallInt>::Stoi(integer);
+        const auto smallInt = Converter<SmallInt>::DownCast(integer);
         value.Set(smallInt);
     }
 
     void Coercions::DownCastFromBigInt(Value& value) {
         const auto bigInt = value.AsBigInt();
 
-        if (Converter<TinyInt>::TryStoi(bigInt)) {
-            const auto tinyInt = Converter<TinyInt>::Stoi(bigInt);
+        if (Converter<TinyInt>::TryDownCast(bigInt)) {
+            const auto tinyInt = Converter<TinyInt>::DownCast(bigInt);
             value.Set(tinyInt);
             return;
         }
 
-        if (Converter<SmallInt>::TryStoi(bigInt)) {
-            const auto smallInt = Converter<SmallInt>::Stoi(bigInt);
+        if (Converter<SmallInt>::TryDownCast(bigInt)) {
+            const auto smallInt = Converter<SmallInt>::DownCast(bigInt);
             value.Set(smallInt);
             return;
         }
 
-        if (!Converter<Int>::TryStoi(bigInt))
+        if (!Converter<Int>::TryDownCast(bigInt))
             return;
 
-        const auto integer = Converter<Int>::Stoi(bigInt);
+        const auto integer = Converter<Int>::DownCast(bigInt);
         value.Set(integer);
     }
 
@@ -234,13 +234,13 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Converter<bool>::Stoi(value.AsTinyInt());
+            return Converter<bool>::DownCast(value.AsTinyInt());
         case DataType::SmallInt:
-            return Converter<bool>::Stoi(value.AsSmallInt());
+            return Converter<bool>::DownCast(value.AsSmallInt());
         case DataType::Int:
-            return Converter<bool>::Stoi(value.AsInt());
+            return Converter<bool>::DownCast(value.AsInt());
         case DataType::BigInt:
-            return Converter<bool>::Stoi(value.AsBigInt());
+            return Converter<bool>::DownCast(value.AsBigInt());
         case DataType::Decimal:
             return false;
         case DataType::String:
@@ -259,11 +259,11 @@ namespace DataTypes {
         case DataType::TinyInt:
             return *reinterpret_cast<const TinyInt*>(value.Data());
         case DataType::SmallInt:
-            return Converter<TinyInt>::Stoi(value.AsSmallInt());
+            return Converter<TinyInt>::DownCast(value.AsSmallInt());
         case DataType::Int:
-            return Converter<TinyInt>::Stoi(value.AsInt());
+            return Converter<TinyInt>::DownCast(value.AsInt());
         case DataType::BigInt:
-            return Converter<TinyInt>::Stoi(value.AsBigInt());
+            return Converter<TinyInt>::DownCast(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
@@ -284,9 +284,9 @@ namespace DataTypes {
         case DataType::SmallInt:
             return *reinterpret_cast<const SmallInt*>(value.Data());
         case DataType::Int:
-            return Converter<SmallInt>::Stoi(value.AsInt());
+            return Converter<SmallInt>::DownCast(value.AsInt());
         case DataType::BigInt:
-            return Converter<SmallInt>::Stoi(value.AsBigInt());
+            return Converter<SmallInt>::DownCast(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
@@ -309,7 +309,7 @@ namespace DataTypes {
         case DataType::Int:
             return *reinterpret_cast<const Int*>(value.Data());
         case DataType::BigInt:
-            return Converter<Int>::Stoi(value.AsBigInt());
+            return Converter<Int>::DownCast(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:

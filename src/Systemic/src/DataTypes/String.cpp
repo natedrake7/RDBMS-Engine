@@ -1,12 +1,9 @@
 ﻿#include "../../include/DataTypes/String.h"
 #include "../../include/Memory/IAllocator.h"
-#include <cstdarg>
 #include <cstring>
 #include <ostream>
 
 #include "Comparators.h"
-#include "../../../Server/include/ConnectionManager.h"
-
 
 namespace DataTypes{
     void String::CalculateCapacity(const Int size){
@@ -352,22 +349,6 @@ namespace DataTypes{
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
     }
 
-    String::String(const String& str, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_data = static_cast<char*>(allocator->AllocateRaw(str._size));
-        std::memcpy(this->_data, str._data, str._size);
-        this->_size = str._size;
-        this->_capacity = str._capacity;
-    }
-
-    String::String(const StringView& str, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_data = static_cast<char*>(allocator->AllocateRaw(str.Size()));
-        std::memcpy(this->_data, str.Data(), str.Size());
-        this->_size = str.Size();
-        this->_capacity = str.Size();
-    }
-
     String::String(const object_t* str, const Int size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
@@ -392,24 +373,6 @@ namespace DataTypes{
 
         this->_size = size;
         this->_capacity = size;
-    }
-
-    String::String(const char* str, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-
-        this->_size = static_cast<Int>(std::strlen(str));
-        this->_capacity = this->_size;
-
-        this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
-        std::memcpy(this->_data, str, this->_size);
-    }
-
-    String::String(const std::string& str, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_size = static_cast<Int>(str.size());
-        this->_capacity = this->_size;
-        this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
-        std::memcpy(this->_data, str.data(), this->_size);
     }
 
     String::String(char* str, const Int size, const Memory::IAllocator* allocator){

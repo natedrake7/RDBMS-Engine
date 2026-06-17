@@ -7,12 +7,16 @@
 #include "DateTime.h"
 #include "Guid.h"
 
-static constexpr DataTypes::StringView TrueStrings[] = {
+static constexpr auto TRUE_STRING = DataTypes::StringView("TRUE");
+static constexpr auto FALSE_STRING = DataTypes::StringView("FALSE");
+static constexpr auto NULL_STRING = DataTypes::StringView("NULL");
+
+static constexpr DataTypes::StringView TrueStrings[]{
     DataTypes::StringView("true"),
     DataTypes::StringView("1")
 };
 
-static constexpr DataTypes::StringView FalseStrings[] = {
+static constexpr DataTypes::StringView FalseStrings[]{
     DataTypes::StringView("false"),
     DataTypes::StringView("0")
 };
@@ -30,7 +34,7 @@ static constexpr ConstexprDictionary COLUMN_SIZES_BY_TYPENAME{
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
-static block_size_t COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT] = {
+static block_size_t COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT]{
     sizeof(DataTypes::String),
     sizeof(bool),
     sizeof(TinyInt),
@@ -56,7 +60,7 @@ static constexpr ConstexprDictionary COLUMN_TYPENAMES_TO_ENUMS{
     Pair(DataTypes::StringView("guid"), DataType::Guid)
 };
 
-static constexpr DataTypes::StringView SQL_TYPES_NAMES[] = {
+static constexpr DataTypes::StringView SQL_TYPES_NAMES[]{
     DataTypes::StringView("String"),   // 1
     DataTypes::StringView("Bool"),     // 2
     DataTypes::StringView("TinyInt"),  // 3
@@ -70,7 +74,7 @@ static constexpr DataTypes::StringView SQL_TYPES_NAMES[] = {
     DataTypes::StringView("Null"),     // 11
 };
 
-static constexpr DataType JSON_TYPES_NAMES[] = {
+static constexpr DataType JSON_TYPES_NAMES[]{
     DataType::Null, //NULL
     DataType::Bool,
     DataType::Decimal,

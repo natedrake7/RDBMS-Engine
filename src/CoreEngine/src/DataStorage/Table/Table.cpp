@@ -334,7 +334,7 @@ namespace CoreEngine::StorageTypes {
 
         Database::LogCheckPoint(checkPoint);
 
-        status.message = DataTypes::String("Rows affected: 1", executionContext.GetAllocator());
+        status.message = DataTypes::String(static_cast<const char*>("Rows affected: 1"), executionContext.GetAllocator());
         return status;
     }
 

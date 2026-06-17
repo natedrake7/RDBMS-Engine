@@ -16,7 +16,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         TinyInt convertedValue;
 
-        if (!Converter<TinyInt>::TryStoi(val, convertedValue)) {
+        if (!Converter<TinyInt>::TryDownCast(val, convertedValue)) {
             std::ostringstream ss;
             ss << "Value " << val << " out of range for TinyInt";
 
@@ -33,7 +33,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         SmallInt convertedValue;
 
-        if (!Converter<SmallInt>::TryStoi(val, convertedValue)) {
+        if (!Converter<SmallInt>::TryDownCast(val, convertedValue)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for SmallInt";
@@ -51,7 +51,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         Int convertedValue;
 
-        if (!Converter<Int>::TryStoi(val, convertedValue)) {
+        if (!Converter<Int>::TryDownCast(val, convertedValue)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for Int";
@@ -68,7 +68,7 @@ namespace CoreEngine::StorageTypes{
     Int InsertPayload::SetBigInt(const Value &value, Errors::RuntimeStatus& status){
         const auto val = value.AsBigInt();
 
-        if (!Converter<BigInt>::TryStoi(val)) {
+        if (!Converter<BigInt>::TryDownCast(val)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for BigInt";
@@ -142,7 +142,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         bool convertedValue;
 
-        if (!Converter<bool>::TryStoi(val, convertedValue)) {
+        if (!Converter<bool>::TryDownCast(val, convertedValue)) {
             std::ostringstream ss;
             ss << "Value " << val << " out of range for Bool";
 

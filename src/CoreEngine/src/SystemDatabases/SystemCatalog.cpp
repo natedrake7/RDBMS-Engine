@@ -243,18 +243,12 @@ namespace CoreEngine {
                 columnPos++;
             }
 
-            // DataTypes::String concatenatedColumns(baseContext.GetAllocator());
-            DataTypes::String _columns("PK", baseContext.GetAllocator());
+            DataTypes::String _columns(static_cast<const char*>("PK"), baseContext.GetAllocator());
 
             for (const auto& j : table.primaryKey) {
                 const auto key = columnNameToIndex.Get(j);
-
                 char buffer[3];
                 snprintf(buffer, sizeof(buffer), "%d", key);
-
-                // concatenatedColumns = DataTypes::String::Join(baseContext.GetAllocator(), ',', concatenatedColumns, buffer);
-                // concatenatedColumns +=  j > 0  ? "," + std::to_string(key) : std::to_string(key);
-
                 _columns += "_" + j;
             }
 
