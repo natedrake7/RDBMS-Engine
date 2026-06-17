@@ -17,7 +17,7 @@ namespace CoreEngine::RowKernels{
 
         auto result = DataTypes::Coercions::To<TFrom, TTo>(from, context.allocator);
 
-        if constexpr (DataTypes::PrimitiveColumn<TTo>)
+        if constexpr (DataTypes::Primitive<TTo>)
             *static_cast<TTo*>(outVal) = result;
         else
             new (outVal) TTo(std::move(result));

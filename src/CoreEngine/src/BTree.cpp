@@ -1061,7 +1061,7 @@ namespace Indexing{
                 auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &row;
 
-                if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
+                if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(row);
             }
 
@@ -1122,7 +1122,6 @@ namespace Indexing{
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
-        bool exprResult = false, exprNull = false;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1134,8 +1133,7 @@ namespace Indexing{
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
-                Expressions::EvaluateExpression(expression, evaluationContext, &exprResult, &exprNull);
-                if (exprResult)
+                if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(rid);
             }
 
@@ -1195,12 +1193,13 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
+            evaluationContext.page = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
 
-                if (Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
+                if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(rid);
             }
 
@@ -1361,11 +1360,12 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
+            evaluationContext.page = &currentNode;
             for (Int i = 0;i < currentNode.PageSize();i++){
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
-                evaluationContext.row = &rid;
 
-                if(!Expressions::EvaluateExpression(expression, evaluationContext).AsBool())
+                evaluationContext.row = &rid;
+                if (!Expressions::RowModeFilter(expression, evaluationContext))
                     continue;
 
                 result->Push(rid);
@@ -1690,6 +1690,7 @@ namespace Indexing{
         while (true){
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
+            evaluationContext.page = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, *maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
@@ -1697,9 +1698,7 @@ namespace Indexing{
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
-                const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
-
-                if(!value.AsBool())
+                if(!Expressions::RowModeFilter(expression, evaluationContext))
                     continue;
 
                 auto result = this->table->UpdateRowNoLock(

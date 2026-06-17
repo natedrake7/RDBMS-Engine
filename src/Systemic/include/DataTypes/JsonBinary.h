@@ -26,8 +26,8 @@ namespace DataTypes{
     };
 
     class JsonBinary final{
-        const ::Memory::IAllocator* _allocator;
         const object_t* _data;
+        const ::Memory::IAllocator* _allocator;
         Int _size;
 
         [[nodiscard]] bool KeyEquals(
@@ -58,7 +58,7 @@ namespace DataTypes{
         [[nodiscard]] const object_t* Data() const;
         [[nodiscard]] Int Size() const;
 
-        void SetData(object_t* data, Int size);
+        void SetData(const object_t* data, Int size);
 
         Serialization::JsonValue operator[](const StringView& key) const;
         [[nodiscard]] Serialization::JsonValue Navigate(const DataStructures::PolymorphicArray<JsonPathStep>& pathSegments) const;

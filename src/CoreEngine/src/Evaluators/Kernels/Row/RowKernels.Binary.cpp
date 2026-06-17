@@ -82,7 +82,7 @@ namespace CoreEngine::RowKernels{
         table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_GUID_TYPE] = &BinaryComparisonKernel<DataTypes::Guid, std::less_equal<DataTypes::Guid>>;
     }
 
-    template<DataTypes::PrimitiveColumn T>
+    template<DataTypes::Primitive T>
     constexpr void RegisterIntegral(BinaryKernelTable& table, const DataType dataType){
         const auto castType = static_cast<Int>(dataType);
 

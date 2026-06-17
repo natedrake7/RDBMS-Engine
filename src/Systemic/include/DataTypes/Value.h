@@ -1,7 +1,6 @@
 #pragma once
 #include <string>
 #include <type_traits>
-#include <vector>
 
 #include "DataTypes.h"
 #include "StringView.h"
@@ -16,25 +15,13 @@ namespace Memory{
 }
 
 class Value{
-    object_t* data;
+    const object_t* data;
 
     const Memory::IAllocator* _allocator;
 
     block_size_t size;
     column_index_t columnIndex;
     DataType type;
-
-    [[nodiscard]] bool TryParseAsBool()const;
-    [[nodiscard]] bool TryParseAsBoolFromString()const;
-    [[nodiscard]] bool TryParseAsBoolFromInt()const;
-    [[nodiscard]] bool TryParseDate();
-
-    static Value PerformBigIntAddition(const Value& lhs, const Value& rhs);
-    static Value PerformStringAddition(const Value& lhs, const Value& rhs);
-    static Value PerformDecimalAddition(const Value& lhs, const Value& rhs);
-
-    static Value PerformBigIntSubtraction(const Value& lhs, const Value& rhs);
-    static Value PerformDecimalSubtraction(const Value& lhs, const Value& rhs);
 
     [[nodiscard]] long double InterpolateString() const;
 
@@ -50,7 +37,8 @@ class Value{
 
     public:
         Value(column_index_t index = 0);
-        Value(const Value& copyVal);
+        Value(const Value& other);
+        Value& operator=(const Value& other);
         Value(Value&& other)noexcept;
         Value& operator=(Value&& other) noexcept;
 
@@ -62,21 +50,31 @@ class Value{
             const Memory::IAllocator* allocator,
             column_index_t index = 0
         );
-        ~Value();
 
-        Value(bool data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(TinyInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(SmallInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(Int data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(BigInt data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(const DataTypes::String& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::StringView& data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(const DataTypes::DateTime& data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(const DataTypes::Decimal& data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(const DataTypes::Guid& data, const Memory::IAllocator* allocator, column_index_t index = 0);
-        Value(const DataTypes::JsonBinary& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const Serialization::JsonValue& data, const Memory::IAllocator* allocator, column_index_t index = 0);
+
+        template<DataTypes::Primitive T>
+        Value(
+            T other,
+            const Memory::IAllocator* allocator,
+            column_index_t index = 0
+        );
+
+        template<DataTypes::NonPrimitiveType T>
+        Value(
+            T& other,
+            const Memory::IAllocator* allocator,
+            column_index_t index = 0
+        );
+
+        template<DataTypes::NonPrimitiveType T>
+        Value(
+            const T& other,
+            const Memory::IAllocator* allocator,
+            column_index_t index = 0
+        );
 
         static Value FromMove(
             object_t*  data,
@@ -97,26 +95,26 @@ class Value{
         static Value Null(column_index_t columnIndex = 0);
         static Value Null(const Memory::IAllocator* allocator, column_index_t columnIndex = 0);
 
-        [[nodiscard]] bool IsNull() const;
-        [[nodiscard]] column_index_t GetColumnIndex() const;
-        [[nodiscard]] DataType GetType() const;
+        void SetColumnIndex(column_index_t otherIndex);
+        void SetType(DataType otherType);
 
         void SetNull();
-        void SetData(bool otherData);
-        void SetData(TinyInt otherData);
-        void SetData(SmallInt otherData);
-        void SetData(Int otherData);
-        void SetData(BigInt otherData);
-        void SetData(const std::string& otherData);
-        void SetData(const DataTypes::Decimal& otherData);
-        void SetData(const DataTypes::DateTime& otherData);
-        void SetData(const DataTypes::Guid& otherData);
 
-        void SetData(page_id_t pageId);
+        template<DataTypes::Primitive T>
+        void Set(T other);
+
+        template<DataTypes::NonPrimitiveType T>
+        void Set(T& other);
+
+        template<DataTypes::NonPrimitiveType T>
+        void Set(const T& other);
 
         [[nodiscard]] block_size_t Size() const;
         [[nodiscard]] const object_t* Data() const;
-        [[nodiscard]] object_t* DataUnsafe() const;
+
+        [[nodiscard]] bool IsNull() const;
+        [[nodiscard]] column_index_t GetColumnIndex() const;
+        [[nodiscard]] DataType GetType() const;
 
         [[nodiscard]] bool AsBool()const;
         [[nodiscard]] TinyInt AsTinyInt()const;
@@ -133,21 +131,16 @@ class Value{
         [[nodiscard]] DataTypes::JsonBinary AsJson()const;
         [[nodiscard]] page_id_t AsLargeObjectPointer() const;
 
-        void SetColumnIndex(column_index_t otherIndex);
-        void SetType(DataType otherType);
-        void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset);
-
-        static inline DataType PromoteType(DataType lhs, DataType rhs);
         friend std::ostream& operator<<(std::ostream& os, const Value& field);
 
+        [[nodiscard]] const Memory::IAllocator* GetAllocator() const;
 
-        Value& operator=(const Value& rhs);
-        friend Value operator+(const Value& lhs, const Value& rhs);
-        Value& operator+=(const Value& rhs);
-        friend Value operator-(const Value& lhs, const Value& rhs);
-        friend Value operator/(const Value& lhs, const Value& rhs);
-        friend Value operator%(const Value& lhs, const Value& rhs);
-        friend Value operator*(const Value& lhs, const Value& rhs);
+        [[nodiscard]] bool ParseAsBoolFromString()const;
+
+        [[nodiscard]] long double Interpolate()const;
+
+        template<typename T>
+        [[nodiscard]] T Get() const;
 
         friend bool operator<(const Value& lhs, const Value& rhs);
         friend bool operator==(const Value& lhs, const Value& rhs);
@@ -155,18 +148,119 @@ class Value{
         friend bool operator<=(const Value& lhs, const Value& rhs);
         friend bool operator>=(const Value& lhs, const Value& rhs);
         friend bool operator!=(const Value& lhs, const Value& rhs);
-
-        [[nodiscard]] const Memory::IAllocator* GetAllocator() const;
-
-        [[nodiscard]] bool ParseAsBoolFromString()const;
-        [[nodiscard]] static Value EqualsIgnoreOrdinalCase(const Value& lhs, const Value& rhs);
-
-        [[nodiscard]] BigInt Hash()const;
-        [[nodiscard]] long double Interpolate()const;
-
-        template<typename T>
-        [[nodiscard]] T Get() const;
 };
+
+template <DataTypes::Primitive T>
+Value::Value(const T other, const Memory::IAllocator* allocator, const column_index_t index){
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataTypes::DataTypeOf<T>();
+    auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(sizeof(T)));
+    std::memcpy(buffer, &other, sizeof(T));
+    this->data = buffer;
+    this->size = sizeof(T);
+}
+
+template <DataTypes::NonPrimitiveType T>
+Value::Value(T& other, const Memory::IAllocator* allocator, const column_index_t index){
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataTypes::DataTypeOf<T>();
+
+    if constexpr (DataTypes::IsString<T>){
+        this->data = reinterpret_cast<const object_t*>(other.Data());
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsJson<T>){
+        this->data = other.Data();
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsDecimal<T>){
+        this->data = other.GetRawData();
+        this->size = other.GetRawDataSize();
+    }
+    else
+        static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
+}
+
+template <DataTypes::NonPrimitiveType T>
+Value::Value(const T& other, const Memory::IAllocator* allocator, column_index_t index){
+    this->_allocator = allocator;
+    this->columnIndex = index;
+    this->type = DataTypes::DataTypeOf<T>();
+
+    if constexpr (DataTypes::IsString<T>){
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.Size()));
+        std::memcpy(buffer, other.Data(), other.Size());
+        this->data = buffer;
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsJson<T>){
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.Size()));
+        std::memcpy(buffer, other.Data(), other.Size());
+        this->data = buffer;
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsDecimal<T>){
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.GetRawDataSize()));
+        std::memcpy(buffer, other.GetRawData(), other.GetRawDataSize());
+        this->data = buffer;
+        this->size = other.GetRawDataSize();
+    }
+    else
+        static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
+}
+
+template <DataTypes::Primitive T>
+void Value::Set(const T other){
+    auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(sizeof(T)));
+    std::memcpy(buffer, &other, sizeof(T));
+    this->data = buffer;
+    this->size = sizeof(T);
+    this->type = DataTypes::DataTypeOf<T>();
+}
+
+template <DataTypes::NonPrimitiveType T>
+void Value::Set(T& other){
+    if constexpr (DataTypes::IsString<T>){
+        this->data = reinterpret_cast<const object_t*>(other.Data());
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsJson<T>){
+        this->data = other.Data();
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsDecimal<T>){
+        this->data = other.GetRawData();
+        this->size = other.GetRawDataSize();
+    }
+    else
+        static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
+}
+
+template <DataTypes::NonPrimitiveType T>
+void Value::Set(const T& other){
+    if constexpr (DataTypes::IsString<T>){
+        auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(other.Size()));
+        std::memcpy(buffer, other.Data(), other.Size());
+        this->data = buffer;
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsJson<T>){
+        auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(other.Size()));
+        std::memcpy(buffer, other.Data(), other.Size());
+        this->data = buffer;
+        this->size = other.Size();
+    }
+    else if constexpr (DataTypes::IsDecimal<T>){
+        auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(other.GetRawDataSize()));
+        std::memcpy(buffer, other.GetRawData(), other.GetRawDataSize());
+        this->data = buffer;
+        this->size = other.GetRawDataSize();
+    }
+    else
+        static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
+}
 
 // Typed unbox: maps a compile-time T to the matching runtime accessor. The
 // discarded `if constexpr` branches are never instantiated, so forward-declared

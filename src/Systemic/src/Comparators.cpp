@@ -82,7 +82,7 @@ namespace Comparators{
     }
 
     Comparator Compare(const Value& lhs, const Value& rhs){
-        switch (Value::PromoteType(lhs.GetType(), rhs.GetType())) {
+        switch (PromoteType(lhs.GetType(), rhs.GetType())) {
         case DataType::String:
             return Compare(lhs.AsStringView(), rhs.AsStringView());
         case DataType::Bool:

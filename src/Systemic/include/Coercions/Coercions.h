@@ -75,10 +75,6 @@ namespace DataTypes{
         [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);
         [[nodiscard]] static JsonBinary ToJsonBinary(const Value& value, bool explicitCast = false);
 
-
-        template<typename T>
-        constexpr static DataType DataTypeOf();
-
         template<typename TFrom, typename TTo>
         [[nodiscard]] static TTo To(TFrom& input, const Memory::IAllocator* allocator);
 
@@ -165,34 +161,6 @@ namespace DataTypes{
     }
 
     inline constexpr CoercionMatrix TYPE_COERCION_MATRIX = Coercions::BuildCoercionMatrix();
-
-     template <typename T>
-     constexpr DataType Coercions::DataTypeOf(){
-         if constexpr (std::is_same_v<T, bool>)
-             return DataType::Bool;
-         else if constexpr (std::is_same_v<T, TinyInt>)
-             return DataType::TinyInt;
-         else if constexpr (std::is_same_v<T, SmallInt>)
-             return DataType::SmallInt;
-         else if constexpr (std::is_same_v<T, Int>)
-             return DataType::Int;
-         else if constexpr (std::is_same_v<T, BigInt>)
-             return DataType::BigInt;
-         else if constexpr (std::is_same_v<T, Decimal>)
-             return DataType::Decimal;
-         else if constexpr (std::is_same_v<T, String>)
-             return DataType::String;
-         else if constexpr (std::is_same_v<T, DateTime>)
-             return DataType::DateTime;
-         else if constexpr (std::is_same_v<T, Guid>)
-             return DataType::Guid;
-         else if constexpr (std::is_same_v<T, JsonBinary>)
-             return DataType::Json;
-         else
-             static_assert(false, "DataTypeOf: unmapped cast type");
-
-         return DataType::Null;
-     }
 
     constexpr CoercionType Coercions::GetCoercionType(const DataType fromType, const DataType toType){
         return TYPE_COERCION_MATRIX.At(fromType, toType);

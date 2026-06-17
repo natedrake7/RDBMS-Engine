@@ -300,8 +300,7 @@ namespace CoreEngine::StorageTypes {
         for(const auto& row : results){
 
             // evaluationContext.row = &row;
-            const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
-            if(value.AsBool())
+            if(Expressions::RowModeFilter(expression, evaluationContext))
             {
                 // const auto& key = Database::CreateKey(this->header.clusteredIndex.columns, &row);
                 // tree->Remove(key);

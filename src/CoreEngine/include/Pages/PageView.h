@@ -154,7 +154,7 @@ namespace Pages{
             Int columnIndex
         ) const;
 
-        template<DataTypes::PrimitiveColumn T>
+        template<DataTypes::Primitive T>
         [[nodiscard]] T GetColumnAt(
             Int index,
             Int columnIndex,

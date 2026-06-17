@@ -399,8 +399,7 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
+    ){
         const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
@@ -436,81 +435,77 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
+    ){
         const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
-
         return Headers::IndexHeader{
-        .tableId = data[static_cast<column_index_t>(SysIndexes::TableId)].AsInt(),
-        .id = data[static_cast<column_index_t>(SysIndexes::IndexId)].AsInt(),
-        .name = data[static_cast<column_index_t>(SysIndexes::Name)].AsString(),
-        .isClustered = data[static_cast<column_index_t>(SysIndexes::IsClustered)].AsBool(),
-        .isDisabled = data[static_cast<column_index_t>(SysIndexes::IsDisabled)].AsBool(),
-        .additionalInfo = Headers::AuditInformation(
-            data[static_cast<column_index_t>(SysIndexes::CreatedAt)].AsDateTime(),
-            data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)].AsDateTime(),
-            data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
-            data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
-            data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
-            data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
-                ? DataTypes::DateTime()
-                : data[static_cast<column_index_t>(SysIndexes::DeletedAt)].AsDateTime()
-        ),
-    };
+            .tableId = data[static_cast<column_index_t>(SysIndexes::TableId)].AsInt(),
+            .id = data[static_cast<column_index_t>(SysIndexes::IndexId)].AsInt(),
+            .name = data[static_cast<column_index_t>(SysIndexes::Name)].AsString(),
+            .isClustered = data[static_cast<column_index_t>(SysIndexes::IsClustered)].AsBool(),
+            .isDisabled = data[static_cast<column_index_t>(SysIndexes::IsDisabled)].AsBool(),
+            .additionalInfo = Headers::AuditInformation(
+                data[static_cast<column_index_t>(SysIndexes::CreatedAt)].AsDateTime(),
+                data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)].AsDateTime(),
+                data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
+                data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
+                data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
+                data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
+                    ? DataTypes::DateTime()
+                    : data[static_cast<column_index_t>(SysIndexes::DeletedAt)].AsDateTime()
+            ),
+        };
     }
 
     Headers::IndexColumnsHeader SystemCatalog::ToIndexColumnsHeader(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
-    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
-    const auto& data = materializedRow.Data();
+    ){
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
+        const auto& data = materializedRow.Data();
 
-    return Headers::IndexColumnsHeader{
-        .indexId = data[static_cast<column_index_t>(SysIndexColumns::IndexId)].AsInt(),
-        .columnId = data[static_cast<column_index_t>(SysIndexColumns::ColumnId)].AsInt(),
-        .ordinalPosition = data[static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)].AsSmallInt(),
-        .isIncluded = data[static_cast<column_index_t>(SysIndexColumns::IsIncluded)].AsBool(),
-        .additionalInfo = Headers::AuditInformation(
-        data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
-        data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
-        DataTypes::String::Null(),
-        data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
-                ? DataTypes::DateTime()
-                : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].AsDateTime()
-        )
-    };
+        return Headers::IndexColumnsHeader{
+            .indexId = data[static_cast<column_index_t>(SysIndexColumns::IndexId)].AsInt(),
+            .columnId = data[static_cast<column_index_t>(SysIndexColumns::ColumnId)].AsInt(),
+            .ordinalPosition = data[static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)].AsSmallInt(),
+            .isIncluded = data[static_cast<column_index_t>(SysIndexColumns::IsIncluded)].AsBool(),
+            .additionalInfo = Headers::AuditInformation(
+            data[static_cast<column_index_t>(SysIndexColumns::Version)].AsInt(),
+            data[static_cast<column_index_t>(SysIndexColumns::IsDeleted)].AsBool(),
+            DataTypes::String::Null(),
+            data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].IsNull()
+                    ? DataTypes::DateTime()
+                    : data[static_cast<column_index_t>(SysIndexColumns::DeletedAt)].AsDateTime()
+            )
+        };
     }
 
     Headers::IdentityColumnsHeader SystemCatalog::ToIdentityColumnsHeader(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
-    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
-    const auto& data = materializedRow.Data();
+    ){
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
+        const auto& data = materializedRow.Data();
 
-    return Headers::IdentityColumnsHeader(
-        data[static_cast<column_index_t>(SysIdentityColumns::TableId)].AsInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::ColumnId)].AsInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::SeedValue)].AsInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::IncrementValue)].AsInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::LastValue)].AsBigInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::IsCached)].AsBool(),
-        data[static_cast<column_index_t>(SysIdentityColumns::CacheBlock)].AsInt(),
-        Headers::AuditInformation(
-        data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
-        data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
-        DataTypes::String::Null(),
-        data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
-                ? DataTypes::DateTime()
-                : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].AsDateTime()
-        )
-    );
+        return Headers::IdentityColumnsHeader(
+            data[static_cast<column_index_t>(SysIdentityColumns::TableId)].AsInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::ColumnId)].AsInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::SeedValue)].AsInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::IncrementValue)].AsInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::LastValue)].AsBigInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::IsCached)].AsBool(),
+            data[static_cast<column_index_t>(SysIdentityColumns::CacheBlock)].AsInt(),
+            Headers::AuditInformation(
+            data[static_cast<column_index_t>(SysIdentityColumns::Version)].AsInt(),
+            data[static_cast<column_index_t>(SysIdentityColumns::IsDeleted)].AsBool(),
+            DataTypes::String::Null(),
+            data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].IsNull()
+                    ? DataTypes::DateTime()
+                    : data[static_cast<column_index_t>(SysIdentityColumns::DeletedAt)].AsDateTime()
+            )
+        );
     }
 
     Headers::ConstraintsHeader SystemCatalog::ToConstraintsHeader(
@@ -519,7 +514,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table,
         DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader>& constraintColumns,
         Headers::IndexHeader& indexHeader
-    ) {
+    ){
     const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
@@ -549,8 +544,7 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
+    ){
     const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
@@ -671,51 +665,50 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
-    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
-    const auto& data = materializedRow.Data();
+    ){
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
+        const auto& data = materializedRow.Data();
 
-    return {
-    data[static_cast<column_index_t>(SysIndexStats::TableId)].AsInt(),
-    data[static_cast<column_index_t>(SysIndexStats::IndexId)].AsInt(),
-    data[static_cast<column_index_t>(SysIndexStats::LeafPages)].AsInt(),
-    data[static_cast<column_index_t>(SysIndexStats::Depth)].AsTinyInt(),
-    data[static_cast<column_index_t>(SysIndexStats::AverageFragmentation)].AsDecimal(),
-    data[static_cast<column_index_t>(SysIndexStats::LastUpdated)].AsDateTime(),
-    };
+        return {
+        data[static_cast<column_index_t>(SysIndexStats::TableId)].AsInt(),
+        data[static_cast<column_index_t>(SysIndexStats::IndexId)].AsInt(),
+        data[static_cast<column_index_t>(SysIndexStats::LeafPages)].AsInt(),
+        data[static_cast<column_index_t>(SysIndexStats::Depth)].AsTinyInt(),
+        data[static_cast<column_index_t>(SysIndexStats::AverageFragmentation)].AsDecimal(),
+        data[static_cast<column_index_t>(SysIndexStats::LastUpdated)].AsDateTime(),
+        };
     }
 
     SystemCatalog & SystemCatalog::Get() {
-    static SystemCatalog instance;
-    return instance;
+        static SystemCatalog instance;
+        return instance;
     }
 
     Database* SystemCatalog::GetDatabase() const{ return this->masterDb; }
 
     bool SystemCatalog::Initialize(
-        const ExecutionContext& baseContext,
-        const DataTypes::StringView& configPath
+            const ExecutionContext& baseContext,
+            const DataTypes::StringView& configPath
     ) {
-    const auto [sysDbName, sysDbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
+        const auto [sysDbName, sysDbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
 
-    if (SystemCatalog::CatalogExists(sysDbName.ToView())){
-        this->UseCatalogDatabase(baseContext.GetAllocator(), sysDbName);
-        return false;
-    }
+        if (SystemCatalog::CatalogExists(sysDbName.ToView())){
+            this->UseCatalogDatabase(baseContext.GetAllocator(), sysDbName);
+            return false;
+        }
 
-    this->CreateCatalogDatabase(baseContext.GetAllocator(), sysDbName);
-    this->StoreSystemTablesToCatalog(baseContext, sysDbName.ToView(), sysDbPath.ToView());
+        this->CreateCatalogDatabase(baseContext.GetAllocator(), sysDbName);
+        this->StoreSystemTablesToCatalog(baseContext, sysDbName.ToView(), sysDbPath.ToView());
 
-    return true;
+        return true;
     }
 
     void SystemCatalog::Shutdown(){
-    const Memory::Allocator allocator;
-    this->masterDb->UpdateMasterDatabase(&allocator);
+        const Memory::Allocator allocator;
+        this->masterDb->UpdateMasterDatabase(&allocator);
 
-    delete this->masterDb;
-    this->masterDb = nullptr;
+        delete this->masterDb;
+        this->masterDb = nullptr;
     }
 
     DataStructures::PolymorphicArray<Headers::DatabaseHeader> SystemCatalog::RetrieveCatalog() const {
@@ -1444,10 +1437,10 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
 
-        auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+        auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name), DataType::String);
         auto constantExpr = Expressions::ConstantExpression(Value(dbName, allocator, static_cast<column_index_t>(SysDatabases::Name)));
-
-        const Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+        Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
 
         sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
@@ -1455,14 +1448,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
 }
 
     Headers::DatabaseHeader SystemCatalog::SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const{
-        auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name));
+        auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name), DataType::String);
         auto constantExpr = Expressions::ConstantExpression(Value(name, allocator, static_cast<column_index_t>(SysDatabases::Name)));
 
-        const Expressions::BinaryExpression binaryExpr(
+        Expressions::BinaryExpression binaryExpr(
                 &columnExpr,
             &constantExpr,
             Expressions::BinaryOperator::EqualIgnoreOrdinalCase
         );
+        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
 
         auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysDatabases);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
@@ -1596,10 +1590,10 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     }
 
     Headers::TableHeader SystemCatalog::SelectTable(
-    const ::Memory::IAllocator* allocator,
-    const Int databaseId,
-    const DataTypes::StringView& tableName,
-    const DataTypes::StringView& schema
+        const ::Memory::IAllocator* allocator,
+        const Int databaseId,
+        const DataTypes::StringView& tableName,
+        const DataTypes::StringView& schema
     ) const{
 
     Int schemaId = -1;
@@ -1609,17 +1603,19 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
     auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
-    auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId));
+    auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId), DataType::Int);
     auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, allocator, static_cast<column_index_t>(SysTables::SchemaId)));
 
     auto leftBinaryExpr = Expressions::BinaryExpression(&leftColumnExpr, &leftConstantExpr, Expressions::BinaryOperator::Equal);
 
-    auto rightColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name));
+    auto rightColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name), DataType::String);
     auto rightConstantExpr = Expressions::ConstantExpression(Value(tableName, allocator, static_cast<column_index_t>(SysTables::Name)));
 
     auto rightBinaryExpr = Expressions::BinaryExpression(&rightColumnExpr, &rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    const auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
+    auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
+
+    Expressions::BindExpressionKernel(&logicalExpr, Constants::ExecutionMode::Row);
 
     DataTypes::Indexing::Key key(allocator);
     key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));

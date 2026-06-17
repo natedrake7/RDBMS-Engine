@@ -232,7 +232,7 @@ namespace DataTypes{
         return this->_size;
     }
 
-    void JsonBinary::SetData(object_t* data, const Int size){
+    void JsonBinary::SetData(const object_t* data, const Int size){
         this->_data = data;
         this->_size = size;
     }

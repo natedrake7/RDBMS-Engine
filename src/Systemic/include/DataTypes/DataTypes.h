@@ -81,6 +81,10 @@ enum class DataType: UnsignedTinyInt {
     RowIdentifier = 11
 };
 
+constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
+    return lhs > rhs ? lhs : rhs;
+}
+
 static_assert(static_cast<UnsignedTinyInt>(DataType::RowIdentifier) == DATATYPE_COUNT - 1,
               "DataType must be 0-based and contiguous so it can index tables of size DATATYPE_COUNT");
 
@@ -96,6 +100,8 @@ enum class StringComparisonType: UnsignedTinyInt{
 };
 
 namespace DataTypes{
+    class Guid;
+    class DateTime;
     class String;
     class Decimal;
     class JsonBinary;
@@ -103,14 +109,16 @@ namespace DataTypes{
     template<typename>
     inline constexpr auto AlwaysFalse = false;
 
-    template<typename T>
-    concept PrimitiveColumn = std::is_trivially_copyable_v<T>
-                       && !std::is_pointer_v<T>;
-
     template <typename T>
     concept NonPrimitiveType = std::is_same_v<T, String>
         || std::is_same_v<T, JsonBinary>
         || std::is_same_v<T, Decimal>;
+
+    template<typename T>
+    concept Primitive = std::is_trivially_copyable_v<T>
+                       && !std::is_pointer_v<T>
+                        && !NonPrimitiveType<T>;
+
 
     template <typename T>
     concept IsString = std::is_same_v<T, String>;
@@ -120,4 +128,32 @@ namespace DataTypes{
 
     template <typename T>
     concept IsDecimal = std::is_same_v<T, Decimal>;
+
+    template <typename T>
+    constexpr static DataType DataTypeOf(){
+        if constexpr (std::is_same_v<T, bool>)
+            return DataType::Bool;
+        else if constexpr (std::is_same_v<T, TinyInt>)
+            return DataType::TinyInt;
+        else if constexpr (std::is_same_v<T, SmallInt>)
+            return DataType::SmallInt;
+        else if constexpr (std::is_same_v<T, Int>)
+            return DataType::Int;
+        else if constexpr (std::is_same_v<T, BigInt>)
+            return DataType::BigInt;
+        else if constexpr (std::is_same_v<T, Decimal>)
+            return DataType::Decimal;
+        else if constexpr (std::is_same_v<T, String>)
+            return DataType::String;
+        else if constexpr (std::is_same_v<T, DateTime>)
+            return DataType::DateTime;
+        else if constexpr (std::is_same_v<T, Guid>)
+            return DataType::Guid;
+        else if constexpr (std::is_same_v<T, JsonBinary>)
+            return DataType::Json;
+        else
+            static_assert(DataTypes::AlwaysFalse<T>, "DataTypeOf: unmapped cast type");
+
+        return DataType::Null;
+    }
 }

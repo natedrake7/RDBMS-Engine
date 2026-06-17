@@ -189,7 +189,7 @@ namespace DataTypes {
             return;
 
         const auto tinyInt = Converter<TinyInt>::Stoi(smallInt);
-        value.SetData(tinyInt);
+        value.Set(tinyInt);
     }
 
     void Coercions::DownCastFromInt(Value& value) {
@@ -197,7 +197,7 @@ namespace DataTypes {
 
         if (Converter<TinyInt>::TryStoi(integer)) {
             const auto tinyInt = Converter<TinyInt>::Stoi(integer);
-            value.SetData(tinyInt);
+            value.Set(tinyInt);
             return;
         }
 
@@ -205,7 +205,7 @@ namespace DataTypes {
             return;
 
         const auto smallInt = Converter<SmallInt>::Stoi(integer);
-        value.SetData(smallInt);
+        value.Set(smallInt);
     }
 
     void Coercions::DownCastFromBigInt(Value& value) {
@@ -213,13 +213,13 @@ namespace DataTypes {
 
         if (Converter<TinyInt>::TryStoi(bigInt)) {
             const auto tinyInt = Converter<TinyInt>::Stoi(bigInt);
-            value.SetData(tinyInt);
+            value.Set(tinyInt);
             return;
         }
 
         if (Converter<SmallInt>::TryStoi(bigInt)) {
             const auto smallInt = Converter<SmallInt>::Stoi(bigInt);
-            value.SetData(smallInt);
+            value.Set(smallInt);
             return;
         }
 
@@ -227,7 +227,7 @@ namespace DataTypes {
             return;
 
         const auto integer = Converter<Int>::Stoi(bigInt);
-        value.SetData(integer);
+        value.Set(integer);
     }
 
     bool Coercions::ToBool(const Value& value, const bool explicitCast) {

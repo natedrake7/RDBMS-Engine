@@ -148,11 +148,11 @@ void QueryResult::Serialize(std::vector<char>& buffer) const {
 void QueryResult::Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, const Int dataSize) {
     this->data.Reserve(dataSize);
 
-    for (int i = 0; i < dataSize; i++) {
-        auto value = Value::Null(nullptr);
-        value.Deserialize(buffer, offset);
-        this->data.Push(std::move(value));
-    }
+    // for (int i = 0; i < dataSize; i++) {
+    //     auto value = Value::Null(nullptr);
+    //     value.Deserialize(buffer, offset);
+    //     this->data.Push(std::move(value));
+    // }
 }
 
 void QueryResult::Update(DataStructures::PolymorphicArray<Value>& updates) {
@@ -163,7 +163,7 @@ void QueryResult::Update(DataStructures::PolymorphicArray<Value>& updates) {
 }
 
 void QueryResult::Update(const DataStructures::PolymorphicArray<Value>& updates) {
-    for (const auto& value : updates) {
+    for (auto& value : updates) {
         auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = value;
     }

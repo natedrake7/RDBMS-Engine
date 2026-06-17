@@ -1768,7 +1768,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        const auto promotedType = Value::PromoteType(leftType, rightType);
+        const auto promotedType = PromoteType(leftType, rightType);
 
         if (leftType != promotedType)
             InsertCastExpression(context, binaryExpr->left, promotedType);
@@ -1818,7 +1818,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        const auto promotedType = Value::PromoteType(leftType, rightType);
+        const auto promotedType = PromoteType(leftType, rightType);
 
         if (leftType != promotedType)
             InsertCastExpression(context, binaryExpr->left, promotedType);

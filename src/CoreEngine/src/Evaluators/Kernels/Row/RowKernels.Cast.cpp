@@ -18,8 +18,8 @@ namespace CoreEngine::RowKernels{
 
     template<typename TFrom, typename TTo>
     constexpr void RegisterCastPair(CastKernelTable& table) {
-            constexpr auto from = DataTypes::Coercions::DataTypeOf<TFrom>();
-            constexpr auto to   = DataTypes::Coercions::DataTypeOf<TTo>();
+            constexpr auto from = DataTypes::DataTypeOf<TFrom>();
+            constexpr auto to   = DataTypes::DataTypeOf<TTo>();
 
             if constexpr (
                 !std::is_same_v<TFrom, TTo> &&

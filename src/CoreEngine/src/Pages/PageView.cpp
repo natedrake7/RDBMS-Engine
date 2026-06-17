@@ -507,7 +507,7 @@ namespace Pages{
         );
     }
 
-    template <DataTypes::PrimitiveColumn T>
+    template <DataTypes::Primitive T>
     T PageView::GetColumnAt(
         const Int index,
         const Int columnIndex,

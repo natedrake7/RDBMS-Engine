@@ -3,7 +3,7 @@
 #include "../../../../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Expression.h"
 namespace CoreEngine::RowKernels{
-    template<DataTypes::PrimitiveColumn T, typename Op>
+    template<DataTypes::Primitive T, typename Op>
     void BinaryArithmeticKernel(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context,
@@ -28,7 +28,7 @@ namespace CoreEngine::RowKernels{
 
     // Divide / Modulo: divide-by-zero yields NULL (swap for a raised error if your
     // semantics demand it). Modulo is only registered for integral T.
-    template<DataTypes::PrimitiveColumn T>
+    template<DataTypes::Primitive T>
     void BinaryDivideKernel(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context,
@@ -51,7 +51,7 @@ namespace CoreEngine::RowKernels{
         *outNull = false;
     }
 
-    template<DataTypes::PrimitiveColumn T>
+    template<DataTypes::Primitive T>
     void BinaryModuloKernel(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context,

@@ -177,7 +177,7 @@ namespace Expressions{
 
         ColumnExpression(const DataTypes::String& name, const DataTypes::String& tableAlias);
         ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
-        explicit ColumnExpression(column_index_t index);
+        explicit ColumnExpression(column_index_t index, DataType dataType);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
 
@@ -380,7 +380,7 @@ namespace Expressions{
         [[nodiscard]] DataType GetReturnType() const;
     };
 
-    Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);
+    // Value EvaluateExpression(const Expression* expression, const EvaluationContext& context);
 
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
@@ -392,6 +392,11 @@ namespace Expressions{
         const EvaluationContext& context,
         void* outVal,
         bool* outNull
+    );
+
+    Value EvaluateExpression(
+        const Expression* expression,
+        const EvaluationContext& context
     );
 
     CoreEngine::SelectionVector* EvaluateFilterExpression(
