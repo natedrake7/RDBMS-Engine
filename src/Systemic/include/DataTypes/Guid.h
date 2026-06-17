@@ -15,7 +15,6 @@ namespace DataTypes {
     constexpr static StringView GUID_STRING_FORMAT = "%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x";
     constexpr static StringView GUID_VALIDATION_FORMAT = "^[{]?[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}[}]?$";
 
-
     class Guid {
         UnsignedTinyInt _data[GUID_SIZE];
 

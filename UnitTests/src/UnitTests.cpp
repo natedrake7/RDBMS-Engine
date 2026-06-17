@@ -87,7 +87,7 @@ namespace Tests{
         table.AddColumn(column2);
 
         auto* frameData = static_cast<object_t*>(allocator.AllocateRaw(Constants::PAGE_SIZE));
-        auto frame = Pages::Frame(frameData, &table);
+        auto frame = Pages::Frame(frameData);
         frame.Header()->pageId = 0;
         frame.Header()->size = 0;
         frame.Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
@@ -99,62 +99,62 @@ namespace Tests{
         insertValues.Push(Value(1, &allocator));
         insertValues.Push(Value(DataTypes::StringView("Hello"), &allocator));
 
-        auto payload = table.CreateInsertPayload(status, &allocator, 0, 40, insertValues);
+        // auto payload = table.CreateInsertPayload(status, &allocator, 0, 40, insertValues);
 
         DataTypes::Indexing::Key key(&allocator);
         int keyVal = 1;
         key.InsertKey(DataTypes::Indexing::Key(&keyVal, 4, DataType::Int, &allocator));
 
-        auto tuple = Pages::IndexInsertTuple(key, &payload);
+        // auto tuple = Pages::IndexInsertTuple(key, &payload);
 
-        constexpr static auto numTuples = 40;
-        for (int i = 0;i < numTuples; i++)
-        {
-            if (i == numTuples - 1)
-            {
-                page.InsertTuple(tuple);
-
-            }
-            else
-                page.InsertTuple(tuple);
-        }
+        // constexpr static auto numTuples = 40;
+        // for (int i = 0;i < numTuples; i++)
+        // {
+        //     if (i == numTuples - 1)
+        //     {
+        //         page.InsertTuple(tuple);
+        //
+        //     }
+        //     else
+        //         page.InsertTuple(tuple);
+        // }
 
 
         for (int i = 0;i < page.PageSize(); i++){
             auto rid = CoreEngine::StorageTypes::RID(page.PageId(), i);
 
-            auto row = CoreEngine::StorageTypes::Table::Materialize(&allocator, &page, &rid);
-            std::cout << row << std::endl;
+            // auto row = CoreEngine::StorageTypes::Table::Materialize(&allocator, &page, &rid);
+            // std::cout << row << std::endl;
         }
 
         int diff = 0;
 
-        auto usedBytes = page.PageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::SIZE);
+        // auto usedBytes = page.PageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::SIZE);
 
-        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
+        // std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
 
-        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
+        // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
 
         auto updates = DataStructures::PolymorphicArray<Value>(&allocator, 1);
         updates.Push(Value(DataTypes::StringView("Hello my name is bigger bro"), &allocator, 1));
 
 
         auto rid = CoreEngine::StorageTypes::RID(page.PageId(), 0);
-        auto row = table.Materialize(&allocator, &page, &rid);
-        row.Update(updates);
+        // auto row = table.Materialize(&allocator, &page, &rid);
+        // row.Update(updates);
 
-        std::cout << "After update: " << row << std::endl;
+        // std::cout << "After update: " << row << std::endl;
 
-        auto newPayload = table.CreateInsertPayload(status, &allocator, 0, 40, row.Data());
-        tuple.payload = &newPayload;
+        // auto newPayload = table.CreateInsertPayload(status, &allocator, 0, 40, row.Data());
+        // tuple.payload = &newPayload;
 
-        const auto _ = page.UpdateRow(&allocator, *tuple.payload, 0);
+        // const auto _ = page.UpdateRow(&allocator, *tuple.payload, 0);
 
         std::cout << "After update:" << std::endl;
         for (int i = 0;i < page.PageSize(); i++){
             auto rid_i = CoreEngine::StorageTypes::RID(page.PageId(), i);
-            auto updatedRow = table.Materialize(&allocator, &page, &rid_i);
-            std::cout << updatedRow << std::endl;
+            // auto updatedRow = table.Materialize(&allocator, &page, &rid_i);
+            // std::cout << updatedRow << std::endl;
         }
 
         page.Defragment(&allocator);
@@ -162,14 +162,14 @@ namespace Tests{
         std::cout << "After Defragmentation:" << std::endl;
         for (int i = 0;i < page.PageSize(); i++){
             auto rid_i = CoreEngine::StorageTypes::RID(page.PageId(), i);
-            auto updatedRow = table.Materialize(&allocator, &page, &rid_i);
-            std::cout << updatedRow << std::endl;
+            // auto updatedRow = table.Materialize(&allocator, &page, &rid_i);
+            // std::cout << updatedRow << std::endl;
         }
 
-        usedBytes = page.PageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::SIZE);
+        // usedBytes = page.PageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::SIZE);
 
-        std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
-        std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
+        // std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
+        // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
     }
 
     void PageUpdate(){

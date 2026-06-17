@@ -308,7 +308,7 @@ namespace CoreEngine {
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
     ) {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::DatabaseHeader{
@@ -327,7 +327,7 @@ namespace CoreEngine {
         DataStructures::PolymorphicArray<Headers::TableHeader>& dbTables,
         DataStructures::PolymorphicArray<Headers::SchemaHeader>& schemas
     ) {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::DatabaseHeader{
@@ -355,7 +355,7 @@ namespace CoreEngine {
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
     ) {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         auto header = Headers::SchemaHeader(
@@ -377,7 +377,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         auto header = Headers::TableHeader();
@@ -401,7 +401,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::ColumnHeader{
@@ -438,7 +438,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::IndexHeader{
@@ -466,7 +466,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return Headers::IndexColumnsHeader{
@@ -491,7 +491,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return Headers::IdentityColumnsHeader(
@@ -520,7 +520,7 @@ namespace CoreEngine {
         DataStructures::PolymorphicArray<Headers::ConstraintsColumnsHeader>& constraintColumns,
         Headers::IndexHeader& indexHeader
     ) {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsHeader{
@@ -551,7 +551,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return Headers::ConstraintsColumnsHeader{
@@ -575,7 +575,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return Headers::DefaultValuesHeader{
@@ -598,7 +598,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return {
@@ -616,7 +616,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table,
         const DataType columnType
     ) {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::ColumnStatistics{
@@ -644,7 +644,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table,
         const DataType columnType
     ) {
-        const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
         const auto& data = materializedRow.Data();
 
         return Headers::ColumnHistograms{
@@ -673,7 +673,7 @@ namespace CoreEngine {
         const StorageTypes::Table* table
     )
     {
-    const auto materializedRow = table->MaterializeFromIndexPage(allocator, rowPtr);
+    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
     const auto& data = materializedRow.Data();
 
     return {
@@ -1392,7 +1392,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         DataStructures::PolymorphicArray<Security::Role> roles(allocator, rows.Size());
 
         for (const auto& row : rows) {
-            const auto materializedRow = table->MaterializeFromIndexPage(allocator, &row);
+            const auto materializedRow = table->MaterializeFromPage(allocator, &row);
             const auto& data = materializedRow.Data();
 
             const auto view = data[static_cast<column_index_t>(SysRoles::RoleName)].AsStringView();
@@ -1419,7 +1419,7 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
         DataStructures::PolymorphicArray<Security::User> users(allocator, rows.Size());
 
         for (const auto& row : rows) {
-            const auto materializedRow = table->MaterializeFromIndexPage(allocator, &row);
+            const auto materializedRow = table->MaterializeFromPage(allocator, &row);
             const auto& data = materializedRow.Data();
 
             const auto view = data[static_cast<column_index_t>(SysUsers::UserName)].AsStringView();
@@ -1534,7 +1534,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     tablePtr->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
 
     for (const auto& row : selectedSchemas){
-        const auto materializedRow = tablePtr->MaterializeFromIndexPage(allocator, &row);
+        const auto materializedRow = tablePtr->MaterializeFromPage(allocator, &row);
         const auto currentSchemaName = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::Name));
         const auto schemaNameView = currentSchemaName.AsStringView();
 
@@ -1649,7 +1649,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         DataStructures::PolymorphicArray<Headers::ConstraintsHeader> selectedConstraintsHeader(allocator, selectedConstraints.Size());
 
         for (const auto& row : selectedConstraints) {
-            const auto materializedRow = constraintsTable->MaterializeFromIndexPage(allocator, &row);
+            const auto materializedRow = constraintsTable->MaterializeFromPage(allocator, &row);
             const auto& data = materializedRow.Data();
 
             auto constraintColumns = this->SelectConstraintColumnsByConstraintId(allocator, data[0].AsInt());

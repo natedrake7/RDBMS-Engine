@@ -7,21 +7,18 @@ namespace CoreEngine::StorageTypes{
     InsertPayload Table::CreateInsertPayload(
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
-        const transaction_id_t transactionId,
+        const RowHeader& rowHeader,
         const Int dataSize,
         const DataStructures::PolymorphicArray<Value> &inputData
     ) const{
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = transactionId;
-
         const auto columnsSize = this->_columns.Size();
-        auto dataEntriesOffset = Constants::ROW_VERSION_HEADER_SIZE;
+        auto dataEntriesOffset = sizeof(RowHeader);
 
         // Only allocate offset space for non-NULL columns
         const auto dataOffSet = dataEntriesOffset + columnsSize * sizeof(RowEntry);
         auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
 
-        std::memcpy(payload.Data(), &rowHeader, Constants::ROW_VERSION_HEADER_SIZE);
+        std::memcpy(payload.Data(), &rowHeader, sizeof(RowHeader));
 
         auto autoComputedColumns = 0;
         for (const auto& column : this->_columns){

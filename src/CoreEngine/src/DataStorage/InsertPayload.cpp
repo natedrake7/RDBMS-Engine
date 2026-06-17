@@ -198,8 +198,6 @@ namespace CoreEngine::StorageTypes{
         this->_data = nullptr;
         this->size = 0;
         this->offset = 0;
-        this->isHeaderInitialized = false;
-        this->isReferencingExternalData = false;
     }
 
     InsertPayload::InsertPayload(
@@ -210,16 +208,12 @@ namespace CoreEngine::StorageTypes{
         this->_data = static_cast<object_t*>(allocator->AllocateRaw(size));
         this->size = size;
         this->offset = startingOffset;
-        this->isHeaderInitialized = false;
-        this->isReferencingExternalData = true;
     }
 
     InsertPayload::InsertPayload(const UnsignedSmallInt size, const UnsignedSmallInt startingOffset){
         this->_data = static_cast<object_t*>(std::malloc(size));
         this->size = size;
         this->offset = startingOffset;
-        this->isHeaderInitialized = false;
-        this->isReferencingExternalData = false;
     }
 
     InsertPayload& InsertPayload::operator=(InsertPayload&& other) noexcept{
@@ -229,14 +223,10 @@ namespace CoreEngine::StorageTypes{
         this->_data = other._data;
         this->size = other.size;
         this->offset = other.offset;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = std::move(other.header);
-        this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
         other.size = 0;
         other.offset = 0;
-        other.isHeaderInitialized = false;
 
         return *this;
     }
@@ -245,14 +235,10 @@ namespace CoreEngine::StorageTypes{
         this->_data = other._data;
         this->size = other.size;
         this->offset = other.offset;
-        this->isHeaderInitialized = other.isHeaderInitialized;
-        this->header = std::move(other.header);
-        this->isReferencingExternalData = other.isReferencingExternalData;
 
         other._data = nullptr;
         other.size = 0;
         other.offset = 0;
-        other.isHeaderInitialized = false;
     }
 
     InsertPayload InsertPayload::FromRowPtr(const Pages::RawRowReference& rowPtr){
@@ -261,8 +247,6 @@ namespace CoreEngine::StorageTypes{
         payload._data = rowPtr._data;
         payload.size = rowPtr.size;
         payload.offset = 0;
-        payload.isHeaderInitialized = false;
-        payload.isReferencingExternalData = true;
 
         return payload;
     }
@@ -306,12 +290,6 @@ namespace CoreEngine::StorageTypes{
     //     return *this;
     // }
 
-    InsertPayload::~InsertPayload(){
-        if (!this->isReferencingExternalData)
-            std::free(this->_data);
-        this->_data = nullptr;
-    }
-
     UnsignedSmallInt InsertPayload::SetData(const void* otherData, const UnsignedSmallInt dataSize){
         std::memcpy(this->_data + this->offset, otherData, dataSize);
         const auto dataOffset = this->offset;
@@ -338,7 +316,7 @@ namespace CoreEngine::StorageTypes{
         // Calculate bitmap size once
         const auto columnOrdinal = column->OrdinalPosition();
 
-        const auto offSet = Constants::ROW_VERSION_HEADER_SIZE + columnOrdinal * sizeof(RowEntry);
+        const auto offSet = sizeof(RowHeader) + columnOrdinal * sizeof(RowEntry);
         const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
 
         if (columnDataEntry->Type() == RowEntry::NULLVAL)

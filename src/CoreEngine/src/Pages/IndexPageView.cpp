@@ -313,17 +313,8 @@ namespace Pages{
     CoreEngine::StorageTypes::RowHeader IndexPageView::PeekHeader(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         CoreEngine::StorageTypes::RowHeader header;
-        std::memcpy(&header, this->_frame->_data + slot.AbsoluteDataOffset(), Constants::ROW_VERSION_HEADER_SIZE);
+        std::memcpy(&header, this->_frame->_data + slot.AbsoluteDataOffset(), sizeof(CoreEngine::StorageTypes::RowHeader));
         return header;
-    }
-
-    bool IndexPageView::IsRowVisible(const Int indexPosition, const CoreEngine::Snapshot& snapshot) const{
-        const auto slot = this->GetSlotDirectory(indexPosition);
-        const auto* versionHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
-            this->_frame->_data + slot.AbsoluteDataOffset()
-        );
-
-        return versionHeader->IsVisibleForTransaction(snapshot);
     }
 
     page_id_t IndexPageView::GetChild(const Int indexPosition) const{
@@ -361,37 +352,5 @@ namespace Pages{
         slot.SetOffset(slot.AbsoluteDataOffset());
         slot.SetDataSize(slot.DataSize() - slot.KeySize());
         this->UpdateSlotDirectory(slot, indexPosition);
-    }
-
-    void IndexPageView::Log(
-        const ::Memory::IAllocator* allocator,
-        std::ostream& os
-    ) const{
-        if (this->IsLeaf()){
-            os << "Rows: ";
-            for (int i = 0;i < this->_frame->Header()->size; i++){
-                os << this->MaterializeRow(allocator, i) << " ";
-            }
-            os << std::endl;
-            os << "Keys: ";
-            for (int i = 0;i < this->_frame->Header()->size; i++){
-                os << this->GetKeyByIndex(allocator, i).ToString(allocator) << " ";
-            }
-            os << std::endl;
-            return;
-        }
-
-        os << "Children: ";
-        for (int i = 0;i < this->_frame->Header()->size; i++){
-            const auto tuple = this->GetInternalNodeTuple(allocator, i);
-            os << tuple.pageId << " ";
-        }
-        os << std::endl;
-        os << "Keys: ";
-        for (int i = 0;i < this->_frame->Header()->size; i++){
-            const auto tuple = this->GetInternalNodeTuple(allocator, i);
-            os  << tuple.key.ToString(allocator) << " ";
-        }
-        os << std::endl;
     }
 }

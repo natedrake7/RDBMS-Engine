@@ -3,7 +3,6 @@
 
 #include "../../DatabaseConstants.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../../../Systemic/include/DataTypes/StringView.h"
 #include "../../../../Systemic/include/Guards/Mutex.h"
 #include "../../BufferPool/FileManager.h"
 
@@ -13,14 +12,14 @@ namespace CoreEngine::StorageTypes{
 
 namespace Pages{
     using FrameId = Int;
-
     struct PageHeader;
+
     struct Frame{
         mutable MultiThreading::Mutex latch;
 
         object_t* _data;
 
-        const CoreEngine::StorageTypes::Table* table;
+        // const CoreEngine::StorageTypes::Table* table;
         log_sequence_number_t logSequenceNumber;
 
         Storage::FileKey fileKey;
@@ -31,7 +30,7 @@ namespace Pages{
         bool isDirty;
 
         Frame();
-        Frame(object_t* data, const CoreEngine::StorageTypes::Table* table);
+        explicit Frame(object_t* data);
         Frame& operator=(const Frame& other);
 
         [[nodiscard]] PageHeader* Header() const;

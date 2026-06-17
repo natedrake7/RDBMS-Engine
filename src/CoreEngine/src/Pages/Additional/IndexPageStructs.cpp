@@ -73,7 +73,7 @@ namespace Pages{
             return *this;
 
         this->key = std::move(other.key);
-        this->row = std::move(other.row);
+        this->row = other.row;
 
         return *this;
     }
@@ -81,13 +81,13 @@ namespace Pages{
     LeafNodeTuple::LeafNodeTuple(LeafNodeTuple&& other) noexcept
     {
         this->key = std::move(other.key);
-        this->row = std::move(other.row);
+        this->row = other.row;
     }
 
 
-    LeafNodeTuple::LeafNodeTuple(CoreEngine::StorageTypes::RID& row, DataTypes::Indexing::Key& key){
+    LeafNodeTuple::LeafNodeTuple(const CoreEngine::StorageTypes::RID row, DataTypes::Indexing::Key& key){
         this->key = std::move(key);
-        this->row = std::move(row);
+        this->row = row;
     }
 
     InternalNodeTuple::InternalNodeTuple()

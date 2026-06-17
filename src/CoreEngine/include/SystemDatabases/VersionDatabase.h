@@ -37,15 +37,11 @@ namespace CoreEngine{
             extent_id_t& newExtentId
         );
 
-        Pages::PageView TryGetLastUndoPage(
-            const StorageTypes::Table* table,
-            row_size_t size
-        );
+        Pages::PageView TryGetLastUndoPage(row_size_t size);
 
         Pages::PageView CreateUndoPage(const ::Memory::IAllocator* allocator);
         Pages::PageView GetLastUndoPage(
             const ::Memory::IAllocator* allocator,
-            const StorageTypes::Table* table,
             row_size_t size
         );
 
@@ -73,17 +69,15 @@ namespace CoreEngine{
                 const DataTypes::StringView& configPath
             );
 
-            Errors::RuntimeStatus InsertRow(
+            [[nodiscard]]
+            StorageTypes::RID InsertRow(
                 const ::Memory::IAllocator* allocator,
-                const Pages::RawRowReference& rowRef,
-                StorageTypes::RowHeader& rowHeader,
-                const StorageTypes::Table* table
+                const Pages::RawRowReference& rowRef
             );
-            StorageTypes::RID RetrieveRowReference(
-                const ::Memory::IAllocator* allocator,
+            [[nodiscard]]
+            StorageTypes::RID RetrieveVersionedRid(
                 const Snapshot& snapshot,
-                const StorageTypes::RowHeader& rowHeader,
-                const StorageTypes::Table* table
+                const StorageTypes::RowHeader& rowHeader
             )const;
             [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
 

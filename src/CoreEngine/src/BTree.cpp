@@ -400,8 +400,7 @@ namespace Indexing{
     Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
         return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
             this->database->GetDataFileKey(),
-            pageId,
-            this->table
+            pageId
         );
     }
 
@@ -1019,7 +1018,7 @@ namespace Indexing{
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
 
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
@@ -1056,7 +1055,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1091,7 +1090,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
@@ -1130,7 +1129,7 @@ namespace Indexing{
             evaluationContext.page = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1232,7 +1231,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
@@ -1278,7 +1277,7 @@ namespace Indexing{
 
             evaluationContext.page = &currentNode;
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++) {
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1326,7 +1325,7 @@ namespace Indexing{
 
             evaluationContext.page = &currentNode;
             for (Int i = 0;i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1409,7 +1408,7 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for(Int i = 0;i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
                 result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
             }
@@ -1519,7 +1518,7 @@ namespace Indexing{
 
             evaluationContext.page = &currentNode;
             for (Int i = 0; i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
                 const auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
 
@@ -1565,7 +1564,7 @@ namespace Indexing{
 
             evaluationContext.page = &currentNode;
             for (Int i = 0;i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1607,7 +1606,7 @@ namespace Indexing{
             MultiThreading::WriterGuard lock(&currentNode.Latch());
 
             for (Int i = 0;i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1647,7 +1646,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1693,7 +1692,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, *maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
@@ -1739,7 +1738,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, *maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(i, context.GetSnapshot()))
+                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
                 auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);

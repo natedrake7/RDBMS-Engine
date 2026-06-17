@@ -3,32 +3,21 @@
 #include "Pages/PageView.h"
 
 namespace Pages{
-    Frame::Frame(){
-        this->_data = nullptr;
-        this->table = nullptr;
-        this->isDirty = false;
-        this->pinCount = 0;
-        this->priority = Constants::PagePriority::LOW;
-        this->hasSecondChance = true;
-        this->logSequenceNumber = 0;
-    }
+    Frame::Frame()
+        :   _data(nullptr), logSequenceNumber(0),
+            pinCount(0), priority(Constants::PagePriority::LOW),
+            hasSecondChance(true), isDirty(false){}
 
-    Frame::Frame(object_t* data, const CoreEngine::StorageTypes::Table* table){
-        this->_data = data;
-        this->table = table;
-        this->isDirty = false;
-        this->pinCount = 0;
-        this->priority = Constants::PagePriority::LOW;
-        this->hasSecondChance = true;
-        this->logSequenceNumber = 0;
-    }
+    Frame::Frame(object_t* data)
+        :   _data(data), logSequenceNumber(0),
+            pinCount(0), priority(Constants::PagePriority::LOW),
+            hasSecondChance(true), isDirty(false){}
 
     Frame& Frame::operator=(const Frame& other){
         if (this == &other)
             return *this;
 
         this->_data = other._data;
-        this->table = other.table;
         this->isDirty = other.isDirty;
         this->pinCount = other.pinCount.load();
         this->priority = other.priority.load();

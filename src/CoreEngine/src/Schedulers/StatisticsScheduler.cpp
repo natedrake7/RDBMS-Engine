@@ -244,8 +244,7 @@ namespace CoreEngine {
 
         const auto iamPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            iamPageId,
-            table
+            iamPageId
         );
 
         DataStructures::PolymorphicArray<extent_id_t> extents;
@@ -280,8 +279,7 @@ namespace CoreEngine {
 
                 auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     dataKey,
-                    extentPageId,
-                    table
+                    extentPageId
                 );
 
                 bool successfulLock = false;

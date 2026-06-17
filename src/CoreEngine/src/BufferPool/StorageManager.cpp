@@ -83,8 +83,7 @@ void StorageManager::TryFlushFrameToDiskNoLock(const Pages::Frame *framePtr){
 Pages::Frame* StorageManager::OpenExtentNoLock(
     const FileKey fileKey,
     const page_id_t pageId,
-    const extent_id_t extentId,
-    const CoreEngine::StorageTypes::Table *table
+    const extent_id_t extentId
 ){
     // read page from disk, call this->fileManager
     const auto fd = this->fileManager.GetFile(fileKey);
@@ -122,7 +121,7 @@ Pages::Frame* StorageManager::OpenExtentNoLock(
         newFramePtr->hasSecondChance = false;
         newFramePtr->pinCount.store(isRequestedPage ? 1 : 0);   // producer pins the page it hands back
         newFramePtr->priority.store(Constants::PagePriority::LOW);
-        newFramePtr->table = table;
+        // newFramePtr->table = table;
 
         if (isRequestedPage)
             framePtr = newFramePtr;
@@ -135,29 +134,28 @@ Pages::Frame* StorageManager::OpenExtentNoLock(
 
 Pages::Frame* StorageManager::GetFrame(
     const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table *table
+    const page_id_t pageId
 ){
     auto* segment = this->GetSegmentNoLock(fileKey, pageId);
     if (segment == nullptr)
-        return this->HandlePageCacheMiss(fileKey, pageId, table);
+        return this->HandlePageCacheMiss(fileKey, pageId);
 
     const auto frameId = segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire);
 
     if (frameId == INVALID_FRAME)
-        return this->HandlePageCacheMiss(fileKey, pageId, table);
+        return this->HandlePageCacheMiss(fileKey, pageId);
 
     auto* frame = _memoryManager->GetFrame(frameId);
 
     if (!frame->TryPin())
-        return this->HandlePageCacheMiss(fileKey, pageId, table);
+        return this->HandlePageCacheMiss(fileKey, pageId);
 
     if (frame->fileKey != fileKey
         || frame->Header()->pageId != pageId
         || segment->frames[PageAddress::PageSlot(pageId)].load(std::memory_order_acquire) != frameId
     ){
         frame->Unpin();
-        return this->HandlePageCacheMiss(fileKey, pageId, table);
+        return this->HandlePageCacheMiss(fileKey, pageId);
     }
 
     frame->hasSecondChance = true;
@@ -194,22 +192,21 @@ void StorageManager::OpenFile(const FileKey key, const DataTypes::StringView& fi
 
 Pages::PageView StorageManager::CreatePage(
     const FileKey fileKey,
-    const CoreEngine::StorageTypes::Table *table,
     const page_id_t pageId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::DATA, table);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::DATA);
     frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
     return Pages::PageView(frame);
 }
 
 Pages::LargeObjectView StorageManager::CreateLargeDataPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::LOB, nullptr);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::LOB);
     frame->Header()->bytesLeft = Constants::LARGE_OBJECT_PAGE_SIZE;
     return Pages::LargeObjectView(frame);
 }
 
 Pages::OverflowPageView StorageManager::CreateOverflowPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::OVERFLOWTYPE, nullptr);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::OVERFLOWTYPE);
     frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
     return Pages::OverflowPageView(frame);
 }
@@ -219,12 +216,12 @@ Pages::OverflowPageView StorageManager::CreateOverflowPage(const FileKey fileKey
 //////////////////////////////////////////////////
 
 Pages::HeaderPageView StorageManager::CreateHeaderPage(const FileKey fileKey){
-    auto* frame = this->CreateFrame(fileKey, Constants::HEADER_PAGE_ID, Constants::PageType::HEADER, nullptr);
+    auto* frame = this->CreateFrame(fileKey, Constants::HEADER_PAGE_ID, Constants::PageType::HEADER);
     return Pages::HeaderPageView(frame);
 }
 
 Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM, nullptr);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM);
     return Pages::GlobalAllocationPageView(frame);
 }
 
@@ -234,22 +231,21 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
     const page_id_t pageId,
     const extent_id_t startingExtentId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::IAM, nullptr);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::IAM);
     return Pages::AllocationPageView(frame);
 }
 
 
 Pages::PageFreeSpaceView StorageManager::CreatePageFreeSpacePage(const FileKey fileKey,const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREESPACE, nullptr);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREESPACE);
     return Pages::PageFreeSpaceView(frame);
 }
 
 Pages::IndexPageView StorageManager::CreateIndexPage(
     const FileKey fileKey,
-    const CoreEngine::StorageTypes::Table* table,
     const page_id_t pageId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::INDEX, table);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::INDEX);
 
     frame->Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
     auto* additionalHeader = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
@@ -262,8 +258,7 @@ Pages::IndexPageView StorageManager::CreateIndexPage(
 Pages::Frame* StorageManager::CreateFrame(
     const FileKey fileKey,
     const page_id_t pageId,
-    const Constants::PageType type,
-    const CoreEngine::StorageTypes::Table *table
+    const Constants::PageType type
 ){
     MultiThreading::WriterGuard lock(&this->tableMutex);
 
@@ -274,10 +269,10 @@ Pages::Frame* StorageManager::CreateFrame(
 
     auto* framePtr = this->_memoryManager->AllocateFrame(frameId);
     framePtr->_data = this->_memoryManager->Data() + frameId * Constants::PAGE_SIZE;
-    framePtr->table = table;
+    // framePtr->table = table;
     framePtr->fileKey = fileKey;
     framePtr->isDirty = true;
-    framePtr->hasSecondChance = false;
+    framePtr->hasSecondChance = true;
     framePtr->pinCount.store(1);   // producer pins the page it hands back
     framePtr->priority.store(Constants::PagePriority::LOW);
 
@@ -336,8 +331,7 @@ Segment* StorageManager::EnsureSegmentExistsNoLock(const FileKey fileKey, const 
 
 Pages::Frame* StorageManager::HandlePageCacheMiss(
     const FileKey fileKey,
-    const page_id_t pageId,
-    const CoreEngine::StorageTypes::Table* table
+    const page_id_t pageId
 ){
     MultiThreading::WriterGuard guard(&this->tableMutex);
     this->EnsureDatabaseTableExistsNoLock(fileKey);
@@ -345,8 +339,7 @@ Pages::Frame* StorageManager::HandlePageCacheMiss(
 
     return this->OpenExtentNoLock(
         fileKey, pageId,
-        CoreEngine::Database::CalculateExtentId(pageId),
-        table
+        CoreEngine::Database::CalculateExtentId(pageId)
     );
 }
 

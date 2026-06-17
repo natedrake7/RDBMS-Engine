@@ -78,16 +78,14 @@ namespace Storage {
         Pages::Frame* OpenExtentNoLock(
             FileKey fileKey,
             page_id_t pageId,
-            extent_id_t extentId,
-            const CoreEngine::StorageTypes::Table *table
+            extent_id_t extentId
         );
 
         void CacheFrameToPageTableNoLock(FileKey key, page_id_t pageId, Pages::FrameId frameId) const;
         Pages::Frame* CreateFrame(
             FileKey fileKey,
             page_id_t pageId,
-            Constants::PageType type,
-            const CoreEngine::StorageTypes::Table *table
+            Constants::PageType type
         );
 
         Segment* GetSegmentNoLock(FileKey fileKey, page_id_t pageId) const;
@@ -96,15 +94,13 @@ namespace Storage {
         Segment* EnsureSegmentExistsNoLock(FileKey fileKey, page_id_t pageId) const;
         Pages::Frame* HandlePageCacheMiss(
             FileKey fileKey,
-            page_id_t pageId,
-            const CoreEngine::StorageTypes::Table *table
+            page_id_t pageId
         );
 
         Pages::FrameId AcquireFrameId();
         Pages::Frame* GetFrame(
             FileKey fileKey,
-            page_id_t pageId,
-            const CoreEngine::StorageTypes::Table *table
+            page_id_t pageId
         );
         void RemovePage(Pages::Frame* framePtr);
 
@@ -124,7 +120,6 @@ namespace Storage {
 
         Pages::PageView CreatePage(
             FileKey fileKey,
-            const CoreEngine::StorageTypes::Table *table,
             page_id_t pageId
         );
         Pages::HeaderPageView CreateHeaderPage(FileKey fileKey);
@@ -140,33 +135,30 @@ namespace Storage {
         Pages::PageFreeSpaceView CreatePageFreeSpacePage(FileKey fileKey, page_id_t pageId);
         Pages::IndexPageView CreateIndexPage(
             FileKey fileKey,
-            const CoreEngine::StorageTypes::Table* table,
             page_id_t pageId
         );
         template<typename TView>
         TView GetPage(
             FileKey fileKey,
-            page_id_t pageId,
-            const CoreEngine::StorageTypes::Table *table = nullptr
+            page_id_t pageId
         );
     };
 
     template <typename TView>
     TView StorageManager::GetPage(
         const FileKey fileKey,
-        const page_id_t pageId,
-        const CoreEngine::StorageTypes::Table* table
+        const page_id_t pageId
     ){
-        auto* frame = this->GetFrame(fileKey, pageId, table);
+        auto* frame = this->GetFrame(fileKey, pageId);
         return TView(frame);
     }
 
-    template Pages::PageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::IndexPageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::HeaderPageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::LargeObjectView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::OverflowPageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::GlobalAllocationPageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::AllocationPageView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
-    template Pages::PageFreeSpaceView StorageManager::GetPage(FileKey, page_id_t, const CoreEngine::StorageTypes::Table*);
+    template Pages::PageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::IndexPageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::HeaderPageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::LargeObjectView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::OverflowPageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::GlobalAllocationPageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::AllocationPageView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::PageFreeSpaceView StorageManager::GetPage(FileKey, page_id_t);
 }

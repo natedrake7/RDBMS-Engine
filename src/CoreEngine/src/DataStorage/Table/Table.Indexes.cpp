@@ -22,7 +22,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->GetDataFileKey(), indexPageId, this);
+        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->GetDataFileKey(), indexPageId);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
@@ -241,8 +241,7 @@ namespace CoreEngine::StorageTypes {
             for (const auto& rowId : rowIds) {
                 const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     fileKey,
-                    rowId.pageId,
-                    this
+                    rowId.pageId
                 );
 
                 MultiThreading::ReaderGuard lock(&page.Latch());
@@ -264,8 +263,7 @@ namespace CoreEngine::StorageTypes {
         for (const auto& rowId : rowIds) {
             const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                 fileKey,
-                rowId.pageId,
-                this
+                rowId.pageId
             );
 
             MultiThreading::ReaderGuard lock(&page.Latch());
@@ -319,53 +317,53 @@ namespace CoreEngine::StorageTypes {
 
     }
 
-    Value Table::MaterializeColumn(
-        const ::Memory::IAllocator* allocator,
-        const RID* row,
-        const column_index_t columnIndex
-    ) const{
-        const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-            this->database->GetDataFileKey(),
-            row->_pageId,
-            this
-        );
-
-        return Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
-    }
-
-    Value* Table::MaterializeColumn(
-        const ExecutionContext& context,
-        const Int rangeEnd,
-        const column_index_t columnIndex
-    ) const{
-        const auto fileKey = this->database->GetDataFileKey();
-        const auto filename = this->database->GetFileName();
-
-        auto* allocator = context.GetAllocator();
-        auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(rangeEnd * sizeof(Value)));
-
-        for (Int i = 0; i < rangeEnd; i++){
-            const auto* row = context.GetRid(0, i);
-
-            const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-                fileKey,
-                row->_pageId,
-                this
-            );
-
-            valueArray[i] = Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
-        }
-
-        return valueArray;
-    }
-
-    QueryResult Table::Materialize(
-        const ::Memory::IAllocator* allocator,
-        const Pages::PageView* page,
-        const RID* row
-    ){
-        return page->MaterializeRow(allocator, row->_index);
-    }
+    // Value Table::MaterializeColumn(
+    //     const ::Memory::IAllocator* allocator,
+    //     const RID* row,
+    //     const column_index_t columnIndex
+    // ) const{
+    //     const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
+    //         this->database->GetDataFileKey(),
+    //         row->_pageId,
+    //         this
+    //     );
+    //
+    //     return Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
+    // }
+    //
+    // Value* Table::MaterializeColumn(
+    //     const ExecutionContext& context,
+    //     const Int rangeEnd,
+    //     const column_index_t columnIndex
+    // ) const{
+    //     const auto fileKey = this->database->GetDataFileKey();
+    //     const auto filename = this->database->GetFileName();
+    //
+    //     auto* allocator = context.GetAllocator();
+    //     auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(rangeEnd * sizeof(Value)));
+    //
+    //     for (Int i = 0; i < rangeEnd; i++){
+    //         const auto* row = context.GetRid(0, i);
+    //
+    //         const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
+    //             fileKey,
+    //             row->_pageId,
+    //             this
+    //         );
+    //
+    //         valueArray[i] = Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
+    //     }
+    //
+    //     return valueArray;
+    // }
+    //
+    // QueryResult Table::Materialize(
+    //     const ::Memory::IAllocator* allocator,
+    //     const Pages::PageView* page,
+    //     const RID* row
+    // ){
+    //     return page->MaterializeRow(allocator, row->_index);
+    // }
 
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
         const Headers::Index index(columnIndices.Data(), columnIndices.Size());
@@ -486,7 +484,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     row_size_t Table::CalculatePayloadSize() const{
-        row_size_t payloadSize = Constants::ROW_VERSION_HEADER_SIZE;
+        row_size_t payloadSize = sizeof(RowHeader);
         for (const auto* column : this->_columns){
             if (column->isColumnLOB()){
                 payloadSize+= sizeof(page_id_t) + sizeof(RowEntry);

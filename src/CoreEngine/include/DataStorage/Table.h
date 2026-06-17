@@ -29,6 +29,7 @@ namespace Indexing{
 }
 
 namespace CoreEngine{
+    struct ScanState;
     struct SelectionVector;
     class Database;
 }
@@ -37,8 +38,7 @@ namespace ByteMaps{
     class BitMap;
 }
 
-namespace CoreEngine::StorageTypes
-{
+namespace CoreEngine::StorageTypes{
     struct TableHeader{
         DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
         page_id_t allocationPageId;
@@ -50,7 +50,6 @@ namespace CoreEngine::StorageTypes
         column_number_t numberOfColumns;
 
         TableHeader();
-        ~TableHeader();
         TableHeader &operator=(const TableHeader &tableHeader);
     };
 
@@ -107,16 +106,17 @@ namespace CoreEngine::StorageTypes
             void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
             void RemoveColumnByClusteredIndex(column_index_t index);
             void RemoveColumnByHeap(column_index_t index)const;
-            void InsertToVersionDatabase(
+            [[nodiscard]]
+            static RID InsertToVersionDatabase(
                 const ::Memory::IAllocator* allocator,
                 const Pages::RawRowReference& rowRef
-            ) const;
+            );
 
         public:
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
-                transaction_id_t transactionId,
+                const RowHeader& rowHeader,
                 Int dataSize,
                 const DataStructures::PolymorphicArray<Value> &inputData
             ) const;
@@ -125,15 +125,7 @@ namespace CoreEngine::StorageTypes
         * Functions to create and destroy Table objects.
         * @{
         */
-            Table(table_id_t tableId, Int ordinalPosition, Database *database);
-            // Table(
-            //   table_id_t tableId,
-            //   Int ordinalPosition,
-            //   const DataStructures::PolymorphicArray<Column *> &columns,
-            //   Database *database,
-            //   const Headers::Index* clusteredIndex = nullptr,
-            //   const DataStructures::PolymorphicArray<Headers::Index> *nonClusteredIndexes = nullptr
-            // );
+            Table(table_id_t tableId, SmallInt ordinalPosition, Database *database);
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
             Table(
@@ -204,7 +196,7 @@ namespace CoreEngine::StorageTypes
             void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
-            [[nodiscard]] DataStructures::StaticArray<DataType, 10> GetColumnTypeByTreeId(const UnsignedTinyInt& treeId) const;
+            [[nodiscard]] DataStructures::StaticArray<DataType, 10> GetColumnTypeByTreeId(UnsignedTinyInt treeId) const;
             [[nodiscard]] table_id_t GetTableId() const;
             [[nodiscard]] Constants::TableType GetType() const;
             [[nodiscard]] bool IsClustered()const;
@@ -371,10 +363,10 @@ namespace CoreEngine::StorageTypes
         * @name Materialization Functions
         * @{
         */
-            Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* row, column_index_t columnIndex) const;
-            Value* MaterializeColumn(const ExecutionContext& context, Int rangeEnd, column_index_t columnIndex) const;
-            static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
-            QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
+            Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* rid, column_index_t columnIndex) const;
+            // Value* MaterializeColumn(const ExecutionContext& context, Int rangeEnd, column_index_t columnIndex) const;
+            // static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
+            // QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
             template<typename T>

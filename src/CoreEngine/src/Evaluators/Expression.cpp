@@ -183,9 +183,9 @@ namespace Expressions{
 
     void Expression::SetIndex(const column_index_t index){ this->columnIndex = index; }
 
-    Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
-        return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
-    }
+    // Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
+    //     return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
+    // }
 
     void ColumnExpression::BindVectorizedKernel(){
         switch (this->returnType){
@@ -273,12 +273,10 @@ namespace Expressions{
     }
 
     ColumnExpression::ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias)
-        : alias(std::move(name)), tableAlias(std::move(tableAlias)){
-        this->tableId = INVALID_TABLE_ID;
-        this->columnId = INVALID_COLUMN_ID;
+        :   alias(std::move(name)), tableAlias(std::move(tableAlias)),
+            tableId(INVALID_TABLE_ID), columnId(INVALID_COLUMN_ID),
+            returnType(DataType::Null), size(0) {
         this->columnIndex = 0;
-        this->size = 0;
-        this->returnType = DataType::Null;
         this->expressionType = ExpressionType::Column;
     }
 
@@ -293,49 +291,6 @@ namespace Expressions{
 
     Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
         return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
-        // switch (context.type) {
-        // case EvaluationContext::EvaluationContextType::SingleRow:
-        //     return this->EvaluateSingleRow(context);
-        // case EvaluationContext::EvaluationContextType::MaterializedRow:
-        //     return context.materializedRow.GetColumnAt(this->columnIndex);
-        // case EvaluationContext::EvaluationContextType::Join:
-        //     return this->EvaluateJoin(context);
-        // case EvaluationContext::EvaluationContextType::Constant:
-        // case EvaluationContext::EvaluationContextType::Aggregate:
-        // case EvaluationContext::EvaluationContextType::Window:
-        //     break;
-        // }
-    }
-
-    Value* ColumnExpression::Evaluate(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& context,
-        const CoreEngine::SelectionVector* selectionVector
-    ){
-        const auto* columnExpr = expression->AsColumn();
-        const auto size = selectionVector->selectedRidsCount;
-        auto* allocator = context.GetAllocator();
-        auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(size * sizeof(Value)));
-
-        const auto* table = context.GetTable(columnExpr->tableId);
-        for (Int i = 0; i < size; i++ ){
-            const auto rowIndex = selectionVector->selectedRids[0][i];
-            const auto* row = context.GetRid(0, rowIndex);
-
-            valueArray[i] = table->MaterializeColumn(context.GetAllocator(), row, columnExpr->columnIndex);
-        }
-
-        return valueArray;
-    }
-
-    Value* ColumnExpression::Evaluate(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& context,
-        const Int rangeEnd
-    ){
-        const auto* columnExpr = expression->AsColumn();
-        const auto* table = context.GetTable(0);
-        return table->MaterializeColumn(context, rangeEnd, columnExpr->columnIndex);
     }
 
     void ColumnExpression::BindExpressionKernel(

@@ -9,7 +9,6 @@
 #include <cmath>
 
 #include "ValidationMessages.h"
-#include "../../../include/SystemDatabases/CatalogSchema.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/BTree.h"
@@ -21,24 +20,20 @@
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
-#include "Managers/GlobalMemoryManager.h"
 #include "Memory/PersistentAllocator.h"
-#include "Vectorization/Vectorization.h"
 
 namespace CoreEngine::StorageTypes {
-      TableHeader::TableHeader() {
+    TableHeader::TableHeader() {
         this->allocationPageId = INVALID_PAGE_ID;
         this->tableId = 0;
         this->numberOfColumns = 0;
         this->clusteredIndexPageId = INVALID_PAGE_ID;
         this->ordinalPosition = 0;
-      }
+    }
 
-      TableHeader::~TableHeader() = default;
-
-      TableHeader &TableHeader::operator=(const TableHeader &tableHeader) {
+    TableHeader &TableHeader::operator=(const TableHeader &tableHeader) {
         if (this == &tableHeader)
-          return *this;
+            return *this;
 
         this->numberOfColumns = tableHeader.numberOfColumns;
         this->tableId = tableHeader.tableId;
@@ -47,49 +42,44 @@ namespace CoreEngine::StorageTypes {
         this->clusteredIndexPageId = tableHeader.clusteredIndexPageId;
         this->nonClusteredIndexPageIds = tableHeader.nonClusteredIndexPageIds;
         return *this;
-      }
+    }
 
-      bool Table::VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, const column_index_t index, int& indexPosition){
-        for(int i = 0;i < vector.Size(); i++)
-          if(vector[i] == index)
-          {
-            indexPosition = i;
-            return true;
-          }
+    bool Table::VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, const column_index_t index, int& indexPosition){
+        for(Int i = 0;i < vector.Size(); i++)
+            if(vector[i] == index){
+                indexPosition = i;
+                return true;
+            }
 
         return false;
-      }
+    }
 
-      void Table::PopulateClusteredIndexCache(const Headers::Index& index){
+    void Table::PopulateClusteredIndexCache(const Headers::Index& index){
         for (const auto& columnIndex: index.columns) {
-          const auto* column = this->_columns[columnIndex];
-          this->clusteredIndexColumnsCache.Add(column->GetColumnId());
+            const auto* column = this->_columns[columnIndex];
+            this->clusteredIndexColumnsCache.Add(column->GetColumnId());
         }
-      }
+    }
 
-      bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
+    bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
         return this->clusteredIndexColumnsCache.Contains(column->GetColumnId())
-          && this->clusteredIndexColumnsCache.Size() == 1;
-      }
+            && this->clusteredIndexColumnsCache.Size() == 1;
+    }
 
-      void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
-
+    void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
         const auto* clusteredTree = this->GetClusteredIndexedTree();
-
         clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
     }
 
-      void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
+    void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
         if(this->header.allocationPageId == INVALID_PAGE_ID)
-          return;
+            return;
 
-        const auto filename = this->database->GetFileName();
         const auto dataKey = this->database->GetDataFileKey();
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->header.allocationPageId,
-            this
+            this->header.allocationPageId
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
@@ -114,7 +104,7 @@ namespace CoreEngine::StorageTypes {
             if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
-            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
+            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
 
             if (page.PageSize() == 0)
               continue;
@@ -135,12 +125,10 @@ namespace CoreEngine::StorageTypes {
         }
     }
 
-      void Table::RemoveColumnByClusteredIndex(const column_index_t index){
-
-    const auto* tree = this->GetClusteredIndexedTree();
-
-    tree->RemoveColumnFromRow(index);
-  }
+    void Table::RemoveColumnByClusteredIndex(const column_index_t index){
+        const auto* tree = this->GetClusteredIndexedTree();
+        tree->RemoveColumnFromRow(index);
+    }
 
     void Table::RemoveColumnByHeap(const column_index_t index)const{
         // const auto& filename = this->GetFileNameView();
@@ -174,16 +162,15 @@ namespace CoreEngine::StorageTypes {
         // }
     }
 
-    void Table::InsertToVersionDatabase(
+    RID Table::InsertToVersionDatabase(
         const ::Memory::IAllocator* allocator,
         const Pages::RawRowReference& rowRef
-    )const{
+    ){
         static auto& versionDatabase = VersionDatabase::Get();
-        RowHeader rowHeader;
-        versionDatabase.InsertRow(allocator, rowRef, rowHeader, this);
+        return versionDatabase.InsertRow(allocator, rowRef);
     }
 
-    Table::Table(const table_id_t tableId, const Int ordinalPosition, Database* database){
+    Table::Table(const table_id_t tableId, const SmallInt ordinalPosition, Database* database){
         this->database = database;
         this->header.tableId = tableId;
         this->header.ordinalPosition = ordinalPosition;
@@ -194,34 +181,7 @@ namespace CoreEngine::StorageTypes {
         this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
     }
 
-//     Table::Table(
-//         const table_id_t tableId,
-//         const Int ordinalPosition,
-//         const DataStructures::PolymorphicArray<Column*> &columns,
-//         Database *database,
-//         const Headers::Index* clusteredIndex,
-//         const DataStructures::PolymorphicArray<Headers::Index> *nonClusteredIndexes
-//       ){
-// //        this->schema = schema;
-//         // this->_columns = columns;
-//         this->database = database;
-//         this->header.numberOfColumns = columns.size();
-//         this->header.tableId = tableId;
-//         this->header.ordinalPosition = ordinalPosition;
-//
-//         this->clusteredIndexedTree = nullptr;
-//
-//         if(clusteredIndex) {
-//           this->clusteredIndexHeader = *clusteredIndex;
-//           this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
-//         }
-//
-//         if(nonClusteredIndexes)
-//           this->nonClusteredIndexes = *nonClusteredIndexes;
-//       }
-
-      Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database)
-      {
+    Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database){
         this->header = tableHeader;
         this->header.tableId = masterDbHeader.id;
         this->header.ordinalPosition = masterDbHeader.ordinalPosition;
@@ -232,10 +192,9 @@ namespace CoreEngine::StorageTypes {
         this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
 
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
-      }
+    }
 
-      Table::Table(const std::string& tableName, const TableHeader &tableHeader, Database *database)
-      {
+    Table::Table(const std::string& tableName, const TableHeader &tableHeader, Database *database){
         this->header = tableHeader;
         this->database = database;
         this->clusteredIndexedTree = nullptr;
@@ -244,7 +203,7 @@ namespace CoreEngine::StorageTypes {
         this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
 
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
-      }
+    }
 
     Table::Table(
         const Headers::sysTable &systemHeader,
@@ -303,12 +262,14 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<char> buffer;
 
         const auto estimatedPayloadSize = this->CalculatePayloadSize();
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
         for (auto& insertedRow : input) {
             Errors::RuntimeStatus status;
             auto payload = this->CreateInsertPayload(
                 status,
                 executionContext.GetAllocator(),
-                executionContext.GetCurrentTransactionId(),
+                rowHeader,
                 estimatedPayloadSize,
                 insertedRow.Data()
             );
@@ -350,10 +311,12 @@ namespace CoreEngine::StorageTypes {
         Logging::CheckPoint checkPoint;
 
         Errors::RuntimeStatus status;
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
         auto payload = this->CreateInsertPayload(
             status,
             executionContext.GetAllocator(),
-            executionContext.GetCurrentTransactionId(),
+            rowHeader,
             this->CalculatePayloadSize(),
             inputData
         );
@@ -539,7 +502,7 @@ namespace CoreEngine::StorageTypes {
         const auto dataKey = this->database->GetDataFileKey();
         const auto systemFileKey = this->database->GetSystemFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId);
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         tableMapPage.GetAllocatedExtents(&tableExtentIds, state.extentId);
@@ -560,7 +523,7 @@ namespace CoreEngine::StorageTypes {
             if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
               break;
 
-            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
+            auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
@@ -585,25 +548,6 @@ namespace CoreEngine::StorageTypes {
             }
           }
         }
-    }
-
-    QueryResult Table::MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const{
-          const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-                this->database->GetDataFileKey(),
-                row->_pageId,
-                this
-          );
-
-          return page.MaterializeRow(allocator, row->_index);
-    }
-
-    QueryResult Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
-          const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                  this->database->GetDataFileKey(),
-                  row->_pageId,
-                  this
-            );
-          return page.MaterializeRow(allocator, row->_index);
     }
 
     void Table::TemporaryDatabaseHeapScan(
@@ -703,7 +647,7 @@ namespace CoreEngine::StorageTypes {
           return status;
       }
 
-      const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
+      const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId);
 
       DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
       tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
@@ -732,7 +676,7 @@ namespace CoreEngine::StorageTypes {
               // find potential candidate
               if (rowCategory <= pageSizeCategory)
               {
-                  auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId, this);
+                  auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId);
 
                   MultiThreading::WriterGuard pageLock(&page.Latch());
 
@@ -774,8 +718,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->header.allocationPageId,
-            this
+            this->header.allocationPageId
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
@@ -799,7 +742,7 @@ namespace CoreEngine::StorageTypes {
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
 
                 if (page.PageSize() == 0)
                     continue;
@@ -833,8 +776,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->header.allocationPageId,
-            this
+            this->header.allocationPageId
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
@@ -858,7 +800,7 @@ namespace CoreEngine::StorageTypes {
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                   break;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId, this);
+                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto row = RID(extentPageId, i);
@@ -1005,8 +947,8 @@ namespace CoreEngine::StorageTypes {
         if(columnSize <= largestVariableLengthColumnSize
             || column->isColumnOverflowed()
             || columnSize >= Constants::LARGE_DATA_OBJECT_SIZE
-            || clusteredColumns.Contains(column->OrdinalPosition()))
-          continue;
+            || clusteredColumns.Contains(column->OrdinalPosition())
+        ) continue;
 
         largestVariableLengthColumnSize = columnSize;
         largestColumn = column;
@@ -1021,7 +963,7 @@ namespace CoreEngine::StorageTypes {
       return maximumRowSize;
     }
 
-    DataStructures::StaticArray<DataType, 10> Table::GetColumnTypeByTreeId(const uint8_t& treeId) const{
+    DataStructures::StaticArray<DataType, 10> Table::GetColumnTypeByTreeId(const UnsignedTinyInt treeId) const{
           DataStructures::StaticArray<DataType, 10> columnDatatypes;
 
           if(treeId == 0){
@@ -1094,16 +1036,19 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto* allocator = context.GetAllocator();
-        this->InsertToVersionDatabase(allocator, page->RawRowData(row->_index));
+        const auto versionRid = this->InsertToVersionDatabase(allocator, page->RawRowData(row->_index));
 
-        auto materializedRow = page->MaterializeRow(allocator, row->_index);
+        auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = context.GetCurrentTransactionId();
+        rowHeader._oldVersionRID = versionRid;
         auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
-            context.GetCurrentTransactionId(),
+            rowHeader,
             this->CalculatePayloadSize(),
             materializedRow.Data()
         );
@@ -1134,9 +1079,9 @@ namespace CoreEngine::StorageTypes {
         const auto rowRawData = page->RawRowData(row->_index);
 
         const auto* allocator = context.GetAllocator();
-        this->InsertToVersionDatabase(allocator, rowRawData);
+        const auto versionRid = this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = page->MaterializeRow(allocator, row->_index);
+        auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
 
         const Expressions::EvaluationContext evaluationContext(row, context);
         for (const auto* updateExpr : updates) {
@@ -1151,10 +1096,13 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = context.GetCurrentTransactionId();
+        rowHeader._oldVersionRID = versionRid;
         auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
-            context.GetCurrentTransactionId(),
+            rowHeader,
             size,
             materializedRow.Data()
         );
@@ -1186,9 +1134,9 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto rowRawData = page->RawRowData(row->_index);
-        this->InsertToVersionDatabase(allocator, rowRawData);
+        const auto versionRid = this->InsertToVersionDatabase(allocator, rowRawData);
 
-        auto materializedRow = page->MaterializeRow(allocator, row->_index);
+        auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
         materializedRow.Update(updates);
 
         auto size = 0;
@@ -1196,10 +1144,13 @@ namespace CoreEngine::StorageTypes {
             size += value.Size();
 
         Errors::RuntimeStatus status;
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = FIRST_TRANSACTION_ID;
+        rowHeader._oldVersionRID = versionRid;
         const auto newPayload = this->CreateInsertPayload(
             status,
             allocator,
-            FIRST_TRANSACTION_ID,
+            rowHeader,
             size,
             materializedRow.Data()
         );
@@ -1250,6 +1201,27 @@ namespace CoreEngine::StorageTypes {
                 break;
             }
         }
+    }
+    Value Table::MaterializeColumn(
+        const ::Memory::IAllocator* allocator,
+        const RID* rid,
+        const column_index_t columnIndex
+    ) const{
+        const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+            this->database->GetDataFileKey(),
+            rid->_pageId
+        );
+
+        return page.GetColumnAt(allocator, rid, this, columnIndex);
+    }
+
+    QueryResult Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
+        const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+            this->database->GetDataFileKey(),
+            row->_pageId
+        );
+
+        return page.MaterializeRow(allocator, this, row->_index);
     }
 
     void Table::RetrieveIdentityColumnsFromCatalog(const ::Memory::IAllocator* allocator)const{
@@ -1353,7 +1325,7 @@ namespace CoreEngine::StorageTypes {
     const auto dataKey = this->database->GetDataFileKey();
     const auto systemKey = this->database->GetSystemFileKey();
 
-    const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId, this);
+    const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId);
 
     DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
     tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
@@ -1372,7 +1344,7 @@ namespace CoreEngine::StorageTypes {
           if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
             break;
 
-          auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId, this);
+          auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId);
 
           // for (auto& row: page.DataRowsNoLock(this))
           //   this->HandleAddColumn(page.Get(), &row, index, defaultValue);

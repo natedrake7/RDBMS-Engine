@@ -127,25 +127,6 @@ public:
       table_id_t tableOrdinal
     );
 
-    [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-      const std::vector<column_index_t>& indexedColumns,
-      const StorageTypes::InsertPayload& payload
-    );
-
-    // [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-    //     const ExecutionContext& context,
-    //     const std::vector<column_index_t>& indexedColumns,
-    //     const Pages::RowView& rowPtr,
-    //     Int offSet
-    // );
-
-    // [[nodiscard]] static DataTypes::Indexing::Key CreateKey(
-    //     const ExecutionContext& context,
-    //     const std::vector<column_index_t>& indexedColumns,
-    //     const Pages::RowView& rowPtr,
-    //     const DataTypes::RowIdentifier& rowId
-    // );
-
     [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(
         Storage::FileKey sysFileKey,
         page_id_t pageId

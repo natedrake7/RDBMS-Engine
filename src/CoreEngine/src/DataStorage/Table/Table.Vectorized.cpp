@@ -21,8 +21,7 @@ namespace CoreEngine::StorageTypes{
 
             const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 this->database->GetDataFileKey(),
-                rid._pageId,
-                this
+                rid._pageId
             );
 
             std::memcpy(_data + (i * sizeof(T)), page.GetColumnAt(rid._index, columnIndex), sizeof(T));
@@ -47,8 +46,7 @@ namespace CoreEngine::StorageTypes{
 
             const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                 this->database->GetDataFileKey(),
-                rid._pageId,
-                this
+                rid._pageId
             );
 
             std::memcpy(&output[i], page.GetColumnAt(rid._index, columnIndex), sizeof(T));

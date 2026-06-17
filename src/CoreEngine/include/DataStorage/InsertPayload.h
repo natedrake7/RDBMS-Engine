@@ -9,7 +9,6 @@
 
 namespace CoreEngine{
     class ExecutionContext;
-    struct ScanState;
 }
 
 namespace Pages{
@@ -21,13 +20,8 @@ namespace CoreEngine::StorageTypes {
 
     class InsertPayload final{
         object_t* _data;
-        UnsignedSmallInt size;
-        UnsignedSmallInt offset;
-
-        mutable RowHeader header;
-        mutable bool isHeaderInitialized;
-
-        bool isReferencingExternalData;
+        UnsignedInt size;
+        UnsignedInt offset;
 
         template <typename T>
         void CopyToBuffer(T value);
@@ -65,8 +59,6 @@ namespace CoreEngine::StorageTypes {
         InsertPayload(InsertPayload&& other) noexcept;
 
         static InsertPayload FromRowPtr(const Pages::RawRowReference& rowPtr);
-
-        ~InsertPayload();
 
         UnsignedSmallInt SetData(const void* otherData, UnsignedSmallInt dataSize);
         void SetData(const void* otherData, UnsignedSmallInt dataSize, Int offSet) const;

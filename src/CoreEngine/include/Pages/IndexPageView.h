@@ -65,8 +65,6 @@ namespace Pages{
 
             CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 
-            [[nodiscard]] bool IsRowVisible(Int indexPosition, const CoreEngine::Snapshot& snapshot)const;
-
             [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
             InternalNodeTuple GetInternalNodeTuple(
                 const ::Memory::IAllocator* allocator,
@@ -79,10 +77,5 @@ namespace Pages{
             //     Int indexPosition
             // ) const;
             void RemoveKeyFromChild(Int indexPosition) const;
-
-            void Log(
-                const ::Memory::IAllocator* allocator,
-                std::ostream& os
-            )const;
     };
 }

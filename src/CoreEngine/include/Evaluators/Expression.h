@@ -162,8 +162,6 @@ namespace Expressions{
     };
 
     class ColumnExpression final : public Expression {
-        [[nodiscard]] Value EvaluateSingleRow(const EvaluationContext& context)const;
-
         void BindVectorizedKernel();
         void BindRowKernel();
 
@@ -182,16 +180,6 @@ namespace Expressions{
         explicit ColumnExpression(column_index_t index);
 
         [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
-        [[nodiscard]] static Value* Evaluate(
-            const Expression* expression,
-            const CoreEngine::ExecutionContext& context,
-            const CoreEngine::SelectionVector* selectionVector
-        );
-        [[nodiscard]] static Value* Evaluate(
-            const Expression* expression,
-            const CoreEngine::ExecutionContext& context,
-            Int rangeEnd
-        );
 
         static void BindExpressionKernel(ColumnExpression* expression, Constants::ExecutionMode mode);
 

@@ -148,10 +148,7 @@ namespace CoreEngine {
         return true;
     }
 
-    Pages::PageView VersionDatabase::TryGetLastUndoPage(
-        const StorageTypes::Table *table,
-        const row_size_t size
-    ) {
+    Pages::PageView VersionDatabase::TryGetLastUndoPage(const row_size_t size) {
         page_id_t pageId;
 
         {
@@ -165,8 +162,7 @@ namespace CoreEngine {
 
         auto lastUsedPage = Storage::StorageManager::Get().GetPage<Pages::PageView>(
             this->dataFileKey,
-            pageId,
-            table
+            pageId
         );
 
         MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage.Latch());
@@ -198,7 +194,6 @@ namespace CoreEngine {
 
             auto undoPage = Storage::StorageManager::Get().CreatePage(
                 this->dataFileKey,
-                nullptr,
                 pageId
             );
 
@@ -207,14 +202,12 @@ namespace CoreEngine {
 
         return Storage::StorageManager::Get().GetPage<Pages::PageView>(
             this->dataFileKey,
-            newPageId,
-            nullptr
+            newPageId
         );
     }
 
     Pages::PageView VersionDatabase::GetLastUndoPage(
         const ::Memory::IAllocator* allocator,
-        const StorageTypes::Table* table,
         const row_size_t size
     ) {
         const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
@@ -222,7 +215,7 @@ namespace CoreEngine {
             this->header.lastGamPageId
         );
 
-        auto cachedPage = this->TryGetLastUndoPage(table, size);
+        auto cachedPage = this->TryGetLastUndoPage(size);
         if (cachedPage.IsValid())
             return cachedPage;
 
@@ -247,8 +240,7 @@ namespace CoreEngine {
 
                 auto undoPage = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                     this->dataFileKey,
-                    pageId,
-                    table
+                    pageId
                 );
 
                 MultiThreading::ReaderGuard undoLatch(&undoPage.Latch());
@@ -267,43 +259,41 @@ namespace CoreEngine {
         return this->CreateUndoPage(allocator);
     }
 
-    Errors::RuntimeStatus VersionDatabase::InsertRow(
+    StorageTypes::RID VersionDatabase::InsertRow(
         const ::Memory::IAllocator* allocator,
-        const Pages::RawRowReference& rowRef,
-        StorageTypes::RowHeader& rowHeader,
-        const StorageTypes::Table* table
+        const Pages::RawRowReference& rowRef
     ){
-        Errors::RuntimeStatus status;
-        // const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
-        // const auto page = this->GetLastUndoPage(allocator, table, payload.Size());
-        //
-        // MultiThreading::WriterGuard lock(&page.Latch());
-        //
-        // const auto indexPosition = page.InsertRow(payload);
-        //
-        // rowPointer.pageId = page.PageId();
-        // rowPointer.offset = indexPosition;
-        //
-        // this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
-        return status;
+        const auto page = this->GetLastUndoPage(allocator, rowRef.size);
+
+        MultiThreading::WriterGuard lock(&page.Latch());
+
+        const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
+        const auto indexPosition = page.InsertRow(payload);
+
+        this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
+
+        return StorageTypes::RID(page.PageId(), indexPosition);
     }
 
-    StorageTypes::RID VersionDatabase::RetrieveRowReference(
-        const ::Memory::IAllocator* allocator,
+    StorageTypes::RID VersionDatabase::RetrieveVersionedRid(
         const Snapshot& snapshot,
-        const StorageTypes::RowHeader& rowHeader,
-        const StorageTypes::Table *table
+        const StorageTypes::RowHeader& rowHeader
     )const {
         {
             const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                 this->dataFileKey,
-                rowHeader._oldVersionPageId,
-                table
+                rowHeader._oldVersionRID._pageId
             );
 
             MultiThreading::ReaderGuard lock(&page.Latch());
-            return StorageTypes::RID(page.PageId(), rowHeader._oldVersionOffset);
-            // return page.PeekRow(allocator, rowHeader._oldVersionOffset, 0);
+
+            if (!page.IsRowVisible(snapshot, rowHeader._oldVersionRID._index)){
+                const auto* versionRowHeader = page.PeekRowHeader(rowHeader._oldVersionRID._index);
+                if (versionRowHeader->HasOldVersion())
+                    return this->RetrieveVersionedRid(snapshot, *versionRowHeader);
+            }
+
+            return StorageTypes::RID(page.PageId(), rowHeader._oldVersionRID._index);
         }
     }
 
@@ -341,8 +331,7 @@ namespace CoreEngine {
 
                 auto page = storageManager.GetPage<Pages::PageView>(
                     this->dataFileKey,
-                    pageId,
-                    nullptr
+                    pageId
                 );
 
                 MultiThreading::WriterGuard pageLatch(&page.Latch());
@@ -352,7 +341,7 @@ namespace CoreEngine {
 
                     if (
                         transactionId == FIRST_TRANSACTION_ID
-                        || rowHeader._createdTransactionId <= transactionId
+                        || rowHeader->_createdTransactionId <= transactionId
                     ) {
                         page.Delete(i);
                         i--;

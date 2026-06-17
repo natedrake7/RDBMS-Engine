@@ -39,7 +39,7 @@ namespace Pages{
 
         PageHeader();
 
-        Constants::PageType Type() const;
+        [[nodiscard]] Constants::PageType Type() const;
         void SetType(Constants::PageType pageType);
     };
     static_assert(sizeof(PageHeader) == Constants::PAGE_HEADER_SIZE);
@@ -84,7 +84,7 @@ namespace Pages{
 
         [[nodiscard]] PageHeader* GetHeader()const;
 
-        [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekRowHeader(Int indexPosition)const;
+        [[nodiscard]] const CoreEngine::StorageTypes::RowHeader* PeekRowHeader(Int indexPosition)const;
 
         [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
@@ -121,6 +121,7 @@ namespace Pages{
 
         QueryResult MaterializeRow(
             const Memory::IAllocator* allocator,
+            const CoreEngine::StorageTypes::Table* tablePtr,
             Int indexPosition
         ) const;
 
@@ -146,14 +147,14 @@ namespace Pages{
             Int columnIndex
         );
 
-        static Value GetColumnAt(
+        Value GetColumnAt(
             const ::Memory::IAllocator* allocator,
-            const PageView* page,
             const CoreEngine::StorageTypes::RID* row,
+            const CoreEngine::StorageTypes::Table* table,
             Int columnIndex
-        );
+        ) const;
 
-        template<typename T>
+        template<DataTypes::PrimitiveColumn T>
         [[nodiscard]] T GetColumnAt(
             Int index,
             Int columnIndex,
@@ -180,5 +181,7 @@ namespace Pages{
         ) const;
 
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
+
+        [[nodiscard]] bool IsRowVisible(const CoreEngine::Snapshot& snapshot, Int indexPosition) const;
     };
 }

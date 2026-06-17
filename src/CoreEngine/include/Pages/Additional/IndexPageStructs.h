@@ -60,7 +60,7 @@ namespace Pages{
 		LeafNodeTuple& operator=(const LeafNodeTuple& other) = delete;
 		LeafNodeTuple(const LeafNodeTuple& other) = delete;
 
-		LeafNodeTuple(CoreEngine::StorageTypes::RID& row, DataTypes::Indexing::Key& key);
+		LeafNodeTuple(CoreEngine::StorageTypes::RID row, DataTypes::Indexing::Key& key);
 	};
 
 	struct RowIdTuple{

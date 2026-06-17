@@ -26,10 +26,9 @@ template<> struct IsStringType<DataTypes::StringView> : std::true_type {};
 template<typename T>
 inline constexpr bool IsStringType_v = IsStringType<T>::value;
 
-template<typename Key, typename Value, size_t N, typename Hasher = ConstexprHash<Key>>
+template<typename Key, typename Value, size_t N, typename Hasher = CaseInsensitiveHash<Key>>
 class ConstexprDictionary{
     static constexpr size_t Capacity = N * 2;
-
 
     Pair<Key, Value> buckets[Capacity] {};
     bool occupied[Capacity] {};

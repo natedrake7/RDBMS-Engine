@@ -13,6 +13,7 @@ namespace Pages{
         this->pageId = INVALID_PAGE_ID;
         this->size = 0;
         this->bytesLeft = static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
+        this->type = static_cast<page_size_t>(Constants::PageType::DATA);
     }
 
     Constants::PageType PageHeader::Type() const{
@@ -139,11 +140,9 @@ namespace Pages{
         return this->_frame->Header();
     }
 
-    CoreEngine::StorageTypes::RowHeader PageView::PeekRowHeader(const Int indexPosition) const{
+    const CoreEngine::StorageTypes::RowHeader* PageView::PeekRowHeader(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        CoreEngine::StorageTypes::RowHeader rowHeader;
-        std::memcpy(&rowHeader, this->_frame->_data + slot.AbsoluteDataOffset(), Constants::ROW_VERSION_HEADER_SIZE);
-        return rowHeader;
+        return reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(this->_frame->_data + slot.AbsoluteDataOffset());
     }
 
     SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
@@ -409,17 +408,18 @@ namespace Pages{
 
     QueryResult PageView::MaterializeRow(
         const Memory::IAllocator* allocator,
+        const CoreEngine::StorageTypes::Table* tablePtr,
         const Int indexPosition
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        const auto& columns = this->_frame->table->GetColumns();
+        const auto& columns = tablePtr->GetColumns();
         const auto columnsSize = columns.Size();
 
         auto result = QueryResult(allocator);
 
         const auto dataOffset = slot.AbsoluteDataOffset();
-        const auto entryTableOffset = dataOffset + Constants::ROW_VERSION_HEADER_SIZE;
+        const auto entryTableOffset = dataOffset + sizeof(CoreEngine::StorageTypes::RowHeader);
         const auto* rowDataPtr = this->_frame->_data + dataOffset;
         auto* entries = reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(this->_frame->_data + entryTableOffset);
 
@@ -485,16 +485,15 @@ namespace Pages{
 
     Value PageView::GetColumnAt(
         const ::Memory::IAllocator* allocator,
-        const PageView* page,
         const CoreEngine::StorageTypes::RID* row,
+        const CoreEngine::StorageTypes::Table* table,
         const Int columnIndex
-    ){
-        const auto slot = page->GetSlotDirectory(row->_index);
-        const auto* frame = page->GetFrame();
-        const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
+    ) const{
+        const auto slot = this->GetSlotDirectory(row->_index);
+        const auto* rowDataPtr = this->_frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         if (rowEntry.IsNull())
@@ -503,12 +502,12 @@ namespace Pages{
         return Value::FromExternalStorage(
             rowDataPtr + rowEntry._offset,
             rowEntry.Size(),
-            frame->table->GetColumns()[columnIndex]->Type(),
+            table->GetColumns()[columnIndex]->Type(),
             allocator
         );
     }
 
-    template <typename T>
+    template <DataTypes::PrimitiveColumn T>
     T PageView::GetColumnAt(
         const Int index,
         const Int columnIndex,
@@ -518,12 +517,11 @@ namespace Pages{
         const auto* rowDataPtr = this->_frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         *outNull = rowEntry.IsNull();
         auto out = T();
-
         if (*outNull) return out;
 
         std::memcpy(&out, rowDataPtr + rowEntry._offset, sizeof(T));
@@ -540,7 +538,7 @@ namespace Pages{
         const auto* rowDataPtr = this->_frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         *outNull = rowEntry.IsNull();
@@ -558,7 +556,7 @@ namespace Pages{
         const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         if (rowEntry.IsNull()) return nullptr;
@@ -577,7 +575,7 @@ namespace Pages{
         const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
 
         const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + Constants::ROW_VERSION_HEADER_SIZE + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
+            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
         );
 
         // TODO: OVERFLOWVAL / LOB entries store a pointer here, not the bytes themselves.
@@ -595,6 +593,15 @@ namespace Pages{
     RawRowReference PageView::RawRowData(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return RawRowReference(this->_frame->_data + slot.AbsoluteDataOffset(), slot.DataSize());
+    }
+
+    bool PageView::IsRowVisible(const CoreEngine::Snapshot& snapshot, const Int indexPosition) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto* versionHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
+            this->_frame->_data + slot.AbsoluteDataOffset()
+        );
+
+        return versionHeader->IsVisibleForTransaction(snapshot);
     }
 
     template bool PageView::GetColumnAt<bool>(Int index, Int columnIndex, bool* outNull) const;

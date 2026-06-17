@@ -1,7 +1,4 @@
-#include <iostream>
-
 #include "../include/Database.h"
-#include <vector>
 #include "../include/DatabaseConstants.h"
 #include "../include/DataStorage/Table.h"
 #include "../include/BufferPool/StorageManager.h"
@@ -9,53 +6,6 @@
 #include "Guards/ReaderGuard.h"
 
 namespace CoreEngine {
-    DataTypes::Indexing::Key Database::CreateKey(
-        const std::vector<column_index_t>& indexedColumns,
-        const StorageTypes::InsertPayload& payload
-    )
-    {
-        DataTypes::Indexing::Key key;
-        // for (const auto &columnId : indexedColumns){
-        //     auto data = row->GetColumnByIndex(columnId);
-        //     key.InsertKey(DataTypes::Indexing::Key(data));
-        // }
-
-        return key;
-    }
-
-    // DataTypes::Indexing::Key Database::CreateKey(
-    //     const ExecutionContext& context,
-    //     const std::vector<column_index_t>& indexedColumns,
-    //     const Pages::RowView& rowPtr,
-    //     const Int offSet
-    // ){
-    //
-    //     DataTypes::Indexing::Key key;
-    //     for (const auto ordinalPosition : indexedColumns){
-    //         auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition - offSet);
-    //         key.InsertKey(DataTypes::Indexing::Key(data));
-    //     }
-    //
-    //     return key;
-    // }
-
-    // DataTypes::Indexing::Key Database::CreateKey(
-    //     const ExecutionContext& context,
-    //     const std::vector<column_index_t> &indexedColumns,
-    //     const Pages::RowView& rowPtr,
-    //     const DataTypes::RowIdentifier &rowId
-    // ){
-    //     DataTypes::Indexing::Key key;
-    //     for (const auto ordinalPosition : indexedColumns){
-    //         auto data = rowPtr.PartialMaterialize(context.GetAllocator(), ordinalPosition);
-    //         key.InsertKey(DataTypes::Indexing::Key(data));
-    //     }
-    //
-    //     key.InsertKey(DataTypes::Indexing::Key(&rowId, sizeof(rowId), DataType::RowIdentifier, context.GetAllocator()));
-    //
-    //     return key;
-    // }
-
    Pages::IndexPageView Database::FindOrAllocateNextIndexPage(
         const ::Memory::IAllocator* allocator,
         StorageTypes::Table*& table,
@@ -84,8 +34,7 @@ namespace CoreEngine {
 
         const auto indexAllocationMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             this->dataFileKey,
-            tableHeader.allocationPageId,
-            table
+            tableHeader.allocationPageId
         );
 
         DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator);
@@ -116,8 +65,7 @@ namespace CoreEngine {
 
                 auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
                     this->dataFileKey,
-                    nextIndexPageId,
-                    table
+                    nextIndexPageId
                 );
 
                 bool success = false;

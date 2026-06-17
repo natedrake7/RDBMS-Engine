@@ -248,10 +248,8 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
     }
 
     parseResult.Release();
-    CoreEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
 
     const auto end = std::chrono::high_resolution_clock::now();
-
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);
 
     std::cout << "Rows affected: " << count << std::endl;

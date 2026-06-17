@@ -8,17 +8,22 @@ namespace CoreEngine {
 
 
 namespace CoreEngine::StorageTypes{
+    struct RID{
+        page_id_t _pageId;
+        Int _index;
+
+        RID();
+        RID(page_id_t pageId, Int index);
+    };
+
     struct RowHeader{
         transaction_id_t _createdTransactionId;
         transaction_id_t _deletedTransactionId;
 
-        page_id_t _oldVersionPageId;
-        page_offset_t _oldVersionOffset;
+        RID _oldVersionRID;
 
         explicit RowHeader();
-        ~RowHeader() = default;
-
-        [[nodiscard]] bool HasOldVersion()const { return this->_oldVersionPageId != INVALID_PAGE_ID; }
+        [[nodiscard]] bool HasOldVersion()const { return this->_oldVersionRID._pageId != INVALID_PAGE_ID; }
         [[nodiscard]] bool IsVisibleForTransaction(const Snapshot& snapshot)const;
         [[nodiscard]] bool IsDeletedForTransaction(const Snapshot& snapshot)const;
     };
@@ -76,13 +81,5 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] bool IsNull() const { return this->Type() == EntryType::NULLVAL; }
         [[nodiscard]] bool IsOverflow() const { return this->Type() == EntryType::OVERFLOWVAL; }
         [[nodiscard]] bool IsLOB() const { return this->Type() == EntryType::LOB; }
-    };
-
-    struct RID{
-        page_id_t _pageId;
-        Int _index;
-
-        RID() = default;
-        RID(page_id_t pageId, Int index);
     };
 }
