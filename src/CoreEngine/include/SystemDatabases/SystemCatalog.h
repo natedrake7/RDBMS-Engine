@@ -19,7 +19,6 @@ namespace CoreEngine {
 
     class SystemCatalog {
         SystemCatalog();
-        ~SystemCatalog();
 
         Database* masterDb;
         std::vector<Headers::sysTable> sysTables;
@@ -274,7 +273,7 @@ namespace CoreEngine {
             const ::Memory::IAllocator* allocator,
             Int databaseId,
             const DataTypes::StringView& schema,
-            int* schemaId = nullptr
+            Int* schemaId = nullptr
         ) const;
         [[nodiscard]]DataStructures::PolymorphicArray<Headers::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
         [[nodiscard]]DataStructures::PolymorphicArray<Headers::TableHeader> SelectTables(

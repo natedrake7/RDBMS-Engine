@@ -145,19 +145,19 @@ namespace DataTypes{
         switch (type) {
             case StringComparisonType::Equals:
                 return *this == other;
-            case StringComparisonType::EqualsIgnoreOrdinalCase:
+            case StringComparisonType::EqualsIgnoreCase:
                 return this->EqualsIgnoreCase(other._data, other._size);
             case StringComparisonType::StartsWith:
                 return this->StartsWith(other._data, other._size);
-            case StringComparisonType::StartsWithIgnoreOrdinalCase:
+            case StringComparisonType::StartsWithIgnoreCase:
                 return this->StartsWithIgnoreCase(other._data, other._size);
             case StringComparisonType::EndsWith:
                 return this->EndsWith(other._data, other._size);
-            case StringComparisonType::EndsWithIgnoreOrdinalCase:
+            case StringComparisonType::EndsWithIgnoreCase:
                 return this->EndsWithIgnoreCase(other._data, other._size);
             case StringComparisonType::Contains:
                 return this->Contains(other._data, other._size);
-            case StringComparisonType::ContainsIgnoreCase:
+            case StringComparisonType::ContainsCase:
                 return this->ContainsIgnoreCase(other._data, other._size);
             default:
                 throw std::invalid_argument("Invalid StringComparisonType.");
@@ -168,19 +168,19 @@ namespace DataTypes{
         switch (type) {
             case StringComparisonType::Equals:
                 return this->Equals(other.Data(), other.Size());
-            case StringComparisonType::EqualsIgnoreOrdinalCase:
+            case StringComparisonType::EqualsIgnoreCase:
                 return this->EqualsIgnoreCase(other.Data(), other.Size());
             case StringComparisonType::StartsWith:
                 return this->StartsWith(other.Data(), other.Size());
-            case StringComparisonType::StartsWithIgnoreOrdinalCase:
+            case StringComparisonType::StartsWithIgnoreCase:
                 return this->StartsWithIgnoreCase(other.Data(), other.Size());
             case StringComparisonType::EndsWith:
                 return this->EndsWith(other.Data(), other.Size());
-            case StringComparisonType::EndsWithIgnoreOrdinalCase:
+            case StringComparisonType::EndsWithIgnoreCase:
                 return this->EndsWithIgnoreCase(other.Data(), other.Size());
             case StringComparisonType::Contains:
                 return this->Contains(other.Data(), other.Size());
-            case StringComparisonType::ContainsIgnoreCase:
+            case StringComparisonType::ContainsCase:
                 return this->ContainsIgnoreCase(other.Data(), other.Size());
             default:
                 throw std::invalid_argument("Invalid StringComparisonType.");
@@ -192,19 +192,19 @@ namespace DataTypes{
         switch (type) {
             case StringComparisonType::Equals:
                 return this->Equals(other, otherSize);
-            case StringComparisonType::EqualsIgnoreOrdinalCase:
+            case StringComparisonType::EqualsIgnoreCase:
                 return this->EqualsIgnoreCase(other, otherSize);
             case StringComparisonType::StartsWith:
                 return this->StartsWith(other, otherSize);
-            case StringComparisonType::StartsWithIgnoreOrdinalCase:
+            case StringComparisonType::StartsWithIgnoreCase:
                 return this->StartsWithIgnoreCase(other, otherSize);
             case StringComparisonType::EndsWith:
                 return this->EndsWith(other, otherSize);
-            case StringComparisonType::EndsWithIgnoreOrdinalCase:
+            case StringComparisonType::EndsWithIgnoreCase:
                 return this->EndsWithIgnoreCase(other, otherSize);
             case StringComparisonType::Contains:
                 return this->Contains(other, otherSize);
-            case StringComparisonType::ContainsIgnoreCase:
+            case StringComparisonType::ContainsCase:
                 return this->ContainsIgnoreCase(other, otherSize);
             default:
                 throw std::invalid_argument("Invalid StringComparisonType.");
@@ -215,19 +215,19 @@ namespace DataTypes{
         switch (type) {
             case StringComparisonType::Equals:
                 return this->Equals(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::EqualsIgnoreOrdinalCase:
+            case StringComparisonType::EqualsIgnoreCase:
                 return this->EqualsIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::StartsWith:
                 return this->StartsWith(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::StartsWithIgnoreOrdinalCase:
+            case StringComparisonType::StartsWithIgnoreCase:
                 return this->StartsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::EndsWith:
                 return this->EndsWith(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::EndsWithIgnoreOrdinalCase:
+            case StringComparisonType::EndsWithIgnoreCase:
                 return this->EndsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::Contains:
                 return this->Contains(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::ContainsIgnoreCase:
+            case StringComparisonType::ContainsCase:
                 return this->ContainsIgnoreCase(other.data(), static_cast<Int>(other.size()));
             default:
                 throw std::invalid_argument("Invalid StringComparisonType.");
@@ -238,19 +238,19 @@ namespace DataTypes{
         switch (type) {
             case StringComparisonType::Equals:
                 return this->Equals(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::EqualsIgnoreOrdinalCase:
+            case StringComparisonType::EqualsIgnoreCase:
                 return this->EqualsIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::StartsWith:
                 return this->StartsWith(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::StartsWithIgnoreOrdinalCase:
+            case StringComparisonType::StartsWithIgnoreCase:
                 return this->StartsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::EndsWith:
                 return this->EndsWith(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::EndsWithIgnoreOrdinalCase:
+            case StringComparisonType::EndsWithIgnoreCase:
                 return this->EndsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
             case StringComparisonType::Contains:
                 return this->Contains(other.data(), static_cast<Int>(other.size()));
-            case StringComparisonType::ContainsIgnoreCase:
+            case StringComparisonType::ContainsCase:
                 return this->ContainsIgnoreCase(other.data(), static_cast<Int>(other.size()));
             default:
                 throw std::invalid_argument("Invalid StringComparisonType.");

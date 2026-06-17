@@ -41,8 +41,6 @@ namespace CoreEngine {
         this->masterDb = nullptr;
     }
 
-    SystemCatalog::~SystemCatalog() = default;
-
     std::tuple<DataTypes::String, DataTypes::String> SystemCatalog::ReadConfiguration(
         const ::Memory::IAllocator* allocator,
         const DataTypes::StringView& configPath
@@ -1517,30 +1515,26 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::StringView& schema,
-        int* schemaId
-) const{
-    DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 1);
-    auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysSchemas);
+        Int* schemaId
+    ) const{
+        DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 1);
+        auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
 
-    DataTypes::Indexing::Key key(allocator);
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
+        Expressions::ColumnExpression columnExpr(static_cast<column_index_t>(SysSchemas::Name), DataType::String);
+        Expressions::ConstantExpression constantExpr(Value(schema, allocator, static_cast<column_index_t>(SysSchemas::Name)));
+        Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
 
-    tablePtr->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, nullptr);
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    for (const auto& row : selectedSchemas){
-        const auto materializedRow = tablePtr->MaterializeFromPage(allocator, &row);
-        const auto currentSchemaName = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::Name));
-        const auto schemaNameView = currentSchemaName.AsStringView();
+        table->SystemClusteredIndexSeek(allocator, &selectedSchemas, key, &binaryExpr);
+        if (selectedSchemas.Empty()) return false;
 
-        if (schemaNameView.Contains(schema, StringComparisonType::EqualsIgnoreOrdinalCase)){
-            if (schemaId != nullptr)
-                *schemaId = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::SchemaId)).AsInt();
+        const auto materializedRow = table->MaterializeFromPage(allocator, &selectedSchemas[0]);
+        *schemaId = materializedRow.GetColumnAt(static_cast<column_index_t>(SysSchemas::SchemaId)).AsInt();
 
-            return true;
-        }
-    }
-
-    return false;
+        return true;
     }
 
     DataStructures::PolymorphicArray<Headers::TableHeader> SystemCatalog::SelectTables(
@@ -1595,37 +1589,36 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const DataTypes::StringView& tableName,
         const DataTypes::StringView& schema
     ) const{
+        Int schemaId = -1;
+        if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.Empty())
+            return {};
 
-    Int schemaId = -1;
-    if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.Empty())
-        return {};
+        DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
+        auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
-    DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
-    auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+        auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId), DataType::Int);
+        auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, allocator, static_cast<column_index_t>(SysTables::SchemaId)));
 
-    auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId), DataType::Int);
-    auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, allocator, static_cast<column_index_t>(SysTables::SchemaId)));
+        auto leftBinaryExpr = Expressions::BinaryExpression(&leftColumnExpr, &leftConstantExpr, Expressions::BinaryOperator::Equal);
 
-    auto leftBinaryExpr = Expressions::BinaryExpression(&leftColumnExpr, &leftConstantExpr, Expressions::BinaryOperator::Equal);
+        auto rightColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name), DataType::String);
+        auto rightConstantExpr = Expressions::ConstantExpression(Value(tableName, allocator, static_cast<column_index_t>(SysTables::Name)));
 
-    auto rightColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::Name), DataType::String);
-    auto rightConstantExpr = Expressions::ConstantExpression(Value(tableName, allocator, static_cast<column_index_t>(SysTables::Name)));
+        auto rightBinaryExpr = Expressions::BinaryExpression(&rightColumnExpr, &rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
 
-    auto rightBinaryExpr = Expressions::BinaryExpression(&rightColumnExpr, &rightConstantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
+        auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
 
-    auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
+        Expressions::BindExpressionKernel(&logicalExpr, Constants::ExecutionMode::Row);
 
-    Expressions::BindExpressionKernel(&logicalExpr, Constants::ExecutionMode::Row);
+        DataTypes::Indexing::Key key(allocator);
+        key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
 
-    DataTypes::Indexing::Key key(allocator);
-    key.InsertKey(DataTypes::Indexing::Key(&databaseId, sizeof(databaseId), DataType::Int, allocator));
+        sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, &logicalExpr);
 
-    sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, &logicalExpr);
+        if (selectedTables.Empty())
+            return {};
 
-    if (selectedTables.Empty())
-        return {};
-
-    return SystemCatalog::ToTableHeader(allocator, &selectedTables[0], sysTablesPtr);
+        return SystemCatalog::ToTableHeader(allocator, &selectedTables[0], sysTablesPtr);
     }
 
     DataStructures::PolymorphicArray<Headers::ConstraintsHeader> SystemCatalog::SelectConstraints(

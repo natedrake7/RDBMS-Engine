@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 typedef uint8_t UnsignedTinyInt;
@@ -90,16 +92,17 @@ static_assert(static_cast<UnsignedTinyInt>(DataType::RowIdentifier) == DATATYPE_
 
 enum class StringComparisonType: UnsignedTinyInt{
     Equals = 0,
-    EqualsIgnoreOrdinalCase = 1,
+    EqualsIgnoreCase = 1,
     StartsWith = 2,
-    StartsWithIgnoreOrdinalCase = 3,
+    StartsWithIgnoreCase = 3,
     EndsWith = 4,
-    EndsWithIgnoreOrdinalCase = 5,
+    EndsWithIgnoreCase = 5,
     Contains = 6,
-    ContainsIgnoreCase = 7
+    ContainsCase = 7
 };
 
 namespace DataTypes{
+    class StringView;
     class Guid;
     class DateTime;
     class String;
@@ -119,9 +122,15 @@ namespace DataTypes{
                        && !std::is_pointer_v<T>
                         && !NonPrimitiveType<T>;
 
-
     template <typename T>
     concept IsString = std::is_same_v<T, String>;
+
+    template <typename T>
+    concept IsStringLike =
+        std::is_same_v<T, String>
+        || std::is_same_v<T, StringView>
+        || std::is_same_v<T, std::string>
+        || std::is_same_v<T, std::string_view>;
 
     template <typename T>
     concept IsJson = std::is_same_v<T, JsonBinary>;

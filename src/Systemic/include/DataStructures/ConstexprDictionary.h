@@ -49,7 +49,7 @@ class ConstexprDictionary{
 
     [[nodiscard]] static constexpr bool KeyEquals(const Key& lhs, const Key& rhs) noexcept {
         if constexpr (std::is_same_v<Hasher, CaseInsensitiveHash<Key>> && IsStringType_v<Key>)
-            return DataTypes::String::EqualsIgnoreCase(lhs, rhs);
+            return DataTypes::String::Compare<StringComparisonType::EqualsIgnoreCase>(lhs, rhs);
         return lhs == rhs;
     }
 

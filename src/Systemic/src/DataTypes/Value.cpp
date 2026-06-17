@@ -352,11 +352,11 @@ bool Value::ParseAsBoolFromString() const{
     const auto strView = this->AsStringView();
 
     for (const auto& str: TrueStrings)
-        if (str.Contains(strView, StringComparisonType::EqualsIgnoreOrdinalCase))
+        if (str.Contains(strView, StringComparisonType::EqualsIgnoreCase))
             return true;
 
     for (const auto& str: FalseStrings)
-        if (str.Contains(strView, StringComparisonType::EqualsIgnoreOrdinalCase))
+        if (str.Contains(strView, StringComparisonType::EqualsIgnoreCase))
             return false;
 
     return false;

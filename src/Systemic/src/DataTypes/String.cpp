@@ -21,92 +21,67 @@ namespace DataTypes{
         return this->_capacity >= size;
     }
 
-    bool String::Equals(const char* other, const Int size) const{
-        return this->_size == size
-            && std::memcmp(this->_data, other, size) == 0;
+    bool String::Equals(const StringView& lhs, const StringView& rhs){
+        return lhs.Size() == rhs.Size()
+            && std::memcmp(lhs.Data(), rhs.Data(), lhs.Size()) == 0;
     }
 
-    bool String::EqualsIgnoreCase(const char* other, const Int size) const{
-        if (this->_size != size)
-            return false;
-
-        for (Int i = 0; i < this->_size; i++) {
-            if (std::tolower(this->_data[i]) != std::tolower(other[i]))
-                return false;
-        }
-
-        return true;
+    bool String::EqualsIgnoreCase(const StringView& lhs, const StringView& rhs){
+        const auto leftSize = lhs.Size();
+        return (leftSize == rhs.Size())
+            && strncasecmp(lhs.Data(), rhs.Data(), leftSize) == 0;
     }
 
-    bool String::StartsWith(const char* other, const Int size) const{
-        if (this->_size < size)
-            return false;
-
-        return std::memcmp(this->_data, other, size) == 0;
+    bool String::StartsWith(const StringView& lhs, const StringView& rhs){
+        return (lhs.Size() >= rhs.Size())
+            && strncmp(lhs.Data(), rhs.Data(), rhs.Size()) == 0;
     }
 
-    bool String::StartsWithIgnoreCase(const char* other, const Int size) const{
-        if (this->_size < size)
-            return false;
-
-        for (int i = 0; i < size; i++){
-            if (std::tolower(this->_data[i]) != std::tolower(other[i]))
-                return false;
-        }
-
-        return true;
+    bool String::StartsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+        return (lhs.Size() >= rhs.Size())
+            && strncasecmp(lhs.Data(), rhs.Data(), rhs.Size()) == 0;
     }
 
-    bool String::EndsWith(const char* other, const Int size) const{
-        if (this->_size < size)
-            return false;
-
-        return std::memcmp(this->_data + this->_size - size, other, size) == 0;
+    bool String::EndsWith(const StringView& lhs, const StringView& rhs){
+        return (lhs.Size() >= rhs.Size())
+            && strncmp(lhs.Data() + lhs.Size() - rhs.Size(), rhs.Data(), rhs.Size()) == 0;
     }
 
-    bool String::EndsWithIgnoreCase(const char* other, const Int size) const{
-        if (this->_size < size)
-            return false;
-
-        for (int i = 0; i < size; i++){
-            if (std::tolower(this->_data[this->_size - size + i]) != std::tolower(other[i]))
-                return false;
-        }
-
-        return true;
+    bool String::EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+        return (lhs.Size() >= rhs.Size())
+            && strncasecmp(lhs.Data() + lhs.Size() - rhs.Size(), rhs.Data(), rhs.Size()) == 0;
     }
 
-    bool String::Contains(const char* other, const Int size) const {
-        if (size == 0)
+    bool String::Contains(const StringView& lhs, const StringView& rhs){
+        const auto leftSize = lhs.Size();
+        const auto rightSize = rhs.Size();
+
+        if (leftSize == 0)
             return true;
 
-        if (this->_size < size)
+        if (leftSize < rightSize)
             return false;
 
-        for (Int i = 0; i <= this->_size - size; i++) {
-            if (std::memcmp(this->_data + i, other, size) == 0)
+        for (Int i = 0; i <= leftSize - rightSize; i++) {
+            if (strncmp(lhs.Data() + i, rhs.Data(), rhs.Size()) == 0)
                 return true;
         }
 
         return false;
     }
 
-    bool String::ContainsIgnoreCase(const char* other, const Int size) const {
-        if (size == 0)
+    bool String::ContainsIgnoreCase(const StringView& lhs, const StringView& rhs){
+        const auto leftSize = lhs.Size();
+        const auto rightSize = rhs.Size();
+
+        if (leftSize == 0)
             return true;
 
-        if (this->_size < size)
+        if (leftSize < rightSize)
             return false;
 
-        for (Int i = 0; i <= this->_size - size; i++) {
-            bool match = true;
-            for (Int j = 0; j < size; j++) {
-                if (std::tolower(this->_data[i + j]) != std::tolower(other[j])) {
-                    match = false;
-                    break;
-                }
-            }
-            if (match)
+        for (Int i = 0; i <= leftSize - rightSize; i++) {
+            if (strncasecmp(lhs.Data() + i, rhs.Data(), rhs.Size()) == 0)
                 return true;
         }
 
@@ -587,11 +562,11 @@ namespace DataTypes{
     }
 
     bool operator==(const String& lhs, const String& rhs){
-        return lhs.Equals(rhs.Data(), rhs.Size());
+        return String::Equals(lhs.ToView(), rhs.ToView());
     }
 
     bool operator!=(const String& lhs, const String& rhs){
-        return !lhs.Equals(rhs.Data(), rhs.Size());
+        return !String::Equals(lhs.ToView(), rhs.ToView());
     }
 
     bool operator<=(const String& lhs, const String& rhs){
@@ -748,122 +723,6 @@ namespace DataTypes{
             if (this->_data[i] == c)
                 return i;
         return -1;
-    }
-
-    bool String::Compare(const String& other, const StringComparisonType type) const{
-        switch (type) {
-        case StringComparisonType::Equals:
-            return this->Equals(other._data, other._size);
-        case StringComparisonType::EqualsIgnoreOrdinalCase:
-            return this->EqualsIgnoreCase(other._data, other._size);
-        case StringComparisonType::StartsWith:
-            return this->StartsWith(other._data, other._size);
-        case StringComparisonType::StartsWithIgnoreOrdinalCase:
-            return this->StartsWithIgnoreCase(other._data, other._size);
-        case StringComparisonType::EndsWith:
-            return this->EndsWith(other._data, other._size);
-        case StringComparisonType::EndsWithIgnoreOrdinalCase:
-            return this->EndsWithIgnoreCase(other._data, other._size);
-        case StringComparisonType::Contains:
-            return this->Contains(other._data, other._size);
-        case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(other._data, other._size);
-        default:
-            throw std::invalid_argument("Invalid StringComparisonType.");
-        }
-    }
-
-    bool String::Compare(const char* other, const StringComparisonType type) const{
-        const auto otherSize = static_cast<Int>(std::strlen(other));
-        switch (type) {
-        case StringComparisonType::Equals:
-            return this->Equals(other, otherSize);
-        case StringComparisonType::EqualsIgnoreOrdinalCase:
-            return this->EqualsIgnoreCase(other, otherSize);
-        case StringComparisonType::StartsWith:
-            return this->StartsWith(other, otherSize);
-        case StringComparisonType::StartsWithIgnoreOrdinalCase:
-            return this->StartsWithIgnoreCase(other, otherSize);
-        case StringComparisonType::EndsWith:
-            return this->EndsWith(other, otherSize);
-        case StringComparisonType::EndsWithIgnoreOrdinalCase:
-            return this->EndsWithIgnoreCase(other, otherSize);
-        case StringComparisonType::Contains:
-            return this->Contains(other, otherSize);
-        case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(other, otherSize);
-        default:
-            throw std::invalid_argument("Invalid StringComparisonType.");
-        }
-    }
-
-    bool String::Compare(const StringView& other, const StringComparisonType type) const{
-        switch (type) {
-        case StringComparisonType::Equals:
-            return this->Equals(other.Data(), other.Size());
-        case StringComparisonType::EqualsIgnoreOrdinalCase:
-            return this->EqualsIgnoreCase(other.Data(), other.Size());
-        case StringComparisonType::StartsWith:
-            return this->StartsWith(other.Data(), other.Size());
-        case StringComparisonType::StartsWithIgnoreOrdinalCase:
-            return this->StartsWithIgnoreCase(other.Data(), other.Size());
-        case StringComparisonType::EndsWith:
-            return this->EndsWith(other.Data(), other.Size());
-        case StringComparisonType::EndsWithIgnoreOrdinalCase:
-            return this->EndsWithIgnoreCase(other.Data(), other.Size());
-        case StringComparisonType::Contains:
-            return this->Contains(other.Data(), other.Size());
-        case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(other.Data(), other.Size());
-        default:
-            throw std::invalid_argument("Invalid StringComparisonType.");
-        }
-    }
-
-    bool String::Compare(const std::string_view other, const StringComparisonType type) const{
-        switch (type) {
-        case StringComparisonType::Equals:
-            return this->Equals(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EqualsIgnoreOrdinalCase:
-            return this->EqualsIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::StartsWith:
-            return this->StartsWith(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::StartsWithIgnoreOrdinalCase:
-            return this->StartsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EndsWith:
-            return this->EndsWith(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EndsWithIgnoreOrdinalCase:
-            return this->EndsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::Contains:
-            return this->Contains(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        default:
-            throw std::invalid_argument("Invalid StringComparisonType.");
-        }
-    }
-
-    bool String::Compare(const std::string& other, const StringComparisonType type) const{
-        switch (type) {
-        case StringComparisonType::Equals:
-            return this->Equals(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EqualsIgnoreOrdinalCase:
-            return this->EqualsIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::StartsWith:
-            return this->StartsWith(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::StartsWithIgnoreOrdinalCase:
-            return this->StartsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EndsWith:
-            return this->EndsWith(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::EndsWithIgnoreOrdinalCase:
-            return this->EndsWithIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::Contains:
-            return this->Contains(other.data(), static_cast<Int>(other.size()));
-        case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(other.data(), static_cast<Int>(other.size()));
-        default:
-            throw std::invalid_argument("Invalid StringComparisonType.");
-        }
     }
 
     bool String::Empty() const{
@@ -1350,6 +1209,6 @@ namespace DataTypes{
     }
 
     bool StringEqualsIgnoreCase::operator()(const String& lhs, const String& rhs) const {
-        return lhs.Compare(rhs, StringComparisonType::EqualsIgnoreOrdinalCase);
+        return String::Compare<StringComparisonType::EqualsIgnoreCase>(lhs, rhs);
     }
 }

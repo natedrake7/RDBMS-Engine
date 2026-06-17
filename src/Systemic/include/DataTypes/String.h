@@ -16,14 +16,17 @@ namespace DataTypes{
         void CalculateCapacity(Int size);
         [[nodiscard]] bool CanFit(Int size) const;
 
-        [[nodiscard]] inline bool Equals(const char* other, Int size) const;
-        [[nodiscard]] inline bool EqualsIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool StartsWith(const char* other, Int size) const;
-        [[nodiscard]] inline bool StartsWithIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool EndsWith(const char* other, Int size) const;
-        [[nodiscard]] inline bool EndsWithIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool Contains(const char* other, Int size) const;
-        [[nodiscard]] inline bool ContainsIgnoreCase(const char* other, Int size) const;
+        [[nodiscard]] inline static bool Equals(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool EqualsIgnoreCase(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool StartsWith(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool StartsWithIgnoreCase(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool EndsWith(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool Contains(const StringView& lhs, const StringView& rhs);
+        [[nodiscard]] inline static bool ContainsIgnoreCase(const StringView& lhs, const StringView& rhs);
+
+        template<IsStringLike T>
+        [[nodiscard]] static constexpr StringView ToView(const T& str);
 
         [[nodiscard]] static inline String Normalize(
             const char* str,
@@ -197,17 +200,12 @@ namespace DataTypes{
 
             [[nodiscard]] Int Size()const;
             [[nodiscard]] Int IndexOf(char c) const;
-            [[nodiscard]] bool Compare(const String& other, StringComparisonType type) const;
-            [[nodiscard]] bool Compare(const char* other, StringComparisonType type) const;
-            [[nodiscard]] bool Compare(const StringView& other, StringComparisonType type) const;
-            [[nodiscard]] bool Compare(std::string_view other, StringComparisonType type) const;
-            [[nodiscard]] bool Compare(const std::string& other, StringComparisonType type) const;
 
-            template<typename TLeft, typename TRight>
-            [[nodiscard]] static bool EqualsIgnoreCase(const TLeft& lhs, const TRight& rhs) noexcept;
+            template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
+            [[nodiscard]] static constexpr bool Compare(const TLeft& lhs, const TRight& rhs);
+
 
             [[nodiscard]] bool Empty() const;
-
             [[nodiscard]] String ToLower() const;
             [[nodiscard]] String ToUpper() const;
             void ToLowerInPlace() const;
@@ -360,6 +358,34 @@ namespace DataTypes{
 
     };
 
+    template <IsStringLike T>
+    constexpr StringView String::ToView(const T& str){
+        const char* lhsData = nullptr;
+        Int lhsSize = 0;
+
+        if constexpr (std::is_same_v<std::decay_t<T>, String>) {
+            lhsData = str.Data();
+            lhsSize = str.Size();
+        } else if constexpr (std::is_same_v<std::decay_t<T>, StringView>) {
+            lhsData = str.Data();
+            lhsSize = str.Size();
+        } else if constexpr (std::is_same_v<std::decay_t<T>, std::string>) {
+            lhsData = str.data();
+            lhsSize = static_cast<Int>(str.size());
+        } else if constexpr (std::is_same_v<std::decay_t<T>, std::string_view>) {
+            lhsData = str.data();
+            lhsSize = static_cast<Int>(str.size());
+        } else if constexpr (
+            std::is_same_v<std::decay_t<T>, char*> ||
+            std::is_same_v<std::decay_t<T>, const char*>
+        ) {
+            lhsData = str;
+            lhsSize = static_cast<Int>(std::strlen(str));
+        }
+
+        return StringView(lhsData, lhsSize);
+    }
+
     struct StringEqualsIgnoreCase {
         bool operator()(const String& lhs, const String& rhs) const;
     };
@@ -418,16 +444,18 @@ String String::ConcatInPlace(const Args&... args) const {
     // Calculate total size first
     Int totalSize = this->_size;
     ([&]<typename Type>(const Type& arg) {
-        if constexpr (std::is_same_v<std::decay_t<Type>, String>)
-            totalSize += arg.Size();
-        else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
-            totalSize += arg.Size();
-        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>)
-            totalSize += static_cast<Int>(arg.size());
-        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>)
-            totalSize += static_cast<Int>(arg.size());
-        else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
-                           std::is_same_v<std::decay_t<Type>, const char*>)
+        if constexpr (
+            std::is_same_v<std::decay_t<Type>, String>
+            || std::is_same_v<std::decay_t<Type>, StringView>
+        ) totalSize += arg.Size();
+        else if constexpr (
+            std::is_same_v<std::decay_t<Type>, std::string>
+            || std::is_same_v<std::decay_t<Type>, std::string_view>
+        ) totalSize += static_cast<Int>(arg.size());
+        else if constexpr (
+            std::is_same_v<std::decay_t<Type>, char*> ||
+            std::is_same_v<std::decay_t<Type>, const char*>
+        )
             totalSize += static_cast<Int>(std::strlen(arg));
     }(args), ...);
 
@@ -451,8 +479,10 @@ String String::ConcatInPlace(const Args&... args) const {
         } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>) {
             std::memcpy(buf + offset, arg.data(), arg.size());
             offset += static_cast<Int>(arg.size());
-        } else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
-                             std::is_same_v<std::decay_t<Type>, const char*>) {
+        } else if constexpr (
+            std::is_same_v<std::decay_t<Type>, char*> ||
+            std::is_same_v<std::decay_t<Type>, const char*>
+        ) {
             const auto len = static_cast<Int>(std::strlen(arg));
             std::memcpy(buf + offset, arg, len);
             offset += len;
@@ -466,17 +496,18 @@ template <typename ... Args>
 String String::Join(const Memory::IAllocator* allocator, const char delimiter, const Args&... args){
     Int totalSize = sizeof...(Args) > 1 ? static_cast<Int>(sizeof...(Args) - 1) : 0;
     ([&]<typename Type>(const Type& arg) {
-        if constexpr (std::is_same_v<std::decay_t<Type>, String>)
-            totalSize += arg.Size();
-        else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
-            totalSize += arg.Size();
-        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>)
-            totalSize += static_cast<Int>(arg.size());
-        else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>)
-            totalSize += static_cast<Int>(arg.size());
-        else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
-                           std::is_same_v<std::decay_t<Type>, const char*>)
-            totalSize += static_cast<Int>(std::strlen(arg));
+        if constexpr (
+            std::is_same_v<std::decay_t<Type>, String>
+            || std::is_same_v<std::decay_t<Type>, StringView>
+        ) totalSize += arg.Size();
+        else if constexpr (
+            std::is_same_v<std::decay_t<Type>, std::string>
+            || std::is_same_v<std::decay_t<Type>, std::string_view>
+        ) totalSize += static_cast<Int>(arg.size());
+        else if constexpr (
+            std::is_same_v<std::decay_t<Type>, char*> ||
+            std::is_same_v<std::decay_t<Type>, const char*>
+        ) totalSize += static_cast<Int>(std::strlen(arg));
     }(args), ...);
 
     // Allocate and copy
@@ -510,53 +541,30 @@ String String::Join(const Memory::IAllocator* allocator, const char delimiter, c
     return String(data, totalSize, allocator);
 }
 
-template<typename TLeft, typename TRight>
-bool String::EqualsIgnoreCase(const TLeft& lhs, const TRight& rhs) noexcept {
-    const char* lhsData = nullptr;
-    Int lhsSize = 0;
-    const char* rhsData = nullptr;
-    Int rhsSize = 0;
+template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
+constexpr bool String::Compare(const TLeft& lhs, const TRight& rhs) {
+    const auto leftView  = String::ToView(lhs);
+    const auto rightView = String::ToView(rhs);
 
-    // Resolve lhs
-    if constexpr (std::is_same_v<std::decay_t<TLeft>, String>) {
-        lhsData = lhs.Data(); lhsSize = lhs.Size();
-    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, StringView>) {
-        lhsData = lhs.Data(); lhsSize = lhs.Size();
-    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, std::string>) {
-        lhsData = lhs.data(); lhsSize = static_cast<Int>(lhs.size());
-    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, std::string_view>) {
-        lhsData = lhs.data(); lhsSize = static_cast<Int>(lhs.size());
-    } else if constexpr (std::is_same_v<std::decay_t<TLeft>, char*> ||
-                         std::is_same_v<std::decay_t<TLeft>, const char*>) {
-        lhsData = lhs; lhsSize = static_cast<Int>(std::strlen(lhs));
-    }
-
-    // Resolve rhs
-    if constexpr (std::is_same_v<std::decay_t<TRight>, String>) {
-        rhsData = rhs.Data(); rhsSize = rhs.Size();
-    } else if constexpr (std::is_same_v<std::decay_t<TRight>, StringView>) {
-        rhsData = rhs.Data(); rhsSize = rhs.Size();
-    } else if constexpr (std::is_same_v<std::decay_t<TRight>, std::string>) {
-        rhsData = rhs.data(); rhsSize = static_cast<Int>(rhs.size());
-    } else if constexpr (std::is_same_v<std::decay_t<TRight>, std::string_view>) {
-        rhsData = rhs.data(); rhsSize = static_cast<Int>(rhs.size());
-    } else if constexpr (std::is_same_v<std::decay_t<TRight>, char*> ||
-                         std::is_same_v<std::decay_t<TRight>, const char*>) {
-        rhsData = rhs; rhsSize = static_cast<Int>(std::strlen(rhs));
-    }
-
-    if (lhsSize != rhsSize)
-        return false;
-
-    for (Int i = 0; i < lhsSize; ++i) {
-        if (std::tolower(static_cast<unsigned char>(lhsData[i])) !=
-            std::tolower(static_cast<unsigned char>(rhsData[i])))
-            return false;
-    }
-
-    return true;
+    if constexpr (Type == StringComparisonType::Equals)
+        return String::Equals(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::EqualsIgnoreCase)
+        return String::EqualsIgnoreCase(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::StartsWith)
+        return String::StartsWith(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::StartsWithIgnoreCase)
+        return String::StartsWithIgnoreCase(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::EndsWith)
+        return String::EndsWith(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::EndsWithIgnoreCase)
+        return String::EndsWithIgnoreCase(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::Contains)
+        return String::Contains(leftView, rightView);
+    else if constexpr (Type == StringComparisonType::ContainsCase)
+        return String::ContainsIgnoreCase(leftView, rightView);
+    else
+        static_assert(AlwaysFalse<TLeft>, "Compare: unsupported StringComparisonType");
 }
-
 }
 
 template <>
