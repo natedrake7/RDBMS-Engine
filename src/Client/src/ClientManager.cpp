@@ -120,7 +120,7 @@ namespace Client {
       }
 
       if (parameter == "-P") {
-        this->parameters.port = Converter<int32_t>::Stoi(connectionString[++i]);
+        this->parameters.port = Converter::StrToInt<int32_t>(connectionString[++i]);
         continue;
       }
       if (parameter == "-h") {

@@ -191,7 +191,7 @@ namespace QueryPipeline {
                 ? context->sign()->getText() + context->NUMBER()->getText()
                 : context->NUMBER()->getText();
 
-            const auto number = Converter<BigInt>::Stoi(numberStr);
+            const auto number = Converter::StrToInt<BigInt>(numberStr);
             auto value = Value(number, this->_compileContext->GetAllocator(), 0);
             return std::any(value);
         }
@@ -274,7 +274,7 @@ namespace QueryPipeline {
 
         auto typeName = DataTypes::String::FromView(QueryPipeline::String, this->_compileContext->GetAllocator());
         const auto size = number
-                  ? Converter<Int>::Stoi(number->getText())
+                  ? Converter::StrToInt<Int>(number->getText())
                   : -1;
 
         auto column = Statements::ColumnType(typeName, size);
@@ -342,7 +342,7 @@ namespace QueryPipeline {
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitTop(SQLParser::TopContext *context){
-        auto value = Converter<int64_t>::Stoi(context->NUMBER()->getText());
+        auto value = Converter::StrToInt<int64_t>(context->NUMBER()->getText());
         return std::any(value);
     }
 
@@ -387,8 +387,8 @@ namespace QueryPipeline {
         auto columnType = Statements::ColumnType(
             typeName,
             Statements::DecimalType(
-            Converter<Int>::Stoi(context->precision->getText()),
-            Converter<Int>::Stoi(context->scale->getText())
+            Converter::StrToInt<Int>(context->precision->getText()),
+            Converter::StrToInt<Int>(context->scale->getText())
             )
         );
 

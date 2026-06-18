@@ -3,15 +3,18 @@
 #include <string>
 #include <limits>
 #include <stdexcept>
+#include <charconv>
+#include <cstring>
+#include <cstdio>
 
 #include "Constants.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/String.h"
 #include "DataTypes/StringView.h"
 
-template<typename T>
 class Converter {
-    static T Stoi(const char* data, const Int size){
+    template<DataTypes::Primitive T>
+    static T StrToInt(const char* data, const Int size){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
         T value{};
@@ -19,12 +22,13 @@ class Converter {
 
         // ec != {}  -> no digits or out of T's range;  ptr != end -> trailing garbage
         if (ec != std::errc{} || ptr != data + size)
-            throw std::out_of_range("Converter::Stoi: invalid or out-of-range integer string");
+            throw std::out_of_range("Converter::StrToInt: invalid or out-of-range integer string");
 
         return value;
     }
 
-    static T TryStoi(const char* data, const Int size){
+    template<DataTypes::Primitive T>
+    static bool TryStrToInt(const char* data, const Int size){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
         T value{};
@@ -34,35 +38,59 @@ class Converter {
     }
 
 public:
-    static T Stoi(const DataTypes::StringView& input){
-        return Stoi(input.Data(), input.Size());
+    template<DataTypes::Primitive INT_TYPE, DataTypes::IsStringLike STR_TYPE>
+    static INT_TYPE StrToInt(const STR_TYPE& input){
+        if constexpr (
+            std::is_same_v<STR_TYPE, DataTypes::StringView>
+            || std::is_same_v<STR_TYPE, DataTypes::String>
+        ){
+            return StrToInt<INT_TYPE>(input.Data(), input.Size());
+        }
+        else if constexpr (
+            std::is_same_v<STR_TYPE, std::string>
+            || std::is_same_v<STR_TYPE, std::string_view>
+        ){
+            return StrToInt<INT_TYPE>(input.data(), static_cast<Int>(input.size()));
+        }
+        else if constexpr (
+            std::is_same_v<STR_TYPE, const char*>
+            || std::is_same_v<STR_TYPE, char*>
+        ){
+            return StrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
+        }
+        else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
     }
 
-    static T Stoi(const DataTypes::String& input){
-        return Stoi(input.Data(), input.Size());
+    template<DataTypes::Primitive INT_TYPE, DataTypes::IsStringLike STR_TYPE>
+    static bool TryStrToInt(const STR_TYPE& input) {
+        if constexpr (
+            std::is_same_v<STR_TYPE, DataTypes::StringView>
+            || std::is_same_v<STR_TYPE, DataTypes::String>
+        ){
+            return TryStrToInt<INT_TYPE>(input.Data(), input.Size());
+        }
+        else if constexpr (
+            std::is_same_v<STR_TYPE, std::string>
+            || std::is_same_v<STR_TYPE, std::string_view>
+        ){
+            return TryStrToInt<INT_TYPE>(input.data(), static_cast<Int>(input.size()));
+        }
+        else if constexpr (
+            std::is_same_v<STR_TYPE, const char*>
+            || std::is_same_v<STR_TYPE, char*>
+        ){
+            return TryStrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
+        }
+        else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
     }
 
-    static T Stoi(const std::string& input){
-        return Stoi(input.data(), static_cast<Int>(input.size()));
-    }
-
-    static DataTypes::Decimal Stod(const DataTypes::StringView& input) {
-        return DataTypes::Decimal(input);
-    }
-
-    static bool TryStoi(const DataTypes::StringView& input) {
-        return TryStoi(input.Data(), input.Size());
-    }
-
-    static bool TryStoi(const std::string& input) {
-        return TryStoi(input.data(), static_cast<Int>(input.size()));
-    }
-    
+    template<DataTypes::Primitive T>
     static bool TryDownCast(const BigInt input){
         static_assert(std::is_integral_v<T>, "T must be integral type");
         return !(input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max());
     }
 
+    template<DataTypes::Primitive T>
     static bool TryDownCast(const BigInt input, T& output){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
@@ -74,45 +102,47 @@ public:
         return false;
     }
 
+    template<DataTypes::Primitive T>
     static T DownCast(const BigInt input){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
         if (input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max())
-            throw std::out_of_range("SafeStoi: Value is out of range of the target type.");
+            throw std::out_of_range("Converter::DownCast: Value is out of range of the target type.");
 
         return static_cast<T>(input);
     }
 
-    static bool TryStoi(
+    static DataTypes::Decimal Stod(const DataTypes::StringView& input) {
+        return DataTypes::Decimal(input);
+    }
+
+    // True when the Decimal's encoded payload fits within `size` bytes (column width check).
+    static bool DecimalFitsInSize(
         const DataTypes::Decimal &input,
         const UnsignedInt size
     ){
-
-        // if (input > std::numeric_limits<DataTypes::Decimal>::max()
-        //     || input < std::numeric_limits<DataTypes::Decimal>::min())
-        //     return false;
-
         return input.GetRawDataSize() <= size;
     }
 
-    static bool AssertOverflow(const T leftValue, const T rightValue){
+    // static bool AssertOverflow(const T leftValue, const T rightValue){
+    //     static_assert(std::is_integral_v<T>, "T must be integral type");
+    //
+    //     return ((rightValue > 0 && leftValue > std::numeric_limits<T>::max() - rightValue) ||
+    //         (rightValue < 0 && leftValue < std::numeric_limits<T>::min() - rightValue));
+    // }
+
+
+    template<DataTypes::Primitive T>
+    static auto IntToStr(const T input, const ::Memory::IAllocator* allocator){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        return ((rightValue > 0 && leftValue > std::numeric_limits<T>::max() - rightValue) ||
-            (rightValue < 0 && leftValue < std::numeric_limits<T>::min() - rightValue));
-    }
-
-
-    static DataTypes::String Itos(const T input, const ::Memory::IAllocator* allocator){
-        static_assert(std::is_integral_v<T>, "T must be integral type");
-
-        char buffer[ITOS_BUFFER_SIZE] = {};
-        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<long long>(input));
+        char buffer[ITOS_BUFFER_SIZE]{};
+        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<BigInt>(input));
 
         return DataTypes::String(buffer, len, allocator);
     }
 
-    static DataTypes::String Dtos(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){
+    static DataTypes::String DecimalToStr(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){
         return input.ToString(allocator);
     }
 

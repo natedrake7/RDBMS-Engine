@@ -19,10 +19,17 @@ namespace Comparators{
         Greater = 1
     };
 
-    [[nodiscard]] inline Comparator BranchlessCompare(bool rhs, bool lhs);
+    [[nodiscard]] static constexpr Comparator BranchlessCompare(const bool lhs, const bool rhs){
+        return static_cast<Comparator>(
+            (rhs > lhs) - (rhs < lhs)
+        );
+    }
 
-    [[nodiscard]] Comparator Compare(bool lhs, bool rhs);
-    [[nodiscard]] Comparator Compare(BigInt lhs, BigInt rhs);
+    template<DataTypes::IsInteger T>
+    [[nodiscard]] static constexpr Comparator Compare(T lhs, T rhs){
+        return BranchlessCompare(lhs < rhs, lhs > rhs);
+    }
+
     [[nodiscard]] Comparator Compare(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs);
     [[nodiscard]] Comparator Compare(const DataTypes::Guid& lhs, const DataTypes::Guid& rhs);
     [[nodiscard]] Comparator Compare(const DataTypes::DateTime& lhs, const DataTypes::DateTime& rhs);
@@ -31,7 +38,7 @@ namespace Comparators{
     [[nodiscard]] Comparator Compare(const DataTypes::String& lhs, const char* rhs, Int size);
 
     [[nodiscard]] Comparator Compare(const DataTypes::StringView& lhs, const DataTypes::StringView& rhs);
-    [[nodiscard]] Comparator Compare(const DataTypes::JsonBinary& lhs, const DataTypes::JsonBinary& rhs);
+    // [[nodiscard]] Comparator Compare(const DataTypes::JsonBinary& lhs, const DataTypes::JsonBinary& rhs);
 
     [[nodiscard]] Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, Int size);
 

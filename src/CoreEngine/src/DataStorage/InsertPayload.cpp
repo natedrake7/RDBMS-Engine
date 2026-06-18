@@ -1,4 +1,4 @@
-﻿#include "../../include/DataStorage/InsertPayload.h"
+#include "../../include/DataStorage/InsertPayload.h"
 
 #include <cmath>
 #include <iostream>
@@ -16,7 +16,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         TinyInt convertedValue;
 
-        if (!Converter<TinyInt>::TryDownCast(val, convertedValue)) {
+        if (!Converter::TryDownCast<TinyInt>(val, convertedValue)) {
             std::ostringstream ss;
             ss << "Value " << val << " out of range for TinyInt";
 
@@ -33,7 +33,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         SmallInt convertedValue;
 
-        if (!Converter<SmallInt>::TryDownCast(val, convertedValue)) {
+        if (!Converter::TryDownCast<SmallInt>(val, convertedValue)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for SmallInt";
@@ -51,7 +51,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         Int convertedValue;
 
-        if (!Converter<Int>::TryDownCast(val, convertedValue)) {
+        if (!Converter::TryDownCast<Int>(val, convertedValue)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for Int";
@@ -68,7 +68,7 @@ namespace CoreEngine::StorageTypes{
     Int InsertPayload::SetBigInt(const Value &value, Errors::RuntimeStatus& status){
         const auto val = value.AsBigInt();
 
-        if (!Converter<BigInt>::TryDownCast(val)) {
+        if (!Converter::TryDownCast<BigInt>(val)) {
             std::ostringstream ss;
 
             ss << "Value " << val << " out of range for BigInt";
@@ -86,7 +86,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsDecimal();
         const auto& columnHeader = column->GetColumnHeader();
 
-        if (!Converter<DataTypes::Decimal>::TryStoi(val, column->Size())) {
+        if (!Converter::DecimalFitsInSize(val, column->Size())) {
             std::ostringstream ss;
 
             ss  << "Value "
@@ -142,7 +142,7 @@ namespace CoreEngine::StorageTypes{
         const auto val = value.AsBigInt();
         bool convertedValue;
 
-        if (!Converter<bool>::TryDownCast(val, convertedValue)) {
+        if (!Converter::TryDownCast<bool>(val, convertedValue)) {
             std::ostringstream ss;
             ss << "Value " << val << " out of range for Bool";
 

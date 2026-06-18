@@ -52,15 +52,15 @@ namespace DataTypes {
             case DataType::TinyInt:
                 return true;
             case DataType::SmallInt:
-                return Converter<TinyInt>::TryDownCast(value.AsSmallInt());
+                return Converter::TryDownCast<TinyInt>(value.AsSmallInt());
             case DataType::Int:
-                return Converter<TinyInt>::TryDownCast(value.AsInt());
+                return Converter::TryDownCast<TinyInt>(value.AsInt());
             case DataType::BigInt:
-                return Converter<TinyInt>::TryDownCast(value.AsBigInt());
+                return Converter::TryDownCast<TinyInt>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return Converter<TinyInt>::TryStoi(value.AsStringView());
+                return Converter::TryStrToInt<TinyInt>(value.AsStringView());
             default:
                 return false;
         }
@@ -69,13 +69,13 @@ namespace DataTypes {
     bool Coercions::CanGetBool(const Value& value) {
         switch (value.GetType()) {
             case DataType::TinyInt:
-                return Converter<bool>::TryDownCast(value.AsTinyInt());
+                return Converter::TryDownCast<bool>(value.AsTinyInt());
             case DataType::SmallInt:
-                return Converter<bool>::TryDownCast(value.AsSmallInt());
+                return Converter::TryDownCast<bool>(value.AsSmallInt());
             case DataType::Int:
-                return Converter<bool>::TryDownCast(value.AsInt());
+                return Converter::TryDownCast<bool>(value.AsInt());
             case DataType::BigInt:
-                return Converter<bool>::TryDownCast(value.AsBigInt());
+                return Converter::TryDownCast<bool>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String: {
@@ -96,13 +96,13 @@ namespace DataTypes {
             case DataType::SmallInt:
                 return true;
             case DataType::Int:
-                return Converter<SmallInt>::TryDownCast(value.AsInt());
+                return Converter::TryDownCast<SmallInt>(value.AsInt());
             case DataType::BigInt:
-                return Converter<SmallInt>::TryDownCast(value.AsBigInt());
+                return Converter::TryDownCast<SmallInt>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return Converter<SmallInt>::TryStoi(value.AsStringView());
+                return Converter::TryStrToInt<SmallInt>(value.AsStringView());
             default:
                 return false;
         }
@@ -116,11 +116,11 @@ namespace DataTypes {
             case DataType::Int:
                 return true;
             case DataType::BigInt:
-                return Converter<Int>::TryDownCast(value.AsBigInt());
+                return Converter::TryDownCast<Int>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return Converter<Int>::TryStoi(value.AsStringView());
+                return Converter::TryStrToInt<Int>(value.AsStringView());
             default:
                 return false;
         }
@@ -137,7 +137,7 @@ namespace DataTypes {
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return Converter<BigInt>::TryStoi(value.AsStringView());
+                return Converter::TryStrToInt<BigInt>(value.AsStringView());
             default:
                 return false;
         }
@@ -185,48 +185,48 @@ namespace DataTypes {
 
     void Coercions::DownCastFromSmallInt(Value& value) {
         const auto smallInt = value.AsSmallInt();
-        if (!Converter<TinyInt>::TryDownCast(smallInt))
+        if (!Converter::TryDownCast<TinyInt>(smallInt))
             return;
 
-        const auto tinyInt = Converter<TinyInt>::DownCast(smallInt);
+        const auto tinyInt = Converter::DownCast<TinyInt>(smallInt);
         value.Set(tinyInt);
     }
 
     void Coercions::DownCastFromInt(Value& value) {
         const auto integer = value.AsInt();
 
-        if (Converter<TinyInt>::TryDownCast(integer)) {
-            const auto tinyInt = Converter<TinyInt>::DownCast(integer);
+        if (Converter::TryDownCast<TinyInt>(integer)) {
+            const auto tinyInt = Converter::DownCast<TinyInt>(integer);
             value.Set(tinyInt);
             return;
         }
 
-        if (!Converter<SmallInt>::TryDownCast(integer))
+        if (!Converter::TryDownCast<SmallInt>(integer))
             return;
 
-        const auto smallInt = Converter<SmallInt>::DownCast(integer);
+        const auto smallInt = Converter::DownCast<SmallInt>(integer);
         value.Set(smallInt);
     }
 
     void Coercions::DownCastFromBigInt(Value& value) {
         const auto bigInt = value.AsBigInt();
 
-        if (Converter<TinyInt>::TryDownCast(bigInt)) {
-            const auto tinyInt = Converter<TinyInt>::DownCast(bigInt);
+        if (Converter::TryDownCast<TinyInt>(bigInt)) {
+            const auto tinyInt = Converter::DownCast<TinyInt>(bigInt);
             value.Set(tinyInt);
             return;
         }
 
-        if (Converter<SmallInt>::TryDownCast(bigInt)) {
-            const auto smallInt = Converter<SmallInt>::DownCast(bigInt);
+        if (Converter::TryDownCast<SmallInt>(bigInt)) {
+            const auto smallInt = Converter::DownCast<SmallInt>(bigInt);
             value.Set(smallInt);
             return;
         }
 
-        if (!Converter<Int>::TryDownCast(bigInt))
+        if (!Converter::TryDownCast<Int>(bigInt))
             return;
 
-        const auto integer = Converter<Int>::DownCast(bigInt);
+        const auto integer = Converter::DownCast<Int>(bigInt);
         value.Set(integer);
     }
 
@@ -234,13 +234,13 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Converter<bool>::DownCast(value.AsTinyInt());
+            return Converter::DownCast<bool>(value.AsTinyInt());
         case DataType::SmallInt:
-            return Converter<bool>::DownCast(value.AsSmallInt());
+            return Converter::DownCast<bool>(value.AsSmallInt());
         case DataType::Int:
-            return Converter<bool>::DownCast(value.AsInt());
+            return Converter::DownCast<bool>(value.AsInt());
         case DataType::BigInt:
-            return Converter<bool>::DownCast(value.AsBigInt());
+            return Converter::DownCast<bool>(value.AsBigInt());
         case DataType::Decimal:
             return false;
         case DataType::String:
@@ -259,15 +259,15 @@ namespace DataTypes {
         case DataType::TinyInt:
             return *reinterpret_cast<const TinyInt*>(value.Data());
         case DataType::SmallInt:
-            return Converter<TinyInt>::DownCast(value.AsSmallInt());
+            return Converter::DownCast<TinyInt>(value.AsSmallInt());
         case DataType::Int:
-            return Converter<TinyInt>::DownCast(value.AsInt());
+            return Converter::DownCast<TinyInt>(value.AsInt());
         case DataType::BigInt:
-            return Converter<TinyInt>::DownCast(value.AsBigInt());
+            return Converter::DownCast<TinyInt>(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return Converter<TinyInt>::Stoi(value.AsString());
+            return Converter::StrToInt<TinyInt>(value.AsString());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -284,13 +284,13 @@ namespace DataTypes {
         case DataType::SmallInt:
             return *reinterpret_cast<const SmallInt*>(value.Data());
         case DataType::Int:
-            return Converter<SmallInt>::DownCast(value.AsInt());
+            return Converter::DownCast<SmallInt>(value.AsInt());
         case DataType::BigInt:
-            return Converter<SmallInt>::DownCast(value.AsBigInt());
+            return Converter::DownCast<SmallInt>(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return Converter<SmallInt>::Stoi(value.AsString());
+            return Converter::StrToInt<SmallInt>(value.AsString());
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
@@ -309,11 +309,11 @@ namespace DataTypes {
         case DataType::Int:
             return *reinterpret_cast<const Int*>(value.Data());
         case DataType::BigInt:
-            return Converter<Int>::DownCast(value.AsBigInt());
+            return Converter::DownCast<Int>(value.AsBigInt());
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return Converter<Int>::Stoi(value.AsStringView());
+            return Converter::StrToInt<Int>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
@@ -336,7 +336,7 @@ namespace DataTypes {
         case DataType::Decimal:
             return 0;
         case DataType::String:
-            return Converter<BigInt>::Stoi(value.AsStringView());
+            return Converter::StrToInt<BigInt>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool() ? 1 : 0;
         default:
@@ -349,13 +349,13 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Converter<TinyInt>::Itos(value.AsTinyInt(), value.GetAllocator());
+            return Converter::IntToStr<TinyInt>(value.AsTinyInt(), value.GetAllocator());
         case DataType::SmallInt:
-            return Converter<SmallInt>::Itos(value.AsSmallInt(), value.GetAllocator());
+            return Converter::IntToStr<SmallInt>(value.AsSmallInt(), value.GetAllocator());
         case DataType::Int:
-            return Converter<Int>::Itos(value.AsInt(), value.GetAllocator());
+            return Converter::IntToStr<Int>(value.AsInt(), value.GetAllocator());
         case DataType::BigInt:
-            return Converter<BigInt>::Itos(value.AsBigInt(), value.GetAllocator());
+            return Converter::IntToStr<BigInt>(value.AsBigInt(), value.GetAllocator());
         case DataType::Decimal:
             return value.AsDecimal().ToString(value.GetAllocator());
         case DataType::String:

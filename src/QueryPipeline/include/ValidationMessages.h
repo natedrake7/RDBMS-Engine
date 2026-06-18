@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "../../Systemic/include/Converter.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
@@ -54,11 +54,11 @@ namespace QueryPipeline::Messages{
     static constexpr DataTypes::StringView USE_DATABASE_FAIL = "Failed to use Database";
 
     static DataTypes::String INSERT_ROWS_FROM_CHILD_QUERY(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = Converter<Int>::Itos(count, allocator);
+        const auto parsedInt = Converter::IntToStr<Int>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", count, " rows from child query");
     }
     static DataTypes::String INSERT_ROWS_FROM_FIELDS(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = Converter<Int>::Itos(count, allocator);
+        const auto parsedInt = Converter::IntToStr<Int>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from fields");
     }
 
@@ -157,7 +157,7 @@ namespace QueryPipeline::Messages{
         const DataTypes::StringView& columnType,
         const Int valueSize
     ){
-        const auto valueSizeStr = Converter<Int>::Itos(valueSize, allocator);
+        const auto valueSizeStr = Converter::IntToStr<Int>(valueSize, allocator);
         return DataTypes::String::Concat(allocator, "Cannot alter column: ", columnName, "of type: ", columnType, " to new size: ", valueSizeStr);
     }
 

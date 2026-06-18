@@ -245,11 +245,11 @@ namespace CoreEngine {
 
             DataTypes::String _columns(static_cast<const char*>("PK"), baseContext.GetAllocator());
 
-            for (const auto& j : table.primaryKey) {
-                const auto key = columnNameToIndex.Get(j);
+            for (const auto& primaryKeyStr : table.primaryKey) {
+                const auto key = columnNameToIndex.Get(primaryKeyStr);
                 char buffer[3];
                 snprintf(buffer, sizeof(buffer), "%d", key);
-                _columns += "_" + j;
+                _columns += "_" + primaryKeyStr;
             }
 
             //TODO keep the last value keys

@@ -1,4 +1,4 @@
-﻿#include "CompileContext.h"
+#include "CompileContext.h"
 #include "ErrorListener.h"
 #include "../../../Systemic/include/Converter.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
@@ -81,7 +81,7 @@ namespace QueryPipeline{
 
         if (context->INT()){
             const auto str = context->INT()->getText();
-            if (!Converter<Int>::TryStoi(str))
+            if (!Converter::TryStrToInt<Int>(str))
                 throw SyntaxError("Failed to parse result value: " + context->getText(), CreatePositionErrorMessage(context));
             return std::any(DataTypes::String(str, this->_compileContext->GetAllocator()));
         }

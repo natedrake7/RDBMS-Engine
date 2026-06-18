@@ -80,7 +80,7 @@ namespace DataStructures{
                 for (Int i = this->_size - 1; i >= index; --i)
                     this->_data[i + size] = this->_data[i];
 
-                for (Int i = index; i < size; ++i)
+                for (Int i = index; i < index + size; ++i)
                     this->_data[i] = data;
 
                 this->_size += size;
@@ -95,11 +95,12 @@ namespace DataStructures{
             }
 
             constexpr void  Remove(const Int start, const Int end){
-                if (start >= this->_size || end >= this->_size)
+                if (start < 0 || start >= this->_size || end >= this->_size)
                     throw std::runtime_error("StaticArray Remove: Index is out of range.");
-                for (Int i = start; i < this->_size - 1; ++i)
-                    this->_data[i] = this->_data[i + (end - start)];
-                this->_size -= (end - start);
+                const Int count = end - start;
+                for (Int i = start; i < this->_size - count; ++i)
+                    this->_data[i] = this->_data[i + count];
+                this->_size -= count;
             }
 
             constexpr void Pop(){
@@ -121,7 +122,7 @@ namespace DataStructures{
                 this->_size = size;
             }
 
-            constexpr bool Empty() const { return this->_size == 0; }
+            [[nodiscard]] constexpr bool Empty() const { return this->_size == 0; }
 
             constexpr T First() const { return this->_data[0]; }
             constexpr T Last() const { return this->_data[this->_size - 1]; }

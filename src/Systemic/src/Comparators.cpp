@@ -6,26 +6,11 @@
 #include "../include/DataTypes/StringView.h"
 #include "../include/DataTypes/Value.h"
 
-
 namespace Comparators{
     //Branchless Comparison
     //left < right	-1
     // equal	0
     // left > right	+1
-    Comparator BranchlessCompare(const bool rhs, const bool lhs){
-        return static_cast<Comparator>(
-            (lhs > rhs) - (lhs < rhs)
-        );
-    }
-
-    Comparator Compare(const bool lhs, const bool rhs){
-        return BranchlessCompare(lhs, rhs);
-    }
-
-    Comparator Compare(const BigInt lhs, const BigInt rhs){
-        return BranchlessCompare(lhs < rhs, lhs > rhs);
-    }
-
     Comparator Compare(const DataTypes::Decimal& lhs, const DataTypes::Decimal& rhs){
         return BranchlessCompare(lhs < rhs, lhs > rhs);
     }
@@ -70,9 +55,10 @@ namespace Comparators{
         );
     }
 
-    Comparator Compare(const DataTypes::JsonBinary& lhs, const DataTypes::JsonBinary& rhs){
-        return Compare(lhs.Data(), rhs.Data());
-    }
+    // Comparator Compare(const DataTypes::JsonBinary& lhs, const DataTypes::JsonBinary& rhs){
+    //     return C
+    //     return Compare(lhs.Data(), rhs.Data(), lhs.Size());
+    // }
 
     Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, const Int size){
         const auto cmp = strncasecmp(lhs, rhs, size);

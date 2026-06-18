@@ -34,8 +34,8 @@ namespace QueryPipeline {
     antlrcpp::Any SQLVisitorImplementation::visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context) {
         auto* incrementStatement = new Statements::Identity();
 
-        incrementStatement->seed = Converter<uint8_t>::Stoi(context->seed->getText());
-        incrementStatement->incrementFactor = Converter<uint8_t>::Stoi(context->increment->getText());
+        incrementStatement->seed = Converter::StrToInt<TinyInt>(context->seed->getText());
+        incrementStatement->incrementFactor = Converter::StrToInt<TinyInt>(context->increment->getText());
 
         return incrementStatement;
     }

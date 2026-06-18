@@ -201,10 +201,10 @@ namespace DataTypes{
 
         // --- string <-> numeric ---
         else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, String>)    // num -> String
-            return Converter<TFrom>::Itos(input, allocator);
+            return Converter::IntToStr<TFrom>(input, allocator);
 
         else if constexpr (IsString<TFrom> && std::is_arithmetic_v<TTo>)              // String -> num
-            return Converter<TTo>::Stoi(input);
+            return Converter::StrToInt<TTo>(input);
 
         // --- Decimal ---
         else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal

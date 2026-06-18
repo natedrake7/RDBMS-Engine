@@ -40,10 +40,14 @@ namespace Tests{
         std::cout << sum << std::endl;
 
         constexpr auto strValue = DataTypes::StringView("1000.020");
-        constexpr auto strValue2 = DataTypes::StringView("-1000.020");
+        constexpr auto strValue2 = DataTypes::StringView("1000.020");
         constexpr auto lhs2 = DataTypes::Decimal(100);
         constexpr auto rhs2 = DataTypes::Decimal(strValue);
         constexpr auto sum2 = lhs2 + rhs2;
+
+        constexpr auto result = lhs2 == rhs2;
+
+        constexpr auto strSum2 = sum2.ToBufferString();
 
         std::cout << sum2 << std::endl;
 

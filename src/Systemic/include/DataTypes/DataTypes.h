@@ -134,6 +134,9 @@ namespace DataTypes{
         || std::is_same_v<T, char*>
         || std::is_same_v<T, const char*>;
 
+    template<typename T>
+    concept IsInteger = std::is_integral_v<T>;
+
     template <typename T>
     concept IsJson = std::is_same_v<T, JsonBinary>;
 
