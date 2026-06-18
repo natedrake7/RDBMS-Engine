@@ -1,5 +1,7 @@
 ﻿#include "../include/Serialization/JsonBuilder.h"
 
+#include <algorithm>
+
 namespace Serialization{
     void JsonBuilder::Value(const void* data, const Int size, const JsonType type){
         const auto offSet = this->_buffer.Size();
