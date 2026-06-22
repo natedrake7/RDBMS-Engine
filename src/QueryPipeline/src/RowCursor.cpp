@@ -10,9 +10,9 @@ namespace QueryPipeline{
         : _batch(batch) {}
 
     void RowCursor::PrintRows(std::ostream& os) const{
-        for (auto i = 0;i < this->_batch->_numberOfRows; i++){
-            for (auto j = 0; j < this->_batch->_numberOfColumns; j++)
-                this->PrintColumn(os, i, j);
+        for (auto rowIndex = 0;rowIndex < this->_batch->_numberOfRows; rowIndex++){
+            for (auto columnIndex = 0; columnIndex < this->_batch->_numberOfColumns; columnIndex++)
+                this->PrintColumn(os, rowIndex, columnIndex);
             os << std::endl;
         }
     }
@@ -47,16 +47,20 @@ namespace QueryPipeline{
         case DataType::BigInt:
             os << (*reinterpret_cast<const BigInt*>(columnData->_data + rowIndex * sizeof(BigInt)));
             break;
-        case DataType::Decimal:
+        case DataType::Decimal:{
+            os << (*reinterpret_cast<const DataTypes::Decimal*>(columnData->_data + rowIndex * sizeof(DataTypes::Decimal)));
             break;
+        }
         case DataType::DateTime:{
             const auto time = DataTypes::DateTime(*reinterpret_cast<const BigInt*>(columnData->_data + rowIndex * sizeof(BigInt)));
             time.Print(os);
             break;
         }
-        case DataType::Guid:
-            // const auto guid = DataTypes::Guid(*reinterpret_cast<const UInt*>(columnData->_data + rowIndex * sizeof(UInt)));
+        case DataType::Guid:{
+            const auto guid = DataTypes::Guid(columnData->_data + rowIndex * sizeof(DataTypes::Guid));
+            os << guid;
             break;
+        }
         case DataType::Json:{
             auto* json = reinterpret_cast<const DataTypes::JsonBinary*>(columnData->_data + rowIndex * sizeof(DataTypes::JsonBinary));
             os << json->ToString();

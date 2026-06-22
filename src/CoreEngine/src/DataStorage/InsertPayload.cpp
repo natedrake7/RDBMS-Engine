@@ -100,7 +100,7 @@ namespace CoreEngine::StorageTypes{
         }
 
         this->CopyToBuffer(val);
-        return val.GetRawDataSize();
+        return val.RawSize();
     }
 
     Int InsertPayload::SetString(

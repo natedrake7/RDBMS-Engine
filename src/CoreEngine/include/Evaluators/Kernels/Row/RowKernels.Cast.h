@@ -12,15 +12,20 @@ namespace CoreEngine::RowKernels{
     ){
         const auto* castExpr = self->AsCast();
         TFrom from;
-        castExpr->childExpr->rowKernel(castExpr->childExpr, context, &from, outNull);
-        if (*outNull) return;
+        bool childNull = false;
+        castExpr->childExpr->rowKernel(castExpr->childExpr, context, &from, &childNull);
+        if (childNull){
+            *outNull = true;
+            return;
+        }
 
         auto result = DataTypes::Coercions::To<TFrom, TTo>(from, context.allocator);
 
         if constexpr (DataTypes::Primitive<TTo>)
             *static_cast<TTo*>(outVal) = result;
         else
-            new (outVal) TTo(std::move(result));
+            *static_cast<TTo*>(outVal) = std::move(result);
+        *outNull = false;
     }
 
     struct CastKernelTable{

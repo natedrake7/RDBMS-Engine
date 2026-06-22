@@ -6,34 +6,69 @@
 #include "../Functions/MathFunctions.h"
 #include "DataTypes.h"
 
-static constexpr Int DECIMAL_ARRAY_SIZE = 20;
-static constexpr Int DECIMAL_TEMPORARY_BUFFER_SIZE = 2 * DECIMAL_ARRAY_SIZE;
-static constexpr Int DECIMAL_MULTIPLICATION_BUFFER_SIZE = 4 * DECIMAL_ARRAY_SIZE;
-
-static constexpr Int DECIMAL_ZERO = 0x00;
-static constexpr Int DECIMAL_HEADER_INDEX = 0;
-static constexpr Int DECIMAL_DIGITS_START_INDEX = 1;
 
 namespace DataTypes {
     class StringView;
 
+    enum class DecimalRoundingMode : UnsignedTinyInt{
+        Truncate = 0,
+        HalfUp = 1,
+        HalfEven = 2
+    };
+
+    static constexpr Int DECIMAL_ARRAY_SIZE = 20;
+    static constexpr Int DECIMAL_MAX_NUMBER_OF_DIGITS = (DECIMAL_ARRAY_SIZE - 1) * 2;
+    static constexpr Int DECIMAL_TEMPORARY_BUFFER_SIZE = 2 * DECIMAL_ARRAY_SIZE;
+    static constexpr Int DECIMAL_MULTIPLICATION_BUFFER_SIZE = 4 * DECIMAL_ARRAY_SIZE;
+
+    static constexpr Int DECIMAL_ZERO = 0x00;
+    static constexpr Int DECIMAL_HEADER_INDEX = 0;
+    static constexpr Int DECIMAL_DIGITS_START_INDEX = 1;
+
+    using DataBuffer = DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE>;
+    using StringBuffer = DataStructures::StaticArray<char, 2 * DECIMAL_ARRAY_SIZE>;
+    using DigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_TEMPORARY_BUFFER_SIZE>;
+    using MultiplicationDigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_MULTIPLICATION_BUFFER_SIZE>;
+
+    template<typename T>
+    concept IsDecimalBuffer = std::is_same_v<T, DataBuffer>
+            || std::is_same_v<T, DigitsBuffer>
+            || std::is_same_v<T, MultiplicationDigitsBuffer>;
+
     class Decimal final {
         DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE> _data;
 
-        using DataBuffer = DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE>;
-        using StringBuffer = DataStructures::StaticArray<char, 2 * DECIMAL_ARRAY_SIZE>;
-        using DigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_TEMPORARY_BUFFER_SIZE>;
-        using MultiplicationDigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_MULTIPLICATION_BUFFER_SIZE>;
+        static constexpr Int LowNibble(const DataBuffer& buffer, Int index);
+        static constexpr Int HighNibble(const DataBuffer& buffer, Int index);
 
-    protected:
+        static constexpr byte_t PackNibbles(Int highNibble, Int lowNibble);
+
         static constexpr DigitsBuffer Unpack(const DataBuffer& bytes);
-        static constexpr  MultiplicationDigitsBuffer MultiplyDigits(
+
+        static constexpr DigitsBuffer ToBase100(const DataBuffer& bytes);
+        static constexpr MultiplicationDigitsBuffer Base100ToDigits(const MultiplicationDigitsBuffer& input);
+        static constexpr MultiplicationDigitsBuffer MultiplyBase100(
             const DigitsBuffer& leftDigits,
             const DigitsBuffer& rightDigits
+
         );
-        static constexpr MultiplicationDigitsBuffer DivideDigits(
-            const DigitsBuffer& leftDigits,
-            const DigitsBuffer& rightDigits
+        static constexpr Comparators::Comparator CompareDigitsArray(
+            const DigitsBuffer& lhs,
+            const DigitsBuffer& rhs
+        );
+        static constexpr void SubtractDigits(
+            DigitsBuffer& lhs,
+            const DigitsBuffer& rhs
+        );
+        static constexpr DigitsBuffer DivideDigits(
+            const DigitsBuffer& lhs,
+            const DigitsBuffer& rhs
+        );
+
+        static constexpr DigitsBuffer LongDivide(
+            const DigitsBuffer& dividend,
+            const DigitsBuffer& divisor,
+            DigitsBuffer& remainderOut
         );
         static constexpr DataBuffer Pack(
             const DigitsBuffer& digits,
@@ -87,30 +122,28 @@ namespace DataTypes {
             bool isPositive
         );
 
+        template<DecimalRoundingMode Mode>
         static constexpr Decimal Divide(
-            const DataBuffer& left,
-            const DataBuffer& right,
-            fraction_index_t& fractionIndex,
+            const DataBuffer& dividend,
+            const DataBuffer& divisor,
             bool isPositive
         );
 
+        template <IsDecimalBuffer T>
         static constexpr void TrimLeadingZeros(
-            MultiplicationDigitsBuffer& digits,
+            T& digits,
             fraction_index_t& fractionIndex
         );
 
-        static constexpr void TrimLeadingZeros(
-            DataBuffer& digits,
-            fraction_index_t& fractionIndex
-        );
-
+        template <IsDecimalBuffer T>
         static constexpr void TrimTrailingZeros(
-            MultiplicationDigitsBuffer& digits,
+            T& digits,
             fraction_index_t fractionIndex
         );
 
+        template <IsDecimalBuffer T>
         static constexpr void PadDecimalParts(
-            MultiplicationDigitsBuffer& digits,
+            T& digits,
             fraction_index_t& fractionIndex
         );
 
@@ -122,11 +155,32 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr Comparators::Comparator Compare(const Decimal& lhs, const Decimal& rhs);
-
+        template<IsDecimalBuffer T>
+        [[nodiscard]] static constexpr bool IsZeroMagnitude(const  T& buffer);
         [[nodiscard]] static constexpr Comparators::Comparator CompareMagnitude(
             const DataBuffer& lhs,
             const DataBuffer& rhs,
             Int size
+        );
+
+        template<IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
+        static constexpr bool DetermineRoundUp(
+            const BUFFER& digits,
+            Int digitsToKeep
+        );
+
+        template<IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
+        static constexpr void RoundToScale(
+            BUFFER& digits,
+            fraction_index_t& fractionIndex,
+            Int targetScale
+        );
+
+        static constexpr void RoundToScale(
+            MultiplicationDigitsBuffer& digits,
+            fraction_index_t& fractionIndex,
+            Int targetScale,
+            DecimalRoundingMode mode
         );
 
     public:
@@ -143,8 +197,8 @@ namespace DataTypes {
         [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] constexpr StringBuffer ToBufferString() const;
 
-        [[nodiscard]] constexpr const byte_t* GetRawData() const;
-        [[nodiscard]] constexpr Int GetRawDataSize() const;
+        [[nodiscard]] constexpr const byte_t* RawData() const;
+        [[nodiscard]] constexpr Int RawSize() const;
 
         [[nodiscard]] constexpr const DataBuffer& Data() const;
         [[nodiscard]] static constexpr Int Size(Int precision);
@@ -167,11 +221,114 @@ namespace DataTypes {
         template <IsInteger T>
         constexpr Decimal& operator=(T value);
 
+        template <IsInteger T>
+        [[nodiscard]] constexpr T To();
+
+        template<DecimalRoundingMode T>
+        static constexpr void RoundToScale(Decimal& value, Int precision);
     };
-// Specialization
 }
 
 namespace DataTypes{
+    template <IsDecimalBuffer T>
+    constexpr void Decimal::TrimLeadingZeros(T& digits, fraction_index_t& fractionIndex){
+        auto leadingZeros = 0;
+        while (leadingZeros < fractionIndex && digits[leadingZeros] == DECIMAL_ZERO)
+            leadingZeros++;
+
+        if (leadingZeros == 0) return;
+
+        digits.Remove(0, leadingZeros);
+        fractionIndex -= static_cast<fraction_index_t>(leadingZeros);
+    }
+
+    template <IsDecimalBuffer T>
+    constexpr void Decimal::TrimTrailingZeros(T& digits, fraction_index_t fractionIndex){
+        for (auto i = digits.Size() - 1; i > fractionIndex; --i) {
+            if (digits[i] != 0) break;
+            digits.Pop();
+        }
+    }
+
+    template <IsDecimalBuffer T>
+    constexpr void Decimal::PadDecimalParts(T& digits, fraction_index_t& fractionIndex){
+        if (fractionIndex % 2 != 0) {
+            digits.Insert(0, 0);
+            fractionIndex++;
+        }
+
+        const auto fractionalPart = digits.Size() - fractionIndex;
+        if (fractionalPart % 2 != 0) digits.Push(DECIMAL_ZERO);
+    }
+
+    template <IsDecimalBuffer T>
+    constexpr bool Decimal::IsZeroMagnitude(const T& buffer){
+        Int i = 0;
+        while (i < buffer.Size() && buffer[i] == 0) i++;
+        return i == buffer.Size();
+    }
+
+    template <IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
+    constexpr bool Decimal::DetermineRoundUp(
+        const BUFFER& digits,
+        const Int digitsToKeep
+    ){
+        if constexpr (Mode == DecimalRoundingMode::Truncate)
+            return false;
+        else{
+            const auto firstDigitDropped = digits[digitsToKeep];
+            if constexpr (Mode == DecimalRoundingMode::HalfUp)
+                return firstDigitDropped >= 5;
+            else if constexpr (Mode == DecimalRoundingMode::HalfEven){
+                if (firstDigitDropped < 5)
+                    return false;
+
+                if (firstDigitDropped > 5)
+                    return true;
+
+                auto restNonZero = false;
+                for (Int i = digitsToKeep + 1; i < digits.Size(); i++)
+                    if (digits[i] != 0){
+                        restNonZero = true;
+                        break;
+                    }
+                return restNonZero || (digitsToKeep > 0 && (digits[digitsToKeep - 1] & 1));
+            }
+            else
+                static_assert(DataTypes::AlwaysFalse<Decimal>, "Decimal::DetermineRoundUp: Invalid mode given");
+        }
+    }
+
+    template <IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
+    constexpr void Decimal::RoundToScale(
+        BUFFER& digits,
+        fraction_index_t& fractionIndex,
+        const Int targetScale
+    ){
+        if (digits.Size() <= fractionIndex + targetScale)
+            return;
+
+        const auto digitsToKeep = fractionIndex + targetScale;
+        const auto roundUp = Decimal::DetermineRoundUp<BUFFER, Mode>(digits, digitsToKeep);
+
+        while (digits.Size() > digitsToKeep)
+            digits.Pop();
+
+        if (roundUp){
+            Int i = digitsToKeep - 1;
+            for (; i >= 0; i--){
+                if (++digits[i] < 10)
+                    break;
+                digits[i] = 0;
+            }
+
+            if (i < 0){
+                digits.Insert(0, 1);
+                fractionIndex++;
+            }
+        }
+    }
+
 template <IsInteger T>
 constexpr Decimal::Decimal(T value){
     static_assert(std::is_integral_v<T>, "Decimal::Decimal(T value): T must be an integer");
@@ -179,8 +336,7 @@ constexpr Decimal::Decimal(T value){
     const auto isPositive = value >= 0;
     auto absValue = Math::Abs<T>(value);
 
-
-    Int numberOfDigits = 0;
+    Int numberOfDigits = 1;
     for (auto tempVal = absValue / 10; tempVal > 0; tempVal /= 10)
         numberOfDigits++;
 
@@ -188,9 +344,9 @@ constexpr Decimal::Decimal(T value){
     const fraction_index_t fractionIndex = numberOfDigits + leadingZeros;
 
     DigitsBuffer digits;
-    digits.SetSize(fractionIndex + numberOfDigits + 2);
+    digits.SetSize(fractionIndex);
 
-    for (Int i = leadingZeros + numberOfDigits - 1; i >= leadingZeros; --i){
+    for (Int i = fractionIndex - 1; i >= leadingZeros; --i){
         digits[i] = static_cast<Int>(absValue % 10);
         absValue /= 10;
     }
@@ -205,72 +361,89 @@ constexpr Decimal& Decimal::operator=(T value){
     return *this;
 }
 
+template <IsInteger T>
+constexpr T Decimal::To(){
+    const auto positive = this->IsPositive();
+
+    using UnsignedType = std::make_unsigned_t<T>;
+    UnsignedType mag = 0;
+
+    for (Int i = DECIMAL_DIGITS_START_INDEX; i < this->_data.Size(); ++i)
+        mag = mag * 10 + static_cast<UnsignedType>(this->_data[i] - '0');
+
+    return positive ? static_cast<T>(mag) : -static_cast<T>(mag);
+}
+
+constexpr void Decimal::RoundToScale(
+    MultiplicationDigitsBuffer& digits,
+    fraction_index_t& fractionIndex,
+    const Int targetScale,
+    const DecimalRoundingMode mode
+){
+    switch (mode){
+    case DecimalRoundingMode::Truncate:
+        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::Truncate>(digits, fractionIndex, targetScale);
+    case DecimalRoundingMode::HalfUp:
+        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfUp>(digits, fractionIndex, targetScale);
+    case DecimalRoundingMode::HalfEven:
+        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfEven>(digits, fractionIndex, targetScale);
+    }
+}
+
 constexpr Decimal::Decimal() {
     this->_data.Push(Decimal::CreateSignAndFractionByte(true, 0));
     this->_data.Push(DECIMAL_ZERO);
 }
 
 constexpr Decimal::Decimal(const StringView& value){
-    if (value.Empty()) return;
+    if (value.Empty()){
+        *this = Decimal();
+        return;
+    }
 
-    Int start = 0;
-
+    Int i = 0;
     const bool isPositive = value[0] != '-';
     if (value[0] == '-' || value[0] == '+')
-        start++;
+        i++;
 
-    while (start < value.Size() - 1 && value[start] == '0' && value[start + 1] != '.')
-        start++;
+    while (i + 1 < value.Size() && value[i] == '0' && value[i + 1] != '.')
+        i++;
 
-    Int dotPos = -1;
-    for (Int i = start; i < value.Size(); i++) {
-        if (value[i] == '.'){
-            dotPos = i;
-            break;
-        }
+    Int intCount = 0, fractionalCount = 0;
+    bool hasDot = false;
+    for (Int k = i; k < value.Size(); k++) {
+        if (value[k] == '.')
+            hasDot = true;
+        else if (!hasDot)
+            intCount++;
+        else
+            fractionalCount++;
     }
 
-    // Stack buffer — no heap
-    DataStructures::StaticArray<char, DECIMAL_ARRAY_SIZE * 2> digitsArray;
-    for (Int i = start; i < value.Size(); i++) {
-        if (i == dotPos) continue;
-        digitsArray.Push(value[i]);
+    const auto leadingPad = intCount % 2;
+    const auto fractionalPad = fractionalCount % 2;
+
+    const fraction_index_t fractionIndex = intCount + leadingPad;
+    const Int totalSize = fractionIndex + fractionalPad + fractionalCount;
+
+    DigitsBuffer digits;
+    digits.SetSize(totalSize);
+
+    Int digitsAfterPad = leadingPad;
+    for (Int k = i; k < value.Size(); k++){
+        if (value[k] == '.')
+            continue;
+        digits[digitsAfterPad++] = value[k] - '0';
     }
 
-    fraction_index_t fractionIndex = (dotPos == -1)
-        ? 0
-        : static_cast<fraction_index_t>(dotPos - start);
-
-    if ((digitsArray.Size() - fractionIndex) % 2 != 0)
-        digitsArray.Push('0');
-
-    if (fractionIndex % 2 != 0) {
-        // shift right by 1
-        for (Int i = digitsArray.Size(); i > 0; i--)
-            digitsArray[i - 1] = digitsArray[i - 2];
-
-        digitsArray.Insert('0', 0);
-        fractionIndex++;
-    }
-
-    this->_data.Push(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
-    const auto digitsCount = digitsArray.Size();
-
-    for (Int i = 0; i < digitsCount; i += 2) {
-        auto val = static_cast<byte_t>((digitsArray[i] - '0') << 4);
-
-        if (i + 1 < digitsCount)
-            val |= static_cast<byte_t>(digitsArray[i + 1] - '0');
-
-        this->_data.Push(val);
-    }
+    this->_data = Decimal::Pack(digits, isPositive, fractionIndex);
 }
 
 constexpr Decimal::Decimal(const byte_t* data, const Int dataSize){
     this->_data.SetData(data, dataSize);
 }
 
-constexpr Decimal::DataBuffer Decimal::Pack(const DigitsBuffer& digits, const bool isPositive, const fraction_index_t fractionIndex){
+constexpr DataBuffer Decimal::Pack(const DigitsBuffer& digits, const bool isPositive, const fraction_index_t fractionIndex){
     DataBuffer result;
     result.Push(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
 
@@ -283,7 +456,7 @@ constexpr Decimal::DataBuffer Decimal::Pack(const DigitsBuffer& digits, const bo
     return result;
 }
 
-constexpr Decimal::DataBuffer Decimal::Pack(
+constexpr DataBuffer Decimal::Pack(
     const MultiplicationDigitsBuffer& digits,
     const bool isPositive,
     const fraction_index_t fractionIndex
@@ -354,7 +527,7 @@ constexpr Decimal operator-(const Decimal &left, const Decimal &right){
 
         return comparisonResult == Comparators::Comparator::Greater
                    ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
-                   : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, rightSign);
+                   : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, !leftSign);
     }
 
     return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
@@ -370,21 +543,9 @@ constexpr Decimal operator*(const Decimal &left, const Decimal &right){
 }
 
 constexpr Decimal operator/(const Decimal& left, const Decimal& right){
-    auto leftFractionIndex = left.GetFractionIndex();
-    auto rightFractionIndex = right.GetFractionIndex();
-
-    auto leftCopy = left.Data();
-    auto rightCopy = right.Data();
-
-    Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-    Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-    fraction_index_t fractionIndex = leftFractionIndex + rightFractionIndex;
-
-    return Decimal::Divide(
-        leftCopy,
-        rightCopy,
-        fractionIndex,
+    return Decimal::Divide<DecimalRoundingMode::HalfUp>(
+        left.Data(),
+        right.Data(),
         left.IsPositive() == right.IsPositive()
     );
 }
@@ -417,13 +578,13 @@ constexpr bool Decimal::IsPositive() const { return ( this->_data[DECIMAL_HEADER
 
 constexpr fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->_data[DECIMAL_HEADER_INDEX] & 0x7F); }
 
-constexpr const byte_t* Decimal::GetRawData() const { return this->_data.Data(); }
+constexpr const byte_t* Decimal::RawData() const { return this->_data.Data(); }
 
-constexpr Int Decimal::GetRawDataSize() const { return this->_data.Size(); }
+constexpr Int Decimal::RawSize() const { return this->_data.Size(); }
 
-constexpr const Decimal::DataBuffer& Decimal::Data() const { return this->_data; }
+constexpr const DataBuffer& Decimal::Data() const { return this->_data; }
 
-constexpr Decimal::StringBuffer Decimal::ToBufferString() const{
+constexpr StringBuffer Decimal::ToBufferString() const{
     const auto isPositive = this->IsPositive();
 
     StringBuffer buffer;
@@ -450,41 +611,6 @@ constexpr Decimal::StringBuffer Decimal::ToBufferString() const{
     if (buffer.Last() == '0') buffer.Pop();
 
     return buffer;
-}
-
-constexpr void Decimal::TrimLeadingZeros(MultiplicationDigitsBuffer& digits, fraction_index_t &fractionIndex){
-    auto leadingZeros = 0;
-    while (leadingZeros < fractionIndex && digits[leadingZeros] == 0)
-        leadingZeros++;
-
-    if (leadingZeros == 0) return;
-
-    digits.Remove(0, leadingZeros);
-    fractionIndex -= static_cast<fraction_index_t>(leadingZeros);
-}
-
-constexpr void Decimal::TrimLeadingZeros(DataBuffer& digits, fraction_index_t &fractionIndex){
-    while (fractionIndex > 2 && digits[DECIMAL_DIGITS_START_INDEX] == DECIMAL_ZERO) {
-        digits.Remove(DECIMAL_DIGITS_START_INDEX);
-        fractionIndex -= 2;
-    }
-}
-
-constexpr void Decimal::TrimTrailingZeros(MultiplicationDigitsBuffer& digits, const fraction_index_t fractionIndex){
-    for (auto i = digits.Size() - 1; i > fractionIndex; i--) {
-        if (digits[i] != 0) break;
-        digits.Pop();
-    }
-}
-
-constexpr void Decimal::PadDecimalParts(MultiplicationDigitsBuffer& digits, fraction_index_t& fractionIndex){
-    if (fractionIndex % 2 != 0) {
-        digits.Insert(0, 0);
-        fractionIndex++;
-    }
-
-    const auto fractionalPart = digits.Size() - fractionIndex;
-    if (fractionalPart % 2 != 0) digits.Push(DECIMAL_ZERO);
 }
 
 constexpr Comparators::Comparator Decimal::Compare(const Decimal& lhs, const Decimal& rhs){
@@ -531,18 +657,47 @@ constexpr Comparators::Comparator Decimal::CompareMagnitude(
     return Comparators::Compare<Int>(result, 0);
 }
 
-constexpr Decimal::DigitsBuffer Decimal::Unpack(const DataBuffer& bytes){
+constexpr Int Decimal::LowNibble(const DataBuffer& buffer, const Int index){
+    return (buffer[index] & 0x0F);
+}
+
+constexpr Int Decimal::HighNibble(const DataBuffer& buffer, const Int index){
+    return (buffer[index] >> 4);
+}
+
+constexpr byte_t Decimal::PackNibbles(const Int highNibble, const Int lowNibble){
+    return static_cast<byte_t>((highNibble << 4) | lowNibble);
+}
+
+constexpr DigitsBuffer Decimal::Unpack(const DataBuffer& bytes){
     DigitsBuffer digits;
 
-    for (int i = 1; i < bytes.Size(); i++) {
-        digits.Push((bytes[i] >> 4) & 0x0F);
-        digits.Push(bytes[i] & 0x0F);
+    for (Int i = DECIMAL_DIGITS_START_INDEX; i < bytes.Size(); i++) {
+        digits.Push(Decimal::HighNibble(bytes, i));
+        digits.Push(Decimal::LowNibble(bytes, i));
     }
 
     return digits;
 }
 
-constexpr Decimal::MultiplicationDigitsBuffer Decimal::MultiplyDigits(
+constexpr DigitsBuffer Decimal::ToBase100(const DataBuffer& bytes){
+    DigitsBuffer digits;
+    for (Int i = DECIMAL_DIGITS_START_INDEX; i < bytes.Size(); i++)
+        digits.Push(Decimal::HighNibble(bytes, i) * 10 + Decimal::LowNibble(bytes, i));
+
+    return digits;
+}
+
+constexpr MultiplicationDigitsBuffer Decimal::Base100ToDigits(const MultiplicationDigitsBuffer& input){
+    MultiplicationDigitsBuffer digits;
+    for (Int i = 0; i < input.Size(); ++i) {
+        digits.Push(input[i] / 10);
+        digits.Push(input[i] % 10);
+    }
+    return digits;
+}
+
+constexpr MultiplicationDigitsBuffer Decimal::MultiplyBase100(
     const DigitsBuffer& leftDigits,
     const DigitsBuffer& rightDigits
 ){
@@ -562,27 +717,79 @@ constexpr Decimal::MultiplicationDigitsBuffer Decimal::MultiplyDigits(
     }
 
     for (Int k = result.Size() - 1; k > 0; k--) {
-        const Int val = result[k];
-        if (val >= 10) {
-            result[k - 1] += val / 10;
-            result[k]      = val % 10;
+        if (result[k] >= 100) {
+            result[k - 1] += result[k] / 100;
+            result[k] %= 100;
         }
     }
 
     return result;
 }
 
-constexpr Decimal::MultiplicationDigitsBuffer Decimal::DivideDigits(
-    const DigitsBuffer& leftDigits,
-    const DigitsBuffer& rightDigits
+constexpr Comparators::Comparator Decimal::CompareDigitsArray(
+    const DigitsBuffer& lhs,
+    const DigitsBuffer& rhs
 ){
-    MultiplicationDigitsBuffer result;
-    result.SetSize(leftDigits.Size() + rightDigits.Size());
+    Int lhsI = 0;
+    while (lhsI < lhs.Size() && lhs[lhsI] == 0) lhsI++;
 
-    for (Int i = leftDigits.Size() - 1; i >= 0; --i) {
-        for (Int j = rightDigits.Size() - 1; j >= 0; --j) {
+    Int rhsI = 0;
+    while (rhsI < rhs.Size() && rhs[rhsI] == 0) rhsI++;
+
+    const auto lhsSize = lhs.Size() - lhsI;
+    const auto rhsSize = rhs.Size() - rhsI;
+
+    if (lhsSize != rhsSize)
+        return Comparators::Compare(lhsSize, rhsSize);
+
+    for (; lhsI < lhs.Size(); lhsI++)
+        if (lhs[lhsI] != rhs[rhsI++])
+            return Comparators::Compare(lhs[lhsI],  rhs[rhsI++]);
+
+    return Comparators::Comparator::Equal;
+}
+
+constexpr void Decimal::SubtractDigits(
+    DigitsBuffer& lhs,
+    const DigitsBuffer& rhs
+){
+    Int lhsI = lhs.Size() - 1;
+    Int rhsI = rhs.Size() - 1;
+    Int borrow = 0;
+
+    for (; lhsI >= 0 && rhsI >= 0; --lhsI, --rhsI){
+        Int d = lhs[lhsI] - rhs[rhsI] - borrow;
+        if (d < 0){
+            d += 10;
+            borrow = 1;
+        }
+        else borrow = 0;
+
+        lhs[lhsI] = d;
+    }
+
+    for (; lhsI >= 0 && borrow; --lhsI){
+        Int d = lhs[lhsI] - borrow;
+        if (d < 0){
+            d += 10;
+            borrow = 1;
+        }
+        else borrow = 0;
+        lhs[lhsI] = d;
+    }
+}
+
+constexpr DigitsBuffer Decimal::DivideDigits(
+    const DigitsBuffer& lhs,
+    const DigitsBuffer& rhs
+){
+    DigitsBuffer result;
+    result.SetSize(lhs.Size() + rhs.Size());
+
+    for (Int i = lhs.Size() - 1; i >= 0; --i) {
+        for (Int j = rhs.Size() - 1; j >= 0; --j) {
             const auto pos = i + j + 1;
-            result[pos] += leftDigits[i] * rightDigits[j];
+            result[pos] += lhs[i] * rhs[j];
         }
     }
 
@@ -595,10 +802,33 @@ constexpr Decimal::MultiplicationDigitsBuffer Decimal::DivideDigits(
     return result;
 }
 
+constexpr DigitsBuffer Decimal::LongDivide(
+    const DigitsBuffer& dividend,
+    const DigitsBuffer& divisor,
+    DigitsBuffer& remainderOut
+){
+    DigitsBuffer quotient;
+    quotient.SetSize(dividend.Size());
+
+    for (Int i = 0; i < dividend.Size(); ++i){
+        remainderOut.Push(dividend[i]);
+
+        Int quotientDigit = 0;
+        while (Decimal::CompareDigitsArray(remainderOut, divisor) != Comparators::Comparator::Less){
+            Decimal::SubtractDigits(remainderOut, divisor);
+            ++quotientDigit;
+        }
+        quotient[i] = quotientDigit;
+    }
+
+    return quotient;
+}
+
 constexpr fraction_index_t Decimal::DetermineResultFractionIndex(
     const fraction_index_t leftFractionIndex,
-    const fraction_index_t rightFractionIndex){
-    return std::max(leftFractionIndex, rightFractionIndex);
+    const fraction_index_t rightFractionIndex
+){
+    return Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
 }
 
 constexpr Decimal Decimal::Add(
@@ -613,13 +843,13 @@ constexpr Decimal Decimal::Add(
 
     Int carry = 0;
     for (auto i = lhs.Size() - 1; i > 0; i--){
-        const Int lowNibble = (lhs[i] & 0x0F) + (rhs[i] & 0x0F) + carry;
-        const Int highNibble = (lhs[i] >> 4) + (rhs[i] >> 4) + (lowNibble / 10);
+        const Int lowNibble = Decimal::LowNibble(lhs, i) + Decimal::LowNibble(rhs, i) + carry;
+        const Int highNibble = Decimal::HighNibble(lhs, i) + Decimal::HighNibble(rhs, i) + (lowNibble / 10);
         carry = highNibble / 10;
-        lhs[i] = static_cast<byte_t>((highNibble % 10) << 4 | lowNibble % 10);
+        lhs[i] = Decimal::PackNibbles(highNibble % 10, lowNibble % 10);
     }
 
-    Decimal::TrimLeadingZeros(lhs, fractionIndex);
+    Decimal::TrimLeadingZeros<DataBuffer>(lhs, fractionIndex);
     lhs[DECIMAL_HEADER_INDEX] = Decimal::CreateSignAndFractionByte(isPositive, fractionIndex);
     return Decimal(lhs.Data(), lhs.Size());
 }
@@ -679,21 +909,21 @@ constexpr Decimal Decimal::Subtract(
 ){
     Int borrow = 0;
     for (Int i = lhs.Size() - 1; i > 0; i--) {
-        Int lowNibble = (lhs[i] & 0x0F) - (rhs[i] & 0x0F) - borrow;
+        Int lowNibble = Decimal::LowNibble(lhs, i) - Decimal::LowNibble(rhs, i) - borrow;
         if (lowNibble < 0){
             lowNibble += 10;
             borrow = 1;
         }
         else borrow = 0;
 
-        Int highNibble = (lhs[i] >> 4) - (rhs[i] >> 4) - borrow;
+        Int highNibble = Decimal::HighNibble(lhs, i) - Decimal::HighNibble(rhs, i) - borrow;
         if (highNibble < 0){
             highNibble += 10;
             borrow = 1;
         }
         else borrow = 0;
 
-        lhs[i] = static_cast<byte_t>((highNibble << 4) | lowNibble);
+        lhs[i] = Decimal::PackNibbles(highNibble, lowNibble);
     }
     Decimal::TrimLeadingZeros(lhs, fractionIndex);
     lhs[DECIMAL_HEADER_INDEX] = Decimal::CreateSignAndFractionByte(isPositive, fractionIndex);
@@ -707,38 +937,69 @@ constexpr Decimal Decimal::Multiply(
     fraction_index_t fractionIndex,
     const bool isPositive
 ){
-    auto productDigits = Decimal::MultiplyDigits(
-        Decimal::Unpack(lhs),
-        Decimal::Unpack(rhs)
-    );
 
+    const auto leftUnpacked = Decimal::ToBase100(lhs);
+    const auto rightUnpacked = Decimal::ToBase100(rhs);
+    const auto productUnpacked = Decimal::MultiplyBase100(leftUnpacked, rightUnpacked);
+
+    auto productDigits = Decimal::Base100ToDigits(productUnpacked);
     Decimal::TrimLeadingZeros(productDigits, fractionIndex);
     Decimal::TrimTrailingZeros(productDigits, fractionIndex);
 
+    const Int maxScale = DECIMAL_MAX_NUMBER_OF_DIGITS - 3 - fractionIndex;
+    if (maxScale < 0)
+        throw std::runtime_error("Decimal multiplication overflow");
 
-
-    Decimal::PadDecimalParts(productDigits, fractionIndex);
-
+    Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfUp>(productDigits, fractionIndex, maxScale);
+    Decimal::PadDecimalParts<MultiplicationDigitsBuffer>(productDigits, fractionIndex);
     const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
     return Decimal(packed.Data(), packed.Size());
 }
 
+template <DecimalRoundingMode Mode>
 constexpr Decimal Decimal::Divide(
-    const DataBuffer& left,
-    const DataBuffer& right,
-    fraction_index_t &fractionIndex,
+    const DataBuffer& dividend,
+    const DataBuffer& divisor,
     const bool isPositive
 ){
-    const auto leftDigits  = Decimal::Unpack(left);
-    const auto rightDigits = Decimal::Unpack(right);
 
-    auto productDigits = Decimal::DivideDigits(leftDigits, rightDigits);
+    auto leftDigits  = Decimal::Unpack(dividend);
+    auto rightDigits = Decimal::Unpack(divisor);
 
-    Decimal::TrimLeadingZeros(productDigits, fractionIndex);
-    Decimal::TrimTrailingZeros(productDigits, fractionIndex);
-    Decimal::PadDecimalParts(productDigits, fractionIndex);
+    if (Decimal::IsZeroMagnitude<DigitsBuffer>(rightDigits))
+        throw std::runtime_error("Decimal division by zero");
 
-    const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
+    const Int leftFractionIndex = dividend[DECIMAL_HEADER_INDEX] & 0x7F;
+    const Int rightFractionIndex = divisor [DECIMAL_HEADER_INDEX] & 0x7F;
+
+    const Int leftFractionalSize = leftDigits.Size()  - leftFractionIndex;
+    const Int rightFractionalSize = rightDigits.Size() - rightFractionIndex;
+
+    const Int targetScale = Math::Max<Int>(leftFractionalSize, rightFractionalSize);
+    const Int shift = rightFractionalSize - leftFractionalSize + targetScale + 1;
+    for (Int k = 0; k < shift; ++k)
+        leftDigits.Push(0);
+
+    DigitsBuffer remainderOut;
+    auto quotient = Decimal::LongDivide(
+        leftDigits,
+        rightDigits,
+        remainderOut
+    );
+
+    fraction_index_t fractionIndex = quotient.Size() - (targetScale + 1);
+    Decimal::TrimLeadingZeros<DigitsBuffer>(quotient, fractionIndex);
+
+    if (!Decimal::IsZeroMagnitude<DigitsBuffer>(remainderOut))
+        quotient.Push(1);
+
+    Decimal::RoundToScale<DigitsBuffer, Mode>(quotient, fractionIndex, targetScale);
+
+    Decimal::TrimTrailingZeros<DigitsBuffer>(quotient, fractionIndex);
+    Decimal::PadDecimalParts<DigitsBuffer>(quotient, fractionIndex);
+
+    const auto sign = isPositive || Decimal::IsZeroMagnitude<DigitsBuffer>(quotient);
+    const auto packed = Decimal::Pack(quotient, sign, fractionIndex);
     return Decimal(packed.Data(), packed.Size());
 }
 

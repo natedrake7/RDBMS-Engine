@@ -406,7 +406,7 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::Guid:
-            return Guid(value.Data(), value.Size());
+            return Guid(value.Data());
         case DataType::String:
             return Guid::Parse(value.AsStringView());
         default:

@@ -196,18 +196,18 @@ namespace DataTypes{
         }
 
         // --- numeric ladder ---
-        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_arithmetic_v<TTo>)      // num <-> num
+        else if constexpr (DataTypes::IsInteger<TFrom> && std::is_arithmetic_v<TTo>)      // num <-> num
             return static_cast<TTo>(input);
 
         // --- string <-> numeric ---
-        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, String>)    // num -> String
+        else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, String>)    // num -> String
             return Converter::IntToStr<TFrom>(input, allocator);
 
         else if constexpr (IsString<TFrom> && std::is_arithmetic_v<TTo>)              // String -> num
             return Converter::StrToInt<TTo>(input);
 
         // --- Decimal ---
-        else if constexpr (std::is_arithmetic_v<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal
+        else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal
             return Decimal(input);
 
         else if constexpr (IsString<TFrom> && std::is_same_v<TTo, Decimal>)           // String -> Decimal

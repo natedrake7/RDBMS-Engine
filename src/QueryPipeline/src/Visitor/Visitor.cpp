@@ -383,15 +383,19 @@ namespace QueryPipeline {
 
     antlrcpp::Any SQLVisitorImplementation::visitDecimalType(SQLParser::DecimalTypeContext *context){
 
-        auto typeName = DataTypes::String::FromView(QueryPipeline::Decimal, this->_compileContext->GetAllocator());
-        auto columnType = Statements::ColumnType(
-            typeName,
-            Statements::DecimalType(
-            Converter::StrToInt<Int>(context->precision->getText()),
-            Converter::StrToInt<Int>(context->scale->getText())
-            )
-        );
+        const auto typeName = DataTypes::String::FromView(QueryPipeline::Decimal, this->_compileContext->GetAllocator());
+        Statements::ColumnType columnType(typeName);
 
+        if (context->precision && !context->scale
+            || context->scale && !context->precision
+        )  throw SyntaxError("Precision and scale must be specified together", CreatePositionErrorMessage(context));
+
+        if (context->precision && context->scale){
+            columnType.decimal = Statements::DecimalType(
+                Converter::StrToInt<TinyInt>(context->precision->getText()),
+                Converter::StrToInt<TinyInt>(context->scale->getText())
+            );
+        }
         return std::any(columnType);
     }
 

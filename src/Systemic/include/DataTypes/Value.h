@@ -176,8 +176,10 @@ Value::Value(T& other, const Memory::IAllocator* allocator, const column_index_t
         this->size = other.Size();
     }
     else if constexpr (DataTypes::IsDecimal<T>){
-        this->data = other.GetRawData();
-        this->size = other.GetRawDataSize();
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.RawSize()));
+        std::memcpy(buffer, other.RawData(), other.RawSize());
+        this->data = buffer;
+        this->size = other.RawSize();
     }
     else
         static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
@@ -202,10 +204,10 @@ Value::Value(const T& other, const Memory::IAllocator* allocator, column_index_t
         this->size = other.Size();
     }
     else if constexpr (DataTypes::IsDecimal<T>){
-        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.GetRawDataSize()));
-        std::memcpy(buffer, other.GetRawData(), other.GetRawDataSize());
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.RawSize()));
+        std::memcpy(buffer, other.RawData(), other.RawSize());
         this->data = buffer;
-        this->size = other.GetRawDataSize();
+        this->size = other.RawSize();
     }
     else
         static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
@@ -231,8 +233,8 @@ void Value::Set(T& other){
         this->size = other.Size();
     }
     else if constexpr (DataTypes::IsDecimal<T>){
-        this->data = other.GetRawData();
-        this->size = other.GetRawDataSize();
+        this->data = other.RawData();
+        this->size = other.RawSize();
     }
     else
         static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
@@ -253,10 +255,10 @@ void Value::Set(const T& other){
         this->size = other.Size();
     }
     else if constexpr (DataTypes::IsDecimal<T>){
-        auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(other.GetRawDataSize()));
-        std::memcpy(buffer, other.GetRawData(), other.GetRawDataSize());
+        auto* buffer = static_cast<object_t*>(_allocator->AllocateRaw(other.RawSize()));
+        std::memcpy(buffer, other.RawData(), other.RawSize());
         this->data = buffer;
-        this->size = other.GetRawDataSize();
+        this->size = other.RawSize();
     }
     else
         static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");

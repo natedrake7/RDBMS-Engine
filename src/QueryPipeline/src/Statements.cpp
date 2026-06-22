@@ -2514,6 +2514,7 @@ namespace QueryPipeline::Statements {
         Expressions::Expression *&expression
     ){
         auto* binaryExpr = expression->AsBinary();
+
         FoldExpression(context, binaryExpr->left);
         FoldExpression(context, binaryExpr->right);
 
@@ -2529,6 +2530,10 @@ namespace QueryPipeline::Statements {
         Expressions::Expression *&expression
     ){
         auto* logicalExpr = expression->AsLogical();
+
+        FoldExpression(context, logicalExpr->left);
+        FoldExpression(context, logicalExpr->right);
+
         //If expression is of type OR and either right or left is a constant, it will always be true
         if (logicalExpr->IsOr()) {
             if (logicalExpr->left->IsConstant()) {
@@ -2600,6 +2605,7 @@ namespace QueryPipeline::Statements {
     }
 
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
+        Expressions::BindExpressionKernel(expression, Constants::ExecutionMode::Row);
         auto value = Expressions::EvaluateExpression(expression, Expressions::EvaluationContext(context.GetAllocator()));
         expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }

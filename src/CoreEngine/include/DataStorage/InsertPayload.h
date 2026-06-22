@@ -97,7 +97,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::Decimal &src){
-        this->SetData(src.GetRawData(), src.GetRawDataSize());
+        this->SetData(src.RawData(), src.RawSize());
     }
 
     void InsertPayload::CopyToBuffer(const DataTypes::Guid &src){

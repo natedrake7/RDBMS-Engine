@@ -152,7 +152,7 @@ namespace Serialization{
     }
 
     void JsonBuilder::Value(const DataTypes::Decimal& value){
-        this->Value(value.GetRawData(), value.GetRawDataSize(), JsonType::Number);
+        this->Value(value.RawData(), value.RawSize(), JsonType::Number);
     }
 
     void JsonBuilder::ValueNull(){

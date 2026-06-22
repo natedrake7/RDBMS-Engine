@@ -25,7 +25,7 @@ namespace DataTypes {
 
     public:
         Guid();
-        Guid(const unsigned char* data, Int size);
+        explicit Guid(const unsigned char* data);
         explicit Guid(const std::array<UnsignedTinyInt, GUID_SIZE>& data);
         [[nodiscard]] UnsignedTinyInt* GetDataUnsafe();
         [[nodiscard]] const UnsignedTinyInt* GetData() const;

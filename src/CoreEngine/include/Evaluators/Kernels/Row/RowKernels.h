@@ -43,16 +43,14 @@ namespace CoreEngine::RowKernels{
         *outNull = value.IsNull();
         if (*outNull) return;
 
-        if constexpr (DataTypes::NonPrimitiveType<T>){
-            if constexpr (DataTypes::IsString<T>)
-                new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
-            else if constexpr (DataTypes::IsJson<T>)
-                new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
-            else if constexpr (DataTypes::IsDecimal<T>)
-                new (outVal) DataTypes::Decimal(value.Data(), value.Size());
-        }
-        else if constexpr (DataTypes::Primitive<T>)
+        if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
+        else if constexpr (DataTypes::IsString<T>)
+            new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
+        else if constexpr (DataTypes::IsJson<T>)
+            new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
+        else if constexpr (DataTypes::IsDecimal<T>)
+            new (outVal) DataTypes::Decimal(value.Data(), value.Size());
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }
@@ -76,16 +74,14 @@ namespace CoreEngine::RowKernels{
         *outNull = value.IsNull();
         if (*outNull) return;
 
-        if constexpr (DataTypes::NonPrimitiveType<T>){
-            if constexpr (DataTypes::IsString<T>)
-                new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
-            else if constexpr (DataTypes::IsJson<T>)
-                new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
-            else if constexpr (DataTypes::IsDecimal<T>)
-                new (outVal) DataTypes::Decimal(value.Data(), value.Size());
-        }
-        else if constexpr (DataTypes::Primitive<T>)
+        if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
+        else if constexpr (DataTypes::IsString<T>)
+            new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
+        else if constexpr (DataTypes::IsJson<T>)
+            new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
+        else if constexpr (DataTypes::IsDecimal<T>)
+            new (outVal) DataTypes::Decimal(value.Data(), value.Size());
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }
@@ -137,7 +133,9 @@ namespace CoreEngine::RowKernels{
         bool outNull = false;
         T out;
         self->rowKernel(self, context, &out, &outNull);
-        if (outNull) return Value::Null(context.allocator);
+        if (outNull)
+            return Value::Null(context.allocator);
+
         return Value(out, context.allocator);
     }
 }

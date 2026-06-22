@@ -454,7 +454,25 @@ namespace Expressions{
 
 
     bool BinaryExpression::ValidateDivision() const{
-        return false;
+        const auto leftType = GetExpressionReturnType(this->left);
+        const auto rightType = GetExpressionReturnType(this->right);
+
+        switch (PromoteType(leftType, rightType)) {
+        case DataType::TinyInt:
+        case DataType::SmallInt:
+        case DataType::Int:
+        case DataType::BigInt:
+        case DataType::Decimal:
+        case DataType::Bool:
+            return true;
+        case DataType::String:
+        case DataType::DateTime:
+        case DataType::Guid:
+        case DataType::RowIdentifier:
+        case DataType::Null:
+        default:
+            return false;
+        }
     }
 
     bool BinaryExpression::ValidateModulo() const{

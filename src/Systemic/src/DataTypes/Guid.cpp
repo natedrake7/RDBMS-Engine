@@ -45,12 +45,12 @@ namespace DataTypes {
         return Guid(data);
     }
 
-    Guid::Guid() {
+    Guid::Guid(){
         std::memset(this->_data, 0, GUID_SIZE);
     }
 
-    Guid::Guid(const unsigned char *data, const Int size){
-        std::memcpy(this->_data, data, size);
+    Guid::Guid(const unsigned char *data){
+        std::memcpy(this->_data, data, GUID_SIZE);
     }
 
     Guid::Guid(const std::array<UnsignedTinyInt, GUID_SIZE> &data){

@@ -5,7 +5,6 @@
 #include <stdexcept>
 #include <charconv>
 #include <cstring>
-#include <cstdio>
 
 #include "Constants.h"
 #include "DataTypes/Decimal.h"
@@ -121,7 +120,7 @@ public:
         const DataTypes::Decimal &input,
         const UnsignedInt size
     ){
-        return input.GetRawDataSize() <= size;
+        return input.RawSize() <= size;
     }
 
     // static bool AssertOverflow(const T leftValue, const T rightValue){
