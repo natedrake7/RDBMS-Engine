@@ -85,12 +85,9 @@ namespace QueryPipeline::Statements {
     };
 
     struct Identity {
-        uint16_t seed;
-        uint16_t incrementFactor;
-        int64_t cacheBlock;
-
-        Identity() = default;
-        ~Identity() = default;
+        SmallInt seed;
+        SmallInt incrementFactor;
+        BigInt cacheBlock;
 
         [[nodiscard]] Errors::ValidationStatus Validate(const QueryContext& context) const;
     };
@@ -114,7 +111,6 @@ namespace QueryPipeline::Statements {
         Constants::OrderType type;
 
         OrderColumn();
-        ~OrderColumn();
     };
 
     struct AlterColumn {
@@ -157,7 +153,6 @@ namespace QueryPipeline::Statements {
     struct OrderByStatement {
         DataStructures::PolymorphicArray<OrderColumn*> columns;
 
-        ~OrderByStatement();
         bool Validate(
             const DataStructures::PolymorphicArray<OrderColumn*>& selectColumns,
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict
@@ -371,8 +366,6 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<column_index_t> columnIndices;
         SelectStatement* selectStatement;
 
-        ~InsertStatement() override;
-
         void InsertDefaultValuesForMissingColumns(
             const QueryContext& context,
             const Headers::ColumnHeader& header,
@@ -381,7 +374,7 @@ namespace QueryPipeline::Statements {
         void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
         [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
             const QueryContext& context,
-            const Expressions::Expression* expression,
+            Expressions::Expression*& expression,
             const DataTypes::String& columnName
         ) const;
         [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context) const;
@@ -405,7 +398,6 @@ namespace QueryPipeline::Statements {
         ColumnName name;
 
         UpdateColumn();
-        ~UpdateColumn();
     };
 
     struct UpdateStatement final : Statement {

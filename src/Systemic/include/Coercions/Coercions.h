@@ -103,34 +103,33 @@ namespace DataTypes{
         // ---- Numeric ladder ----
         // TinyInt → ...
         matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Int)]      = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
 
         // SmallInt →
         matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Int)]     = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::BigInt)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
         matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
 
         // Int →
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::TinyInt)]  = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
         matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
 
         // BigInt →
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::TinyInt)]  = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
         matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Int)]      = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Decimal)]  = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Int)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
 
         // Decimal →
-        //TOOD make explicit
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::TinyInt)]  = CT::None;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::SmallInt)] = CT::None;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::Int)]      = CT::None;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::BigInt)]   = CT::None;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::TinyInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
 
         // ---- String conversions ----
         for (Int t = static_cast<Int>(DT::TinyInt); t <= static_cast<Int>(DT::Decimal); t++) {
@@ -138,12 +137,12 @@ namespace DataTypes{
             matrix.cells[t][static_cast<Int>(DT::String)] = CT::Implicit; // stringify
         }
 
-        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Bool)]     = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::String)]     = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Bool)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::String)] = CT::Implicit;
         matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::DateTime)] = CT::Explicit;
         matrix.cells[static_cast<Int>(DT::DateTime)][static_cast<Int>(DT::String)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Guid)]     = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Guid)][static_cast<Int>(DT::String)]     = CT::Implicit;
+        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Guid)] = CT::Explicit;
+        matrix.cells[static_cast<Int>(DT::Guid)][static_cast<Int>(DT::String)] = CT::Implicit;
 
         // ---- Bool conversions ----
         matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::TinyInt)]  = CT::Implicit;
@@ -207,6 +206,8 @@ namespace DataTypes{
             return Converter::StrToInt<TTo>(input);
 
         // --- Decimal ---
+        else if constexpr (std::is_same_v<TFrom, Decimal> && DataTypes::IsInteger<TTo>)
+            return input.template ToInt<TTo>();
         else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal
             return Decimal(input);
 

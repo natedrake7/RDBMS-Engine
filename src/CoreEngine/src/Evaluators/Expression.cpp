@@ -289,10 +289,6 @@ namespace Expressions{
         this->expressionType = ExpressionType::Column;
     }
 
-    Value ColumnExpression::Evaluate(const EvaluationContext& context) const{
-        return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
-    }
-
     void ColumnExpression::BindExpressionKernel(
         ColumnExpression* expression,
         const Constants::ExecutionMode mode
@@ -378,10 +374,6 @@ namespace Expressions{
             expression->BindVectorizedKernel();
             break;
         }
-    }
-
-    Value ConstantExpression::Evaluate() const{
-        return this->value;
     }
 
     DataType ConstantExpression::GetReturnType() const{ return this->value.GetType(); }
@@ -557,37 +549,6 @@ namespace Expressions{
     }
 
     //TODO Implement field logical operations.
-    Value BinaryExpression::Evaluate(const EvaluationContext& context) const{
-        // switch (this->operation) {
-        // case BinaryOperator::Add:
-        //     return EvaluateExpression(this->left, context) + EvaluateExpression(this->right, context);
-        // case BinaryOperator::Subtract:
-        //     return EvaluateExpression(this->left, context) - EvaluateExpression(this->right, context);
-        // case BinaryOperator::Multiply:
-        //     return EvaluateExpression(this->left, context) * EvaluateExpression(this->right, context);
-        // case BinaryOperator::Divide:
-        //     return EvaluateExpression(this->left, context) / EvaluateExpression(this->right, context);
-        // case BinaryOperator::Modulo:
-        //     return EvaluateExpression(this->left, context) % EvaluateExpression(this->right, context);
-        // case BinaryOperator::Equal:
-        //     return Value(EvaluateExpression(this->left, context) == EvaluateExpression(this->right, context), context.allocator);
-        // case BinaryOperator::EqualIgnoreOrdinalCase:
-        //     return Value::EqualsIgnoreOrdinalCase(EvaluateExpression(this->left, context), EvaluateExpression(this->right, context));
-        // case BinaryOperator::NotEqual:
-        //     return Value(EvaluateExpression(this->left, context) != EvaluateExpression(this->right, context), context.allocator);
-        // case BinaryOperator::Greater:
-        //     return Value(EvaluateExpression(this->left, context) > EvaluateExpression(this->right, context), context.allocator);
-        // case BinaryOperator::GreaterEqual:
-        //     return Value(EvaluateExpression(this->left, context) >= EvaluateExpression(this->right, context), context.allocator);
-        // case BinaryOperator::Less:
-        //     return Value(EvaluateExpression(this->left, context) < EvaluateExpression(this->right, context), context.allocator);
-        // case BinaryOperator::LessEqual:
-        //     return Value(EvaluateExpression(this->left, context) <= EvaluateExpression(this->right, context), context.allocator);
-        // default:
-        //     throw std::runtime_error("BinaryExpression::Evaluate: Unknown operator" + std::to_string(static_cast<int>(this->operation)));
-        // }
-    }
-
     DataType BinaryExpression::GetReturnType() const{
         switch (this->operation) {
         case BinaryOperator::Add:
@@ -979,57 +940,13 @@ namespace Expressions{
         }
     }
 
-    Value LogicalExpression::Evaluate(const EvaluationContext& context) const {
-        // switch (this->logicalType) {
-        // case LogicalType::And: {
-        //     const auto leftValue = EvaluateExpression(this->left, context);
-        //     const auto rightValue = EvaluateExpression(this->right, context);
-        //     return Value(leftValue.AsBool() && rightValue.AsBool(), context.allocator, 0);
-        // }
-        // case LogicalType::Or: {
-        //     const auto leftValue = EvaluateExpression(this->left, context);
-        //     const auto rightValue = EvaluateExpression(this->right, context);
-        //     return Value(leftValue.AsBool() || rightValue.AsBool(), context.allocator, 0);
-        // }
-        // case LogicalType::Invalid:
-        // default:
-        //     throw std::runtime_error("LogicalExpression::Evaluate: Unknown predicate" + std::to_string(static_cast<Int>(this->logicalType)));
-        // }
-    }
-
-    DataType LogicalExpression::GetReturnType() const{ return DataType::Bool; }
-
-    Value BranchExpression::EvaluateSwitch(const EvaluationContext &context) const{
-        // for (int i = 0;i < this->branches.Size(); i++) {
-        //     if (EvaluateExpression(this->branches[i], context).AsBool())
-        //         return EvaluateExpression(this->results[i], context);
-        // }
-        //
-        // return EvaluateExpression(this->baseCase, context);
-    }
-
-    Value BranchExpression::EvaluateTernary(const EvaluationContext &context) const{
-        // if (EvaluateExpression(this->branches[0], context).AsBool())
-        //     return EvaluateExpression(this->results[0], context);
-        // return EvaluateExpression(this->results[1], context);
-    }
+    constexpr DataType LogicalExpression::GetReturnType() { return DataType::Bool; }
 
     BranchExpression::BranchExpression(const BranchType type, const ::Memory::IAllocator* allocator)
         :   branchType(type), branches(allocator),
             results(allocator), arguments(allocator),
             baseCase(nullptr) {
         this->expressionType = ExpressionType::Branch;
-    }
-
-    Value BranchExpression::Evaluate(const EvaluationContext &context) const {
-        switch (this->branchType) {
-        case BranchType::Switch:
-            return this->EvaluateSwitch(context);
-        case BranchType::Ternary:
-            return this->EvaluateTernary(context);
-        default:
-            throw std::runtime_error("BranchExpression::Evaluate: Unknown expression branching type");
-        }
     }
 
     DataType BranchExpression::GetReturnType() const {
@@ -1145,32 +1062,6 @@ namespace Expressions{
         this->expressionType = ExpressionType::Json;
     }
 
-    Value JsonExpression::Evaluate(const EvaluationContext& context) const{
-        // switch (context.type) {
-        // case EvaluationContext::EvaluationContextType::SingleRow: {
-        //     const auto columnValue = context.row->PartialMaterialize(
-        //         context.allocator,
-        //         this->columnPtr->columnIndex
-        //     );
-        //     return this->EvaluateJsonPath(context, columnValue);
-        // }
-        // case EvaluationContext::EvaluationContextType::MaterializedRow: {
-        //     const auto columnValue = context.materializedRow.GetColumnAt(this->columnPtr->columnIndex);
-        //     return this->EvaluateJsonPath(context, columnValue);
-        // }
-        // case EvaluationContext::EvaluationContextType::Join:{
-        //     const auto columnValue = this->columnPtr->Evaluate(context);
-        //     return this->EvaluateJsonPath(context, columnValue);
-        // }
-        // case EvaluationContext::EvaluationContextType::Constant:
-        // case EvaluationContext::EvaluationContextType::Aggregate:
-        // case EvaluationContext::EvaluationContextType::Window:
-        //     break;
-        // }
-        //
-        // return Value::Null(nullptr);
-    }
-
     DataType JsonExpression::GetReturnType() const{
         return this->type;
     }
@@ -1203,75 +1094,7 @@ namespace Expressions{
         }
     }
 
-    Value CastExpression::Evaluate(const EvaluationContext& context) const{
-        // auto value = EvaluateExpression(this->childExpr, context);
-        //
-        // if (value.IsNull())
-        //     return value;
-        //
-        // switch (this->targetType){
-        // case DataType::String:
-        //     return Value(value.AsString(), context.allocator);
-        //     break;
-        // case DataType::Bool:
-        //     return Value(value.AsBool(), context.allocator);
-        //     break;
-        // case DataType::TinyInt:
-        //     return Value(value.AsTinyInt(), context.allocator);
-        //     break;
-        // case DataType::SmallInt:
-        //     return Value(value.AsSmallInt(), context.allocator);
-        //     break;
-        // case DataType::Int:
-        //     return Value(value.AsInt(), context.allocator);
-        //     break;
-        // case DataType::BigInt:
-        //     return Value(value.AsBigInt(), context.allocator);
-        //     break;
-        // case DataType::Decimal:
-        //     return Value(value.AsDecimal(), context.allocator);
-        //     break;
-        // case DataType::DateTime:
-        //     return Value(value.AsDateTime(), context.allocator);
-        //     break;
-        // case DataType::Guid:
-        //     return Value(value.AsGuid(), context.allocator);
-        //     break;
-        // case DataType::Json:
-        //     return Value(value.AsJson(), context.allocator);
-        //     break;
-        // default:
-        //     throw std::runtime_error("CastExpression::Evaluate: Unknown cast target type");
-        // }
-    }
-
     DataType CastExpression::GetReturnType() const{ return this->targetType; }
-
-    // Value EvaluateExpression(const Expression* expression, const EvaluationContext& context){
-    //     switch (expression->expressionType){
-    //     case ExpressionType::Column:
-    //         return expression->AsColumn()->Evaluate(context);
-    //     case ExpressionType::Constant:
-    //         return expression->AsConstant()->Evaluate();
-    //     case ExpressionType::Binary:
-    //         return expression->AsBinary()->Evaluate(context);
-    //     case ExpressionType::Logical:
-    //         return expression->AsLogical()->Evaluate(context);
-    //     case ExpressionType::Variable:
-    //         return expression->AsVariable()->Evaluate(context);
-    //     case ExpressionType::Branch:
-    //         return expression->AsBranch()->Evaluate(context);
-    //     case ExpressionType::Function:
-    //         return expression->AsFunction()->Evaluate(context);
-    //     case ExpressionType::Json:
-    //         return expression->AsJson()->Evaluate(context);
-    //     case ExpressionType::Cast:
-    //         return expression->AsCast()->Evaluate(context);
-    //     case ExpressionType::Expression:
-    //     default:
-    //         return Value::Null(context.allocator);
-    //     }
-    // }
 
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,

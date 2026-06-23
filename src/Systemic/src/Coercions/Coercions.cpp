@@ -265,7 +265,7 @@ namespace DataTypes {
         case DataType::BigInt:
             return Converter::DownCast<TinyInt>(value.AsBigInt());
         case DataType::Decimal:
-            return 0;
+            return value.AsDecimal().ToInt<TinyInt>();
         case DataType::String:
             return Converter::StrToInt<TinyInt>(value.AsString());
         case DataType::Bool:
@@ -288,7 +288,7 @@ namespace DataTypes {
         case DataType::BigInt:
             return Converter::DownCast<SmallInt>(value.AsBigInt());
         case DataType::Decimal:
-            return 0;
+            return value.AsDecimal().ToInt<SmallInt>();
         case DataType::String:
             return Converter::StrToInt<SmallInt>(value.AsString());
         case DataType::Bool:
@@ -311,7 +311,7 @@ namespace DataTypes {
         case DataType::BigInt:
             return Converter::DownCast<Int>(value.AsBigInt());
         case DataType::Decimal:
-            return 0;
+            return value.AsDecimal().ToInt<Int>();
         case DataType::String:
             return Converter::StrToInt<Int>(value.AsStringView());
         case DataType::Bool:
@@ -334,7 +334,7 @@ namespace DataTypes {
         case DataType::BigInt:
             return *reinterpret_cast<const BigInt*>(value.Data());
         case DataType::Decimal:
-            return 0;
+            return value.AsDecimal().ToInt<BigInt>();
         case DataType::String:
             return Converter::StrToInt<BigInt>(value.AsStringView());
         case DataType::Bool:

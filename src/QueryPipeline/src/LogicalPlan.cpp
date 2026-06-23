@@ -22,8 +22,6 @@ namespace QueryPipeline {
         this->databaseId = INVALID_DATABASE_ID;
     }
 
-    LogicalPlan::~LogicalPlan() = default;
-
     LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
 
@@ -34,8 +32,6 @@ namespace QueryPipeline {
 
     LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
         : LogicalPlan(sessionId), username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
-
-    LogicalCreateUser::~LogicalCreateUser() = default;
 
     PhysicalPlan::PlanNode* LogicalCreateUser::ToPhysical(QueryContext& context) {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalCreateUser>(this->username, this->password, this->role);
@@ -67,8 +63,6 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<Expressions::Expression*> &resultExpressions,
         DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders)
         : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
-
-    LogicalProject::~LogicalProject() = default;
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
         for (auto* expression : this->resultExpressions)
@@ -248,11 +242,6 @@ namespace QueryPipeline {
         left(left), right(right),
         condition(condition), type(type) {}
 
-    LogicalJoin::~LogicalJoin(){
-        delete this->left;
-        delete this->right;
-    }
-
     PhysicalPlan::PlanNode* LogicalJoin::ToPhysical(QueryContext& context){
         const Optimizer optimizer(context);
 
@@ -296,20 +285,12 @@ namespace QueryPipeline {
     LogicalTop::LogicalTop(LogicalPlan *child, const BigInt top)
         : child(child), top(top) {}
 
-    LogicalTop::~LogicalTop() {
-        delete this->child;
-    }
-
     PhysicalPlan::PhysicalTop* LogicalTop::ToPhysical(QueryContext& context){
         return context._compileContext.Allocate<PhysicalPlan::PhysicalTop>(this->child->ToPhysical(context), this->top);
     }
 
     LogicalDistinct::LogicalDistinct(LogicalPlan *child)
         : child(child) {}
-
-    LogicalDistinct::~LogicalDistinct() {
-        delete this->child;
-    }
 
     PhysicalPlan::PhysicalDistinct* LogicalDistinct::ToPhysical(QueryContext& context){
         return context._compileContext.Allocate<PhysicalPlan::PhysicalDistinct>(this->child->ToPhysical(context));
@@ -322,14 +303,15 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<column_index_t>& columnIndices
     ) : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnIndices)) {}
 
-    LogicalInsert::~LogicalInsert(){
-        delete this->child;
-    }
-
     PhysicalPlan::PhysicalInsert* LogicalInsert::ToPhysical(QueryContext& context){
         auto* physicalSelect = this->child != nullptr
             ? this->child->ToPhysical(context)
             : nullptr;
+
+        for (auto& [values] : this->fields){
+            for (const auto& expression : values)
+                Expressions::BindExpressionKernel(expression, context._executionMode);
+        }
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->columnsIndices);
     }

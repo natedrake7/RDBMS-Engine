@@ -373,7 +373,7 @@ namespace QueryPipeline::PhysicalPlan {
         static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
         DataStructures::PolymorphicArray<Value> ConvertExpressionsToValues(
-            CoreEngine::ExecutionContext& context,
+            const CoreEngine::ExecutionContext& context,
             Int index
         ) const;
         ExecutionResult InsertFromChild(CoreEngine::StorageTypes::Table* tablePtr, CoreEngine::ExecutionContext& context) const;

@@ -980,19 +980,19 @@ PhysicalTableCreate::PhysicalTableCreate(
     }
 
     DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
-        CoreEngine::ExecutionContext& context,
+        const CoreEngine::ExecutionContext& context,
         const Int index
     ) const{
         auto& [expressions] = this->fields[index];
 
         DataStructures::PolymorphicArray<Value> values(context.GetAllocator());
         values.Reserve(expressions.Size());
-        for (int i = 0; i < expressions.Size(); i++) {
-            const Expressions::EvaluationContext evaluationContext(
-                Expressions::EvaluationContext::EvaluationContextType::Constant,
-                context
-            );
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::Constant,
+            context
+        );
 
+        for (int i = 0; i < expressions.Size(); i++) {
             auto value = Expressions::EvaluateExpression(expressions[i], evaluationContext);
             value.SetColumnIndex(this->columnsIndices[index]);
             values.Push(std::move(value));

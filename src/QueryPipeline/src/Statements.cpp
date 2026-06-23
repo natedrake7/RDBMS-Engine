@@ -323,8 +323,6 @@ namespace QueryPipeline::Statements {
         this->type = Constants::OrderType::ASCENDING;
     }
 
-    OrderColumn::~OrderColumn() = default;
-
     AlterColumn::AlterColumn(){
         this->columnId = INVALID_COLUMN_ID;
         this->index = INVALID_ORDINAL_POS;
@@ -337,8 +335,6 @@ namespace QueryPipeline::Statements {
             || this->expression->IsLogical()
             || this->expression->IsBinary();
     }
-
-    OrderByStatement::~OrderByStatement() = default;
 
     bool OrderByStatement::Validate(
         const DataStructures::PolymorphicArray<OrderColumn*>& selectColumns,
@@ -940,8 +936,6 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
     }
 
-    InsertStatement::~InsertStatement() = default;
-
     void InsertStatement::InsertDefaultValuesForMissingColumns(
         const QueryContext& context,
         const Headers::ColumnHeader &header,
@@ -990,7 +984,7 @@ namespace QueryPipeline::Statements {
 
     Errors::ValidationStatus InsertStatement::ValidateReturnType(
         const QueryContext& context,
-        const Expressions::Expression* expression,
+        Expressions::Expression*& expression,
         const DataTypes::String& columnName
     ) const{
         const auto valueType = Expressions::GetExpressionReturnType(expression);
@@ -1002,16 +996,26 @@ namespace QueryPipeline::Statements {
 
         const auto columnType = static_cast<DataType>(columnHeader.dataType);
 
-        if (DataTypes::Coercions::IsCoercionAllowed(
+        if (valueType == columnType)
+            return Errors::ValidationStatus::Ok();
+
+        if (
+            DataTypes::Coercions::IsCoercionAllowed(
             valueType,
             columnType
-        )) return Errors::ValidationStatus::Ok();
+            )
+        ){
+            InsertCastExpression(context, expression, columnType);
+            FoldCastExpression(context, expression);
+            return Errors::ValidationStatus::Ok();
+        }
 
         if (expression->IsConstant()) {
-            auto* constantExpr = expression->AsConstant();
+            const auto* constantExpr = expression->AsConstant();
 
             if (constantExpr->value.IsNull()) {
-                if (columnHeader.isNullable) return Errors::ValidationStatus::Ok();
+                if (columnHeader.isNullable)
+                    return Errors::ValidationStatus::Ok();
 
                 return Errors::ValidationStatus::Error(
             Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
@@ -1021,8 +1025,11 @@ namespace QueryPipeline::Statements {
                 );
             }
 
-            if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value))
+            if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value)){
+                InsertCastExpression(context, expression, columnType);
+                EvaluateExpression(context, expression);
                 return Errors::ValidationStatus::Ok();
+            }
         }
 
         return Errors::ValidationStatus::Error(
@@ -1048,13 +1055,17 @@ namespace QueryPipeline::Statements {
         this->selectStatement->databaseId = this->databaseId;
 
         auto selectStatus = this->selectStatement->CompileDerived(context);
-        if (!selectStatus.IsOk()) return selectStatus;
+        if (!selectStatus.IsOk())
+            return selectStatus;
 
-        for (int i = 0;i < this->selectStatement->results.Size();i++) {
-            const auto& resultExpression = this->selectStatement->results[i];
+        for (Int i = 0;i < this->selectStatement->results.Size();i++) {
+            auto returnTypeStatus = this->ValidateReturnType(
+                context, this->selectStatement->results[i],
+                this->columns[i].name
+            );
 
-            auto returnTypeStatus = this->ValidateReturnType(context, resultExpression, this->columns[i].name);
-            if (!returnTypeStatus.IsOk()) return returnTypeStatus;
+            if (!returnTypeStatus.IsOk())
+                return returnTypeStatus;
         }
 
         return Errors::ValidationStatus::Ok();
@@ -1075,7 +1086,7 @@ namespace QueryPipeline::Statements {
         );
 
         for (auto& [insertColumns] : this->values) {
-            for (int i = 0;i < insertColumns.Size(); i++) {
+            for (Int i = 0;i < insertColumns.Size(); i++) {
                 auto& value = insertColumns[i];
 
                 auto expressionStatus = CompileExpression(context, statementValidationScope, value);
@@ -1098,7 +1109,8 @@ namespace QueryPipeline::Statements {
             );
 
         auto tableStatus = this->table->Validate(context, this->databaseId);
-        if (!tableStatus.IsOk()) return tableStatus;
+        if (!tableStatus.IsOk())
+            return tableStatus;
 
         this->columnIndices.TrySetAllocator(context.GetAllocator());
 
@@ -1143,8 +1155,9 @@ namespace QueryPipeline::Statements {
             this->columnIndices.Push(header.ordinalPosition);
         }
 
-        for (const auto& header : columnsDict | std::views::values) {
-            if (header.isSystem
+        for (const auto& header: columnsDict | std::views::values) {
+            if (
+                header.isSystem
                 || identityColumns.Contains(header.id)
                 || statementColumns.Contains(header.id)
             ) continue;
@@ -1217,8 +1230,6 @@ namespace QueryPipeline::Statements {
 
     UpdateColumn::UpdateColumn()
         : value(nullptr), name(DataTypes::String::Null()){}
-
-  UpdateColumn::~UpdateColumn() = default;
 
     Errors::ValidationStatus UpdateStatement::ValidateReturnType(
         const QueryContext& context,

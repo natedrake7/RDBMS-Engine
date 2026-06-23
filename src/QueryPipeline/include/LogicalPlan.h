@@ -12,7 +12,7 @@ namespace QueryPipeline {
       LogicalPlan(const DataTypes::Guid& sessionId, Int databaseId);
       explicit LogicalPlan(const DataTypes::Guid& sessionId);
       LogicalPlan();
-      virtual ~LogicalPlan();
+      virtual ~LogicalPlan() = default;
       virtual PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) = 0;
   };
 
@@ -37,7 +37,6 @@ namespace QueryPipeline {
       DataTypes::String& password,
       DataTypes::String& role
     );
-    ~LogicalCreateUser()override;
     PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
   };
 
@@ -77,7 +76,6 @@ namespace QueryPipeline {
         LogicalPlan* child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
         DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders);
-      ~LogicalProject() override;
       PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;
   };
 
@@ -117,8 +115,6 @@ namespace QueryPipeline {
       Int rightTableId
     );
 
-    ~LogicalJoin() override;
-
     PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
@@ -149,7 +145,6 @@ namespace QueryPipeline {
       BigInt top;
 
       explicit LogicalTop(LogicalPlan* child, BigInt top);
-      ~LogicalTop() override;
       PhysicalPlan::PhysicalTop* ToPhysical(QueryContext& context)override;
   };
 
@@ -158,7 +153,6 @@ namespace QueryPipeline {
       LogicalPlan* child;
 
       explicit LogicalDistinct(LogicalPlan* child);
-      ~LogicalDistinct() override;
       PhysicalPlan::PhysicalDistinct* ToPhysical(QueryContext& context)override;
   };
 
@@ -176,7 +170,6 @@ namespace QueryPipeline {
         LogicalPlan* child,
         DataStructures::PolymorphicArray<column_index_t>& columnIndices
       );
-      ~LogicalInsert()override;
       PhysicalPlan::PhysicalInsert* ToPhysical(QueryContext& context)override;
   };
 

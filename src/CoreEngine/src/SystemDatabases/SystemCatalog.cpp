@@ -153,7 +153,6 @@ namespace CoreEngine {
         const DataTypes::StringView& dbNameView,
         const DataTypes::StringView& dbPathView
     )const {
-
         const auto dbInsertResult = this->InsertDbToMasterDb(
             baseContext,
             dbNameView,
@@ -225,17 +224,22 @@ namespace CoreEngine {
 
                 const auto columnId = columnResult.primaryKey.AsInt(1);
 
-                if (column.hasIdentity)
+                if (column.hasIdentity){
+                    const auto identityValue = (i == 0)
+                        ? Constants::SYSTEM_CATALOG_ID
+                        : Constants::DEFAULT_IDENTITY_VALUE;
+
                     const auto _ = this->InsertIdentityColumnToMasterDb(
                         baseContext,
                         tableId,
                         columnId,
                         Constants::DEFAULT_IDENTITY_SEED,
                         Constants::DEFAULT_IDENTITY_INCREMENT,
-                        Constants::DEFAULT_IDENTITY_VALUE,
+                        identityValue,
                         true,
                         Constants::DEFAULT_IDENTITY_CACHE_BLOCK
                     );
+                }
 
                 columnNameToIndex.Add(column.name, columnPos);
                 columnIdsDict.Add(column.name, columnId);
@@ -859,14 +863,14 @@ namespace CoreEngine {
         );
     }
 
-Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
-    const ExecutionContext& executionContext,
-    const DataTypes::StringView& dbName,
-    const DataTypes::StringView& dbPath,
-    const bool isSystem,
-    const DataTypes::StringView& user,
-    const Int version,
-    const bool isDeleted
+    Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
+        const ExecutionContext& executionContext,
+        const DataTypes::StringView& dbName,
+        const DataTypes::StringView& dbPath,
+        const bool isSystem,
+        const DataTypes::StringView& user,
+        const Int version,
+        const bool isDeleted
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysDatabases);
 
@@ -892,12 +896,12 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     }
 
     Errors::RuntimeStatus  SystemCatalog::InsertSchemaToMasterDb(
-    const ExecutionContext& executionContext,
-    const Int databaseId,
-    const DataTypes::StringView& schemaName,
-    const DataTypes::StringView& user,
-    const Int version,
-    const bool isDeleted
+        const ExecutionContext& executionContext,
+        const Int databaseId,
+        const DataTypes::StringView& schemaName,
+        const DataTypes::StringView& user,
+        const Int version,
+        const bool isDeleted
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
         const auto currentDate = DataTypes::DateTime::Now();
@@ -921,15 +925,15 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     }
 
     Errors::RuntimeStatus SystemCatalog::InsertTableToMasterDb(
-    const ExecutionContext& executionContext,
-    const Int databaseId,
-    const Int schemaId,
-    const DataTypes::StringView& tableName,
-    const SmallInt ordinalPosition,
-    const bool isSystem,
-    const DataTypes::StringView& user,
-    const Int version,
-    const bool isDeleted
+        const ExecutionContext& executionContext,
+        const Int databaseId,
+        const Int schemaId,
+        const DataTypes::StringView& tableName,
+        const SmallInt ordinalPosition,
+        const bool isSystem,
+        const DataTypes::StringView& user,
+        const Int version,
+        const bool isDeleted
     ) const{
 
         StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
@@ -957,19 +961,19 @@ Errors::RuntimeStatus SystemCatalog::InsertDbToMasterDb(
     }
 
     Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
-    const ExecutionContext& executionContext,
-    const Int tableId,
-    const DataTypes::StringView& columnName,
-    const DataType columnType,
-    const Int columnSize,
-    const TinyInt precision,
-    const TinyInt scale,
-    const bool isNullable,
-    const Int ordinalPosition,
-    const bool isSystem,
-    const DataTypes::StringView& user,
-    const Int version,
-    const bool isDeleted
+        const ExecutionContext& executionContext,
+        const Int tableId,
+        const DataTypes::StringView& columnName,
+        const DataType columnType,
+        const Int columnSize,
+        const TinyInt precision,
+        const TinyInt scale,
+        const bool isNullable,
+        const Int ordinalPosition,
+        const bool isSystem,
+        const DataTypes::StringView& user,
+        const Int version,
+        const bool isDeleted
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
 

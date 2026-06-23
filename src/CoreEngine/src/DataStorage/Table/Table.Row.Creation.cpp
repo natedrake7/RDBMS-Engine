@@ -12,7 +12,7 @@ namespace CoreEngine::StorageTypes{
         const DataStructures::PolymorphicArray<Value> &inputData
     ) const{
         const auto columnsSize = this->_columns.Size();
-        auto dataEntriesOffset = sizeof(RowHeader);
+        Int dataEntriesOffset = sizeof(RowHeader);
 
         // Only allocate offset space for non-NULL columns
         const auto dataOffSet = dataEntriesOffset + columnsSize * sizeof(RowEntry);
@@ -62,12 +62,16 @@ namespace CoreEngine::StorageTypes{
                 continue;
             }
 
-            const auto offSet = payload.Offset();
-            const auto result = static_cast<block_size_t>(payload.SetData(value, column, status));
-            if (!status.IsOk()) return payload;
+            if (value.Size() > column->Size()){
+                status.code = Errors::RuntimeError::ColumnSizeExceeded;
+                return payload;
+            }
 
+            const auto size = value.Size();
+
+            const auto offSet = payload.SetData(value.Data(), value.Size());
             // Write offset for all columns
-            RowEntry rowEntry(offSet, RowEntry::INLINE, result);
+            RowEntry rowEntry(offSet, RowEntry::INLINE, size);
             payload.SetData(&rowEntry, sizeof(RowEntry), dataEntriesOffset);
             dataEntriesOffset += sizeof(RowEntry);
         }

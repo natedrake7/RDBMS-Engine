@@ -179,8 +179,6 @@ namespace Expressions{
         ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
         explicit ColumnExpression(column_index_t index, DataType dataType);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
-
         static void BindExpressionKernel(ColumnExpression* expression, Constants::ExecutionMode mode);
 
         [[nodiscard]] DataType GetReturnType() const;
@@ -199,7 +197,6 @@ namespace Expressions{
 
         static void BindExpressionKernel(ConstantExpression* expression, Constants::ExecutionMode mode);
 
-        [[nodiscard]] Value Evaluate()const;
         [[nodiscard]] DataType GetReturnType() const;
     };
 
@@ -225,7 +222,6 @@ namespace Expressions{
 
         static void BindExpressionKernel(BinaryExpression* expression, Constants::ExecutionMode mode);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
         [[nodiscard]] DataType GetReturnType() const;
     };
 
@@ -309,8 +305,7 @@ namespace Expressions{
 
         static void BindExpressionKernel(LogicalExpression* expression, Constants::ExecutionMode mode);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context)const;
-        [[nodiscard]] DataType GetReturnType() const;
+        [[nodiscard]] static constexpr DataType GetReturnType();
     };
 
     class BranchExpression final : public Expression {
@@ -326,7 +321,6 @@ namespace Expressions{
         Expression* baseCase;
 
         explicit BranchExpression(BranchType type, const ::Memory::IAllocator* allocator);
-        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
         [[nodiscard]]DataType GetReturnType() const;
 
         [[nodiscard]] bool HasBaseCase()const;
@@ -360,7 +354,6 @@ namespace Expressions{
 
         explicit JsonExpression(ColumnExpression* columnPtr, const ::Memory::IAllocator* allocator);
 
-        [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
         [[nodiscard]]DataType GetReturnType() const;
     };
 
@@ -376,7 +369,6 @@ namespace Expressions{
 
         static void BindExpressionKernel(CastExpression* expression, Constants::ExecutionMode mode);
 
-        [[nodiscard]] Value Evaluate(const EvaluationContext& context) const;
         [[nodiscard]] DataType GetReturnType() const;
     };
 

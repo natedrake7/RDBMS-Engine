@@ -222,7 +222,7 @@ namespace DataTypes {
         constexpr Decimal& operator=(T value);
 
         template <IsInteger T>
-        [[nodiscard]] constexpr T To();
+        [[nodiscard]] constexpr T ToInt() const;
 
         template<DecimalRoundingMode T>
         static constexpr void RoundToScale(Decimal& value, Int precision);
@@ -232,14 +232,22 @@ namespace DataTypes {
 namespace DataTypes{
     template <IsDecimalBuffer T>
     constexpr void Decimal::TrimLeadingZeros(T& digits, fraction_index_t& fractionIndex){
-        auto leadingZeros = 0;
-        while (leadingZeros < fractionIndex && digits[leadingZeros] == DECIMAL_ZERO)
-            leadingZeros++;
+        Int leadingZeroesIndex = 0;
 
-        if (leadingZeros == 0) return;
+        if constexpr (std::is_same_v<T, DataBuffer>)
+            leadingZeroesIndex = 1;
 
-        digits.Remove(0, leadingZeros);
-        fractionIndex -= static_cast<fraction_index_t>(leadingZeros);
+        while (leadingZeroesIndex < fractionIndex && digits[leadingZeroesIndex] == DECIMAL_ZERO)
+            leadingZeroesIndex++;
+
+        if (leadingZeroesIndex == 0) return;
+
+        if constexpr (std::is_same_v<T, DataBuffer>)
+            digits.Remove(DECIMAL_DIGITS_START_INDEX, leadingZeroesIndex);
+        else
+            digits.Remove(0, leadingZeroesIndex);
+
+        fractionIndex -= static_cast<fraction_index_t>(leadingZeroesIndex);
     }
 
     template <IsDecimalBuffer T>
@@ -362,16 +370,23 @@ constexpr Decimal& Decimal::operator=(T value){
 }
 
 template <IsInteger T>
-constexpr T Decimal::To(){
+constexpr T Decimal::ToInt()const{
     const auto positive = this->IsPositive();
+    const auto fractionIndex = Decimal::GetFractionIndex();
 
     using UnsignedType = std::make_unsigned_t<T>;
-    UnsignedType mag = 0;
+    UnsignedType unsignedNum = 0;
 
-    for (Int i = DECIMAL_DIGITS_START_INDEX; i < this->_data.Size(); ++i)
-        mag = mag * 10 + static_cast<UnsignedType>(this->_data[i] - '0');
+    const auto loopCount = ((fractionIndex + 1) / 2);
 
-    return positive ? static_cast<T>(mag) : -static_cast<T>(mag);
+    for (Int i = DECIMAL_DIGITS_START_INDEX; i <= loopCount; ++i){
+        const auto high = static_cast<UnsignedType>(Decimal::HighNibble(this->_data, i));
+        unsignedNum = unsignedNum * 10 + high;
+        const auto low  = static_cast<UnsignedType>(Decimal::LowNibble(this->_data, i));
+        unsignedNum = unsignedNum * 10 + low;
+    }
+
+    return positive ? static_cast<T>(unsignedNum) : -static_cast<T>(unsignedNum);
 }
 
 constexpr void Decimal::RoundToScale(
@@ -598,17 +613,15 @@ constexpr StringBuffer Decimal::ToBufferString() const{
         if (strCounter == fractionIndex && fractionIndex != 0)
             buffer.Push('.');
 
-        buffer.Push(static_cast<char>('0' + ((this->_data[i] >> 4) & 0x0F)));
+        buffer.Push(static_cast<char>('0' + Decimal::HighNibble(this->_data, i)));
         strCounter++;
 
         if (strCounter == fractionIndex && fractionIndex != 0)
             buffer.Push('.');
 
-        buffer.Push(static_cast<char>('0' + (this->_data[i] & 0x0F)));
+        buffer.Push(static_cast<char>('0' + Decimal::LowNibble(this->_data, i)));
         strCounter++;
     }
-
-    if (buffer.Last() == '0') buffer.Pop();
 
     return buffer;
 }

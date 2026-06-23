@@ -39,9 +39,9 @@ namespace Tests{
         constexpr auto sum = lhs + rhs;
         std::cout << sum << std::endl;
 
-        constexpr auto strValue = DataTypes::StringView("1000");
+        constexpr auto strValue = DataTypes::StringView("1000.23");
         constexpr auto strValue2 = DataTypes::StringView("1000");
-        constexpr auto lhs2 = DataTypes::Decimal(1000);
+        constexpr auto lhs2 = DataTypes::Decimal(100020);
         constexpr auto rhs2 = DataTypes::Decimal(strValue);
         constexpr auto sum2 = lhs2 + rhs2;
 
@@ -49,7 +49,7 @@ namespace Tests{
 
         constexpr auto strSum2 = sum2.ToBufferString();
 
-        constexpr Int roundSum2 = sum2.To();
+        constexpr Int roundSum2 = sum2.ToInt<Int>();
 
         std::cout << sum2 << std::endl;
 
