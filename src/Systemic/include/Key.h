@@ -18,8 +18,7 @@ namespace DataTypes::Indexing {
 
     explicit Key();
     explicit Key(const ::Memory::IAllocator* allocator);
-    Key(
-        const void *keyValue,
+    Key(const void *keyValue,
         key_size_t keySize,
         DataType keyType,
         const Memory::IAllocator* allocator

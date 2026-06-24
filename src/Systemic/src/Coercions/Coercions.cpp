@@ -292,7 +292,7 @@ namespace DataTypes {
         case DataType::String:
             return Converter::StrToInt<SmallInt>(value.AsString());
         case DataType::Bool:
-            return value.AsBool() ? 1 : 0;
+            return value.AsBool();
         default:
             Coercions::ThrowException(valueType, DataType::SmallInt);
         }
@@ -315,7 +315,7 @@ namespace DataTypes {
         case DataType::String:
             return Converter::StrToInt<Int>(value.AsStringView());
         case DataType::Bool:
-            return value.AsBool() ? 1 : 0;
+            return value.AsBool();
         default:
             Coercions::ThrowException(valueType, DataType::Int);
         }
@@ -338,7 +338,7 @@ namespace DataTypes {
         case DataType::String:
             return Converter::StrToInt<BigInt>(value.AsStringView());
         case DataType::Bool:
-            return value.AsBool() ? 1 : 0;
+            return value.AsBool();
         default:
             Coercions::ThrowException(valueType, DataType::BigInt);
         }

@@ -140,7 +140,7 @@ namespace CoreEngine {
             TinyInt precision,
             TinyInt scale,
             bool isNullable,
-            Int ordinalPosition,
+            SmallInt ordinalPosition,
             bool isSystem = false,
             const DataTypes::StringView& user = "system",
             Int version = 0,
@@ -184,7 +184,7 @@ namespace CoreEngine {
             const ExecutionContext& executionContext,
             Int constraintId,
             Int columnId,
-            Int ordinalPosition,
+            SmallInt ordinalPosition,
             Int version = 0,
             bool isDeleted = false
         ) const;
@@ -195,7 +195,7 @@ namespace CoreEngine {
             Int columnId,
             Int seedValue,
             Int increment,
-            Int lastValue,
+            BigInt lastValue,
             bool isCached,
             Int cacheBlock,
             Int version = 0,
@@ -213,7 +213,7 @@ namespace CoreEngine {
         [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
             const ExecutionContext& executionContext,
             Int tableId,
-            const BigInt& rowCount = 0,
+            BigInt rowCount = 0,
             Int rowSize = 0,
             Int pageCount = 0
         ) const;
@@ -221,8 +221,8 @@ namespace CoreEngine {
         [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
             const ExecutionContext& executionContext,
             Int columnId,
-            const BigInt& distinctCount = 0,
-            const BigInt& nullCount = 0
+            BigInt distinctCount = 0,
+            BigInt nullCount = 0
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
