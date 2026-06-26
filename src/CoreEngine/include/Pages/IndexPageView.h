@@ -7,15 +7,12 @@ namespace Pages{
     class IndexPageView final : public PageView {
             void InsertFirstTuple(const IndexInsertTuple& tuple) const;
 
-            DataTypes::Indexing::Key GetKeyByOffset(
-                const ::Memory::IAllocator* allocator,
-                page_offset_t& offSet
-            ) const;
+            DataTypes::Indexing::Key GetKeyByOffset(SlotDirectory slot) const;
 
             [[nodiscard]] key_size_t GetKeySize(page_offset_t offSet)const;
 
         public:
-            IndexPageView();
+            IndexPageView() = default;
             explicit IndexPageView(Frame* framePtr);
 
             IndexPageView& operator=(const IndexPageView& other) = delete;
@@ -24,7 +21,7 @@ namespace Pages{
             IndexPageView(IndexPageView&& other) noexcept;
             IndexPageView& operator=(IndexPageView&& other) noexcept;
 
-            IndexPageAdditionalHeader* GetAdditionalHeader() const;
+            [[nodiscard]] IndexPageAdditionalHeader* GetAdditionalHeader() const;
 
             void SetTreeType(Constants::TreeType treeType) const;
             void SetTreeId(page_id_t treeId) const;
@@ -58,7 +55,7 @@ namespace Pages{
             void InsertTuple(const IndexInsertTuple& tuple) const;
             void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
 
-            DataTypes::Indexing::Key GetKeyByIndex(const ::Memory::IAllocator* allocator, Int indexPosition) const;
+            DataTypes::Indexing::Key GetKeyByIndex(Int indexPosition) const;
 
             //always returns the result of the comparison of the page key against the provided key
             [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
@@ -66,16 +63,7 @@ namespace Pages{
             CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 
             [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
-            InternalNodeTuple GetInternalNodeTuple(
-                const ::Memory::IAllocator* allocator,
-                Int indexPosition
-            ) const;
-            // void AppendRowToBuffer(
-            //     const ::Memory::IAllocator* allocator,
-            //     DataStructures::PolymorphicArray<RowReference>* buffer,
-            //     const CoreEngine::Snapshot& snapshot,
-            //     Int indexPosition
-            // ) const;
+            InternalNodeTuple GetInternalNodeTuple( Int indexPosition) const;
             void RemoveKeyFromChild(Int indexPosition) const;
     };
 }

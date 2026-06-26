@@ -108,21 +108,6 @@ namespace Pages{
         this->pageId = other.pageId;
     }
 
-    InternalNodeTuple& InternalNodeTuple::operator=(const InternalNodeTuple& other){
-        if (this == &other)
-            return *this;
-
-        this->key = other.key;
-        this->pageId = other.pageId;
-
-        return *this;
-    }
-
-    InternalNodeTuple::InternalNodeTuple(const InternalNodeTuple& other){
-        this->key = other.key;
-        this->pageId = other.pageId;
-    }
-
     InternalNodeTuple::InternalNodeTuple(DataTypes::Indexing::Key& key, const page_id_t pageId){
         this->key = std::move(key);
         this->pageId = pageId;

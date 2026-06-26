@@ -108,10 +108,8 @@ namespace Tests{
 
         // auto payload = table.CreateInsertPayload(status, &allocator, 0, 40, insertValues);
 
-        DataTypes::Indexing::Key key(&allocator);
         int keyVal = 1;
-        key.InsertKey(DataTypes::Indexing::Key(&keyVal, 4, DataType::Int, &allocator));
-
+        DataTypes::Indexing::Key key(&allocator, keyVal);
         // auto tuple = Pages::IndexInsertTuple(key, &payload);
 
         // constexpr static auto numTuples = 40;

@@ -375,20 +375,27 @@ namespace QueryPipeline {
         const DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults>& analyzeResults,
         DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
     ){
+        auto* allocator = this->context->_compileContext.GetAllocator();
         Range range;
-        bool canSeek = true;
-        int counter = 0;
+        auto canSeek = true;
+        Int counter = 0;
+
+        DataStructures::PolymorphicArray<Value> startValues(
+           allocator,
+            analyzeResults.Size()
+        );
+        DataStructures::PolymorphicArray<Value> endValues(
+           allocator,
+            analyzeResults.Size()
+        );
+
         for (const auto& info : analyzeResults){
-            range.start.InsertKey(DataTypes::Indexing::Key(info.range.start));
-            range.end.InsertKey(DataTypes::Indexing::Key(info.range.end));
+            startValues.Push(info.range.start);
+            endValues.Push(info.range.end);
 
             for (auto*& expression : conjunctions) {
                 if (expression != info.expression)
                     continue;
-
-
-                // //if expression is used in range, remove it from conjunctions
-                // delete expression;
                 expression = nullptr;
                 break;
             }
@@ -397,6 +404,11 @@ namespace QueryPipeline {
                 canSeek = info.range.HasStart() && info.range.HasEnd();
 
             counter++;
+        }
+
+        if (!startValues.Empty()){
+            range.start = DataTypes::Indexing::Key(allocator, startValues);   // one allocation each
+            range.end = DataTypes::Indexing::Key(allocator, endValues);
         }
 
         for (auto*& expression : conjunctions) {

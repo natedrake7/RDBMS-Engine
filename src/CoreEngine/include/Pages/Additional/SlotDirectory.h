@@ -33,6 +33,7 @@ namespace Pages{
         );
 
         [[nodiscard]] UnsignedSmallInt AbsoluteDataOffset() const;
+        [[nodiscard]] UnsignedSmallInt AbsoluteKeyOffset() const;
 
         [[nodiscard]] UnsignedSmallInt DataOffset() const;
         void SetDataOffset(UnsignedSmallInt otherOffset);

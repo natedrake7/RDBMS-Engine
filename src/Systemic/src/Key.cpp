@@ -1,343 +1,281 @@
 #include "../include/Key.h"
 #include "../include/DataTypes/Value.h"
-#include <array>
 #include <stdexcept>
 #include <ostream>
 
+#include "Encoding.h"
+
 namespace DataTypes::Indexing{
     Key::Key()
-        : value(Value::Null(nullptr)), size(0){}
+        : _data(nullptr){}
 
-    Key::Key(const Memory::IAllocator* allocator)
-        : value(Value::Null(nullptr)), subKeys(allocator), size(0){}
+    Key::Key(const object_t* buffer)
+        : _data(buffer){}
 
     Key::Key(
-        const void *keyValue,
-        const key_size_t keySize,
-        const DataType keyType,
-        const Memory::IAllocator* allocator
-    ) : value(static_cast<const object_t*>(keyValue), keySize, keyType, allocator), subKeys(allocator), size(keySize){}
-
-    Key::Key(const Value &field)
-        : value(nullptr){
-        this->value = field;
-        this->size = this->value.Size();
+        const ::Memory::IAllocator* allocator,
+        const Value& value
+    ): _data(nullptr){
+        this->InsertSingleKey(allocator, value);
     }
 
-    Key::Key(Value &field)
-        : value(nullptr){
-        this->value = std::move(field);
-        this->size = this->value.Size();
+    Key::Key(
+        const ::Memory::IAllocator* allocator,
+        const DataStructures::PolymorphicArray<Value>& subKeys
+    ): _data(nullptr){
+        this->InsertKeys(allocator, subKeys);
     }
 
-    Key::Key(const DataStructures::PolymorphicArray<Key>& subKeys)
-        : value(nullptr){
-        this->size = 0;
-
-        this->subKeys.TrySetAllocator(subKeys.GetAllocator());
-        for (const auto &key : subKeys){
-            this->subKeys.Push(key);
-            this->size += key.size;
-        }
-    }
-
-    Key::Key(DataStructures::PolymorphicArray<Key>& subKeys)
-        : value(nullptr){
-        this->subKeys = std::move(subKeys);
-        this->size = this->CalculateSize();
-    }
-
-    Key::~Key() = default;
-
-    Key::Key(const Key &otherKey)
-        : value(nullptr){
-        this->size = otherKey.size;
-
-        if(otherKey.subKeys.Empty()){
-            this->value = otherKey.value;
-            return;
-        }
-
-        this->subKeys = otherKey.subKeys;
-    }
-
-    Key::Key(Key&& otherKey) noexcept
-        : value(nullptr){
-        if (this == &otherKey)
-            return;
-
-        this->size = otherKey.size;
-        this->subKeys = std::move(otherKey.subKeys);
-        this->value = std::move(otherKey.value);
+    Key::Key(Key&& otherKey) noexcept{
+        this->_data = otherKey._data;
+        otherKey._data = nullptr;
     }
 
     Key& Key::operator=(Key&& otherKey) noexcept{
         if (this == &otherKey)
             return *this;
 
-        this->size = otherKey.size;
-        this->subKeys = std::move(otherKey.subKeys);
-        this->value = std::move(otherKey.value);
+        this->_data = otherKey._data;
+        otherKey._data = nullptr;
 
         return *this;
     }
 
-    Key& Key::operator=(const Key& otherKey){
-        if (this == &otherKey)
-            return *this;
-
-        this->size = otherKey.size;
-        this->subKeys = otherKey.subKeys;
-        this->value = otherKey.value;
-
-        return *this;
+    bool operator==(const Key& lhs, const Key& rhs){
+        return Key::Compare(lhs,rhs) == Comparators::Comparator::Equal;
     }
 
-    Key::Key(const Key *&otherKey)
-        : value(nullptr){
-        this->size = otherKey->size;
-
-        if(otherKey->subKeys.Empty()){
-            this->value = otherKey->value;
-            return;
-        }
-
-        this->subKeys = otherKey->subKeys;
+    bool operator>(const Key& lhs, const Key& rhs){
+        return Key::Compare(lhs,rhs) == Comparators::Comparator::Greater;
     }
 
-    bool Key::operator==(const Key& otherKey) const{
-        if(!this->subKeys.Empty())
-            return this->CompareCompositeKeys(otherKey) == Key::ComparisonResult::Equal;
-
-        return this->value == otherKey.value;
+    bool operator<(const Key& lhs, const Key& rhs){
+        return Key::Compare(lhs,rhs) == Comparators::Comparator::Less;
     }
 
-    bool Key::operator>(const Key& otherKey) const{
-        if(!this->subKeys.Empty())
-            return this->CompareCompositeKeys(otherKey) > Key::ComparisonResult::Equal;
-
-        return this->value > otherKey.value;
+    bool operator<=(const Key& lhs, const Key& rhs){
+        return Key::Compare(lhs,rhs) != Comparators::Comparator::Greater;
     }
 
-    bool Key::operator<(const Key& otherKey) const{
-        return !(*this >= otherKey);
-    }
-
-    bool Key::operator<=(const Key& otherKey) const{
-        return !(*this > otherKey);
-    }
-
-    bool Key::operator>=(const Key& otherKey) const{
-        if(!this->subKeys.Empty())
-            return this->CompareCompositeKeys(otherKey) >= Key::ComparisonResult::Equal;
-
-        return this->value >= otherKey.value;
+    bool operator>=(const Key& lhs, const Key& rhs){
+        return Key::Compare(lhs,rhs) != Comparators::Comparator::Less;
     }
 
     bool Key::InClosedRange(const Key &minKey, const Key &maxKey) const { return minKey <= *this && maxKey >= *this; }
 
     bool Key::InOpenRange(const Key &minKey, const Key &maxKey) const { return minKey < *this && maxKey > *this; }
 
-    bool Key::PartialEqualityCompare(const Key &otherKey) const {
-        const auto compareLength = std::min(this->subKeys.Size(), otherKey.subKeys.Size());
-
-        for (int i = 0; i < compareLength; i++){
-            if (this->subKeys[i] == otherKey.subKeys[i])
-                continue;
-
-            if (this->subKeys[i] < otherKey.subKeys[i])
+    bool Key::PartialEqualityCompare(const Key& lhs, const Key& rhs){
+        const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
+        for (Int i = 0; i < compareLength; i++){
+            const auto result = CompareEntryAt(lhs, rhs, i);
+            if (result != Comparators::Comparator::Equal)
                 return false;
-
-            return false;
         }
 
         return true;
     }
 
-    bool Key::PartialGreaterThan(const Key &otherKey) const {
-        const auto compareLength = std::min(this->subKeys.Size(), otherKey.subKeys.Size());
-
-        for (int i = 0; i < compareLength; i++){
-            if (this->subKeys[i] == otherKey.subKeys[i])
-                continue;
-
-            if (this->subKeys[i] < otherKey.subKeys[i])
+    bool Key::PartialGreaterThan(const Key& lhs, const Key& rhs){
+        const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
+        for (Int i = 0; i < compareLength; i++){
+            const auto result = CompareEntryAt(lhs, rhs, i);
+            if (result == Comparators::Comparator::Greater)
                 return false;
-
-            return true;
         }
 
         return true;
     }
 
-    const Value & Key::GetValue() const { return this->value; }
+    Comparators::Comparator Key::Compare(const Key& lhs, const Key& rhs){
+        const auto partialCompare = Key::PartialCompare(lhs, rhs);
+        if (partialCompare != Comparators::Comparator::Equal)
+            return partialCompare;
+        return Comparators::Compare(lhs.Count(), rhs.Count());   // shorter prefix sorts first
+    }
 
-    Key::ComparisonResult Key::CompareCompositeKeys(const Key& otherKey) const{
-        const auto numOfKeys = std::min(this->subKeys.Size(), otherKey.subKeys.Size());
-
-        for (int i = 0; i < numOfKeys; i++){
-            if (this->subKeys[i] == otherKey.subKeys[i])
-                continue;
-
-            if (this->subKeys[i] < otherKey.subKeys[i])
-                return ComparisonResult::Less;
-
-            return ComparisonResult::Greater;
+    Comparators::Comparator Key::PartialCompare(const Key& lhs, const Key& rhs){
+        const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
+        for (Int i = 0; i < compareLength; i++){
+            const auto result = CompareEntryAt(lhs, rhs, i);
+            if (result != Comparators::Comparator::Equal)
+                return result;
         }
-
-        return ComparisonResult::Equal;
-    }
-
-    void Key::InsertKey(const Key &otherKey){
-        this->size += (otherKey.size + sizeof(key_size_t));
-        this->subKeys.Push(otherKey);
-    }
-
-    void Key::InsertKey(Key&& otherKey){
-        this->size += (otherKey.size + sizeof(key_size_t));
-        this->subKeys.Push(std::move(otherKey));
-    }
-
-    Key::ComparisonResult Key::CompareSubKeys(const Key& firstKey, const Key& otherKey){
-        if (firstKey == otherKey)
-            return ComparisonResult::Equal;
-
-        if (firstKey < otherKey)
-            return ComparisonResult::Less;
-
-        return ComparisonResult::Greater;
+        return Comparators::Comparator::Equal;
     }
 
     Int Key::AsInt(const Int pos)const{
-        if (this->subKeys.Empty())
+        if (this->Empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
-        if (subKeys.Size() < pos)
+        if (this->Count() < pos)
             throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
 
-        return this->subKeys[pos].value.AsInt();
+        const auto* entry = this->GetEntry(pos);
+        return Encoding::DecodeInteger<Int>(this->_data + entry->_offset);
     }
 
     BigInt Key::AsBigInt(const Int pos) const{
-        if (this->subKeys.Empty())
+        if (this->Empty())
             throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
 
-        if (subKeys.Size() < pos)
+        if (this->Count() < pos)
             throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
 
-        return this->subKeys[pos].value.AsBigInt();
+        const auto* entry = this->GetEntry(pos);
+        return Encoding::DecodeInteger<BigInt>(this->_data + entry->_offset);
     }
 
-    key_size_t Key::CalculateSize()const{
-        if (this->subKeys.Empty())
-            return this->value.Size() + sizeof(key_size_t);
-
-        key_size_t currentSize = 0;
-        for (const auto& key : this->subKeys)
-            currentSize += key.CalculateSize();
-
-        return currentSize;
+    void Key::SetCount(object_t* buffer, const key_size_t count){
+        *reinterpret_cast<key_size_t*>(buffer) = count;
     }
 
-    void Key::Serialize(object_t*& buffer, page_offset_t& offset) const{
-        if (this->subKeys.Empty()){
-            const auto valueSize = this->value.Size();
-            memcpy(buffer + offset, &valueSize, sizeof(key_size_t));
-            offset += sizeof(key_size_t);
-
-            memcpy(buffer + offset, this->value.Data(), valueSize);
-            offset += valueSize;
-            return;
-        }
-
-        for (const auto& key : this->subKeys)
-            key.Serialize(buffer, offset);
+    void Key::SetSize(object_t* buffer, const key_size_t size){
+        *reinterpret_cast<key_size_t*>(buffer + sizeof(key_size_t)) = size;
     }
 
-    Key Key::DeserializeNonComposite(
+    void Key::InsertSingleKey(
         const Memory::IAllocator* allocator,
-        const object_t* buffer,
-        page_offset_t& offset,
-        const DataType type
-    ) {
-        key_size_t valueSize = 0;
-        std::memcpy(&valueSize, buffer + offset, sizeof(key_size_t));
-        offset += sizeof(key_size_t);
-
-        auto* data = static_cast<object_t*>(allocator->AllocateRaw(valueSize));
-
-        std::memcpy(data, buffer + offset, valueSize);
-        offset += valueSize;
-
-        auto value = Value::FromMove(
-            data,
-            valueSize,
-            type,
-            allocator
-        );
-
-        return Key(value);
-    }
-
-    Key Key::Deserialize(
-        const Memory::IAllocator* allocator,
-        const object_t* buffer,
-        page_offset_t& offset,
-        const UnsignedTinyInt& numberOfSubKeys,
-        const DataType* keyTypes
+        const Value& value
     ){
-        DataStructures::PolymorphicArray<Key> subKeys(allocator);
-        subKeys.Reserve(numberOfSubKeys);
-        for (key_size_t i = 0; i < numberOfSubKeys; i++){
-            auto subKey = Key::DeserializeNonComposite(allocator, buffer, offset, keyTypes[i]);
-            subKeys.Push(std::move(subKey));
-        }
+        const auto keySize = value.Size();
+        const auto size = Key::HEADER_SIZE + keySize + sizeof(KeyEntry);
 
-        return Key(subKeys);
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(size));
+
+        auto* entry = reinterpret_cast<KeyEntry*>(buffer + Key::HEADER_SIZE);
+        entry->_offset = Key::HEADER_SIZE + sizeof(KeyEntry);
+        entry->_isNull = value.IsNull();
+        entry->_size = Key::EncodeValue(buffer + Key::HEADER_SIZE + sizeof(KeyEntry), value);
+        Key::SetCount(buffer, 1);
+        Key::SetSize(buffer, Key::HEADER_SIZE + sizeof(KeyEntry) + keySize);
+
+        this->_data = buffer;
+    }
+
+    void Key::InsertKeys(
+        const Memory::IAllocator* allocator,
+        const DataStructures::PolymorphicArray<Value>& subKeys
+    ){
+        auto size = Key::HEADER_SIZE;
+        for (const auto& value : subKeys)
+            size += static_cast<key_size_t>(value.Size() + sizeof(KeyEntry));
+
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(size));
+        auto dataOffset = Key::HEADER_SIZE + subKeys.Size() * sizeof(KeyEntry);
+        for (Int i = 0; i < subKeys.Size(); i++){
+            auto* entry = reinterpret_cast<KeyEntry*>(buffer + Key::HEADER_SIZE + i * sizeof(KeyEntry));
+            entry->_offset = dataOffset;
+            entry->_isNull = subKeys[i].IsNull();
+
+            const auto sizeWritten = Key::EncodeValue(buffer + dataOffset, subKeys[i]);
+            dataOffset += sizeWritten;
+            entry->_size = sizeWritten;
+        }
+        Key::SetCount(buffer, subKeys.Size());
+        Key::SetSize(buffer, size);
+        this->_data = buffer;
+    }
+
+    key_size_t Key::EncodeValue(object_t* buffer, const Value& value){
+        if (value.IsNull())
+            return 0;
+
+        switch (value.GetType()){
+        case DataType::TinyInt:
+            return Encoding::EncodeInteger<TinyInt>(buffer, value.AsTinyInt());
+        case DataType::SmallInt:
+            return Encoding::EncodeInteger<SmallInt>(buffer, value.AsSmallInt());
+        case DataType::Int:
+            return Encoding::EncodeInteger<Int>(buffer, value.AsInt());
+        case DataType::BigInt:
+        case DataType::DateTime:
+            return Encoding::EncodeInteger<BigInt>(buffer, value.AsBigInt());
+        case DataType::Bool:
+        case DataType::String:
+        case DataType::Decimal:
+        case DataType::Guid:{
+            std::memcpy(buffer, value.Data(), value.Size());
+            return value.Size();
+        }
+        default:
+            throw std::runtime_error("Key::EncodeValue: invalid value type");
+        }
+    }
+
+    bool Key::Empty() const{
+        return this->Count() == 0;
+    }
+
+    Comparators::Comparator Key::CompareEntryAt(const Key& lhs, const Key& rhs, const Int index){
+        const auto* lhsEntry = lhs.GetEntry(index);
+        const auto* rhsEntry = rhs.GetEntry(index);
+
+        if (lhsEntry->_isNull || rhsEntry->_isNull)
+            return Comparators::Compare(lhsEntry->_isNull, rhsEntry->_isNull);
+
+        const auto minSize = Math::Min(lhsEntry->_size, rhsEntry->_size);
+        const auto cmp = std::memcmp(lhs._data + lhsEntry->_offset, rhs._data + rhsEntry->_offset, minSize);
+        if (cmp != 0)
+            return Comparators::Compare(cmp, 0);
+
+        return Comparators::Compare(lhsEntry->_size, rhsEntry->_size);
+    }
+
+    key_size_t Key::Count() const{
+        return *reinterpret_cast<const key_size_t*>(this->_data);
+    }
+
+    const KeyEntry* Key::GetEntry(const Int index) const{
+        return reinterpret_cast<const KeyEntry*>(this->_data + HEADER_SIZE + index * sizeof(KeyEntry));
+    }
+
+    key_size_t Key::Size() const{
+        return *reinterpret_cast<const key_size_t*>(this->_data + sizeof(key_size_t));
     }
 
     String Key::ToString(const Memory::IAllocator* allocator) const{
         auto str = String::Empty(allocator);
-        if (!this->subKeys.Empty()){
-            str.Append("(");
-
-            for (int i = 0; i < this->subKeys.Size(); i++) {
-                const auto& subKey = this->subKeys[i];
-
-                str.Append(subKey.ToString(allocator));
-                if (i != this->subKeys.Size() - 1)
-                    str.Append(", ");
-            }
-
-            str.Append(")");
-        }
-
-        if (this->value.IsNull())
-            return str;
-
-        str.Append(this->value.AsString());
+        // if (!this->subKeys.Empty()){
+        //     str.Append("(");
+        //
+        //     for (int i = 0; i < this->subKeys.Size(); i++) {
+        //         const auto& subKey = this->subKeys[i];
+        //
+        //         str.Append(subKey.ToString(allocator));
+        //         if (i != this->subKeys.Size() - 1)
+        //             str.Append(", ");
+        //     }
+        //
+        //     str.Append(")");
+        // }
+        //
+        // if (this->value.IsNull())
+        //     return str;
+        //
+        // str.Append(this->value.AsString());
         return str;
     }
 
     std::ostream & operator<<(std::ostream &os, const Key &key){
-        if(!key.subKeys.Empty()){
-            os << "(";
-
-            for (int i = 0; i < key.subKeys.Size(); i++) {
-                const auto& subKey = key.subKeys[i];
-
-                os << subKey;
-
-                if (i != key.subKeys.Size() - 1)
-                    os << ", ";
-            }
-
-            os << ")";
-
-            return os;
-        }
-
-        os << key.value;
+        // if(!key.subKeys.Empty()){
+        //     os << "(";
+        //
+        //     for (int i = 0; i < key.subKeys.Size(); i++) {
+        //         const auto& subKey = key.subKeys[i];
+        //
+        //         os << subKey;
+        //
+        //         if (i != key.subKeys.Size() - 1)
+        //             os << ", ";
+        //     }
+        //
+        //     os << ")";
+        //
+        //     return os;
+        // }
+        //
+        // os << key.value;
         return os;
     }
 

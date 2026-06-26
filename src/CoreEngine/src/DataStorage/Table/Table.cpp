@@ -327,7 +327,7 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        status =  this->InsertRow(executionContext, payload, 1);
+        status = this->InsertRow(executionContext, payload, 1);
 
         if (!status.IsOk())
           return status;

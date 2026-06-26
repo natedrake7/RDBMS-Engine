@@ -31,7 +31,6 @@ namespace CoreEngine::StorageTypes {
         const Int pagesToAllocate
     ){
         auto* tree = this->GetClusteredIndexedTree();
-        // auto key = Database::CreateKey(this->GetClusteredIndex(), row);
 
         auto key = this->CreateKey(
             executionContext,
@@ -438,17 +437,16 @@ namespace CoreEngine::StorageTypes {
         const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
         const InsertPayload& payload
     ) const{
-        auto key = DataTypes::Indexing::Key(executionContext.GetAllocator());
-
+        DataStructures::PolymorphicArray<Value> values(executionContext.GetAllocator());
         for (const auto columnId : indexedColumns){
             auto value = payload.MaterializeColumn(
                 executionContext,
                 this->_columns[columnId]
             );
-            key.InsertKey(DataTypes::Indexing::Key(value));
+            values.Push(std::move(value));
         }
 
-        return key;
+        return DataTypes::Indexing::Key(executionContext.GetAllocator(), values);
     }
 
     key_size_t Table::CalculateIndexKeySize(const Int indexPos) const {

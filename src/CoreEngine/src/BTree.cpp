@@ -220,7 +220,7 @@ namespace Indexing{
         newChild.DistributeFromPage(allocator, &child, mid, mid);
 
         // promote first key of new child
-        const auto childKey = newChild.GetKeyByIndex(allocator, 0);
+        const auto childKey = newChild.GetKeyByIndex(0);
         parent.InsertChild(newChild.PageId(), &childKey, index + 1);
         BTree::AssignLeavesConnections(child, newChild);
     }
@@ -239,7 +239,7 @@ namespace Indexing{
         //get middle child and insert it as first child(no key is moved)
         //size = 29, mid = 14 -> moveIndex = 15 so no row is duplicated
         // 1. promote
-        const auto promotedKey = child.GetKeyByIndex(allocator, mid);
+        const auto promotedKey = child.GetKeyByIndex(mid);
         // 2. fix first child of right node
         const auto firstChild = child.GetChild(mid);
         newChild.InsertFirstChild(firstChild);
@@ -665,7 +665,7 @@ namespace Indexing{
                 auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent.Latch(), parentLock);
 
                 if (childIndex > 0) {
-                    const auto childKey = child.GetKeyByIndex(context.GetAllocator(), childIndex - 1);
+                    const auto childKey = child.GetKeyByIndex(childIndex - 1);
                     // parent.InsertKey(childKey, childIndex - 1);
                 }
 

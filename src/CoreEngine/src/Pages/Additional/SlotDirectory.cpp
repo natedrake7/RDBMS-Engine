@@ -23,6 +23,11 @@ namespace Pages{
         return this->_offset + this->DataOffset();
     }
 
+    UnsignedSmallInt SlotDirectory::AbsoluteKeyOffset() const{
+        return this->_offset;
+    }
+
+
     void SlotDirectory::SetDataOffset(const UnsignedSmallInt otherOffset){
         this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
     }

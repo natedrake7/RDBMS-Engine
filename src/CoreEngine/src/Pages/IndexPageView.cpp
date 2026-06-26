@@ -10,13 +10,14 @@ namespace Pages{
         auto pos = this->NewInsertOffset();
         const auto copyPos = pos;
 
-        tuple.key.Serialize(this->_frame->_data, pos);
+        std::memcpy(this->_frame->_data + pos,  tuple.key._data, tuple.key.Size());
+        pos += tuple.key.Size();
 
         const auto dataSize = tuple.payload->Size();
         std::memcpy(this->_frame->_data + pos, tuple.payload->Data(), dataSize);
         const auto newSlot = SlotDirectory(
             copyPos, pos - copyPos,
-            dataSize, tuple.key.size,
+            dataSize, tuple.key.Size(),
             SlotDirectory::SLOT_USED
         );
         this->InsertNewSlot(newSlot);
@@ -27,17 +28,9 @@ namespace Pages{
         this->_frame->isDirty = true;
     }
 
-    DataTypes::Indexing::Key IndexPageView::GetKeyByOffset(
-        const ::Memory::IAllocator* allocator,
-        page_offset_t& offSet
-    ) const {
-        const auto* additionalHeader = this->GetAdditionalHeader();
-        return DataTypes::Indexing::Key::Deserialize(
-            allocator,
-            this->_frame->_data,
-            offSet,
-            additionalHeader->SubKeys(),
-            additionalHeader->keyTypes
+    DataTypes::Indexing::Key IndexPageView::GetKeyByOffset( const SlotDirectory slot) const{
+        return DataTypes::Indexing::Key(
+            this->_frame->_data + slot.AbsoluteKeyOffset()
         );
     }
 
@@ -49,7 +42,6 @@ namespace Pages{
         }
         return size;
     }
-    IndexPageView::IndexPageView() {}
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
@@ -145,12 +137,13 @@ namespace Pages{
         auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
-        key->Serialize(this->_frame->_data, nextOffset);
+        std::memcpy(this->_frame->_data + nextOffset, key->_data, key->Size());
+        nextOffset += key->Size();
         std::memcpy(this->_frame->_data + nextOffset, &child, sizeof(page_id_t));
 
         const auto newSlot = SlotDirectory(
             offSetCopy, nextOffset - offSetCopy,
-            sizeof(page_id_t), key->size,
+            sizeof(page_id_t), key->Size(),
             SlotDirectory::SLOT_USED
         );
         this->InsertNewSlot(newSlot);
@@ -173,13 +166,14 @@ namespace Pages{
         auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
-        key->Serialize(this->_frame->_data, nextOffset);
+        std::memcpy(this->_frame->_data + nextOffset, key->_data, key->Size());
+        nextOffset += key->Size();
         std::memcpy(this->_frame->_data + nextOffset, &child, sizeof(page_id_t));
 
-        this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->size);
+        this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->Size());
 
 
-        this->_frame->Header()->bytesLeft -= (sizeof(page_id_t) + key->size + SlotDirectory::SIZE);
+        this->_frame->Header()->bytesLeft -= (sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
         this->_frame->Header()->size++;
         this->_frame->isDirty = true;
     }
@@ -225,14 +219,15 @@ namespace Pages{
         auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
-        tuple.key.Serialize(this->_frame->_data, nextOffset);
+        std::memcpy(this->_frame->_data + nextOffset, tuple.key._data, tuple.key.Size());
+        nextOffset += tuple.key.Size();
 
         const auto size = tuple.payload->Size();
         std::memcpy(this->_frame->_data + nextOffset, tuple.payload->Data(), size);
 
         const auto newSlot = SlotDirectory(
             offSetCopy, nextOffset - offSetCopy,
-            size, tuple.key.size,
+            size, tuple.key.Size(),
             SlotDirectory::SLOT_USED
         );
         this->InsertNewSlot(newSlot);
@@ -252,62 +247,29 @@ namespace Pages{
         auto nextOffset = this->NewInsertOffset();
         const auto offSetCopy = nextOffset;
 
-        tuple.key.Serialize(this->_frame->_data, nextOffset);
+        std::memcpy(this->_frame->_data + nextOffset, tuple.key._data, tuple.key.Size());
+        nextOffset += tuple.key.Size();
 
         const auto size = tuple.payload->Size();
         std::memcpy(this->_frame->_data + nextOffset, tuple.payload->Data(), size);
 
-        this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.size);
+        this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.Size());
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->bytesLeft -= (size + tuple.key.size + SlotDirectory::SIZE);
+        headerPtr->bytesLeft -= (size + tuple.key.Size() + SlotDirectory::SIZE);
         headerPtr->size++;
         this->_frame->isDirty = true;
     }
 
-    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const ::Memory::IAllocator* allocator, const Int indexPosition) const{
+    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        auto offSet = slot.Offset();
-        return this->GetKeyByOffset(allocator, offSet);
+        return this->GetKeyByOffset(slot);
     }
 
     Comparators::Comparator IndexPageView::ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        const auto offSet = slot.Offset();
-        const auto* additionalHeader = this->GetAdditionalHeader();
-
-        const auto numOfKeys = std::min(
-            static_cast<UnsignedTinyInt>(key.subKeys.Size()),
-            additionalHeader->SubKeys()
-        );
-
-        auto* dataPtr = this->_frame->_data + offSet;
-
-        for (int i = 0; i < numOfKeys; i++){
-            const auto type = additionalHeader->keyTypes[i];
-
-            const auto size = *reinterpret_cast<key_size_t*>(dataPtr);
-            auto* data = dataPtr + sizeof(key_size_t);
-
-            auto value = Value::FromMove(
-                data,
-                size,
-                type,
-                nullptr
-            );
-
-            const auto result = Comparators::Compare(
-                value,
-                key.subKeys[i].GetValue()
-            );
-
-            if (result != Comparators::Comparator::Equal)
-                return result;
-
-            dataPtr += size + sizeof(key_size_t);
-        }
-
-        return Comparators::Comparator::Equal;
+        const auto pageKey = DataTypes::Indexing::Key(this->_frame->_data + slot.AbsoluteKeyOffset());
+        return DataTypes::Indexing::Key::PartialCompare(pageKey, key);
     }
 
     CoreEngine::StorageTypes::RowHeader IndexPageView::PeekHeader(const Int indexPosition) const{
@@ -324,21 +286,17 @@ namespace Pages{
         return value;
     }
 
-    InternalNodeTuple IndexPageView::GetInternalNodeTuple(
-        const ::Memory::IAllocator* allocator,
-        const Int indexPosition
-    ) const{
+    InternalNodeTuple IndexPageView::GetInternalNodeTuple(const Int indexPosition) const{
         InternalNodeTuple tuple;
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        auto offset = slot.Offset();
         if (indexPosition != 0){
-            auto key = this->GetKeyByOffset(allocator, offset);
+            auto key = this->GetKeyByOffset(slot);
             tuple.SetKey(key);
         }
 
         page_id_t pageId = 0;
-        std::memcpy(&pageId, this->_frame->_data + offset, sizeof(page_id_t));
+        std::memcpy(&pageId, this->_frame->_data + slot.AbsoluteDataOffset(), sizeof(page_id_t));
         tuple.SetPageId(pageId);
 
         return tuple;

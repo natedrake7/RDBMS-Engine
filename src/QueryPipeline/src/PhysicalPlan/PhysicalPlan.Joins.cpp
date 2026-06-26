@@ -223,7 +223,7 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::ExecutionContext& context,
         ExecutionResult& leftResult
     ) const {
-        using CompOperator = DataTypes::Indexing::Key::ComparisonResult;
+        using CompOperator = Comparators::Comparator;
 
         auto result = ExecutionResult(context);
 
