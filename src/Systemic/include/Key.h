@@ -1,7 +1,6 @@
 #pragma once
 #include "Encoding.h"
 #include "DataTypes/Value.h"
-#include "../../CoreEngine/include/DatabaseConstants.h"
 #include "DataStructures/PolymorphicArray.h"
 
 namespace DataTypes::Indexing {
