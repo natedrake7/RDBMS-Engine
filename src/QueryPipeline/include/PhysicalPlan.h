@@ -364,26 +364,25 @@ namespace QueryPipeline::PhysicalPlan {
      */
 
     class PhysicalInsert final : public PlanNode {
-        Statements::DataSource* table;
+        CoreEngine::StorageTypes::InsertPlan insertPlan;
         DataStructures::PolymorphicArray<Statements::Inserts> fields;
 
+        Statements::DataSource* table;
         PlanNode* child;
-        DataStructures::PolymorphicArray<column_index_t> columnsIndices;
 
         static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
-        DataStructures::PolymorphicArray<Value> ConvertExpressionsToValues(
-            const CoreEngine::ExecutionContext& context,
-            Int index
-        ) const;
         ExecutionResult InsertFromChild(CoreEngine::StorageTypes::Table* tablePtr, CoreEngine::ExecutionContext& context) const;
-        ExecutionResult InsertFromFields(CoreEngine::StorageTypes::Table* tablePtr, CoreEngine::ExecutionContext& context) const;
+        ExecutionResult InsertFromValues(
+            CoreEngine::StorageTypes::Table* tablePtr,
+            const CoreEngine::ExecutionContext& context
+        ) const;
     public:
         PhysicalInsert(
             Statements::DataSource* table,
             DataStructures::PolymorphicArray<Statements::Inserts>& fields,
             PlanNode* child,
-            DataStructures::PolymorphicArray<column_index_t>& columnsIndices
+            CoreEngine::StorageTypes::InsertPlan& insertPlan
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };

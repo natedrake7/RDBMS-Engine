@@ -4,30 +4,30 @@
 #include "../../../Server/include/Server.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 
-
 namespace CoreEngine::StorageTypes {
-    void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator, const BigInt value){
+    void IdentityManager::ReserveBlock(const ::Memory::IAllocator* allocator, const BigInt value){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        if (value < this->startingValue + this->header.cacheBlock)
+        auto ceiling = this->reservedUpTo.load(std::memory_order_relaxed);
+        if (value < ceiling)
             return;
+
+        do{
+          ceiling += this->header.cacheBlock;
+        }while (value >= ceiling);
 
         SystemCatalog::Get().UpdateIdentityByColumnId(
             allocator,
             this->header.tableId,
             this->header.columnId,
-            value + this->header.increment
+            ceiling
         );
 
-        this->header.lastValue += this->header.increment;
+        this->reservedUpTo.store(ceiling, std::memory_order_relaxed);
     }
 
-    IdentityManager::IdentityManager() {
-        this->startingValue = 0;
-        this->counter = 0;
-    }
-
-    IdentityManager::~IdentityManager() = default;
+    IdentityManager::IdentityManager()
+        : reservedUpTo(0), counter(0){}
 
     void IdentityManager::SetHeaderIds(const Int tableId, const Int columnId){
         this->header.tableId = tableId;
@@ -36,8 +36,8 @@ namespace CoreEngine::StorageTypes {
 
     void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
         this->header = newHeader;
-        this->startingValue = this->header.lastValue;
-        this->counter.store(this->startingValue, std::memory_order_relaxed);
+        this->reservedUpTo = this->header.lastValue;
+        this->counter.store(this->header.lastValue, std::memory_order_relaxed);
     }
 
     const Headers::IdentityColumnsHeader& IdentityManager::GetHeader() const{
@@ -47,10 +47,8 @@ namespace CoreEngine::StorageTypes {
     BigInt IdentityManager::Generate(const ::Memory::IAllocator* allocator){
         const auto value = this->counter.fetch_add(this->header.increment, std::memory_order_relaxed);
 
-        if (value < this->startingValue + this->header.cacheBlock)
-            return value;
-
-        this->UpdateMasterDb(allocator, value);
+        if (value >= this->reservedUpTo.load(std::memory_order_relaxed))
+            this->ReserveBlock(allocator, value);
 
         return value;
     }
@@ -64,8 +62,9 @@ namespace CoreEngine::StorageTypes {
         return true;
     }
 
-    void IdentityManager::UpdateMasterDb(const ::Memory::IAllocator* allocator) const{
-        if (this->header.columnId == INVALID_COLUMN_ID) return;
+    void IdentityManager::UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const{
+        if (this->header.columnId == INVALID_COLUMN_ID)
+            return;
 
         MultiThreading::WriterGuard guard(&this->mutex);
 
@@ -73,7 +72,7 @@ namespace CoreEngine::StorageTypes {
             allocator,
             this->header.tableId,
             this->header.columnId,
-            this->header.lastValue
+            this->counter.load(std::memory_order_relaxed)
         );
     }
 

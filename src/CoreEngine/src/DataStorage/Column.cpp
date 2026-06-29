@@ -101,7 +101,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Column::UpdateMetadata(const ::Memory::IAllocator* allocator)const{
-        this->identityManager.UpdateMasterDb(allocator);
+        this->identityManager.UpdateMasterDbOnShutdown(allocator);
     }
 
     bool Column::HasIdentity() const{

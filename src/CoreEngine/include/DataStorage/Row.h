@@ -1,11 +1,11 @@
 ﻿#pragma once
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "../../Systemic/include/DataTypes/PackedWord.h"
 
 namespace CoreEngine {
     struct Snapshot;
 }
-
 
 namespace CoreEngine::StorageTypes{
     struct RID{
@@ -32,8 +32,10 @@ namespace CoreEngine::StorageTypes{
         UnsignedSmallInt _offset;
         UnsignedSmallInt _meta;
 
-        static constexpr UnsignedSmallInt TYPE_MASK = 0xC000; // upper 2 bits
+        static constexpr UnsignedSmallInt TYPE_MASK = 0xC000; // upper 2 bits (positioned)
         static constexpr UnsignedSmallInt SIZE_MASK = 0x3FFF; // lower 14 bits
+        static constexpr UnsignedTinyInt  TYPE_SHIFT = 14;
+        static constexpr UnsignedSmallInt TYPE_VALUE_MASK = TYPE_MASK >> TYPE_SHIFT; // 0x3, low-aligned
 
         enum EntryType : UnsignedSmallInt {
             INLINE = 0b00,
@@ -47,16 +49,14 @@ namespace CoreEngine::StorageTypes{
             const UnsignedSmallInt offset,
             const EntryType type,
             const UnsignedSmallInt size
-        ) : _offset(offset){
-            this->_meta = EncodeMeta(type, size);
-        }
+        ) : _offset(offset), _meta(EncodeMeta(type, size)){}
 
         [[nodiscard]] EntryType Type() const {
-            return static_cast<EntryType>((this->_meta & TYPE_MASK) >> 14);
+            return PackedWord<UnsignedSmallInt>::ExtractBits<EntryType, TYPE_SHIFT, TYPE_VALUE_MASK>(this->_meta);
         }
 
         [[nodiscard]] UnsignedSmallInt Size() const {
-            return this->_meta & SIZE_MASK;
+            return PackedWord<UnsignedSmallInt>::ExtractBits<UnsignedSmallInt, 0, SIZE_MASK>(this->_meta);
         }
 
         [[nodiscard]] UnsignedSmallInt Offset() const {
@@ -64,7 +64,10 @@ namespace CoreEngine::StorageTypes{
         }
 
         static UnsignedSmallInt EncodeMeta(const EntryType type, const UnsignedSmallInt size){
-            return (static_cast<UnsignedSmallInt>(type) << 14) | (size & SIZE_MASK);
+            UnsignedSmallInt meta = 0;
+            PackedWord<UnsignedSmallInt>::SetBits<0, SIZE_MASK>(&meta, size);
+            PackedWord<UnsignedSmallInt>::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(&meta, type);
+            return meta;
         }
 
         static bool IsNull(const EntryType type){

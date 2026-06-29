@@ -6,10 +6,7 @@
 namespace Pages{
     class IndexPageView final : public PageView {
             void InsertFirstTuple(const IndexInsertTuple& tuple) const;
-
-            DataTypes::Indexing::Key GetKeyByOffset(SlotDirectory slot) const;
-
-            [[nodiscard]] key_size_t GetKeySize(page_offset_t offSet)const;
+            [[nodiscard]] DataTypes::Indexing::Key GetKeyByOffset(SlotDirectory slot) const;
 
         public:
             IndexPageView() = default;
@@ -55,15 +52,15 @@ namespace Pages{
             void InsertTuple(const IndexInsertTuple& tuple) const;
             void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
 
-            DataTypes::Indexing::Key GetKeyByIndex(Int indexPosition) const;
+            [[nodiscard]] DataTypes::Indexing::Key GetKeyByIndex(Int indexPosition) const;
 
             //always returns the result of the comparison of the page key against the provided key
             [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
-            CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
+            [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 
             [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
-            InternalNodeTuple GetInternalNodeTuple( Int indexPosition) const;
+            [[nodiscard]] InternalNodeTuple GetInternalNodeTuple( Int indexPosition) const;
             void RemoveKeyFromChild(Int indexPosition) const;
     };
 }

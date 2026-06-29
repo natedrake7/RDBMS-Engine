@@ -11,16 +11,11 @@ namespace Pages{
         extent_id_t lastAllocatedExtentId;
         page_id_t nextPageId;
 
-        IndexAllocationPageAdditionalHeader();
-        IndexAllocationPageAdditionalHeader(extent_id_t extentId, page_id_t nextPageId);
-        ~IndexAllocationPageAdditionalHeader();
+        IndexAllocationPageAdditionalHeader(const extent_id_t extentId, const page_id_t nextPageId)
+            : lastAllocatedExtentId(extentId), nextPageId(nextPageId){}
     };
 
     class AllocationPageView final : public PageView{
-        [[nodiscard]] size_t GetByteIndex(extent_id_t extentId) const noexcept;
-        [[nodiscard]] inline bool GetBit(std::size_t bitIndex) const noexcept;
-        inline void SetBit(std::size_t bitIndex) const noexcept;
-        inline void ClearBit(std::size_t bitIndex) const noexcept;
         [[nodiscard]] IndexAllocationPageAdditionalHeader* GetAdditionalHeader() const;
 
         public:

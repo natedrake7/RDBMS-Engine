@@ -655,12 +655,10 @@ namespace QueryPipeline {
 
         statement->variable.SetName(name);
 
-        const auto type = (context->variableType())
+        statement->type = (context->variableType())
             ? std::any_cast<DataType>(visit(context->variableType()))
-            : statement->variable.GetValue().GetType();
+            : statement->variable.GetType();
 
-
-        statement->variable.SetType(type);
         return std::any(statement);
     }
 
@@ -698,11 +696,9 @@ namespace QueryPipeline {
 
         statement->variable.SetName(name);
 
-        const auto type = (context->variableType())
+        statement->type = (context->variableType())
             ? std::any_cast<DataType>(visit(context->variableType()))
-            : statement->variable.GetValue().GetType();
-
-        statement->variable.SetType(type);
+            : statement->variable.GetType();
 
         return std::any(statement);
     }

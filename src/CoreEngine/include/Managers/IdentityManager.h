@@ -9,17 +9,15 @@ namespace CoreEngine{
 namespace CoreEngine::StorageTypes{
     class IdentityManager {
         Headers::IdentityColumnsHeader header;
-        BigInt startingValue;
-
-        std::atomic<BigInt> counter;
-
         mutable MultiThreading::Mutex mutex;
 
-        void UpdateMasterDb(const ::Memory::IAllocator* allocator, BigInt value);
+        std::atomic<BigInt> reservedUpTo;
+        std::atomic<BigInt> counter;
+
+        void ReserveBlock(const ::Memory::IAllocator* allocator, BigInt value);
 
     public:
         IdentityManager();
-        ~IdentityManager();
 
         void SetHeaderIds(Int tableId, Int columnId);
         void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
@@ -27,7 +25,7 @@ namespace CoreEngine::StorageTypes{
 
         [[nodiscard]] BigInt Generate(const ::Memory::IAllocator* allocator);
         [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
-        void UpdateMasterDb(const ::Memory::IAllocator* allocator)const;
+        void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
         [[nodiscard]] bool IsValid()const;
     };

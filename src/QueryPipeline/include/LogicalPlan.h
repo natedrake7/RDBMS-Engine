@@ -156,22 +156,22 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalDistinct* ToPhysical(QueryContext& context)override;
   };
 
-  class LogicalInsert final : public LogicalPlan {
+    class LogicalInsert final : public LogicalPlan {
     public:
-      Statements::DataSource* table;
-      DataStructures::PolymorphicArray<Statements::Inserts> fields;
+        CoreEngine::StorageTypes::InsertPlan insertPlan;
+        DataStructures::PolymorphicArray<Statements::Inserts> fields;
 
-      LogicalPlan* child;
-      DataStructures::PolymorphicArray<column_index_t> columnsIndices;
+        Statements::DataSource* table;
+        LogicalPlan* child;
 
-      explicit LogicalInsert(
-        Statements::DataSource* table,
-        DataStructures::PolymorphicArray<Statements::Inserts>& fields,
-        LogicalPlan* child,
-        DataStructures::PolymorphicArray<column_index_t>& columnIndices
-      );
-      PhysicalPlan::PhysicalInsert* ToPhysical(QueryContext& context)override;
-  };
+        explicit LogicalInsert(
+            Statements::DataSource* table,
+            DataStructures::PolymorphicArray<Statements::Inserts>& fields,
+            LogicalPlan* child,
+            CoreEngine::StorageTypes::InsertPlan& insertPlan
+        );
+        PhysicalPlan::PhysicalInsert* ToPhysical(QueryContext& context)override;
+    };
 
   class LogicalSchemaCreate final : public LogicalPlan {
     public:

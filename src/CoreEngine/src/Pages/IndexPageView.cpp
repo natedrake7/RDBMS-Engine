@@ -24,7 +24,7 @@ namespace Pages{
 
         auto* headerPtr = this->_frame->Header();
         headerPtr->size++;
-        headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        headerPtr->bytesLeft -= newSlot.Size() + SlotDirectory::SIZE;
         this->_frame->isDirty = true;
     }
 
@@ -32,15 +32,6 @@ namespace Pages{
         return DataTypes::Indexing::Key(
             this->_frame->_data + slot.AbsoluteKeyOffset()
         );
-    }
-
-    key_size_t IndexPageView::GetKeySize(const page_offset_t offSet) const{
-        key_size_t size = 0;
-        for (Int i = 0; i < this->GetAdditionalHeader()->SubKeys(); i++){
-            const auto keyDataSize = *reinterpret_cast<key_size_t*>(this->_frame->_data + offSet + size);
-            size += keyDataSize + sizeof(key_size_t);
-        }
-        return size;
     }
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
@@ -88,7 +79,6 @@ namespace Pages{
 
     bool IndexPageView::IsEmpty() const{
         return this->_frame->Header()->size == 0;
-        // return this->framePtr->additionalHeader.indexHeaderPtr->IsEmpty();
     }
 
     bool IndexPageView::IsLeaf() const{

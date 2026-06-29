@@ -7,20 +7,9 @@
 #include "../../../include/BufferPool/StorageManager.h"
 #include "Contexts/ExecutionContext.h"
 #include "Evaluators/Expression.h"
-#include "Managers/GlobalMemoryManager.h"
 #include "Memory/PersistentAllocator.h"
 
 namespace CoreEngine::StorageTypes {
-    void Table::GetClusteredIndexFromDisk() const{
-        // auto root = Table::GetIndexFromDisk(this->header.clusteredIndexPageId);
-        this->clusteredIndexedTree->SetTreeType(Constants::TreeType::Clustered);
-    }
-
-    void Table::GetNonClusteredIndexFromDisk(const Int indexId) const{
-        // auto root =  Table::GetIndexFromDisk(this->header.nonClusteredIndexPageIds[indexId]);
-        this->nonClusteredIndexedTrees[indexId]->SetTreeType(Constants::TreeType::NonClustered);
-    }
-
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
         return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->GetDataFileKey(), indexPageId);
     }
@@ -315,54 +304,6 @@ namespace CoreEngine::StorageTypes {
 
     }
 
-    // Value Table::MaterializeColumn(
-    //     const ::Memory::IAllocator* allocator,
-    //     const RID* row,
-    //     const column_index_t columnIndex
-    // ) const{
-    //     const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-    //         this->database->GetDataFileKey(),
-    //         row->_pageId,
-    //         this
-    //     );
-    //
-    //     return Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
-    // }
-    //
-    // Value* Table::MaterializeColumn(
-    //     const ExecutionContext& context,
-    //     const Int rangeEnd,
-    //     const column_index_t columnIndex
-    // ) const{
-    //     const auto fileKey = this->database->GetDataFileKey();
-    //     const auto filename = this->database->GetFileName();
-    //
-    //     auto* allocator = context.GetAllocator();
-    //     auto* valueArray = static_cast<Value*>(allocator->AllocateRaw(rangeEnd * sizeof(Value)));
-    //
-    //     for (Int i = 0; i < rangeEnd; i++){
-    //         const auto* row = context.GetRid(0, i);
-    //
-    //         const auto indexPage = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-    //             fileKey,
-    //             row->_pageId,
-    //             this
-    //         );
-    //
-    //         valueArray[i] = Pages::PageView::GetColumnAt(allocator, &indexPage, row, columnIndex);
-    //     }
-    //
-    //     return valueArray;
-    // }
-    //
-    // QueryResult Table::Materialize(
-    //     const ::Memory::IAllocator* allocator,
-    //     const Pages::PageView* page,
-    //     const RID* row
-    // ){
-    //     return page->MaterializeRow(allocator, row->_index);
-    // }
-
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
         const Headers::Index index(columnIndices.Data(), columnIndices.Size());
         this->nonClusteredIndexes.Push(index);
@@ -396,7 +337,7 @@ namespace CoreEngine::StorageTypes {
         if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
             return this->clusteredIndexedTree;
 
-        this->GetClusteredIndexFromDisk();
+        this->clusteredIndexedTree->SetTreeType(Constants::TreeType::Clustered);
         return this->clusteredIndexedTree;
     }
 
@@ -424,7 +365,7 @@ namespace CoreEngine::StorageTypes {
               if (indexPageId == INVALID_PAGE_ID)
                   return nonClusteredTree;
 
-              this->GetNonClusteredIndexFromDisk(nonClusteredIndexId);
+              this->clusteredIndexedTree->SetTreeType(Constants::TreeType::NonClustered);
           }
 
           return nonClusteredTree;
@@ -450,47 +391,37 @@ namespace CoreEngine::StorageTypes {
     }
 
     key_size_t Table::CalculateIndexKeySize(const Int indexPos) const {
-        HashSet<column_index_t> clusteredColumns;
-
         if (indexPos != -1)
             return this->CalculateNonClusteredIndexKeySize(indexPos);
 
         key_size_t keySize = 0;
-        for(const auto& column : this->clusteredIndexHeader.columns)
-            clusteredColumns.Add(column);
-
-        for (const auto &column : this->_columns)
-            if(clusteredColumns.Contains(column->OrdinalPosition()))
-                keySize += column->Size();
+        for(const auto columnOrdinalPos : this->clusteredIndexHeader.columns){
+            const auto* column = this->_columns[columnOrdinalPos];
+            keySize += column->Size();
+        }
 
         return keySize;
     }
 
     key_size_t Table::CalculateNonClusteredIndexKeySize(const Int indexPos) const{
-        HashSet<column_index_t> clusteredColumns;
-
         key_size_t keySize = 0;
-        for(const auto& column : this->nonClusteredIndexes[indexPos].columns)
-            clusteredColumns.Add(column);
-
-        for (const auto &column : this->_columns)
-            if(clusteredColumns.Contains(column->OrdinalPosition()))
-                keySize += column->Size();
+        for(const auto columnOrdinalPos : this->nonClusteredIndexes[indexPos].columns){
+            const auto* column = this->_columns[columnOrdinalPos];
+            keySize += column->Size();
+        }
 
         return keySize;
     }
 
-    row_size_t Table::CalculatePayloadSize() const{
-        row_size_t payloadSize = sizeof(RowHeader);
+    void Table::CalculateInsertPayloadSize(){
+        this->payloadSize = sizeof(RowHeader);
         for (const auto* column : this->_columns){
-            if (column->isColumnLOB()){
-                payloadSize+= sizeof(page_id_t) + sizeof(RowEntry);
-                continue;
-            }
+            const auto columnSize =
+                column->isColumnLOB()
+                ? sizeof(page_id_t)
+                : column->Size();
 
-            payloadSize += column->Size() + sizeof(RowEntry);
+            this->payloadSize += columnSize + sizeof(RowEntry);
         }
-
-        return payloadSize;
     }
 }

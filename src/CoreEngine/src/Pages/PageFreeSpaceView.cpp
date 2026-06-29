@@ -32,15 +32,15 @@ namespace Pages{
     }
 
     bool PageFreeSpaceView::IsPageAllocated(const page_id_t pageId) const{
-        return PackedByte::ExtractBits<bool>(*this->GetByte(pageId), ALLOCATION_SHIFT, ALLOCATION_SINGLE_BIT_MASK);
+        return PackedByte::ExtractBits<bool, ALLOCATION_SHIFT, ALLOCATION_SINGLE_BIT_MASK>(*this->GetByte(pageId));
     }
 
     Constants::PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
-        return PackedByte::ExtractBits<Constants::PageType>(*this->GetByte(pageId), TYPE_SHIFT, TYPE_MASK >> TYPE_SHIFT);
+        return PackedByte::ExtractBits<Constants::PageType, TYPE_SHIFT, TYPE_VALUE_MASK>(*this->GetByte(pageId));
     }
 
     byte_t PageFreeSpaceView::GetPageSizeCategory(const page_id_t pageId) const{
-        return PackedByte::ExtractBits<byte_t>(*this->GetByte(pageId), SIZE_SHIFT, SIZE_MASK);
+        return PackedByte::ExtractBits<byte_t, SIZE_SHIFT, SIZE_MASK>(*this->GetByte(pageId));
     }
 
     void PageFreeSpaceView::SetPageMetaData(const PageView* page) const{
@@ -57,19 +57,19 @@ namespace Pages{
     }
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{
-        PackedByte::SetBit(*this->GetByte(pageId), ALLOCATION_SHIFT, false);
+        PackedByte::SetBit<ALLOCATION_SHIFT, false>(this->GetByte(pageId));
     }
 
     void PageFreeSpaceView::SetPageAllocated(const page_id_t pageId) const{
-        PackedByte::SetBit(*this->GetByte(pageId), ALLOCATION_SHIFT, true);
+        PackedByte::SetBit<ALLOCATION_SHIFT, true>(this->GetByte(pageId));
     }
 
     void PageFreeSpaceView::SetPageAllocationStatus(const page_id_t pageId, const page_size_t bytesLeft) const{
         const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / Constants::PAGE_SIZE);
-        PackedByte::SetBits(*this->GetByte(pageId), pageAllocationStatus, SIZE_SHIFT, SIZE_MASK);
+        PackedByte::SetBits<SIZE_SHIFT, SIZE_MASK>(this->GetByte(pageId), pageAllocationStatus);
     }
 
     void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
-        PackedByte::SetBits(*this->GetByte(pageId), static_cast<byte_t>(pageType), TYPE_SHIFT, TYPE_MASK >> TYPE_SHIFT);
+        PackedByte::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(this->GetByte(pageId), static_cast<byte_t>(pageType));
     }
 }

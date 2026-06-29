@@ -28,10 +28,6 @@ namespace QueryPipeline{
         Dictionary<DataTypes::String, DataType> variables;
     };
 
-    // struct StatementValidationScope {
-    //     Dictionary<std::string, table_id_t> tableAliasesDictionary;
-    // };
-
     struct QueryContext {
         CompileValidationScope _scope;
         CompileContext _compileContext;
@@ -43,8 +39,10 @@ namespace QueryPipeline{
 
         QueryContext();
         explicit QueryContext(const Errors::Error& error);
+
         QueryContext(const QueryContext&) = delete;
         QueryContext& operator=(const QueryContext&) = delete;
+
         QueryContext(QueryContext&& other) noexcept;
         QueryContext& operator=(QueryContext&& other) noexcept;
 
@@ -66,11 +64,7 @@ namespace QueryPipeline{
         static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:
-            Parser();
-            ~Parser();
-
-            static Parser& Get()
-            {
+            static Parser& Get(){
                 static Parser instance;
                 return instance;
             }

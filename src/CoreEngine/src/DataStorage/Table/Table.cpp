@@ -170,32 +170,23 @@ namespace CoreEngine::StorageTypes {
         return versionDatabase.InsertRow(allocator, rowRef);
     }
 
-    Table::Table(const table_id_t tableId, const SmallInt ordinalPosition, Database* database){
-        this->database = database;
+    Table::Table(const table_id_t tableId, const SmallInt ordinalPosition, Database* database)
+        : database(database), clusteredIndexedTree(nullptr), payloadSize(0){
         this->header.tableId = tableId;
         this->header.ordinalPosition = ordinalPosition;
         this->header.numberOfColumns = 0;
-        this->clusteredIndexedTree = nullptr;
-
         this->_columns.SetAllocator(&this->_allocator);
         this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
     }
 
-    Table::Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database){
+    Table::Table(
+        const Headers::TableHeader& masterDbHeader,
+        const TableHeader &tableHeader,
+        Database *database
+    ){
         this->header = tableHeader;
         this->header.tableId = masterDbHeader.id;
         this->header.ordinalPosition = masterDbHeader.ordinalPosition;
-        this->database = database;
-        this->clusteredIndexedTree = nullptr;
-
-        this->_columns.SetAllocator(&this->_allocator);
-        this->nonClusteredIndexedTrees.SetAllocator(&this->_allocator);
-
-        this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
-    }
-
-    Table::Table(const std::string& tableName, const TableHeader &tableHeader, Database *database){
-        this->header = tableHeader;
         this->database = database;
         this->clusteredIndexedTree = nullptr;
 
@@ -228,6 +219,7 @@ namespace CoreEngine::StorageTypes {
             this->AddColumn(column);
         }
 
+        this->CalculateInsertPayloadSize();
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
     }
 
@@ -236,12 +228,6 @@ namespace CoreEngine::StorageTypes {
               column->Destroy();
 
           this->_allocator.Release();
-    }
-
-    Table::~Table(){
-        // auto headerPage = Storage::StorageManager::Get().GetHeaderPage(this->database->GetSystemFilename());
-        // headerPage.SetTableHeader(this->header.ordinalPosition, this->header);
-        // this->_allocator.Reset();
     }
 
     Errors::RuntimeStatus Table::BatchInsert(
@@ -261,7 +247,6 @@ namespace CoreEngine::StorageTypes {
         Int rowSize = 0;
         DataStructures::PolymorphicArray<char> buffer;
 
-        const auto estimatedPayloadSize = this->CalculatePayloadSize();
         RowHeader rowHeader;
         rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
         for (auto& insertedRow : input) {
@@ -270,7 +255,6 @@ namespace CoreEngine::StorageTypes {
                 status,
                 executionContext.GetAllocator(),
                 rowHeader,
-                estimatedPayloadSize,
                 insertedRow.Data()
             );
 
@@ -295,7 +279,7 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
-            result = this->InsertRow(executionContext, payload, pagesNeeded);
+            result = this->InsertRowPayload(executionContext, payload, pagesNeeded);
             if (!result.IsOk())
                 return result;
         }
@@ -317,7 +301,6 @@ namespace CoreEngine::StorageTypes {
             status,
             executionContext.GetAllocator(),
             rowHeader,
-            this->CalculatePayloadSize(),
             inputData
         );
 
@@ -327,7 +310,7 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        status = this->InsertRow(executionContext, payload, 1);
+        status = this->InsertRowPayload(executionContext, payload, 1);
 
         if (!status.IsOk())
           return status;
@@ -338,39 +321,49 @@ namespace CoreEngine::StorageTypes {
         return status;
     }
 
-    // Errors::RuntimeStatus Table::InsertRow(
-    //   const ExecutionProperties& properties,
-    //   const vector<Expressions::Expression *> &inputData,
-    //   const DataStructures::PolymorphicArray<column_index_t> &columnIndices
-    // ){
-    //     Logging::CheckPoint checkPoint;
-    //
-    //     auto* row = new Row(*this);
-    //     auto result = this->CreateRow(
-    //       row,
-    //       properties.snapshot.transactionId,
-    //       inputData,
-    //       columnIndices,
-    //       &checkPoint
-    //     );
-    //
-    //     if (result.code != Errors::RuntimeError::Ok)
-    //       return result;
-    //
-    //     result = this->InsertRow(row, 1);
-    //
-    //     if (result.code != Errors::RuntimeError::Ok)
-    //       return result;
-    //
-    //     Database::LogCheckPoint(checkPoint);
-    //
-    //     result.message = "Rows affected: 1";
-    //
-    //     return result;
-    //
-    // }
-
     Errors::RuntimeStatus Table::InsertRow(
+        const ExecutionContext& executionContext,
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& inputData,
+        const InsertPlan& insertPlan
+    ){
+        Logging::CheckPoint checkPoint;
+
+        Errors::RuntimeStatus status;
+        RowHeader rowHeader;
+        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
+
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            executionContext
+        );
+
+        auto payload = this->CreateInsertPayload(
+            status,
+            executionContext.GetAllocator(),
+            rowHeader,
+            inputData,
+            insertPlan,
+            evaluationContext
+        );
+
+        checkPoint.transactionId = executionContext.GetCurrentTransactionId();
+        Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
+
+        if (!status.IsOk())
+            return status;
+
+        status = this->InsertRowPayload(executionContext, payload, 1);
+
+        if (!status.IsOk())
+            return status;
+
+        Database::LogCheckPoint(checkPoint);
+
+        status.message = DataTypes::String(static_cast<const char*>("Rows affected: 1"), executionContext.GetAllocator());
+        return status;
+    }
+
+    Errors::RuntimeStatus Table::InsertRowPayload(
         const ExecutionContext& executionContext,
         InsertPayload& payload,
         const Int pagesToAllocate
@@ -1049,7 +1042,6 @@ namespace CoreEngine::StorageTypes {
             status,
             allocator,
             rowHeader,
-            this->CalculatePayloadSize(),
             materializedRow.Data()
         );
 
@@ -1060,7 +1052,7 @@ namespace CoreEngine::StorageTypes {
             return status;
 
           //only for heap tables
-          auto insertResult = this->InsertRow(context, newPayload, 1);
+          auto insertResult = this->InsertRowPayload(context, newPayload, 1);
 
           if (!insertResult.IsOk()) return insertResult;
 
@@ -1090,10 +1082,6 @@ namespace CoreEngine::StorageTypes {
             materializedRow.Update(updatedValue);
         }
 
-        auto size = 0;
-        for (const auto& value : materializedRow.Data())
-            size += value.Size();
-
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
         RowHeader rowHeader;
@@ -1103,7 +1091,6 @@ namespace CoreEngine::StorageTypes {
             status,
             allocator,
             rowHeader,
-            size,
             materializedRow.Data()
         );
 
@@ -1114,7 +1101,7 @@ namespace CoreEngine::StorageTypes {
             return status;
 
         //only for heap tables
-        auto insertResult = this->InsertRow(context, newPayload, 1);
+        auto insertResult = this->InsertRowPayload(context, newPayload, 1);
 
         if (!insertResult.IsOk())
             return insertResult;
@@ -1139,10 +1126,6 @@ namespace CoreEngine::StorageTypes {
         auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
         materializedRow.Update(updates);
 
-        auto size = 0;
-        for (const auto& value : materializedRow.Data())
-            size += value.Size();
-
         Errors::RuntimeStatus status;
         RowHeader rowHeader;
         rowHeader._createdTransactionId = FIRST_TRANSACTION_ID;
@@ -1151,7 +1134,6 @@ namespace CoreEngine::StorageTypes {
             status,
             allocator,
             rowHeader,
-            size,
             materializedRow.Data()
         );
 

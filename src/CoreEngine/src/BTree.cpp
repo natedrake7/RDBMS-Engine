@@ -981,7 +981,7 @@ namespace Indexing{
 
             root.InsertTuple(tuple);
             this->UpdatePfsPage(root);
-            return {};
+            return Errors::RuntimeStatus();
         }
 
         auto root = this->GetNode(this->rootPageId);
@@ -991,10 +991,6 @@ namespace Indexing{
 
             if (root.Keys() == 2 * this->degree - 1) // root is full,
                 this->SplitRoot(context, root, rootLock, pagesToAllocate);
-        }
-
-        if (root.PageId() == 731){
-            int val = 0;
         }
 
         return this->InsertToNonFullNode(context, root, tuple, pagesToAllocate, indexPosition);

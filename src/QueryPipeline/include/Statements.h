@@ -1,6 +1,4 @@
 #pragma once
-#include <string>
-#include <vector>
 #include "../../CoreEngine/include/DatabaseConstants.h"
 #include "../../CoreEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
@@ -8,6 +6,7 @@
 #include "../../Systemic/include/Security/Security.h"
 #include "../../Systemic/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
+#include "../../CoreEngine/include/DataStorage/InsertPayload.h"
 
 namespace CoreEngine{
     class SystemCatalog;
@@ -42,19 +41,25 @@ namespace QueryPipeline::Statements {
 
         Int tableId;
         Int columnId;
-        column_index_t index;
+        column_index_t ordinalPosition;
         DataType returnType;
     };
 
     struct StatementValidationScope {
-        const Dictionary<DataTypes::String, table_id_t>* tableAliasesDictionary;
-        Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>>* tablesColumnsDictionary;
+        Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary;
+        Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>> tablesColumnsDictionary;
         int* indexPos;
         Statement* statement;
 
+        StatementValidationScope() = default;
         StatementValidationScope(
-            const Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary,
+            Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary,
             Dictionary<int, Dictionary<DataTypes::String, Headers::ColumnHeader>>& tablesColumnsDictionary,
+            Statement* statement,
+            int* indexPos = nullptr
+        );
+        StatementValidationScope(
+            Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary,
             Statement* statement,
             int* indexPos = nullptr
         );
@@ -193,10 +198,7 @@ namespace QueryPipeline::Statements {
     };
 
     struct Statement {
-        Dictionary<Int, Dictionary<DataTypes::String, Headers::ColumnHeader>> tableColumnsDictionary;
         DataTypes::Guid sessionId;
-        Network::Server* server;
-        CoreEngine::SystemCatalog* catalog;
         DataSource* table;
         Int databaseId;
 
@@ -213,6 +215,7 @@ namespace QueryPipeline::Statements {
     struct DeclareVariableStatement final : Statement {
         Variable variable;
         Expressions::Expression* expression;
+        DataType type;
 
         DeclareVariableStatement();
 
@@ -224,6 +227,7 @@ namespace QueryPipeline::Statements {
     struct SetVariableStatement final : Statement {
         Variable variable;
         Expressions::Expression* expression;
+        DataType type;
 
         SetVariableStatement();
 
@@ -363,24 +367,29 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<ColumnName> columns;
         DataStructures::PolymorphicArray<Inserts> values;
 
-        DataStructures::PolymorphicArray<column_index_t> columnIndices;
+        CoreEngine::StorageTypes::InsertPlan insertPlan;
+
         SelectStatement* selectStatement;
 
-        void InsertDefaultValuesForMissingColumns(
-            const QueryContext& context,
+        [[nodiscard]] static Int InsertDefaultValue(
+            const ::Memory::IAllocator* allocator,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& defaultExpressions,
             const Headers::ColumnHeader& header,
-            const Headers::DefaultValuesHeader& defaultValue
+            Headers::DefaultValuesHeader& defaultValue
         );
-        void InsertNullValuesForMissingColumns(const Headers::ColumnHeader& header);
+        void InsertNullValues(const QueryContext& context, const Headers::ColumnHeader& header);
         [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
             const QueryContext& context,
+            StatementValidationScope& validationScope,
             Expressions::Expression*& expression,
             const DataTypes::String& columnName
         ) const;
-        [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context) const;
+        [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context, StatementValidationScope& validationScope) const;
         [[nodiscard]] bool HasSelectStatement() const;
-        [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context);
+
+        [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context, StatementValidationScope& validationScope);
         [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+
         constexpr Security::Permission RequiredPermissions() const override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -406,9 +415,13 @@ namespace QueryPipeline::Statements {
 
         [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
             const QueryContext& context,
+            StatementValidationScope& validationScope,
             const UpdateColumn* update
         ) const;
-        Errors::ValidationStatus ResolveAliases(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& tableAliasesDictionary);
+        Errors::ValidationStatus ResolveAliases(
+            QueryContext& context,
+            StatementValidationScope& validationScope
+        );
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
@@ -601,7 +614,7 @@ namespace QueryPipeline::Statements {
     static Errors::ValidationStatus CompileWildcard(
         const QueryContext& context,
         const Expressions::ColumnExpression* column,
-        const StatementValidationScope& statementValidationScope,
+        const StatementValidationScope& validationScope,
         SelectStatement* statement
     );
 

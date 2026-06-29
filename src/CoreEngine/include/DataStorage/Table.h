@@ -67,6 +67,8 @@ namespace CoreEngine::StorageTypes{
         Database *database;
         Indexing::BTree* clusteredIndexedTree;
 
+        row_size_t payloadSize;
+
         protected:
             static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
 
@@ -78,8 +80,6 @@ namespace CoreEngine::StorageTypes{
             void PopulateClusteredIndexCache(const Headers::Index& index);
             bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
 
-            void GetClusteredIndexFromDisk() const;
-            void GetNonClusteredIndexFromDisk(Int indexId) const;
             [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
 
             static void LinkLargePageDataObjectChunks(
@@ -113,12 +113,28 @@ namespace CoreEngine::StorageTypes{
             );
 
         public:
+            template<typename ValueProvider>
+            InsertPayload SerializeRow(
+                Errors::RuntimeStatus& status,
+                const ::Memory::IAllocator* allocator,
+                const RowHeader& rowHeader,
+                ValueProvider&& provider
+            ) const;
+
             InsertPayload CreateInsertPayload(
                 Errors::RuntimeStatus& status,
                 const ::Memory::IAllocator* allocator,
                 const RowHeader& rowHeader,
-                Int dataSize,
-                const DataStructures::PolymorphicArray<Value> &inputData
+                const DataStructures::PolymorphicArray<Value>& values
+            ) const;
+
+            InsertPayload CreateInsertPayload(
+                Errors::RuntimeStatus& status,
+                const ::Memory::IAllocator* allocator,
+                const RowHeader& rowHeader,
+                const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
+                const InsertPlan& insertPlan,
+                const Expressions::EvaluationContext& evaluationContext
             ) const;
         /**
         * @name Class Constructors and Destructors
@@ -127,7 +143,6 @@ namespace CoreEngine::StorageTypes{
         */
             Table(table_id_t tableId, SmallInt ordinalPosition, Database *database);
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
-            Table(const std::string& tableName, const TableHeader &tableHeader, Database *database);
             Table(
                 const Headers::sysTable& systemHeader,
                 const TableHeader &tableHeader,
@@ -136,7 +151,6 @@ namespace CoreEngine::StorageTypes{
                 Int ordinalPosition
             );
             void Destroy()const;
-            ~Table();
 
         /** @} End of: Class Constructors and Destructors*/
 
@@ -154,6 +168,11 @@ namespace CoreEngine::StorageTypes{
                 const DataStructures::PolymorphicArray<Value> &inputData
             );
             Errors::RuntimeStatus InsertRow(
+                const ExecutionContext& executionContext,
+                const DataStructures::PolymorphicArray<Expressions::Expression*> &inputData,
+                const InsertPlan& insertPlan
+            );
+            Errors::RuntimeStatus InsertRowPayload(
                 const ExecutionContext& executionContext,
                 InsertPayload& payload,
                 Int pagesToAllocate
@@ -441,7 +460,7 @@ namespace CoreEngine::StorageTypes{
 
             [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
 
-            [[nodiscard]] row_size_t CalculatePayloadSize()const;
+            void CalculateInsertPayloadSize();
 
             [[nodiscard]] Database* GetDatabase() const;
 

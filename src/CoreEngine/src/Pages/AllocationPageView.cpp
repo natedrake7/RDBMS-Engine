@@ -10,31 +10,7 @@ namespace Pages{
         return reinterpret_cast<IndexAllocationPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
     }
 
-    size_t AllocationPageView::GetByteIndex(const extent_id_t extentId) const noexcept{
-        return this->initialOffset + (extentId >> 3);
-    }
-
-    bool AllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        return (this->_frame->_data[this->GetByteIndex(bitIndex)] & mask) != 0;
-    }
-
-    void AllocationPageView::SetBit(const std::size_t bitIndex) const noexcept{
-        const std::size_t byteIndex = this->GetByteIndex(bitIndex);
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        const auto byte = static_cast<UnsignedTinyInt>(this->_frame->_data[byteIndex] | mask);
-        this->_frame->_data[byteIndex] = static_cast<char>(byte);
-    }
-
-    void AllocationPageView::ClearBit(const std::size_t bitIndex) const noexcept{
-        const std::size_t byteIndex = this->GetByteIndex(bitIndex);
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        auto byte = this->_frame->_data[byteIndex];
-        byte = static_cast<UnsignedTinyInt>(byte & static_cast<UnsignedTinyInt>(~mask));
-        this->_frame->_data[byteIndex] = static_cast<char>(byte);
-    }
-
-    AllocationPageView::AllocationPageView() : PageView() {
+    AllocationPageView::AllocationPageView(){
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 

@@ -37,9 +37,8 @@ namespace Headers {
 }
 
 namespace CoreEngine {
-    SystemCatalog::SystemCatalog() {
-        this->masterDb = nullptr;
-    }
+    SystemCatalog::SystemCatalog()
+        : masterDb(nullptr){}
 
     std::tuple<DataTypes::String, DataTypes::String> SystemCatalog::ReadConfiguration(
         const ::Memory::IAllocator* allocator,
@@ -145,6 +144,7 @@ namespace CoreEngine {
             if (counter == 0)
                 throw std::runtime_error("All tables in masterDb must have a primary key");
             table->SetPrimaryKeyIndexedColumns(primaryKeyIndexes, counter);
+            table->CalculateInsertPayloadSize();
         }
     }
 
@@ -226,7 +226,7 @@ namespace CoreEngine {
 
                 if (column.hasIdentity){
                     const auto identityValue = (i == 0)
-                        ? Constants::SYSTEM_CATALOG_ID
+                        ? Constants::SYSTEM_CATALOG_ID + 1
                         : Constants::DEFAULT_IDENTITY_VALUE;
 
                     const auto _ = this->InsertIdentityColumnToMasterDb(
@@ -563,23 +563,22 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const StorageTypes::RID* rowPtr,
         const StorageTypes::Table* table
-    )
-    {
-    const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
-    const auto& data = materializedRow.Data();
+    ){
+        const auto materializedRow = table->MaterializeFromPage(allocator, rowPtr);
+        const auto& data = materializedRow.Data();
 
-    return Headers::DefaultValuesHeader{
-        .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)].AsInt(),
-        .value = data[static_cast<column_index_t>(SysDefaultValues::Value)].AsString(),
-        .additionalInfo = Headers::AuditInformation(
-        data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
-        data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
-        DataTypes::String::Null(),
-        data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
-                ? DataTypes::DateTime()
-                : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].AsDateTime()
-        ),
-    };
+        return Headers::DefaultValuesHeader{
+            .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)].AsInt(),
+            .value = data[static_cast<column_index_t>(SysDefaultValues::Value)].AsString(),
+            .additionalInfo = Headers::AuditInformation(
+            data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
+            data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
+            DataTypes::String::Null(),
+            data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].IsNull()
+                    ? DataTypes::DateTime()
+                    : data[static_cast<column_index_t>(SysDefaultValues::DeletedAt)].AsDateTime()
+            ),
+        };
     }
 
     Headers::TableStatistics SystemCatalog::ToTableStatistics(
@@ -891,7 +890,6 @@ namespace CoreEngine {
         auto result = table->InsertRow(executionContext, fields);
 
         std::cout << "Inserted database: "<< dbName << " to master db" << std::endl;
-
         return result;
     }
 
@@ -1008,7 +1006,6 @@ namespace CoreEngine {
         auto result = table->InsertRow(executionContext, fields);
 
         std::cout << "Inserted column: "<< columnName << " to master db" << std::endl;
-
         return result;
     }
 

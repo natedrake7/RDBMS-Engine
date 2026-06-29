@@ -300,8 +300,8 @@ namespace QueryPipeline {
         Statements::DataSource* table,
         DataStructures::PolymorphicArray<Statements::Inserts> &fields,
         LogicalPlan* child,
-        DataStructures::PolymorphicArray<column_index_t>& columnIndices
-    ) : table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnIndices)) {}
+        CoreEngine::StorageTypes::InsertPlan& insertPlan
+    ) : table(table), fields(std::move(fields)), child(child), insertPlan(std::move(insertPlan)) {}
 
     PhysicalPlan::PhysicalInsert* LogicalInsert::ToPhysical(QueryContext& context){
         auto* physicalSelect = this->child != nullptr
@@ -313,7 +313,7 @@ namespace QueryPipeline {
                 Expressions::BindExpressionKernel(expression, context._executionMode);
         }
 
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->columnsIndices);
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->insertPlan);
     }
 
     LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)

@@ -6,7 +6,6 @@
 #include "../../../include/Database.h"
 
 namespace CoreEngine::StorageTypes{
-
     template <typename T>
     void Table::MaterializeColumnFromPage(
         const ExecutionContext& context,

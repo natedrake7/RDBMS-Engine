@@ -101,31 +101,6 @@ namespace CoreEngine::RowKernels{
     );
 
     template<typename T>
-    void ValueFallbackKernel(
-        const Expressions::Expression* self,
-        const Expressions::EvaluationContext& context,
-        void* outVal,
-        bool* outNull
-    ){
-        // const auto value = EvaluateExpression(self, context);   // existing Value path
-        // *outNull = value.IsNull();
-        // if (*outNull) return;
-        //
-        // if constexpr (DataTypes::NonPrimitiveType<T>){
-        //     if constexpr (DataTypes::IsString<T>)
-        //         new (outVal) DataTypes::String(value.DataUnsafe(), value.Size(), context.allocator);
-        //     else if constexpr (DataTypes::IsJson<T>)
-        //         new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
-        //     else if constexpr (DataTypes::IsDecimal<T>)
-        //         new (outVal) DataTypes::Decimal(value.Data(), value.Size());
-        // }
-        // else if constexpr (DataTypes::PrimitiveColumn<T>)
-        //     *static_cast<T*>(outVal) = value.Get<T>();
-        // else
-        //     static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
-    }
-
-    template<typename T>
     Value KernelToValue(
         const Expressions::Expression* self,
         const Expressions::EvaluationContext& context

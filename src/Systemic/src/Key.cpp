@@ -145,8 +145,10 @@ namespace DataTypes::Indexing{
 
         auto* entry = reinterpret_cast<KeyEntry*>(buffer + Key::HEADER_SIZE);
         entry->_offset = Key::HEADER_SIZE + sizeof(KeyEntry);
-        entry->_isNull = value.IsNull();
-        entry->_size = Key::EncodeValue(buffer + Key::HEADER_SIZE + sizeof(KeyEntry), value);
+        entry->_meta = KeyEntry::EncodeMeta(
+            value.IsNull(),
+            Key::EncodeValue(buffer + Key::HEADER_SIZE + sizeof(KeyEntry), value)
+        );
         Key::SetCount(buffer, 1);
         Key::SetSize(buffer, Key::HEADER_SIZE + sizeof(KeyEntry) + keySize);
 
@@ -166,11 +168,9 @@ namespace DataTypes::Indexing{
         for (Int i = 0; i < subKeys.Size(); i++){
             auto* entry = reinterpret_cast<KeyEntry*>(buffer + Key::HEADER_SIZE + i * sizeof(KeyEntry));
             entry->_offset = dataOffset;
-            entry->_isNull = subKeys[i].IsNull();
-
             const auto sizeWritten = Key::EncodeValue(buffer + dataOffset, subKeys[i]);
             dataOffset += sizeWritten;
-            entry->_size = sizeWritten;
+            entry->_meta = KeyEntry::EncodeMeta(subKeys[i].IsNull(), sizeWritten);
         }
         Key::SetCount(buffer, subKeys.Size());
         Key::SetSize(buffer, size);
@@ -211,15 +211,15 @@ namespace DataTypes::Indexing{
         const auto* lhsEntry = lhs.GetEntry(index);
         const auto* rhsEntry = rhs.GetEntry(index);
 
-        if (lhsEntry->_isNull || rhsEntry->_isNull)
-            return Comparators::Compare(lhsEntry->_isNull, rhsEntry->_isNull);
+        if (lhsEntry->IsNull() || rhsEntry->IsNull())
+            return Comparators::Compare(lhsEntry->IsNull(), rhsEntry->IsNull());
 
-        const auto minSize = Math::Min(lhsEntry->_size, rhsEntry->_size);
+        const auto minSize = Math::Min(lhsEntry->Size(), rhsEntry->Size());
         const auto cmp = std::memcmp(lhs._data + lhsEntry->_offset, rhs._data + rhsEntry->_offset, minSize);
         if (cmp != 0)
             return Comparators::Compare(cmp, 0);
 
-        return Comparators::Compare(lhsEntry->_size, rhsEntry->_size);
+        return Comparators::Compare(lhsEntry->Size(), rhsEntry->Size());
     }
 
     key_size_t Key::Count() const{

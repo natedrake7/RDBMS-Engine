@@ -18,8 +18,8 @@
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
-        : displayColumnNames(context.GetAllocator()), columns(context.GetAllocator()),
-          status(context.GetAllocator()),
+        : status(context.GetAllocator()), displayColumnNames(context.GetAllocator()),
+          columns(context.GetAllocator()),
           selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
 
     ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const DataTypes::String& message)
@@ -979,29 +979,6 @@ PhysicalTableCreate::PhysicalTableCreate(
         return lhs.GetColumnIndex() < rhs.GetColumnIndex();
     }
 
-    DataStructures::PolymorphicArray<Value> PhysicalInsert::ConvertExpressionsToValues(
-        const CoreEngine::ExecutionContext& context,
-        const Int index
-    ) const{
-        auto& [expressions] = this->fields[index];
-
-        DataStructures::PolymorphicArray<Value> values(context.GetAllocator());
-        values.Reserve(expressions.Size());
-        const Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::Constant,
-            context
-        );
-
-        for (int i = 0; i < expressions.Size(); i++) {
-            auto value = Expressions::EvaluateExpression(expressions[i], evaluationContext);
-            value.SetColumnIndex(this->columnsIndices[index]);
-            values.Push(std::move(value));
-        }
-
-        std::ranges::sort(values, SortInsertsAscending);
-        return values;
-    }
-
     ExecutionResult PhysicalInsert::InsertFromChild(
         CoreEngine::StorageTypes::Table* tablePtr,
         CoreEngine::ExecutionContext& context
@@ -1028,23 +1005,21 @@ PhysicalTableCreate::PhysicalTableCreate(
         );
     }
 
-    ExecutionResult PhysicalInsert::InsertFromFields(
+    ExecutionResult PhysicalInsert::InsertFromValues(
         CoreEngine::StorageTypes::Table* tablePtr,
-        CoreEngine::ExecutionContext& context
+        const CoreEngine::ExecutionContext& context
     ) const{
         auto result = ExecutionResult(context);
 
-        for (int i = 0;i < this->fields.Size(); i++){
-            const auto values = this->ConvertExpressionsToValues(context, i);
-
-            result.status = tablePtr->InsertRow(context, values);
-            if (! result.status.IsOk())
+        for (Int i = 0;i < this->fields.Size(); i++){
+            result.status = tablePtr->InsertRow(context, this->fields[i].values, this->insertPlan);
+            if (!result.status.IsOk())
                 return result;
         }
 
         result.status = Errors::RuntimeStatus(
             Errors::RuntimeError::Ok,
-            Messages::INSERT_ROWS_FROM_FIELDS(static_cast<Int>(this->fields.Size()), context.GetAllocator())
+            Messages::INSERT_ROWS_FROM_FIELDS(this->fields.Size(), context.GetAllocator())
         );
         return result;
     }
@@ -1053,17 +1028,16 @@ PhysicalTableCreate::PhysicalTableCreate(
         Statements::DataSource* table,
         DataStructures::PolymorphicArray<Statements::Inserts> &fields,
         PlanNode* child,
-        DataStructures::PolymorphicArray<column_index_t>& columnsIndices
-    ): table(table), fields(std::move(fields)), child(child), columnsIndices(std::move(columnsIndices)) {}
+        CoreEngine::StorageTypes::InsertPlan& insertPlan
+    ): insertPlan(std::move(insertPlan)), fields(std::move(fields)), table(table), child(child) {}
 
     ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
         const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-
         auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
         return (this->child != nullptr)
                    ? this->InsertFromChild(tablePtr, context)
-                   : this->InsertFromFields(tablePtr, context);
+                   : this->InsertFromValues(tablePtr, context);
     }
 
     PhysicalHeapUpdate::PhysicalHeapUpdate(

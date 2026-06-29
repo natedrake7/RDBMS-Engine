@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/DataTypes/PackedByte.h"
+#include "../../Systemic/include/DataTypes/PackedWord.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "../../Systemic/include/DataTypes/StringView.h"
 
@@ -99,7 +99,7 @@ namespace Constants{
     static constexpr UnsignedSmallInt LARGE_OBJECT_PAGE_SIZE = PAGE_SIZE_WITHOUT_HEADER - 2 * sizeof(page_id_t);
 	static constexpr UnsignedTinyInt MAX_NUMBER_OF_SUB_KEYS = 7;
 
-    static constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::Size + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
+    static constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE +  sizeof(page_id_t) + PackedByte::SIZE + (sizeof(DataType) * MAX_NUMBER_OF_SUB_KEYS);
     static constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
 
     static constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;

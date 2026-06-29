@@ -4,30 +4,6 @@
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
-    size_t GlobalAllocationPageView::GetBitIndex(const extent_id_t extentId) const noexcept{
-        return this->initialOffset + (extentId >> 3);
-    }
-
-    bool GlobalAllocationPageView::GetBit(const std::size_t bitIndex) const noexcept{
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        return (this->_frame->_data[this->GetBitIndex(bitIndex)] & mask) != 0;
-    }
-
-    void GlobalAllocationPageView::SetBit(const std::size_t bitIndex) const noexcept{
-        const std::size_t byteIndex = this->GetBitIndex(bitIndex);
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        const auto byte = static_cast<UnsignedTinyInt>(this->_frame->_data[byteIndex] | mask);
-        this->_frame->_data[byteIndex] = static_cast<char>(byte);
-    }
-
-    void GlobalAllocationPageView::ClearBit(const std::size_t bitIndex) const noexcept{
-        const std::size_t byteIndex = this->GetBitIndex(bitIndex);
-        const auto mask = static_cast<UnsignedTinyInt>(1u << (bitIndex & 7u));
-        auto byte = this->_frame->_data[byteIndex];
-        byte = static_cast<UnsignedTinyInt>(byte & static_cast<UnsignedTinyInt>(~mask));
-        this->_frame->_data[byteIndex] = static_cast<char>(byte);
-    }
-
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {}
 
     GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{

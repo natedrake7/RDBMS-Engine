@@ -2,21 +2,21 @@
 #include "../../../include/DataStorage/Table.h"
 #include "DataStorage/Column.h"
 #include "DataStorage/InsertPayload.h"
+#include "Evaluators/Expression.h"
 
 namespace CoreEngine::StorageTypes{
-    InsertPayload Table::CreateInsertPayload(
+    template <typename ValueProvider>
+    InsertPayload Table::SerializeRow(
         Errors::RuntimeStatus& status,
         const ::Memory::IAllocator* allocator,
         const RowHeader& rowHeader,
-        const Int dataSize,
-        const DataStructures::PolymorphicArray<Value> &inputData
+        ValueProvider&& provider
     ) const{
-        const auto columnsSize = this->_columns.Size();
         Int dataEntriesOffset = sizeof(RowHeader);
 
         // Only allocate offset space for non-NULL columns
-        const auto dataOffSet = dataEntriesOffset + columnsSize * sizeof(RowEntry);
-        auto payload = InsertPayload(allocator, dataSize + dataOffSet, dataOffSet);
+        const auto dataOffSet = dataEntriesOffset + this->_columns.Size() * sizeof(RowEntry);
+        auto payload = InsertPayload(allocator, this->payloadSize + dataOffSet, dataOffSet);
 
         std::memcpy(payload.Data(), &rowHeader, sizeof(RowHeader));
 
@@ -37,7 +37,8 @@ namespace CoreEngine::StorageTypes{
                 continue;
             }
 
-            const auto& value = inputData[ordinalPosition - autoComputedColumns];
+            const auto value = provider(ordinalPosition, autoComputedColumns);
+
             if (value.IsNull()){
                 RowEntry rowEntry(0, RowEntry::NULLVAL, 0);
                 payload.SetData(&rowEntry, sizeof(RowEntry), dataEntriesOffset);
@@ -78,5 +79,46 @@ namespace CoreEngine::StorageTypes{
 
         payload.AlignSizeWithOffset();
         return payload;
+    }
+
+    InsertPayload Table::CreateInsertPayload(
+        Errors::RuntimeStatus& status,
+        const ::Memory::IAllocator* allocator,
+        const RowHeader& rowHeader,
+        const DataStructures::PolymorphicArray<Value>& values
+    ) const{
+        return this->SerializeRow(status, allocator, rowHeader,
+        [&](const Int ordinalPosition, const Int autoComputedColumns) -> const Value&{
+            return values[ordinalPosition - autoComputedColumns];
+        });
+    }
+
+    InsertPayload Table::CreateInsertPayload(
+        Errors::RuntimeStatus& status,
+        const ::Memory::IAllocator* allocator,
+        const RowHeader& rowHeader,
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
+        const InsertPlan& insertPlan,
+        const Expressions::EvaluationContext& evaluationContext
+    ) const{
+        Value value;
+        return this->SerializeRow(status, allocator, rowHeader,
+            [&](const Int ordinalPosition, const Int _) -> const Value&{
+                const auto& slot = insertPlan._slotMap[ordinalPosition];
+                switch (slot._kind)
+                {
+                    case InsertSlot::SlotKind::Value:
+                        value = Expressions::EvaluateExpression(expressions[slot._slot], evaluationContext);
+                        break;
+                    case InsertSlot::SlotKind::Default:
+                        value = Expressions::EvaluateExpression(insertPlan._sharedDefaults[slot._slot], evaluationContext);
+                        break;
+                    case InsertSlot::SlotKind::Null:
+                        value = Value::Null();
+                        break;
+                }
+                return value;
+            }
+        );
     }
 }

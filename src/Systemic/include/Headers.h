@@ -12,14 +12,14 @@
 #include "DataTypes/Value.h"
 
 namespace Headers {
-  enum ConstraintType: UnsignedTinyInt {
-    PrimaryKey = 0,
-    ForeignKey = 1,
-    Unique = 2,
-    IndexKey = 3,
-    Check = 4,
-    NotNull = 5
-  };
+    enum ConstraintType: UnsignedTinyInt {
+        PrimaryKey = 0,
+        ForeignKey = 1,
+        Unique = 2,
+        IndexKey = 3,
+        Check = 4,
+        NotNull = 5
+    };
 
     struct AuditInformation{
         DataTypes::DateTime createdAt;
@@ -84,15 +84,10 @@ namespace Headers {
         Int cacheBlock;
         AuditInformation additionalInfo;
 
-        IdentityColumnsHeader() {
-            this->tableId = INVALID_TABLE_ID;
-            this->columnId = INVALID_COLUMN_ID;
-            this->seedValue = 0;
-            this->increment = 1;
-            this->lastValue = 0;
-            this->isCached = false;
-            this->cacheBlock = 0;
-        }
+        IdentityColumnsHeader()
+            :   tableId(INVALID_TABLE_ID), columnId(INVALID_COLUMN_ID),
+                seedValue(0), increment(1), lastValue(0),
+                isCached(false), cacheBlock(0){}
 
         IdentityColumnsHeader(
             const Int tableId,
@@ -102,14 +97,10 @@ namespace Headers {
             const BigInt lastValue,
             const bool isCached,
             const Int cacheBlock
-        ):
-        tableId(tableId),
-        columnId(columnId),
-        seedValue(seedValue),
-        increment(increment),
-        lastValue(lastValue),
-        isCached(isCached),
-        cacheBlock(cacheBlock){}
+        ):  tableId(tableId),columnId(columnId),
+            seedValue(seedValue), increment(increment),
+            lastValue(lastValue), isCached(isCached),
+            cacheBlock(cacheBlock){}
 
         IdentityColumnsHeader(
             const Int tableId,
@@ -120,15 +111,10 @@ namespace Headers {
             const bool isCached,
             const Int cacheBlock,
             const AuditInformation& additionalInfo
-        ):
-        tableId(tableId),
-        columnId(columnId),
-        seedValue(seedValue),
-        increment(increment),
-        lastValue(lastValue),
-        isCached(isCached),
-        cacheBlock(cacheBlock),
-        additionalInfo(additionalInfo){}
+        ):  tableId(tableId), columnId(columnId),
+            seedValue(seedValue), increment(increment),
+            lastValue(lastValue),isCached(isCached),
+            cacheBlock(cacheBlock),additionalInfo(additionalInfo){}
     };
 
   struct IndexHeader {
@@ -158,7 +144,7 @@ namespace Headers {
     bool isDisabled;
     Int indexId = INVALID_INDEX_ID;
     IndexHeader index;
-   DataStructures::PolymorphicArray<ConstraintsColumnsHeader> columns;
+    DataStructures::PolymorphicArray<ConstraintsColumnsHeader> columns;
 
     AuditInformation additionalInfo;
   };

@@ -92,8 +92,6 @@ namespace QueryPipeline{
         },
     };
 
-    Parser::Parser() = default;
-
     QueryContext::QueryContext()
         :   status(this->_compileContext.GetAllocator()), hasMore(false),
             _executionMode(Constants::ExecutionMode::Row){
@@ -166,8 +164,6 @@ namespace QueryPipeline{
             context.Push(statement);
          }
     }
-
-    Parser::~Parser() = default;
 
     void Parser::Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query) {
         static auto errorListener = ErrorListener();

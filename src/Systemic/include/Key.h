@@ -2,30 +2,40 @@
 #include "Encoding.h"
 #include "DataTypes/Value.h"
 #include "DataStructures/PolymorphicArray.h"
+#include "DataTypes/PackedWord.h"
 
 namespace DataTypes::Indexing {
     struct KeyEntry{
-        UnsignedSmallInt _offset;
-        UnsignedSmallInt _size: 15;
-        UnsignedSmallInt _isNull: 1;
+        static constexpr UnsignedSmallInt SIZE_MASK = 0x7FFF;
+        static constexpr UnsignedSmallInt NULL_SHIFT = 15;
 
-        KeyEntry(): _offset(0), _size(0), _isNull(0) {}
+        UnsignedSmallInt _offset;
+        UnsignedSmallInt _meta;
+
+        KeyEntry(): _offset(0), _meta(0){}
         KeyEntry(
             const UnsignedSmallInt offset,
             const UnsignedSmallInt size,
             const bool isNull
-        ) : _offset(offset), _size(size), _isNull(isNull){}
+        ) : _offset(offset), _meta(EncodeMeta(isNull, size)){}
 
         [[nodiscard]] bool IsNull() const{
-            return static_cast<bool>(this->_isNull);
+            return PackedWord<UnsignedSmallInt>::GetBit<NULL_SHIFT>(this->_meta);
         }
 
         [[nodiscard]] UnsignedSmallInt Size() const{
-            return this->_size;
+            return PackedWord<UnsignedSmallInt>::ExtractBits<UnsignedSmallInt, 0, SIZE_MASK>(this->_meta);
         }
 
         [[nodiscard]] UnsignedSmallInt Offset() const{
             return this->_offset;
+        }
+
+        static UnsignedSmallInt EncodeMeta(const bool isNull, const UnsignedSmallInt size){
+            UnsignedSmallInt meta = 0;
+            PackedWord<UnsignedSmallInt>::SetBits<0, SIZE_MASK>(&meta, size);
+            PackedWord<UnsignedSmallInt>::SetBit<NULL_SHIFT>(&meta, isNull);
+            return meta;
         }
     };
 
@@ -111,8 +121,7 @@ namespace DataTypes::Indexing {
             const auto sizeWritten = Encoding::EncodeInteger<Ts>(buffer + dataOffset, values);
 
             entry->_offset = static_cast<UnsignedSmallInt>(dataOffset);
-            entry->_size = sizeWritten;
-            entry->_isNull = 0;
+            entry->_meta = KeyEntry::EncodeMeta(false, sizeWritten);
             dataOffset += sizeWritten;
             ++i;
         }(), ...);
