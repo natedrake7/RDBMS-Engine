@@ -2,9 +2,7 @@
 #include <any>
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
-#include "../../Systemic/include/Errors.h"
-#include "../../Systemic/include/QueryResult.h"
-#include <cstdint>
+#include "../../CoreEngine/include/Errors.h"
 #include <string>
 
 #include "DatabaseConstants.h"

@@ -1,12 +1,12 @@
 ﻿#pragma once
 #include "../../DatabaseConstants.h"
-#include "../../Systemic/include/Key.h"
+#include "../../Indexing/Key.h"
 #include "../../Systemic/include/RowIdentifier.h"
 #include "../../DataStorage/Row.h"
 #include "../../../../Systemic/include/DataTypes/PackedWord.h"
 
 namespace CoreEngine::StorageTypes{
-    class InsertPayload;
+    class SerializedRow;
 }
 
 namespace Pages{
@@ -81,10 +81,10 @@ namespace Pages{
 
     struct IndexInsertTuple{
         DataTypes::Indexing::Key key;
-        CoreEngine::StorageTypes::InsertPayload* payload;
+        CoreEngine::StorageTypes::SerializedRow* payload;
 
         IndexInsertTuple();
-        IndexInsertTuple(DataTypes::Indexing::Key& key, CoreEngine::StorageTypes::InsertPayload* payload);
+        IndexInsertTuple(DataTypes::Indexing::Key& key, CoreEngine::StorageTypes::SerializedRow* payload);
     };
 
 	struct LeafNodeTuple{

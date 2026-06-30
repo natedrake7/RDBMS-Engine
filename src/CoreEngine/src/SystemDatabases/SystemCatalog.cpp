@@ -160,7 +160,7 @@ namespace CoreEngine {
             true
         );
 
-        const auto databaseId = dbInsertResult.primaryKey.AsInt();
+        const auto databaseId = dbInsertResult.primaryKey.AsInt<Int>();
 
         const auto schemaInsertResult = this->InsertSchemaToMasterDb(
             baseContext,
@@ -168,7 +168,7 @@ namespace CoreEngine {
             Constants::DEFAULT_SCHEMA_NAME
         );
 
-        const auto schemaId = schemaInsertResult.primaryKey.AsInt(1);
+        const auto schemaId = schemaInsertResult.primaryKey.AsInt<Int>(1);
 
         Dictionary<std::string, column_index_t> columnNameToIndex;
 
@@ -188,7 +188,7 @@ namespace CoreEngine {
 
 
             int columnPos = 0;
-            const auto tableId = tableResult.primaryKey.AsInt(1);
+            const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
 
             Dictionary<std::string, Int> columnIdsDict;
 
@@ -222,7 +222,7 @@ namespace CoreEngine {
                 if (columnResult.code != Errors::RuntimeError::Ok)
                     std::cerr << columnResult.message << std::endl;
 
-                const auto columnId = columnResult.primaryKey.AsInt(1);
+                const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
 
                 if (column.hasIdentity){
                     const auto identityValue = (i == 0)
@@ -265,7 +265,7 @@ namespace CoreEngine {
                     true
                 );
 
-            auto indexId = indexResult.primaryKey.AsInt(1);
+            auto indexId = indexResult.primaryKey.AsInt<Int>(1);
 
             const auto constraintResult =
                 this->InsertConstraintToMasterDb(
@@ -288,7 +288,7 @@ namespace CoreEngine {
 
                 _ = this->InsertConstraintColumnToMasterDb(
                     baseContext,
-                    constraintResult.primaryKey.AsInt(1),
+                    constraintResult.primaryKey.AsInt<Int>(1),
                     columnIdsDict.Get(table.primaryKey[j]),
                     static_cast<SmallInt>(j)
                 );
@@ -766,7 +766,7 @@ namespace CoreEngine {
     );
 
     auto* adminRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt(),
+        result.primaryKey.AsInt<Int>(),
         DataTypes::String::FromView(Constants::ADMIN_NAME, tempAllocator),
         Constants::ADMIN_PERMISSIONS,
         true
@@ -781,7 +781,7 @@ namespace CoreEngine {
     );
 
     auto* dbOwnerRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt(),
+        result.primaryKey.AsInt<Int>(),
         DataTypes::String::FromView(Constants::DB_OWNER_NAME, tempAllocator),
         Constants::DB_OWNER_PERMISSIONS,
         true
@@ -796,7 +796,7 @@ namespace CoreEngine {
     );
 
     auto* dbWriterRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt(),
+        result.primaryKey.AsInt<Int>(),
         DataTypes::String::FromView(Constants::DB_WRITER_NAME, tempAllocator),
         Constants::DB_WRITER_PERMISSIONS,
         true
@@ -811,7 +811,7 @@ namespace CoreEngine {
     );
 
     auto* dbReaderRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt(),
+        result.primaryKey.AsInt<Int>(),
         DataTypes::String::FromView(Constants::DB_READER_NAME, tempAllocator),
         Constants::DB_READER_PERMISSIONS,
         true
@@ -826,7 +826,7 @@ namespace CoreEngine {
     );
 
     auto* guestRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt(),
+        result.primaryKey.AsInt<Int>(),
         DataTypes::String::FromView(Constants::GUEST_NAME, tempAllocator),
         Constants::GUEST_PERMISSIONS,
         true
@@ -853,7 +853,7 @@ namespace CoreEngine {
 
         const auto username = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), baseContext.GetAllocator());
         return Security::User(
-            result.primaryKey.AsInt(),
+            result.primaryKey.AsInt<Int>(),
             username,
             hashedPassword,
             defaultRoleId,

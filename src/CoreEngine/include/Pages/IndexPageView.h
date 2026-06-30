@@ -56,6 +56,8 @@ namespace Pages{
 
             //always returns the result of the comparison of the page key against the provided key
             [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+            [[nodiscard]] Comparators::Comparator PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+
 
             [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 

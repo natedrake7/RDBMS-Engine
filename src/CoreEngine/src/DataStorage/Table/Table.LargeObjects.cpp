@@ -1,10 +1,10 @@
 #include "../../../include/DataStorage/Table.h"
 #include "../../../include/Database.h"
 #include "../../../include/BufferPool/StorageManager.h"
-#include "DataStorage/InsertPayload.h"
+#include "DataStorage/SerializedRow.h"
 
 namespace CoreEngine::StorageTypes {
-    void Table::InsertLargeObjectToPage(InsertPayload& payload) {
+    void Table::InsertLargeObjectToPage(SerializedRow& payload) {
         // Constants::LARGE_OBJECT_THRESHOLD_SIZE
 
         // for (const auto& column : this->_columns) {

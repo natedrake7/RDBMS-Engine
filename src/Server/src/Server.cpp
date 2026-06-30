@@ -157,7 +157,7 @@ namespace Network {
       return false;
     }
 
-    return this->userManager.AddUser(result.primaryKey.AsInt(), userName, hashedPassword, role);
+    return this->userManager.AddUser(result.primaryKey.AsInt<Int>(), userName, hashedPassword, role);
   }
 
   const Security::User* Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{

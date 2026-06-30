@@ -76,7 +76,6 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/DateTime.cpp
         src/Systemic/src/DataTypes/Decimal.cpp
         src/Systemic/src/DataTypes/Guid.cpp
-        src/Systemic/src/Key.cpp
         src/Systemic/src/QueryResult.cpp
         src/Systemic/src/Coercions/Coercions.cpp
         src/Systemic/src/Network/Protocols/ConnectionProtocol.cpp
@@ -149,7 +148,8 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/Column.cpp
         src/CoreEngine/src/BufferPool/FileManager.cpp
         src/CoreEngine/src/BufferPool/StorageManager.cpp
-        src/CoreEngine/src/BTree.cpp
+        src/CoreEngine/src/Indexing/Key.cpp
+        src/CoreEngine/src/Indexing/BTree.cpp
         src/CoreEngine/src/Algorithms/Sort/SortingFunctions.cpp
         src/CoreEngine/src/Algorithms/AggregateFunctions.cpp
         src/CoreEngine/src/Algorithms/Sort/QuickSort.cpp
@@ -170,7 +170,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/SystemDatabases/TemporaryDatabase.cpp
         src/CoreEngine/src/Logger/UndoLogger.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Row.Creation.cpp
-        src/CoreEngine/src/DataStorage/InsertPayload.cpp
+        src/CoreEngine/src/DataStorage/SerializedRow.cpp
         src/CoreEngine/src/BufferPool/BufferPoolMemoryManager.cpp
         src/CoreEngine/src/Pages/PageView.cpp
         src/CoreEngine/src/Pages/IndexPageView.cpp

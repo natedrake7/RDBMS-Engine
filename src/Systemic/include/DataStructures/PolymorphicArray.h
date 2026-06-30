@@ -13,36 +13,26 @@ namespace DataStructures{
         Int _capacity;
 
     public:
-        PolymorphicArray(){
-            this->_allocator = nullptr;
+        PolymorphicArray()
+            :    _allocator(nullptr), _data(nullptr),
+                _size(0), _capacity(0){}
 
-            this->_data = nullptr;
-            this->_size = 0;
-            this->_capacity = 0;
-        }
+        explicit PolymorphicArray(const Memory::IAllocator* allocator)
+            :   _allocator(allocator), _data(nullptr),
+                _size(0), _capacity(0){}
 
-        explicit PolymorphicArray(const Memory::IAllocator* allocator){
-            this->_allocator = allocator;
-            this->_data = nullptr;
-            this->_size = 0;
-            this->_capacity = 0;
-        }
-
-        PolymorphicArray(const Memory::IAllocator* allocator, Int capacity){
-            this->_allocator = allocator;
-            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)));
-            this->_size = 0;
-            this->_capacity = capacity;
-        }
+        PolymorphicArray(const Memory::IAllocator* allocator, const Int capacity)
+            :   _allocator(allocator), _data(static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)))),
+                _size(0), _capacity(capacity){}
 
         PolymorphicArray(const Memory::IAllocator* allocator, Int capacity, T value){
             this->_allocator = allocator;
             this->_data = static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)));
-            this->_size = 0;
+            this->_size = capacity;
             this->_capacity = capacity;
 
-            //????
-            std::memcpy(this->_data, &value, capacity * sizeof(T));
+            for (Int i = 0; i < capacity; i++)
+                this->_data[i] = value;
         }
 
         PolymorphicArray(const PolymorphicArray& other){
@@ -68,13 +58,13 @@ namespace DataStructures{
             return *this;
         }
 
-        PolymorphicArray(PolymorphicArray&& other) noexcept{
-            this->_allocator = other._allocator;
-            this->_data = other._data;
-            this->_size = other._size;
-            this->_capacity = other._capacity;
-
+        PolymorphicArray(PolymorphicArray&& other) noexcept
+            :   _allocator(other._allocator), _data(other._data),
+                _size(other._size), _capacity(other._capacity){
             other._data = nullptr;
+            other._allocator = nullptr;
+            other._size = 0;
+            other._capacity = 0;
         }
 
         PolymorphicArray& operator=(PolymorphicArray&& other) noexcept{
@@ -90,8 +80,6 @@ namespace DataStructures{
 
             return *this;
         }
-
-        ~PolymorphicArray() = default;
 
         void Clear() { this->_size = 0; }
 

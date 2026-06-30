@@ -376,7 +376,8 @@ namespace Headers {
   };
 
     struct Index{
-        DataStructures::StaticArray<UnsignedTinyInt, 10> columns;
+        using IndexedColumns = DataStructures::StaticArray<UnsignedTinyInt, 10>;
+        IndexedColumns columns;
 
         explicit Index(const UnsignedTinyInt* columns, const Int size)
             : columns(columns, size){}

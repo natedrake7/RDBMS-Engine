@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include <string>
-#include "InsertPayload.h"
+#include "SerializedRow.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
-#include "../BTree.h"
+#include "../Indexing/BTree.h"
 #include "../Logger/Logger.h"
 #include "../Pages/OverflowPageView.h"
 #include "../BufferPool/FileManager.h"
@@ -15,7 +15,7 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes{
-    class InsertPayload;
+    class SerializedRow;
 }
 
 namespace QueryPipeline::Statements {
@@ -67,8 +67,6 @@ namespace CoreEngine::StorageTypes{
         Database *database;
         Indexing::BTree* clusteredIndexedTree;
 
-        row_size_t payloadSize;
-
         protected:
             static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
 
@@ -114,24 +112,24 @@ namespace CoreEngine::StorageTypes{
 
         public:
             template<typename ValueProvider>
-            InsertPayload SerializeRow(
+            SerializedRow SerializeRowGeneric(
                 Errors::RuntimeStatus& status,
-                const ::Memory::IAllocator* allocator,
-                const RowHeader& rowHeader,
+                const RowSerializationContext& rowContext,
+                object_t* buffer,
                 ValueProvider&& provider
             ) const;
 
-            InsertPayload CreateInsertPayload(
+            SerializedRow SerializeRow(
                 Errors::RuntimeStatus& status,
-                const ::Memory::IAllocator* allocator,
-                const RowHeader& rowHeader,
+                const RowSerializationContext& rowContext,
+                object_t* buffer,
                 const DataStructures::PolymorphicArray<Value>& values
             ) const;
 
-            InsertPayload CreateInsertPayload(
+            SerializedRow SerializeRow(
                 Errors::RuntimeStatus& status,
-                const ::Memory::IAllocator* allocator,
-                const RowHeader& rowHeader,
+                const RowSerializationContext& rowContext,
+                object_t* buffer,
                 const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
                 const InsertPlan& insertPlan,
                 const Expressions::EvaluationContext& evaluationContext
@@ -174,17 +172,17 @@ namespace CoreEngine::StorageTypes{
             );
             Errors::RuntimeStatus InsertRowPayload(
                 const ExecutionContext& executionContext,
-                InsertPayload& payload,
+                SerializedRow& payload,
                 Int pagesToAllocate
             );
             Errors::RuntimeStatus HeapInsert(
                 const ExecutionContext& executionContext,
-                const InsertPayload& payload,
+                const SerializedRow& payload,
                 Int pagesToAllocate
             )const;
             Errors::RuntimeStatus ClusteredIndexInsert(
                 const ExecutionContext& executionContext,
-                InsertPayload& payload,
+                SerializedRow& payload,
                 Int pagesToAllocate
             );
             // Errors::RuntimeStatus NonClusteredIndexInsert(
@@ -438,7 +436,7 @@ namespace CoreEngine::StorageTypes{
             DataTypes::Indexing::Key CreateKey(
                 const ExecutionContext& executionContext,
                 const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
-                const InsertPayload& payload
+                const SerializedRow& payload
             ) const;
 
             void DeleteLargeObjectFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns);
@@ -460,14 +458,14 @@ namespace CoreEngine::StorageTypes{
 
             [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
 
-            void CalculateInsertPayloadSize();
+            [[nodiscard]] row_size_t CalculateInsertPayloadSize()const;
 
             [[nodiscard]] Database* GetDatabase() const;
 
             int HandleRowOverflow(RID* rowPtr) const;
             int HandleRowOverflow(RID* rowPtr, const Column* column)const;
 
-            void InsertLargeObjectToPage(InsertPayload& payload);
+            void InsertLargeObjectToPage(SerializedRow& payload);
 
             void PopulateColumn(column_index_t index, const Value& defaultValue);
             void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);

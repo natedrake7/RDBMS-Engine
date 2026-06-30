@@ -116,7 +116,7 @@ public:
 
     [[nodiscard]] static Logging::CheckPoint LogRowInsert(
         const ExecutionContext& context,
-        const StorageTypes::InsertPayload& payload,
+        const StorageTypes::SerializedRow& payload,
         transaction_id_t transactionId,
         table_id_t tableOrdinal
     );

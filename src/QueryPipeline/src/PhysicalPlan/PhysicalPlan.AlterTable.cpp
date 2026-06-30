@@ -45,7 +45,7 @@ namespace QueryPipeline::PhysicalPlan{
       if (!result.status.IsOk())
         return result;
 
-      const auto columnId = result.status.primaryKey.AsInt(1);
+      const auto columnId = result.status.primaryKey.AsInt<Int>(1);
 
       if (!this->column->defaultValue.IsNull()) {
         const auto value = this->column->defaultValue.AsString();

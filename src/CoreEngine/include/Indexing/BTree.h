@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include "../../Systemic/include/DataTypes/Value.h"
-#include "../../Systemic/include/Key.h"
-#include "../../Systemic/include/DataStructures/SortedDictionary.h"
+#include "../../../Systemic/include/DataTypes/Value.h"
+#include "Key.h"
+#include "../../../Systemic/include/DataStructures/SortedDictionary.h"
 
-#include "DatabaseConstants.h"
-#include "../../Systemic/include/Errors.h"
-#include "DataStorage/Row.h"
-#include "Pages/IndexPageView.h"
+#include "../DatabaseConstants.h"
+#include "../Errors.h"
+#include "../DataStorage/Row.h"
+#include "../Pages/IndexPageView.h"
 
 namespace Headers{
     struct ColumnStatistics;
@@ -66,7 +66,6 @@ namespace Indexing{
             const DataTypes::Indexing::Key& key
         );
         static inline Int LeafLowerBound(
-            const ::Memory::IAllocator* allocator,
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );

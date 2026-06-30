@@ -85,7 +85,7 @@ namespace Pages{
                    : Constants::PAGE_SIZE_WITHOUT_HEADER;
     }
 
-    void PageView::InsertFirstRow(const CoreEngine::StorageTypes::InsertPayload& payload) const{
+    void PageView::InsertFirstRow(const CoreEngine::StorageTypes::SerializedRow& payload) const{
         const auto rowSize = payload.Size();
         const auto offSet = this->NewInsertOffset();
 
@@ -275,7 +275,7 @@ namespace Pages{
         donorPage->Defragment(allocator);
     }
 
-    Int PageView::InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload) const{
+    Int PageView::InsertRow(const CoreEngine::StorageTypes::SerializedRow& payload) const{
         const auto rowSize = payload.Size();
 
         auto nextOffset = this->NewInsertOffset();
@@ -298,7 +298,7 @@ namespace Pages{
     }
 
     void PageView::InsertRow(
-        const CoreEngine::StorageTypes::InsertPayload& payload,
+        const CoreEngine::StorageTypes::SerializedRow& payload,
         const Int indexPosition
     ) const{
         if (indexPosition >= this->_frame->Header()->size){
@@ -321,7 +321,7 @@ namespace Pages{
 
     bool PageView::UpdateRow(
         const ::Memory::IAllocator* allocator,
-        const CoreEngine::StorageTypes::InsertPayload& payload,
+        const CoreEngine::StorageTypes::SerializedRow& payload,
         const page_offset_t indexPosition
     ) const{
         if (this->IndexOutOfBounds(indexPosition))

@@ -12,7 +12,7 @@
 #include "Optimizer.h"
 #include "Parser.h"
 #include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "DataStorage/InsertPayload.h"
+#include "DataStorage/SerializedRow.h"
 
 namespace QueryPipeline::Statements {
     Statement::Statement(){
@@ -486,9 +486,9 @@ namespace QueryPipeline::Statements {
         }
 
         if (columnSize != 0)
-        column->type.size = columnSize;
+            column->type.size = columnSize;
 
-        const auto& dataType = COLUMN_TYPENAMES_TO_ENUMS.Get(column->type.name.ToView());
+        const auto dataType = COLUMN_TYPENAMES_TO_ENUMS.Get(column->type.name.ToView());
 
         if (dataType == DataType::Decimal) {
             if (!column->type.decimal.Validate()) {
@@ -1062,22 +1062,13 @@ namespace QueryPipeline::Statements {
     bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
     Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context, StatementValidationScope& validationScope){
-        Dictionary<DataTypes::String, table_id_t> tableAliasesDictionary{
-            std::pair(this->table->GetAlias(context), this->table->tableId)
-        };
-
-        StatementValidationScope statementValidationScope(
-            tableAliasesDictionary,
-            validationScope.tablesColumnsDictionary,
-            this,
-            nullptr
-        );
+        validationScope.tableAliasesDictionary.Add(this->table->GetAlias(context), this->table->tableId);
 
         for (auto& [insertColumns] : this->values) {
             for (Int i = 0;i < insertColumns.Size(); i++) {
                 auto& value = insertColumns[i];
 
-                auto expressionStatus = CompileExpression(context, statementValidationScope, value);
+                auto expressionStatus = CompileExpression(context, validationScope, value);
                 if (!expressionStatus.IsOk()) return expressionStatus;
 
                 auto returnTypeStatus = this->ValidateReturnType(context, validationScope, value, this->columns[i].name);
@@ -1110,11 +1101,10 @@ namespace QueryPipeline::Statements {
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertSlot> insertSlots(
             context.GetAllocator(),
-            columnsDict.size()
+            static_cast<Int>(columnsDict.size())
         );
+        insertSlots.AlignSize();
         DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(context.GetAllocator());
-
-        validationScope.tablesColumnsDictionary.Add(this->table->tableId, std::move(columnsDict));
 
         const auto identityColumns =
             catalog.SelectIdentityColumnsByTableIdToDictionary(
@@ -1180,6 +1170,8 @@ namespace QueryPipeline::Statements {
 
         this->insertPlan._slotMap = std::move(insertSlots);
         this->insertPlan._sharedDefaults = std::move(defaultExpressions);
+
+        validationScope.tablesColumnsDictionary.Add(this->table->tableId, std::move(columnsDict));
 
         return this->HasSelectStatement()
             ? this->ValidateSelectStatement(context, validationScope)

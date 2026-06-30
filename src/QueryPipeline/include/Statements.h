@@ -4,9 +4,9 @@
 #include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../Systemic/include/DataTypes/Guid.h"
 #include "../../Systemic/include/Security/Security.h"
-#include "../../Systemic/include/Errors.h"
+#include "../../CoreEngine/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
-#include "../../CoreEngine/include/DataStorage/InsertPayload.h"
+#include "../../CoreEngine/include/DataStorage/SerializedRow.h"
 
 namespace CoreEngine{
     class SystemCatalog;

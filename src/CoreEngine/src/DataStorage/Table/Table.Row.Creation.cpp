@@ -1,24 +1,24 @@
 ﻿#include <cmath>
 #include "../../../include/DataStorage/Table.h"
 #include "DataStorage/Column.h"
-#include "DataStorage/InsertPayload.h"
+#include "DataStorage/SerializedRow.h"
 #include "Evaluators/Expression.h"
 
 namespace CoreEngine::StorageTypes{
     template <typename ValueProvider>
-    InsertPayload Table::SerializeRow(
+    SerializedRow Table::SerializeRowGeneric(
         Errors::RuntimeStatus& status,
-        const ::Memory::IAllocator* allocator,
-        const RowHeader& rowHeader,
+        const RowSerializationContext& rowContext,
+        object_t* buffer,
         ValueProvider&& provider
     ) const{
         Int dataEntriesOffset = sizeof(RowHeader);
 
         // Only allocate offset space for non-NULL columns
         const auto dataOffSet = dataEntriesOffset + this->_columns.Size() * sizeof(RowEntry);
-        auto payload = InsertPayload(allocator, this->payloadSize + dataOffSet, dataOffSet);
+        auto payload = SerializedRow(buffer, rowContext.capacity + dataOffSet, dataOffSet);
 
-        std::memcpy(payload.Data(), &rowHeader, sizeof(RowHeader));
+        std::memcpy(payload.Data(), &rowContext.header, sizeof(RowHeader));
 
         auto autoComputedColumns = 0;
         for (const auto& column : this->_columns){
@@ -27,7 +27,7 @@ namespace CoreEngine::StorageTypes{
             //ignore auto-computed columns even if specified
             if (column->HasIdentity()){
                 const auto columnSize = column->Size();
-                auto identityValue = column->GenerateIdentityValue(allocator);
+                auto identityValue = column->GenerateIdentityValue(rowContext.allocator);
                 const auto dataOffset = payload.SetData(&identityValue, columnSize);
 
                 RowEntry rowEntry(dataOffset, RowEntry::INLINE, columnSize);
@@ -50,7 +50,7 @@ namespace CoreEngine::StorageTypes{
                 block_size_t size = value.Size();
                 page_offset_t offSet = 0;
                 const auto pageId = this->StoreLargeObject(
-                    allocator,
+                    rowContext.allocator,
                     value,
                     offSet,
                     size,
@@ -81,28 +81,28 @@ namespace CoreEngine::StorageTypes{
         return payload;
     }
 
-    InsertPayload Table::CreateInsertPayload(
+    SerializedRow Table::SerializeRow(
         Errors::RuntimeStatus& status,
-        const ::Memory::IAllocator* allocator,
-        const RowHeader& rowHeader,
+        const RowSerializationContext& rowContext,
+        object_t* buffer,
         const DataStructures::PolymorphicArray<Value>& values
     ) const{
-        return this->SerializeRow(status, allocator, rowHeader,
+        return this->SerializeRowGeneric(status, rowContext, buffer,
         [&](const Int ordinalPosition, const Int autoComputedColumns) -> const Value&{
             return values[ordinalPosition - autoComputedColumns];
         });
     }
 
-    InsertPayload Table::CreateInsertPayload(
+    SerializedRow Table::SerializeRow(
         Errors::RuntimeStatus& status,
-        const ::Memory::IAllocator* allocator,
-        const RowHeader& rowHeader,
+        const RowSerializationContext& rowContext,
+        object_t* buffer,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
         const InsertPlan& insertPlan,
         const Expressions::EvaluationContext& evaluationContext
     ) const{
         Value value;
-        return this->SerializeRow(status, allocator, rowHeader,
+        return this->SerializeRowGeneric(status, rowContext, buffer,
             [&](const Int ordinalPosition, const Int _) -> const Value&{
                 const auto& slot = insertPlan._slotMap[ordinalPosition];
                 switch (slot._kind)

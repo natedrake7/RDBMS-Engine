@@ -1,10 +1,13 @@
 ﻿#pragma once
-#include "Statements.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "../../CoreEngine/include/Memory/Allocator.h"
 
 namespace QueryPipeline{
+    namespace Statements{
+        struct Statement;
+    }
+
     class CompileContext{
         CoreEngine::Memory::Allocator allocator;
         DataStructures::PolymorphicArray<Statements::Statement*> statements;

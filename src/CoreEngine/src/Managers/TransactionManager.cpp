@@ -69,7 +69,7 @@ namespace CoreEngine {
     }
 
     static auto& server = Network::Server::Get();
-    const auto* db = server.UseDatabase(context, transactionInfo.modificationInfo.databaseId);
+    // const auto* db = server.UseDatabase(context, transactionInfo.modificationInfo.databaseId);
     // const auto* table = db->OpenTableById(transactionInfo.modificationInfo.tableId);
 
     //TODO track index keys along with rids to rollback index entries as well

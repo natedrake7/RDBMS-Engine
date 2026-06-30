@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "Key.h"
+#include "Indexing/Key.h"
 
 namespace Errors {
     enum class RuntimeError : uint8_t {
@@ -21,42 +21,38 @@ namespace Errors {
     };
 
     struct RuntimeStatus {
-        RuntimeError code;
         DataTypes::String message;
-
         DataTypes::Indexing::Key primaryKey;
+        RuntimeError code;
 
         explicit RuntimeStatus(const ::Memory::IAllocator* allocator)
-            :   code(RuntimeError::Ok), message(DataTypes::String::Empty(allocator)),
-                primaryKey(DataTypes::Indexing::Key()){}
+            :   message(DataTypes::String::Empty(allocator)), primaryKey(DataTypes::Indexing::Key()),
+                code(RuntimeError::Ok){}
 
         RuntimeStatus(const RuntimeError code, const DataTypes::String& message)
-            : code(code), message(message), primaryKey(DataTypes::Indexing::Key()){}
+            : message(message), primaryKey(DataTypes::Indexing::Key()), code(code){}
 
         RuntimeStatus()
-            :   code(RuntimeError::Ok),
-                message(DataTypes::String::Null()),
-                primaryKey(DataTypes::Indexing::Key()){}
+            :   message(DataTypes::String::Null()),
+                primaryKey(DataTypes::Indexing::Key()),
+                code(RuntimeError::Ok){}
 
         RuntimeStatus(
             const RuntimeError code,
             const DataTypes::StringView& message,
             const ::Memory::IAllocator* allocator
-        ):  code(code),
-            message(DataTypes::String(message, allocator)),
-            primaryKey(DataTypes::Indexing::Key()){}
+        ):  message(DataTypes::String(message, allocator)),
+            primaryKey(DataTypes::Indexing::Key()),
+            code(code){}
 
         RuntimeStatus(const RuntimeError code, DataTypes::String& message)
-            : code(code), message(std::move(message)), primaryKey(DataTypes::Indexing::Key()){}
+            : message(std::move(message)), primaryKey(DataTypes::Indexing::Key()), code(code){}
 
         RuntimeStatus(const RuntimeError code, DataTypes::String&& message)
-            : code(code), message(std::move(message)), primaryKey(DataTypes::Indexing::Key()){}
+            : message(std::move(message)), primaryKey(DataTypes::Indexing::Key()), code(code){}
 
-        RuntimeStatus(RuntimeStatus&& other) noexcept {
-            this->code = other.code;
-            this->message = std::move(other.message);
-            this->primaryKey = std::move(other.primaryKey);
-        }
+        RuntimeStatus(RuntimeStatus&& other) noexcept
+            : message(std::move(other.message)), primaryKey(std::move(other.primaryKey)), code(other.code){}
 
         RuntimeStatus& operator=(RuntimeStatus&& other) noexcept{
             if (this == &other)
@@ -85,29 +81,20 @@ namespace Errors {
             this->code = ValidationError::Ok;
         }
 
-        explicit ValidationStatus(const ::Memory::IAllocator* allocator) {
-            this->code = ValidationError::Ok;
-            this->message = DataTypes::String::Empty(allocator);
-        }
+        explicit ValidationStatus(const ::Memory::IAllocator* allocator)
+            : code(ValidationError::Ok), message(DataTypes::String::Empty(allocator)){}
 
-        ValidationStatus(const ValidationError code, const DataTypes::String& message){
-            this->code = code;
-            this->message = message;
-        }
+        ValidationStatus(const ValidationError code, const DataTypes::String& message)
+            : code(code), message(message){}
 
-        ValidationStatus(const ValidationError code, DataTypes::String&& message) noexcept {
-            this->code = code;
-            this->message = std::move(message);
-        }
+        ValidationStatus(const ValidationError code, DataTypes::String&& message) noexcept
+            : code(code), message(std::move(message)){}
 
         ValidationStatus(
             const ValidationError code,
             const DataTypes::StringView& message,
             const ::Memory::IAllocator* allocator
-        ){
-            this->code = code;
-            this->message = DataTypes::String(message, allocator);
-        }
+        )   : code(code), message(DataTypes::String(message, allocator)){}
 
         static ValidationStatus Error(
             const DataTypes::StringView& message,
@@ -138,29 +125,18 @@ namespace Errors {
         bool hasError;
 
         explicit Error()
-        {
-            this->hasError = false;
-            this->message = DataTypes::String::Null();
-        }
+            : message(DataTypes::String::Null()), hasError(false) {}
 
-        explicit Error(const ::Memory::IAllocator* allocator) {
-            this->hasError = false;
-            this->message = DataTypes::String::Empty(allocator);
-        }
+        explicit Error(const ::Memory::IAllocator* allocator)
+            : message(DataTypes::String::Empty(allocator)), hasError(false) {}
 
-        Error(const bool hasError, const DataTypes::String& message){
-            this->hasError = hasError;
-            this->message = message;
-        }
+        Error(const bool hasError, const DataTypes::String& message)
+            : message(message), hasError(hasError) {}
 
-        Error(const bool hasError, DataTypes::String&& message) noexcept {
-            this->hasError = hasError;
-            this->message = std::move(message);
-        }
+        Error(const bool hasError, DataTypes::String&& message) noexcept
+            : message(std::move(message)), hasError(hasError) {}
 
-        Error(const bool hasError, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator){
-            this->hasError = hasError;
-            this->message = DataTypes::String(message, allocator);
-        }
+        Error(const bool hasError, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator)
+            : message(DataTypes::String(message, allocator)), hasError(hasError) {}
     };
 }

@@ -16,7 +16,7 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
         const ExecutionContext& executionContext,
-        InsertPayload& payload,
+        SerializedRow& payload,
         const Int pagesToAllocate
     ){
         auto* tree = this->GetClusteredIndexedTree();
@@ -376,7 +376,7 @@ namespace CoreEngine::StorageTypes {
     DataTypes::Indexing::Key Table::CreateKey(
         const ExecutionContext& executionContext,
         const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
-        const InsertPayload& payload
+        const SerializedRow& payload
     ) const{
         DataStructures::PolymorphicArray<Value> values(executionContext.GetAllocator());
         for (const auto columnId : indexedColumns){
@@ -413,15 +413,16 @@ namespace CoreEngine::StorageTypes {
         return keySize;
     }
 
-    void Table::CalculateInsertPayloadSize(){
-        this->payloadSize = sizeof(RowHeader);
+    row_size_t Table::CalculateInsertPayloadSize()const{
+        row_size_t size = sizeof(RowHeader);
         for (const auto* column : this->_columns){
             const auto columnSize =
                 column->isColumnLOB()
-                ? sizeof(page_id_t)
-                : column->Size();
+                    ? sizeof(page_id_t)
+                    : column->Size();
 
-            this->payloadSize += columnSize + sizeof(RowEntry);
+            size += columnSize + sizeof(RowEntry);
         }
+        return size;
     }
 }

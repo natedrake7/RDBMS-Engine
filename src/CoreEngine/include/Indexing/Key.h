@@ -1,8 +1,13 @@
 #pragma once
-#include "Encoding.h"
-#include "DataTypes/Value.h"
-#include "DataStructures/PolymorphicArray.h"
-#include "DataTypes/PackedWord.h"
+#include "../../../Systemic/include/Encoding.h"
+#include "../../../Systemic/include/DataTypes/Value.h"
+#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "../../../Systemic/include/DataTypes/PackedWord.h"
+
+namespace CoreEngine::StorageTypes
+{
+    class SerializedRow;
+}
 
 namespace DataTypes::Indexing {
     struct KeyEntry{
@@ -82,8 +87,8 @@ namespace DataTypes::Indexing {
         [[nodiscard]] static Comparators::Comparator Compare(const Key& lhs, const Key& rhs);
         [[nodiscard]] static Comparators::Comparator PartialCompare(const Key& lhs, const Key& rhs);
 
-        [[nodiscard]] Int AsInt(Int pos = 0)const;
-        [[nodiscard]] BigInt AsBigInt(Int pos = 0)const;
+        template<IsInteger T>
+        [[nodiscard]] T AsInt(Int pos = 0)const;
 
         static void SetCount(object_t* buffer, key_size_t count);
         static void SetSize(object_t* buffer, key_size_t size);
@@ -129,5 +134,11 @@ namespace DataTypes::Indexing {
         SetCount(buffer, count);
         SetSize(buffer, total);
         this->_data = buffer;
+    }
+
+    template <IsInteger T>
+    T Key::AsInt(const Int pos) const{
+        const auto* entry = this->GetEntry(pos);
+        return Encoding::DecodeInteger<T>(this->_data + entry->_offset);
     }
 }

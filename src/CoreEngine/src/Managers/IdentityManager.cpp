@@ -36,7 +36,8 @@ namespace CoreEngine::StorageTypes {
 
     void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
         this->header = newHeader;
-        this->reservedUpTo = this->header.lastValue;
+        this->reservedUpTo.store(this->header.lastValue, std::memory_order_relaxed);
+        // this->reservedUpTo.store(this->header.lastValue + this->header.cacheBlock, std::memory_order_relaxed);
         this->counter.store(this->header.lastValue, std::memory_order_relaxed);
     }
 

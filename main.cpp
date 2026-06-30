@@ -85,13 +85,6 @@
 //Implement full Forward Ptr Functionality
 
 //TODO make join usable again
-//TODO fix decimal multiplication and create division for it to be complete
-//CREATE DATABASE MoviesDB
-//USE MoviesDB
-//CREATE TABLE dbo.Actors(ID INT PRIMARY KEY IDENTITY(1,1), Name STRING(200), Age INT)
-//INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25
-//INSERT INTO dbo.Actors(Name, Age) SELECT 'Kostas', 25 FROM dbo.Actors
-
 //TODO fix optimizer with query predicate pushdown functionality
 //fix stats manager
 
@@ -99,7 +92,6 @@
 
 //TODO use json accessors for updates as well.
 //TODO add CAST, TRYCAST
-//TODO make key entity better(use simillar format to rows)
 //TODO update LogicalPlan->ToPhysical to bind expression kernels before to physical
 //TODO implement columnar evaluation
 
@@ -116,6 +108,10 @@
 //SELECT sd.database_id, st.table_id FROM dbo.sys_tables AS st left join dbo.sys_databases AS sd ON sd.database_id = 1
 //heavier join
 //SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
+
+//TODO check insert duplicate key error on 3rd insert
+//TODO make identity maybe templated
+
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();

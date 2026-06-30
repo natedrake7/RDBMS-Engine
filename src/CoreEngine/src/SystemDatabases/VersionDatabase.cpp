@@ -267,7 +267,7 @@ namespace CoreEngine {
 
         MultiThreading::WriterGuard lock(&page.Latch());
 
-        const auto payload = StorageTypes::InsertPayload::FromRowPtr(rowRef);
+        const auto payload = StorageTypes::SerializedRow::FromRowPtr(rowRef);
         const auto indexPosition = page.InsertRow(payload);
 
         this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);

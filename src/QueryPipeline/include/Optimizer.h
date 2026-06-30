@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "../../Systemic/include/Constants.h"
-#include "../../Systemic/include/Key.h"
+#include "../../CoreEngine/include/Indexing/Key.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/Headers.h"
 

@@ -1,13 +1,13 @@
-﻿#include "../include/BTree.h"
+﻿#include "../../include/Indexing/BTree.h"
 #include <algorithm>
 #include <cassert>
-#include "../include/DataStorage/Row.h"
-#include "../include/DataStorage/Column.h"
-#include "../include/DataStorage/Table.h"
-#include "../include/BufferPool/StorageManager.h"
-#include "../include/Database.h"
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
+#include "../../include/DataStorage/Row.h"
+#include "../../include/DataStorage/Column.h"
+#include "../../include/DataStorage/Table.h"
+#include "../../include/BufferPool/StorageManager.h"
+#include "../../include/Database.h"
+#include "../../../Systemic/include/Guards/ReaderGuard.h"
+#include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "Schedulers/StatisticsScheduler.h"
 #include <cmath>
 
@@ -40,7 +40,7 @@ namespace Indexing{
         while (left < right){
             const Int mid = left + (right - left) / 2;
 
-            const auto comparison = page.ComparePageKeyAgainst(key, mid);
+            const auto comparison = page.PartialComparePageKeyAgainst(key, mid);
             if (comparison == Comparators::Comparator::Greater){
                 right = mid;
                 continue;
@@ -61,7 +61,7 @@ namespace Indexing{
 
         while (left < right){
             const Int mid = left + (right - left) / 2;
-            if (page.ComparePageKeyAgainst(key, mid) == Comparators::Comparator::Less){
+            if (page.PartialComparePageKeyAgainst(key, mid) == Comparators::Comparator::Less){
                 left = mid + 1;
                 continue;
             }
@@ -73,7 +73,6 @@ namespace Indexing{
     }
 
     Int BTree::LeafLowerBound(
-        const ::Memory::IAllocator* allocator,
         const Pages::IndexPageView& page,
         const DataTypes::Indexing::Key& key
     ){
@@ -336,7 +335,7 @@ namespace Indexing{
         const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
     ){
-        indexPosition = BTree::LeafLowerBound(context.GetAllocator(), node, tuple.key);
+        indexPosition = BTree::LeafLowerBound(node, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
 

@@ -1,7 +1,6 @@
-#include "../include/Key.h"
-#include "../include/DataTypes/Value.h"
+#include "../../include/Indexing/Key.h"
+#include "../../../Systemic/include/DataTypes/Value.h"
 #include <stdexcept>
-#include <ostream>
 
 #include "Encoding.h"
 
@@ -102,28 +101,6 @@ namespace DataTypes::Indexing{
                 return result;
         }
         return Comparators::Comparator::Equal;
-    }
-
-    Int Key::AsInt(const Int pos)const{
-        if (this->Empty())
-            throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
-
-        if (this->Count() < pos)
-            throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
-
-        const auto* entry = this->GetEntry(pos);
-        return Encoding::DecodeInteger<Int>(this->_data + entry->_offset);
-    }
-
-    BigInt Key::AsBigInt(const Int pos) const{
-        if (this->Empty())
-            throw std::runtime_error("Key::GetIdentityKey: subKeys is empty");
-
-        if (this->Count() < pos)
-            throw std::runtime_error("Key::GetIdentityKey: invalid key position specified");
-
-        const auto* entry = this->GetEntry(pos);
-        return Encoding::DecodeInteger<BigInt>(this->_data + entry->_offset);
     }
 
     void Key::SetCount(object_t* buffer, const key_size_t count){

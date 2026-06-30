@@ -2,7 +2,7 @@
 
 #include <cassert>
 #include <cstring>
-#include "DataStorage/InsertPayload.h"
+#include "DataStorage/SerializedRow.h"
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
@@ -256,7 +256,16 @@ namespace Pages{
         return this->GetKeyByOffset(slot);
     }
 
-    Comparators::Comparator IndexPageView::ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
+    Comparators::Comparator IndexPageView::ComparePageKeyAgainst(
+        const DataTypes::Indexing::Key& key,
+        const Int indexPosition
+    ) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+        const auto pageKey = DataTypes::Indexing::Key(this->_frame->_data + slot.AbsoluteKeyOffset());
+        return DataTypes::Indexing::Key::Compare(pageKey, key);
+    }
+
+    Comparators::Comparator IndexPageView::PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto pageKey = DataTypes::Indexing::Key(this->_frame->_data + slot.AbsoluteKeyOffset());
         return DataTypes::Indexing::Key::PartialCompare(pageKey, key);

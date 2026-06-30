@@ -8,7 +8,7 @@ namespace Pages{
 
     IndexInsertTuple::IndexInsertTuple(
         DataTypes::Indexing::Key& key,
-        CoreEngine::StorageTypes::InsertPayload* payload
+        CoreEngine::StorageTypes::SerializedRow* payload
     ){
         this->key = std::move(key);
         this->payload = payload;

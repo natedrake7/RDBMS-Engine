@@ -244,7 +244,7 @@ namespace CoreEngine{
 
     Logging::CheckPoint Database::LogRowInsert(
         const ExecutionContext& context,
-        const StorageTypes::InsertPayload& payload,
+        const StorageTypes::SerializedRow& payload,
         const transaction_id_t transactionId,
         const table_id_t tableOrdinal
     ) {

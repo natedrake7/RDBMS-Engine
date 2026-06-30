@@ -175,7 +175,7 @@ namespace QueryPipeline::PhysicalPlan {
           this->session->user->name.ToView()
       );
 
-      const auto databaseId = result.primaryKey.AsInt();
+      const auto databaseId = result.primaryKey.AsInt<Int>();
 
       const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
@@ -227,178 +227,179 @@ namespace QueryPipeline::PhysicalPlan {
       return ExecutionResult(insertResult.code, insertResult.message);
   }
 
-PhysicalTableCreate::PhysicalTableCreate(
-    const DataTypes::Guid& sessionId,
-    Statements::DataSource*  table,
-    DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
-    const Headers::Index& primaryKey,
-    DataTypes::String& constraintName
-): PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
-   columns(std::move(columns)), primaryKey(primaryKey) {}
+    PhysicalTableCreate::PhysicalTableCreate(
+        const DataTypes::Guid& sessionId,
+        Statements::DataSource*  table,
+        DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
+        const Headers::Index& primaryKey,
+        DataTypes::String& constraintName
+    ):  PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
+        columns(std::move(columns)), primaryKey(primaryKey) {}
 
-  ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
-      if (this->session == nullptr || this->session->user == nullptr)
-          return ExecutionResult(
-              Errors::RuntimeError::Error,
-              Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-              context.GetAllocator()
-          );
+    ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
+        if (this->session == nullptr || this->session->user == nullptr)
+            return ExecutionResult(
+            Errors::RuntimeError::Error,
+            Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+             context.GetAllocator()
+            );
 
-      const auto* allocator = context.GetAllocator();
+        const auto* allocator = context.GetAllocator();
 
-      auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+        auto* db =  this->server->UseDatabase(context, this->table->databaseId);
 
-      const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
+        const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
 
-      const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
+        const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
 
-      const auto tableResult = this->catalog->InsertTableToMasterDb(
-          context,
-          this->table->databaseId,
-          this->table->schemaId,
-          this->table->name.ToView(),
-          index,
-          false,
-          this->session->user->name.ToView()
-      );
+        const auto tableResult = this->catalog->InsertTableToMasterDb(
+            context,
+            this->table->databaseId,
+            this->table->schemaId,
+            this->table->name.ToView(),
+            index,
+            false,
+            this->session->user->name.ToView()
+        );
 
-      const auto tableId = tableResult.primaryKey.AsInt(1);
+        const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
 
-      auto* tablePtr = db->CreateTable(tableId, index);
+        auto* tablePtr = db->CreateTable(tableId, index);
 
-      const auto tableStatsResult = this->catalog->InsertTableStatisticsToMasterDb(
-          context,
-          tableId
-      );
+        const auto tableStatsResult = this->catalog->InsertTableStatisticsToMasterDb(
+            context,
+            tableId
+        );
 
-      Dictionary<int, Int> columnIdsDict;
-      for (const auto* column: this->columns){
-          const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
-          auto* columnPtr =
-              tablePtr->AddColumn(
-                  column->name.name.ToView(),
-                  COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
-                  column->type.size,
-                  column->index,
-                  column->isNullable
-              );
+        Dictionary<Int, Int> columnIdsDict;
+        for (const auto* column: this->columns){
+            const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
+                auto* columnPtr =
+                    tablePtr->AddColumn(
+                          column->name.name.ToView(),
+                          COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
+                          column->type.size,
+                          column->index,
+                          column->isNullable
+                    );
 
-          const auto columnResult =
-              this->catalog->InsertColumnToMasterDb(
-                  context,
-                  tableId,
-                  column->name.name.ToView(),
-                  COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
-                  column->type.size,
-                  column->type.decimal.precision,
-                  column->type.decimal.scale,
-                  column->isNullable,
-                  column->index,
-                  false,
-                  this->session->user->name.ToView()
-              );
+            const auto columnResult =
+                this->catalog->InsertColumnToMasterDb(
+                      context,
+                      tableId,
+                      column->name.name.ToView(),
+                      COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
+                      column->type.size,
+                      column->type.decimal.precision,
+                      column->type.decimal.scale,
+                      column->isNullable,
+                      column->index,
+                      false,
+                      this->session->user->name.ToView()
+                );
 
-          const auto columnId = columnResult.primaryKey.AsInt(1);
-          columnPtr->SetColumnId(columnId);
+            const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
+            columnPtr->SetColumnId(columnId);
 
-          const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
-          columnIdsDict.Add(column->index, columnId);
+            const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
+            columnIdsDict.Add(column->index, columnId);
 
-          if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
-              const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
+            if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
+                const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
                   context,
                   columnId,
                   column->defaultValue
-              );
-          }
+                );
+            }
 
-          //insert identity columns
-          if (column->identity == nullptr) continue;
+            //insert identity columns
+            if (column->identity == nullptr) continue;
 
-          const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
-              context,
-              tableId,
-              columnId,
-              column->identity->seed,
-              column->identity->incrementFactor,
-              column->identity->seed,
-              true,
-              static_cast<Int>(column->identity->cacheBlock)
-          );
-      }
+            const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
+                context,
+                tableId,
+                columnId,
+                column->identity->seed,
+                column->identity->incrementFactor,
+                column->identity->seed,
+                true,
+                static_cast<Int>(column->identity->cacheBlock)
+            );
+        }
 
-      DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
-      for (const auto& column: this->primaryKey.columns) {
-          if (this->constraintName.Empty()){
-              this->constraintName.SetAllocator(allocator);
+        DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
+        for (const auto& column: this->primaryKey.columns) {
+            if (this->constraintName.Empty()){
+                this->constraintName.SetAllocator(allocator);
+                const auto& columnName = this->columns[column]->name.name;
+                this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
+            }
 
-              const auto& columnName = this->columns[column]->name.name;
-              this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
-          }
+            primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
+        }
 
-          primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
-      }
+        static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
+        if (primaryKeyColumnIdsArray.Empty()) {
+            tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+            tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+            tablePtr->CalculateInsertPayloadSize();
+            return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
+        }
 
-      static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
-      if (primaryKeyColumnIdsArray.Empty()) {
-          tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-          tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
-          return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
-      }
+        const auto indexResult = this->catalog->InsertIndexToMasterDb(
+            context,
+            tableId,
+            this->constraintName.ToView(),
+            true,
+            false,
+            this->session->user->name.ToView()
+        );
 
-      const auto indexResult = this->catalog->InsertIndexToMasterDb(
-          context,
-          tableId,
-          this->constraintName.ToView(),
-          true,
-          false,
-          this->session->user->name.ToView()
-      );
+        const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
 
-      const auto indexId = indexResult.primaryKey.AsInt(1);
+        const auto constraintResult = this->catalog->InsertConstraintToMasterDb(
+            context,
+            tableResult.primaryKey.AsInt<Int>(),
+            this->constraintName.ToView(),
+            Headers::ConstraintType::PrimaryKey,
+            false,
+            &indexId,
+            this->session->user->name.ToView()
+        );
 
-      const auto constraintResult = this->catalog->InsertConstraintToMasterDb(
-          context,
-          tableResult.primaryKey.AsInt(),
-          this->constraintName.ToView(),
-          Headers::ConstraintType::PrimaryKey,
-          false,
-          &indexId,
-          this->session->user->name.ToView()
-      );
+        const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
 
-      const auto constraintId = constraintResult.primaryKey.AsInt(1);
-
-      for(int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
-          auto _ = this->catalog->InsertIndexColumnToMasterDb(
-              context,
-              indexResult.primaryKey.AsInt(),
-              primaryKeyColumnIdsArray[i],
-              this->primaryKey.columns[i],
-              true
-          );
+        for(Int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
+            auto _ = this->catalog->InsertIndexColumnToMasterDb(
+                context,
+                indexResult.primaryKey.AsInt<Int>(),
+                primaryKeyColumnIdsArray[i],
+                this->primaryKey.columns[i],
+                true
+            );
 
 
-          _ = this->catalog->InsertConstraintColumnToMasterDb(
-              context,
-              constraintId,
-              primaryKeyColumnIdsArray[i],
-              this->primaryKey.columns[i]
-          );
-      }
+            _ = this->catalog->InsertConstraintColumnToMasterDb(
+                context,
+                constraintId,
+                primaryKeyColumnIdsArray[i],
+                this->primaryKey.columns[i]
+            );
+        }
 
-      const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
-          context,
-          tableId,
-          indexId
-      );
+        const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+            context,
+            tableId,
+            indexId
+        );
 
-      tablePtr->RetrieveIndexesFromCatalog(allocator);
-      tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-      tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+        tablePtr->RetrieveIndexesFromCatalog(allocator);
+        tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
+        tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+        tablePtr->CalculateInsertPayloadSize();
 
-      return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
-  }
+        return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
+    }
 
   PhysicalIndexCreate::PhysicalIndexCreate(
       const DataTypes::Guid& sessionId,
@@ -425,7 +426,7 @@ PhysicalTableCreate::PhysicalTableCreate(
           this->session->user->name.ToView()
       );
 
-      const auto indexId = indexResult.primaryKey.AsInt(1);
+      const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
 
       const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
           context,
@@ -437,7 +438,7 @@ PhysicalTableCreate::PhysicalTableCreate(
           this->session->user->name.ToView()
       );
 
-      const auto constraintId = constraintResult.primaryKey.AsInt(1);
+      const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
 
       for (const auto& columnPos : this->columns) {
           const auto& header = columnsHeaders[columnPos];

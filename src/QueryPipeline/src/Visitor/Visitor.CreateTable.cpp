@@ -21,33 +21,34 @@ namespace QueryPipeline {
         if (context->primaryKeyConstraint())
             statement->constraint = std::any_cast<Statements::PrimaryKeyConstraint*>(visit(context->primaryKeyConstraint()));
 
-        return statement;
+        return std::any(statement);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitPrimaryKey(SQLParser::PrimaryKeyContext *context) {
         if (context->autoIncrementKey())
             return visit(context->autoIncrementKey());
 
-        return nullptr;
+        return std::any(nullptr);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitAutoIncrementKey(SQLParser::AutoIncrementKeyContext *context) {
-        auto* incrementStatement = new Statements::Identity();
+        auto* identityStatement = this->_compileContext->Allocate<Statements::Identity>();
 
-        incrementStatement->seed = Converter::StrToInt<TinyInt>(context->seed->getText());
-        incrementStatement->incrementFactor = Converter::StrToInt<TinyInt>(context->increment->getText());
+        identityStatement->seed = Converter::StrToInt<SmallInt>(context->seed->getText());
+        identityStatement->incrementFactor = Converter::StrToInt<SmallInt>(context->increment->getText());
+        identityStatement->cacheBlock = Constants::DEFAULT_IDENTITY_CACHE_BLOCK;
 
-        return incrementStatement;
+        return std::any(identityStatement);
     }
 
     antlrcpp::Any SQLVisitorImplementation::visitAddColumn(SQLParser::AddColumnContext *context) {
-        const bool isPrimaryKey = (context->primaryKey()) != nullptr;
+        const auto isPrimaryKey = (context->primaryKey()) != nullptr;
 
-        Statements::Identity* key = (isPrimaryKey && context->primaryKey()->autoIncrementKey())
+        auto* key = (isPrimaryKey && context->primaryKey()->autoIncrementKey())
             ? std::any_cast<Statements::Identity*>(visit(context->primaryKey()))
             : nullptr;
 
-        const bool isNullable = ((!context->NULL_() && !context->NOT() && !isPrimaryKey)
+        const auto isNullable = ((!context->NULL_() && !context->NOT() && !isPrimaryKey)
                                  || (context->NULL_() && !context->NOT()) && !isPrimaryKey);
 
         if (context->primaryKey() && context->defaultValue())

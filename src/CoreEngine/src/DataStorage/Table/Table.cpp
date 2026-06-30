@@ -11,7 +11,7 @@
 #include "ValidationMessages.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/BufferPool/StorageManager.h"
-#include "../../../include/BTree.h"
+#include "../../../include/Indexing/BTree.h"
 #include "../../../../Server/include/Server.h"
 #include "../../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../../Systemic/include/Guards/WriterGuard.h"
@@ -171,7 +171,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Table::Table(const table_id_t tableId, const SmallInt ordinalPosition, Database* database)
-        : database(database), clusteredIndexedTree(nullptr), payloadSize(0){
+        : database(database), clusteredIndexedTree(nullptr){
         this->header.tableId = tableId;
         this->header.ordinalPosition = ordinalPosition;
         this->header.numberOfColumns = 0;
@@ -242,20 +242,25 @@ namespace CoreEngine::StorageTypes {
             );
 
 
-        DataStructures::PolymorphicArray<InsertPayload> rows(executionContext.GetAllocator(), input.Size());
+        DataStructures::PolymorphicArray<SerializedRow> rows(executionContext.GetAllocator(), input.Size());
 
         Int rowSize = 0;
         DataStructures::PolymorphicArray<char> buffer;
 
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
-        for (auto& insertedRow : input) {
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(input.Size() * payloadCapacity));
+        auto* allocator = executionContext.GetAllocator();
+
+        RowSerializationContext rowContext(allocator, payloadCapacity);
+        rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+
+        for (Int i = 0;i < input.Size(); i++){
             Errors::RuntimeStatus status;
-            auto payload = this->CreateInsertPayload(
+            auto payload = this->SerializeRow(
                 status,
-                executionContext.GetAllocator(),
-                rowHeader,
-                insertedRow.Data()
+                rowContext,
+                payloadBuffer + i * payloadCapacity,
+                input[i].Data()
             );
 
           if (!status.IsOk())
@@ -293,14 +298,18 @@ namespace CoreEngine::StorageTypes {
         const DataStructures::PolymorphicArray<Value> &inputData
     ){
         Logging::CheckPoint checkPoint;
-
         Errors::RuntimeStatus status;
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
-        auto payload = this->CreateInsertPayload(
+
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
+
+        RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
+        rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+
+        auto payload = this->SerializeRow(
             status,
-            executionContext.GetAllocator(),
-            rowHeader,
+            rowContext,
+            payloadBuffer,
             inputData
         );
 
@@ -329,18 +338,22 @@ namespace CoreEngine::StorageTypes {
         Logging::CheckPoint checkPoint;
 
         Errors::RuntimeStatus status;
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = executionContext.GetCurrentTransactionId();
 
         const Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             executionContext
         );
 
-        auto payload = this->CreateInsertPayload(
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
+
+        RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
+        rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+
+        auto payload = this->SerializeRow(
             status,
-            executionContext.GetAllocator(),
-            rowHeader,
+            rowContext,
+            payloadBuffer,
             inputData,
             insertPlan,
             evaluationContext
@@ -365,11 +378,9 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::InsertRowPayload(
         const ExecutionContext& executionContext,
-        InsertPayload& payload,
+        SerializedRow& payload,
         const Int pagesToAllocate
     ){
-        // this->InsertLargeObjectToPage(row);
-
         //row_id
         auto status = this->IsClustered()
             ? this->ClusteredIndexInsert(executionContext, payload, pagesToAllocate)
@@ -612,7 +623,7 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::HeapInsert(
         const ExecutionContext& executionContext,
-        const InsertPayload& payload,
+        const SerializedRow& payload,
         const Int pagesToAllocate
     )const{
         const auto systemFilename = this->database->GetSystemFilename();
@@ -903,8 +914,7 @@ namespace CoreEngine::StorageTypes {
         return !this->clusteredIndexHeader.columns.Empty();
     }
 
-    row_size_t Table::GetMaximumRowSize() const
-    {
+    row_size_t Table::GetMaximumRowSize() const{
         row_size_t maximumRowSize = 0;
 
         for (const auto &column : this->_columns)
@@ -1035,13 +1045,17 @@ namespace CoreEngine::StorageTypes {
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = context.GetCurrentTransactionId();
-        rowHeader._oldVersionRID = versionRid;
-        auto newPayload = this->CreateInsertPayload(
+
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
+
+        RowSerializationContext rowContext(allocator, payloadCapacity);
+        rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
+
+        auto newPayload = this->SerializeRow(
             status,
-            allocator,
-            rowHeader,
+            rowContext,
+            buffer,
             materializedRow.Data()
         );
 
@@ -1067,7 +1081,6 @@ namespace CoreEngine::StorageTypes {
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     ){
-
         const auto rowRawData = page->RawRowData(row->_index);
 
         const auto* allocator = context.GetAllocator();
@@ -1084,13 +1097,17 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = context.GetCurrentTransactionId();
-        rowHeader._oldVersionRID = versionRid;
-        auto newPayload = this->CreateInsertPayload(
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
+
+        RowSerializationContext rowContext(allocator, payloadCapacity);
+        rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
+        rowContext.header._oldVersionRID = versionRid;
+
+        auto newPayload = this->SerializeRow(
             status,
-            allocator,
-            rowHeader,
+            rowContext,
+            buffer,
             materializedRow.Data()
         );
 
@@ -1127,17 +1144,22 @@ namespace CoreEngine::StorageTypes {
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        RowHeader rowHeader;
-        rowHeader._createdTransactionId = FIRST_TRANSACTION_ID;
-        rowHeader._oldVersionRID = versionRid;
-        const auto newPayload = this->CreateInsertPayload(
+        const auto payloadCapacity = this->CalculateInsertPayloadSize();
+        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(payloadCapacity));
+
+        RowSerializationContext rowContext(allocator, payloadCapacity);
+        rowContext.header._createdTransactionId = FIRST_TRANSACTION_ID;
+        rowContext.header._oldVersionRID = versionRid;
+
+        const auto newPayload = this->SerializeRow(
             status,
-            allocator,
-            rowHeader,
+            rowContext,
+            buffer,
             materializedRow.Data()
         );
 
-        if (!status.IsOk()) return status;
+        if (!status.IsOk())
+            return status;
 
         const auto _ = page->UpdateRow(allocator, newPayload, row->_index);
         return status;

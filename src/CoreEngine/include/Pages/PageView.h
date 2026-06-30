@@ -21,7 +21,7 @@ namespace DataTypes{
 }
 
 namespace CoreEngine::StorageTypes{
-    class InsertPayload;
+    class SerializedRow;
 }
 
 namespace MultiThreading{
@@ -66,7 +66,7 @@ namespace Pages{
 
         [[nodiscard]] Int RawDataSize()const;
 
-        void InsertFirstRow(const CoreEngine::StorageTypes::InsertPayload& payload) const;
+        void InsertFirstRow(const CoreEngine::StorageTypes::SerializedRow& payload) const;
 
         [[nodiscard]] bool IsIndexPage()const;
 
@@ -130,13 +130,13 @@ namespace Pages{
             Int donorResizeVariant
         ) const;
 
-        [[nodiscard]] Int InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload) const;
-        void InsertRow(const CoreEngine::StorageTypes::InsertPayload& payload, Int indexPosition) const;
+        [[nodiscard]] Int InsertRow(const CoreEngine::StorageTypes::SerializedRow& payload) const;
+        void InsertRow(const CoreEngine::StorageTypes::SerializedRow& payload, Int indexPosition) const;
 
         [[nodiscard]]
         bool UpdateRow(
             const ::Memory::IAllocator* allocator,
-            const CoreEngine::StorageTypes::InsertPayload& payload,
+            const CoreEngine::StorageTypes::SerializedRow& payload,
             page_offset_t indexPosition
         ) const;
         void SetForwardPointer(
