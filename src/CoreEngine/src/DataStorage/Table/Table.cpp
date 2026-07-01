@@ -1084,7 +1084,7 @@ namespace CoreEngine::StorageTypes {
         const auto rowRawData = page->RawRowData(row->_index);
 
         const auto* allocator = context.GetAllocator();
-        const auto versionRid = this->InsertToVersionDatabase(allocator, rowRawData);
+        const auto versionRid = Table::InsertToVersionDatabase(allocator, rowRawData);
 
         auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
 

@@ -6,7 +6,8 @@
 #include "../DataStructures/StaticArray.h"
 
 namespace DataTypes {
-	static constexpr UnsignedInt SECONDS_PER_MINUTE = 60;
+    struct ParsedFields;
+    static constexpr UnsignedInt SECONDS_PER_MINUTE = 60;
 	static constexpr UnsignedInt SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
 	static constexpr UnsignedInt SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
 	static constexpr UnsignedInt SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
@@ -15,6 +16,11 @@ namespace DataTypes {
     static constexpr Int DATETIME_TO_STRING_MS_BUFFER_SIZE = 8;
 
     static constexpr StringView DEFAULT_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S";
+
+    [[nodiscard]] inline bool ReadDigits(const char*& p, const char* end, Int width, Int& out);
+    [[nodiscard]] inline bool ReadFractionalMillis(const char*& p, const char* end, int& out);
+    [[nodiscard]] inline bool ReadTzOffset(const char*& p, const char* end, int& out);
+    [[nodiscard]] inline bool MatchFormat(const StringView& format, const StringView& input, ParsedFields& out);
 
 	class DateTime {
 		BigInt timeStamp;
@@ -84,7 +90,8 @@ namespace DataTypes {
 		[[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 		[[nodiscard]] BigInt UnixTimeStamp()const;
 
-		static bool ValidateDate(const DateTime& datetime);
+
+		bool ValidateDate() const;
 
 		// friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
 	    void Print(std::ostream& os, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
@@ -96,6 +103,24 @@ namespace DataTypes {
 	    friend bool operator>(const DateTime& lhs, const DateTime& rhs);
 	    friend bool operator<(const DateTime& lhs, const DateTime& rhs);
 	};
+
+    struct ParsedFields {
+        Int year = 1970, month = 1, day = 1;
+        Int hour = 0, minute = 0, second = 0, millis = 0;
+        Int tzOffsetMinutes = -1;
+
+        [[nodiscard]] bool HasTz() const { return tzOffsetMinutes != -1; }
+        void Reset(){
+            this->year = 1970;
+            this->month = 1;
+            this->day = 1;
+            this->hour = 0;
+            this->minute = 0;
+            this->second = 0;
+            this->millis = 0;
+            this->tzOffsetMinutes = -1;
+        }
+    };
 }
 
 

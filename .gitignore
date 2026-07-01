@@ -14,3 +14,4 @@
 /out/build/x64-Debug
 /out/
 /.cache/clangd/index
+/cmake-build-clang64-debug/

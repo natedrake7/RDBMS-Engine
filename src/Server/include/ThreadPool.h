@@ -4,6 +4,7 @@
 #include <vector>
 #include <queue>
 #include <functional>
+#include <thread>
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 
 class ThreadPool {

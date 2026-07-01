@@ -1,6 +1,4 @@
 #include "../../include/Schedulers/GarbageCollector.h"
-#include <bits/this_thread_sleep.h>
-
 #include "../../include/Managers/TransactionManager.h"
 #include "../../include/SystemDatabases/VersionDatabase.h"
 

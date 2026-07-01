@@ -1,5 +1,6 @@
 ﻿#include "../include/UnitTests.h"
 
+#include <csignal>
 #include <iostream>
 #include "../../CoreEngine/include/DataStorage/Table.h"
 #include "../../CoreEngine/include/DataStorage/Column.h"

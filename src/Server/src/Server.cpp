@@ -7,6 +7,7 @@
 #include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <iostream>
+#include <ranges>
 
 #include "ValidationMessages.h"
 #include "../../CoreEngine/include/Managers/GlobalMemoryManager.h"

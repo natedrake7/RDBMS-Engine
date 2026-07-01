@@ -228,6 +228,14 @@ namespace DataTypes{
             return size;
         }
     };
+
+    class StringViewStreamBuf final : public std::streambuf {
+    public:
+        explicit StringViewStreamBuf(const StringView& view) {
+            auto* data = const_cast<char*>(view.Data());
+            this->setg(data, data, data + view.Size());
+        }
+    };
 }
 
 template <>
