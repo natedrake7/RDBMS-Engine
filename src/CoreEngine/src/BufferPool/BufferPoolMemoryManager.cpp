@@ -9,6 +9,8 @@ namespace CoreEngine{
         this->_data = nullptr;
         this->_framesData = nullptr;
         this->_capacity = 0;
+        this->_freeStack = nullptr;
+        this->_freeTopId = 0;
     }
 
     BufferPoolMemoryManager::~BufferPoolMemoryManager(){

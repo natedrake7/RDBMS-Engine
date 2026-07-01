@@ -205,8 +205,6 @@ namespace CoreEngine::StorageTypes{
         */
             [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
             [[nodiscard]] Storage::FileKey GetDataFileKey() const;
-            [[nodiscard]] DataTypes::StringView GetFileNameView() const;
-            [[nodiscard]] DataTypes::StringView GetSystemFileNameView() const;
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
             [[nodiscard]] const DataStructures::PolymorphicArray<Column*>& GetColumns() const;

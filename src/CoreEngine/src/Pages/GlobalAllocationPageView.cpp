@@ -1,10 +1,15 @@
 ﻿#include "../../include/Pages/GlobalAllocationPageView.h"
-#include "Guards/ReaderGuard.h"
 #include "Pages/AllocationPageView.h"
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
-    GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame) {}
+    GlobalAllocationPageAdditionalHeader* GlobalAllocationPageView::GetAdditionalHeader() const{
+        return reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+    }
+
+    GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame){
+        this->initialOffset = Constants::GAM_METADATA_SIZE;
+    }
 
     GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{
         this->_frame = other._frame;
@@ -22,10 +27,76 @@ namespace Pages{
         return *this;
     }
 
-    int GlobalAllocationPageView::AllocateExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, const Int numberOfExtents) const{
-        int allocatedExtents = 0;
+    extent_id_t GlobalAllocationPageView::FindContiguousExtentsNoLock(const extent_id_t startingIndex, const Int numberOfExtents) const{
+        Int length = 0;
 
-        for (extent_id_t extentId = 0; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
+        extent_id_t startingBit = startingIndex;
+        extent_id_t currentBit = startingIndex;
+
+        const auto step = [&](const extent_id_t bitIndex) -> bool{
+            if (this->GetBit(bitIndex)){
+                length = 0;
+                startingBit = bitIndex + 1;
+            }
+             else if (++length == numberOfExtents)
+                return true;
+
+            return false;
+        };
+
+        for (; currentBit < Constants::EXTENT_BIT_MAP_SIZE && (currentBit & 63) != 0; currentBit++){
+            if (step(currentBit))
+                return startingBit;
+        }
+
+        for (; currentBit + 64 <= Constants::EXTENT_BIT_MAP_SIZE; currentBit += 64){
+            uint64_t word;
+            std::memcpy(&word, this->_frame->_data + this->initialOffset + (currentBit >> 3), sizeof(word));
+
+            if (word == 0x00){
+                length += 64;
+                if (length >= numberOfExtents)
+                    return startingBit;
+            }
+            else if (word == ~0x00){
+                length = 0;
+                startingBit = currentBit + 64;
+            }
+            else{
+                for (extent_id_t bit = 0; bit < 64; bit++){
+                    if (step(currentBit + bit))
+                        return startingBit;
+                }
+            }
+        }
+
+        for (; currentBit < Constants::EXTENT_BIT_MAP_SIZE; currentBit++){
+            if (step(currentBit))
+                return startingBit;
+        }
+
+        return INVALID_EXTENT_ID;
+    }
+
+    Int GlobalAllocationPageView::AllocateExtentsNoLock(
+        DataStructures::PolymorphicArray<extent_id_t>& extents,
+        const Int numberOfExtents
+    ) const{
+        if (this->TryAllocateContiguousExtentsNoLock(extents, numberOfExtents))
+            return numberOfExtents;
+        return this->AllocateFragmentedExtentsNoLock(extents, numberOfExtents);
+    }
+
+    Int GlobalAllocationPageView::AllocateFragmentedExtentsNoLock(
+        DataStructures::PolymorphicArray<extent_id_t>& extents,
+        const Int numberOfExtents
+    ) const{
+        Int allocatedExtents = 0;
+
+        auto* additionalHeader = this->GetAdditionalHeader();
+
+        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        for (extent_id_t extentId = additionalHeader->_firstFreeExtentId; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
             if (allocatedExtents == numberOfExtents)
                 break;
 
@@ -37,38 +108,74 @@ namespace Pages{
 
             allocatedExtents++;
 
-            extents.Push(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId) + extentId);
+            extents.Push(base + extentId);
+        }
+
+        if (allocatedExtents > 0){
+            // Fragmented consumes every free extent from _firstFreeExtentId up to the last one it
+            // touched, so [0, lastLocal] is now fully allocated: first free is lastLocal + 1.
+            const extent_id_t lastLocal = *extents.Back() - base;
+            additionalHeader->_firstFreeExtentId = lastLocal + 1;
+            if (lastLocal + 1 > additionalHeader->_appendExtentId)
+                additionalHeader->_appendExtentId = lastLocal + 1;
+            additionalHeader->_freeExtentCount -= allocatedExtents;
         }
 
         return allocatedExtents;
     }
 
-    void GlobalAllocationPageView::DeallocateExtent(const extent_id_t extentId) const{
-        this->ClearBit(extentId);
+    bool GlobalAllocationPageView::TryAllocateContiguousExtentsNoLock(
+        DataStructures::PolymorphicArray<extent_id_t>& extents,
+        const Int numberOfExtents
+    ) const{
+        auto* additionalHeader = this->GetAdditionalHeader();
+
+        if (additionalHeader->_freeExtentCount < numberOfExtents)
+            return false;
+
+        const auto startingBit = this->FindContiguousExtentsNoLock(additionalHeader->_firstFreeExtentId, numberOfExtents);
+        if (startingBit == INVALID_EXTENT_ID)
+            return false;
+
+        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        for (Int i = 0; i < numberOfExtents; i++){
+            this->SetBit(startingBit + i);
+            extents.Push(base + startingBit + i);
+        }
+
+        const extent_id_t runEnd = startingBit + numberOfExtents;
+
+        // If we consumed the leading hole, [0, runEnd) is now fully allocated.
+        if (startingBit == additionalHeader->_firstFreeExtentId)
+            additionalHeader->_firstFreeExtentId = runEnd;
+
+        // Only advance the tail frontier if the run reached into it.
+        if (runEnd > additionalHeader->_appendExtentId)
+            additionalHeader->_appendExtentId = runEnd;
+
+        additionalHeader->_freeExtentCount -= numberOfExtents;
         this->_frame->isDirty = true;
+        return true;
+    }
+
+    DataStructures::PolymorphicArray<extent_id_t> GlobalAllocationPageView::GetAllocatedExtents(const ::Memory::IAllocator* allocator) const{
+        return DataStructures::PolymorphicArray<extent_id_t>(allocator);
+    }
+
+    void GlobalAllocationPageView::DeallocateExtentNoLock(const extent_id_t extentId) const{
+        const auto bitIndex = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        this->ClearBit(bitIndex);
+        this->_frame->isDirty = true;
+
+        auto* additionalHeader = this->GetAdditionalHeader();
+        if (bitIndex == additionalHeader->_appendExtentId - 1)
+            additionalHeader->_appendExtentId--;
+
+        additionalHeader->_firstFreeExtentId = Math::Min(bitIndex, additionalHeader->_firstFreeExtentId);
+        additionalHeader->_freeExtentCount++;
     }
 
     bool GlobalAllocationPageView::IsFull() const{
-        return this->GetBit(Constants::EXTENT_BIT_MAP_SIZE - 1);
-    }
-
-    std::vector<extent_id_t> GlobalAllocationPageView::GetAllocatedExtents(const extent_id_t startingIndex) const{
-        std::vector<extent_id_t> allocatedExtents;
-
-        if(startingIndex >= Constants::EXTENT_BIT_MAP_SIZE)
-            return allocatedExtents;
-
-        MultiThreading::ReaderGuard lock(&this->_frame->latch);
-
-        allocatedExtents.reserve(Constants::EXTENT_BIT_MAP_SIZE - startingIndex);
-
-        for (extent_id_t id = startingIndex; id < Constants::EXTENT_BIT_MAP_SIZE; id++){
-            if (!this->GetBit(id))
-                continue;
-
-            allocatedExtents.push_back(AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId) + id);
-        }
-
-        return allocatedExtents;
+        return this->GetAdditionalHeader()->_freeExtentCount == 0;
     }
 }

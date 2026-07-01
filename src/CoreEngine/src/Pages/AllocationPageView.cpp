@@ -36,20 +36,25 @@ namespace Pages{
         return *this;
     }
 
-    extent_id_t AllocationPageView::SetExtentsAllocated(
+    extent_id_t AllocationPageView::SetExtentsAllocatedNoLock(
         const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
     ) const{
+        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+        extent_id_t lastExtentId = 0;
         for (const auto extentId : extentIds){
-            const extent_id_t bitMapId = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+            const extent_id_t bitMapId = extentId - base;
 
-            if (bitMapId >= Constants::EXTENT_BIT_MAP_SIZE)
-                return extentId;
+            if (bitMapId >= Constants::EXTENT_BIT_MAP_SIZE){
+                lastExtentId = extentId;
+                break;
+            }
 
             this->SetBit(bitMapId);
-            this->GetAdditionalHeader()->lastAllocatedExtentId = extentId;
             this->_frame->isDirty = true;
         }
+
+        
 
         return INVALID_EXTENT_ID;
     }

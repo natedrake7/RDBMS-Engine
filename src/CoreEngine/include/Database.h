@@ -49,27 +49,25 @@ class Database final{
     MultiThreading::Mutex gamPageMutex;
     MultiThreading::Mutex pfsPageMutex;
 
-    // Dictionary<Int, table_id_t> tableIdsDictionary;
-
     Memory::PersistentAllocator _allocator;
 
     DataTypes::String name;
-    DataTypes::String filename;
-    DataTypes::String systemFilename;
-    DataTypes::StringView fileExtension;
 
     DataStructures::PolymorphicArray<StorageTypes::Table*> _tables;
 
     DatabaseHeader header;
 
-    DataTypes::StringView filenameView;
-    DataTypes::StringView systemFilenameView;
     Storage::FileKey dataFileKey;
     Storage::FileKey systemFileKey;
 
     Int id;
 
-    void PopulateFilenames(const ::Memory::IAllocator* tempAllocator, const DataTypes::String& dbName);
+    static void PopulateFilenames(
+        const ::Memory::IAllocator* tempAllocator,
+        const DataTypes::String& dbName,
+        DataTypes::String& outFile,
+        DataTypes::String& outSysFile
+    );
     void CreateKeys();
 
     void WriteHeaderToFile() const;
@@ -82,8 +80,6 @@ class Database final{
     );
 
     [[nodiscard]] const StorageTypes::Table *GetTable(table_id_t tableId) const;
-
-    // [[nodiscard]] bool ValidateLogIntegrity(const Logging::LogEntry& logEntry) const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
 
@@ -143,14 +139,6 @@ public:
         Int ordinalPosition
     );
 
-    // StorageTypes::Table *CreateTable(
-    //     table_id_t tableId,
-    //     Int ordinalPosition,
-    //     const std::vector<StorageTypes::Column *> &columns,
-    //     const Headers::Index *clusteredKeyIndexes = nullptr,
-    //     const std::vector<Headers::Index> *nonClusteredIndexes = nullptr
-    // );
-
     void CreateTable(
         const Headers::TableHeader& masterDbHeader,
         const StorageTypes::TableHeader &tableHeader
@@ -165,11 +153,7 @@ public:
 
     static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
 
-//    [[nodiscard]] StorageTypes::Table *OpenTable(const string& schemaName, const string &tableName) const;
-
     [[nodiscard]] StorageTypes::Table *OpenTable(table_id_t tableId) const;
-
-    // [[nodiscard]] StorageTypes::Table *OpenTableById(table_id_t tableId) const;
 
     void DeleteTable(const DataTypes::String& tableName);
 
@@ -216,8 +200,6 @@ public:
         page_id_t treeId = 0
     );
 
-    [[nodiscard]] DataTypes::StringView GetFileName() const;
-    [[nodiscard]] DataTypes::StringView GetSystemFilename() const;
     [[nodiscard]] Storage::FileKey GetDataFileKey() const;
     [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
 

@@ -55,56 +55,16 @@ namespace CoreEngine{
         return 1 + pfsPreceding + gamIndex;
     }
 
-//    page_id_t Database::GetPfsAssociatedPage(const page_id_t pageId) {
-//
-//      //TODO find how to track the pages correctly
-//      uint32_t numGamPages = (pageId / GAM_NUMBER_OF_PAGES) + 1;
-//      uint32_t numPfsPages = (pageId / PAGE_FREE_SPACE_SIZE) + 1;
-//
-//      // Convert to logical data-only page ID
-//      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
-//
-//      // Find which PFS page covers this logical data page
-//      uint32_t pfsIndex = logicalDataPageId / PAGE_FREE_SPACE_SIZE;
-//
-//      // Now convert back to physical pageId of that PFS page
-//      // +1 is often where the first PFS page starts (adjust to your system)
-//      page_id_t pfsPageId = (pfsIndex * PAGE_FREE_SPACE_SIZE) + numPfsPages + numGamPages - 1;
-//
-//      if(pageId == 8088 || pageId == 8092)
-//      {
-//        cout << "hello";
-//      }
-//
-//      return pfsPageId;
-//    }
-//
-//    page_id_t Database::GetGamAssociatedPage(const page_id_t pageId) {
-//      uint32_t numGamPages = pageId / GAM_NUMBER_OF_PAGES + 1;
-//      uint32_t numPfsPages = pageId / PAGE_FREE_SPACE_SIZE + 1;
-//
-//      uint32_t logicalDataPageId = pageId - numGamPages - numPfsPages;
-//
-//      uint32_t gamIndex = logicalDataPageId / GAM_NUMBER_OF_PAGES;
-//
-//      page_id_t gamPageId = gamIndex * GAM_NUMBER_OF_PAGES + 2;
-//
-//      return gamPageId;
-//    }
-
-    void Database::PopulateFilenames(const ::Memory::IAllocator* tempAllocator, const DataTypes::String& dbName){
+    void Database::PopulateFilenames(
+        const ::Memory::IAllocator* tempAllocator,
+        const DataTypes::String& dbName,
+        DataTypes::String& outFile,
+        DataTypes::String& outSysFile
+    ){
         const auto path = DataTypes::String::Concat(tempAllocator, dbName, "/", dbName);
 
-        const auto tempFilename = DataTypes::String::Concat(tempAllocator, path, Constants::DATA_FILE_EXTENSION);
-        const auto tempSysFilename = DataTypes::String::Concat(tempAllocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
-
-        this->filename = DataTypes::String(tempFilename, &this->_allocator);
-        this->systemFilename = DataTypes::String(tempSysFilename, &this->_allocator);
-        this->name = DataTypes::String(dbName, &this->_allocator);
-
-        this->fileExtension = Constants::DATA_FILE_EXTENSION;
-        this->systemFilenameView = this->systemFilename.ToView();
-        this->filenameView = this->filename.ToView();
+        outFile = DataTypes::String::Concat(tempAllocator, path, Constants::DATA_FILE_EXTENSION);
+        outSysFile = DataTypes::String::Concat(tempAllocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
     }
 
     void Database::CreateKeys(){
@@ -138,8 +98,6 @@ namespace CoreEngine{
     }
 
     void Database::InitializeStaticData(){
-        this->filenameView = this->filename.ToView();
-        this->systemFilenameView = this->systemFilename.ToView();
         this->dataFileKey = Storage::FileKey::Create(this->id, Storage::FileType::Data);
         this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
     }
@@ -151,11 +109,12 @@ namespace CoreEngine{
         const bool& isServerInitialization
     ) {
         this->id = databaseId;
-        this->PopulateFilenames(allocator, dbName);
+        DataTypes::String file,sysFile;
+        Database::PopulateFilenames(allocator, dbName, file, sysFile);
         this->CreateKeys();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
+        Storage::StorageManager::Get().OpenFile(this->dataFileKey, file.ToView());
+        Storage::StorageManager::Get().OpenFile(this->systemFileKey, sysFile.ToView());
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
@@ -167,7 +126,7 @@ namespace CoreEngine{
         static auto& catalog = SystemCatalog::Get();
 
         //query get from masterDb
-        const auto masterDbData = catalog.SelectTables(allocator, this->name.ToView());
+        const auto masterDbData = catalog.SelectTables(allocator, dbName.ToView());
 
         if (this->header.numberOfTables != masterDbData.Size()) return;
 
@@ -182,11 +141,12 @@ namespace CoreEngine{
         const std::vector<Headers::sysTable>& tables
     ){
         this->id = databaseId;
-        this->PopulateFilenames(allocator, dbName);
+        DataTypes::String file,sysFile;
+        Database::PopulateFilenames(allocator, dbName, file, sysFile);
         this->CreateKeys();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
+        Storage::StorageManager::Get().OpenFile(this->dataFileKey, file.ToView());
+        Storage::StorageManager::Get().OpenFile(this->systemFileKey, sysFile.ToView());
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
@@ -487,8 +447,8 @@ namespace CoreEngine{
     }
 
     void Database::DeleteDatabase() const{
-        if (remove(this->filename.Data()) != 0)
-            throw std::runtime_error("Database " + std::string(this->filename.Data(), this->filename.Size()) + " could not be deleted");
+        // if (remove(this->filename.Data()) != 0)
+        //     throw std::runtime_error("Database " + std::string(this->filename.Data(), this->filename.Size()) + " could not be deleted");
     }
 
     Pages::PageView Database::FindOrAllocateNextDataPage(
@@ -754,7 +714,7 @@ namespace CoreEngine{
         const Int pagesToAllocate,
         const table_id_t tableId,
         page_id_t& lowerLimit
-    ) {
+    ){
         const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(pagesToAllocate);
 
         DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator, extentsToAllocate);
@@ -770,15 +730,14 @@ namespace CoreEngine{
         {
             auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
                 this->systemFileKey,
-                                this->header.lastGamPageId
+                this->header.lastGamPageId
             );
 
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
             initialGamPageId = this->header.lastGamPageId;
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
-            int remainingExtents = extentsToAllocate;
-
+            Int remainingExtents = extentsToAllocate;
             while (remainingExtents > 0) {
                 if (gamPage.IsFull()) {
                     newGamPageCreated = true;
@@ -787,7 +746,7 @@ namespace CoreEngine{
 
                     gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(
                         this->systemFileKey,
-                                                nextGamPageId
+                        nextGamPageId
                     );
 
                     this->header.lastGamPageId = nextGamPageId;
@@ -797,7 +756,6 @@ namespace CoreEngine{
 
                 // Allocate one extent from current GAM page
                 const auto extentsAllocated = gamPage.AllocateExtentsNoLock(allocatedExtents, remainingExtents);
-
                 if (extentsAllocated == 0)
                     continue;
 
@@ -869,7 +827,7 @@ namespace CoreEngine{
 
             while (lastNotRecordedExtent != INVALID_EXTENT_ID) {
                 //todo handle multiple iams
-                lastNotRecordedExtent = tableMapPage.SetExtentsAllocated(allocatedExtents, gamPageId);
+                lastNotRecordedExtent = tableMapPage.SetExtentsAllocatedNoLock(allocatedExtents, gamPageId);
             }
         }
 
@@ -1055,8 +1013,6 @@ namespace CoreEngine{
 //                   : nullptr;
     }
 
-    DataTypes::StringView Database::GetFileName() const { return this->filenameView; }
-
     void Database::GetIdentityColumns(const ::Memory::IAllocator* allocator)const{
         for(const auto& table: this->_tables)
             table->RetrieveIdentityColumnsFromCatalog(allocator);
@@ -1091,8 +1047,6 @@ namespace CoreEngine{
     }
 
     const DataStructures::PolymorphicArray<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
-
-    DataTypes::StringView Database::GetSystemFilename() const{ return this->systemFilenameView; }
 
     Storage::FileKey Database::GetDataFileKey() const{ return this->dataFileKey; }
 

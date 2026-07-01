@@ -24,7 +24,7 @@ namespace Pages{
             AllocationPageView(AllocationPageView&& other) noexcept;
             AllocationPageView& operator=(AllocationPageView&& other) noexcept;
 
-            [[nodiscard]] extent_id_t SetExtentsAllocated(
+            [[nodiscard]] extent_id_t SetExtentsAllocatedNoLock(
                 const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
                 page_id_t globalAllocationMapPageId
             ) const;

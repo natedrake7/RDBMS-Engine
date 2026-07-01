@@ -222,6 +222,13 @@ Pages::HeaderPageView StorageManager::CreateHeaderPage(const FileKey fileKey){
 
 Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(const FileKey fileKey, const page_id_t pageId){
     auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM);
+
+    auto* header = reinterpret_cast<Pages::GlobalAllocationPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
+    header->_appendExtentId = 0;
+    header->_firstFreeExtentId = 0;
+    header->_freeExtentCount = Constants::EXTENT_BIT_MAP_SIZE;
+    std::memset(header->_reserved, 0, Constants::GAM_HEADER_RESERVED_SPACE);
+
     return Pages::GlobalAllocationPageView(frame);
 }
 
@@ -269,7 +276,6 @@ Pages::Frame* StorageManager::CreateFrame(
 
     auto* framePtr = this->_memoryManager->AllocateFrame(frameId);
     framePtr->_data = this->_memoryManager->Data() + frameId * Constants::PAGE_SIZE;
-    // framePtr->table = table;
     framePtr->fileKey = fileKey;
     framePtr->isDirty = true;
     framePtr->hasSecondChance = true;

@@ -406,8 +406,6 @@ namespace CoreEngine::StorageTypes {
         RID* rowPtr,
         const HashSet<column_index_t>& updatedColumns
     ){
-      const auto& filename = this->database->GetFileName();
-
       // auto* rowHeader = row->GetHeader();
       //
       // for(const auto& block : row->GetData()){
@@ -455,8 +453,6 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::DeleteOverflowedRowsFromPage(RID* rowPtr, const HashSet<column_index_t> & updatedColumns)const{
-      const auto& filename = this->database->GetFileName();
-
       // auto* rowHeader = row->GetHeader();
       //
       // for(const auto& block : row->GetData()){
@@ -479,10 +475,6 @@ namespace CoreEngine::StorageTypes {
       //   delete overflowRow;
       // }
     }
-
-    DataTypes::StringView Table::GetFileNameView() const{ return this->database->GetFileName(); }
-
-    DataTypes::StringView Table::GetSystemFileNameView() const{ return this->database->GetSystemFilename(); }
 
     column_number_t Table::GetNumberOfColumns() const { return this->_columns.Size(); }
 
@@ -626,10 +618,7 @@ namespace CoreEngine::StorageTypes {
         const SerializedRow& payload,
         const Int pagesToAllocate
     )const{
-        const auto systemFilename = this->database->GetSystemFilename();
         const auto systemFileKey = this->database->GetSystemFileKey();
-
-        const auto filename = this->database->GetFileName();
         const auto dataKey = this->database->GetDataFileKey();
 
         Errors::RuntimeStatus status;

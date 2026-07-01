@@ -70,11 +70,11 @@ namespace Pages{
 
         [[nodiscard]] bool IsIndexPage()const;
 
-        size_t GetByteIndex(const extent_id_t extentId) const noexcept{
+        [[nodiscard]] size_t GetByteIndex(const extent_id_t extentId) const noexcept{
             return this->initialOffset + (extentId >> 3);
         }
 
-        bool GetBit(const std::size_t bitIndex) const noexcept {
+        [[nodiscard]] bool GetBit(const std::size_t bitIndex) const noexcept {
             return PackedByte::GetBit(
                 this->_frame->_data[this->GetByteIndex(bitIndex)],
                 static_cast<UnsignedTinyInt>(bitIndex & 7u)

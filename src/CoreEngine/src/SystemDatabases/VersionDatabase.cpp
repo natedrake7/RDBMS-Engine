@@ -219,7 +219,7 @@ namespace CoreEngine {
         if (cachedPage.IsValid())
             return cachedPage;
 
-        for (const auto &extentId : gamPage.GetAllocatedExtents()){
+        for (const auto extentId : gamPage.GetAllocatedExtents(allocator)){
             const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
@@ -302,7 +302,9 @@ namespace CoreEngine {
             this->systemFileKey,
             this->header.lastGamPageId
         );
-        return gamPage.GetAllocatedExtents(startingExtentId);
+
+        return std::vector<extent_id_t>();
+        // return gamPage.GetAllocatedExtents(startingExtentId);
     }
 
     extent_id_t VersionDatabase::CleanupVersionedData(
@@ -366,7 +368,7 @@ namespace CoreEngine {
 
                 MultiThreading::WriterGuard gamLock(&gamPage.Latch());
 
-                gamPage.DeallocateExtent(extentId);
+                gamPage.DeallocateExtentNoLock(extentId);
             }
         }
 

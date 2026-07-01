@@ -4,6 +4,11 @@
 #include "../../Systemic/include/Security/Security.h"
 #include "../../Systemic/include/DataTypes/StringView.h"
 
+namespace Pages
+{
+    struct PageHeader;
+}
+
 namespace Constants{
     static constexpr auto WRITE_AHEAD_LOG_FILE = DataTypes::StringView("wal.log");
     static constexpr auto UNDO_LOG_FILE = DataTypes::StringView("undo.log");
@@ -16,16 +21,6 @@ namespace Constants{
     static constexpr Int DEFAULT_IDENTITY_VALUE = 1;
     static constexpr Int DEFAULT_IDENTITY_CACHE_BLOCK = 10000;
 
-
-    static constexpr size_t PAGE_SIZE = 8 * 1024;
-    static constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
-    static constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
-    static constexpr size_t EXTENT_SIZE = 8;
-    static constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
-    static constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
-    static constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
-    static constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = 1024;
-    static constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
     static constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
     enum class AlterTableType: UnsignedTinyInt {
@@ -91,6 +86,21 @@ namespace Constants{
     static constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
     static constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + sizeof(page_id_t);
     static constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
+
+    static constexpr size_t PAGE_SIZE = 8 * 1024;
+    static constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
+    static constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
+    static constexpr size_t EXTENT_SIZE = 8;
+    static constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
+    static constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
+    static constexpr size_t GAM_HEADER_SIZE = PAGE_SIZE - (EXTENT_BIT_MAP_SIZE / 8) - PAGE_HEADER_SIZE;
+    static constexpr size_t GAM_HEADER_RESERVED_SPACE = PAGE_SIZE - (EXTENT_BIT_MAP_SIZE / 8) - PAGE_HEADER_SIZE - 2 * sizeof(extent_id_t) - sizeof(UnsignedInt);
+    static constexpr size_t GAM_METADATA_SIZE = PAGE_HEADER_SIZE + GAM_HEADER_SIZE;
+
+    static constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
+    static constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = 1024;
+    static constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
+
 
     static constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE;
     static constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
