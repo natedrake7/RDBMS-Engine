@@ -23,13 +23,9 @@
 #include "Memory/PersistentAllocator.h"
 
 namespace CoreEngine::StorageTypes {
-    TableHeader::TableHeader() {
-        this->allocationPageId = INVALID_PAGE_ID;
-        this->tableId = 0;
-        this->numberOfColumns = 0;
-        this->clusteredIndexPageId = INVALID_PAGE_ID;
-        this->ordinalPosition = 0;
-    }
+    TableHeader::TableHeader()
+        :   allocationPageId(INVALID_PAGE_ID), clusteredIndexPageId(INVALID_PAGE_ID),
+            tableId(0), ordinalPosition(0), numberOfColumns(0){}
 
     TableHeader &TableHeader::operator=(const TableHeader &tableHeader) {
         if (this == &tableHeader)
@@ -201,7 +197,7 @@ namespace CoreEngine::StorageTypes {
         const TableHeader &tableHeader,
         const Headers::Index& primaryKey,
         Database *database,
-        const Int ordinalPosition
+        const SmallInt ordinalPosition
     ){
 
         this->header = tableHeader;
@@ -219,7 +215,6 @@ namespace CoreEngine::StorageTypes {
             this->AddColumn(column);
         }
 
-        this->CalculateInsertPayloadSize();
         this->PopulateClusteredIndexCache(this->clusteredIndexHeader);
     }
 
@@ -474,6 +469,10 @@ namespace CoreEngine::StorageTypes {
       //
       //   delete overflowRow;
       // }
+    }
+
+    void Table::ReserveExtents(const ::Memory::IAllocator* allocator, Int numberOfPages) const{
+        this->database->ReserveExtents(allocator, numberOfPages);
     }
 
     column_number_t Table::GetNumberOfColumns() const { return this->_columns.Size(); }

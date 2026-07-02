@@ -1,10 +1,17 @@
 ﻿#include "../../include/Pages/GlobalAllocationPageView.h"
+
+#include "DataStorage/ExtentReservation.h"
 #include "Pages/AllocationPageView.h"
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{
     GlobalAllocationPageAdditionalHeader* GlobalAllocationPageView::GetAdditionalHeader() const{
         return reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+    }
+
+    void GlobalAllocationPageView::SetBits(const UnsignedInt startIndex, const UnsignedInt numberOfBits) const{
+        for (Int i = startIndex; i < startIndex + numberOfBits; i++)
+            this->SetBit(i);
     }
 
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame){
@@ -78,13 +85,37 @@ namespace Pages{
         return INVALID_EXTENT_ID;
     }
 
-    Int GlobalAllocationPageView::AllocateExtentsNoLock(
-        DataStructures::PolymorphicArray<extent_id_t>& extents,
-        const Int numberOfExtents
+    Int GlobalAllocationPageView::ReserveExtentsNoLock(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& extents,
+        const Int neededExtents
     ) const{
-        if (this->TryAllocateContiguousExtentsNoLock(extents, numberOfExtents))
-            return numberOfExtents;
-        return this->AllocateFragmentedExtentsNoLock(extents, numberOfExtents);
+        auto* additionalHeader = this->GetAdditionalHeader();
+        if (additionalHeader->_freeExtentCount == 0 || neededExtents <= 0)
+            return 0;
+
+        //fast path:
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        UnsignedInt remaining = neededExtents;
+        const auto tailAvailable = static_cast<UnsignedInt>(Constants::EXTENT_BIT_MAP_SIZE - additionalHeader->_appendExtentId);
+        if (tailAvailable > 0){
+            const auto bitsToTake = Math::Min(remaining, tailAvailable);
+            this->SetBits(additionalHeader->_appendExtentId, bitsToTake);
+
+            extents.Push(CoreEngine::StorageTypes::ExtentSegment(base + additionalHeader->_appendExtentId, bitsToTake));
+
+            additionalHeader->_appendExtentId += bitsToTake;
+            remaining -= bitsToTake;
+        }
+
+        if (remaining > 0){
+
+        }
+
+        const auto bitsReserved = neededExtents - remaining;
+        additionalHeader->_freeExtentCount -= bitsReserved;
+        this->_frame->isDirty = true;
+
+        return bitsReserved;
     }
 
     Int GlobalAllocationPageView::AllocateFragmentedExtentsNoLock(
@@ -95,7 +126,7 @@ namespace Pages{
 
         auto* additionalHeader = this->GetAdditionalHeader();
 
-        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
         for (extent_id_t extentId = additionalHeader->_firstFreeExtentId; extentId < Constants::EXTENT_BIT_MAP_SIZE; extentId++){
             if (allocatedExtents == numberOfExtents)
                 break;
@@ -137,7 +168,7 @@ namespace Pages{
         if (startingBit == INVALID_EXTENT_ID)
             return false;
 
-        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
         for (Int i = 0; i < numberOfExtents; i++){
             this->SetBit(startingBit + i);
             extents.Push(base + startingBit + i);
@@ -163,7 +194,7 @@ namespace Pages{
     }
 
     void GlobalAllocationPageView::DeallocateExtentNoLock(const extent_id_t extentId) const{
-        const auto bitIndex = extentId - AllocationPageView::CalculatePageIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        const auto bitIndex = extentId - AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
         this->ClearBit(bitIndex);
         this->_frame->isDirty = true;
 

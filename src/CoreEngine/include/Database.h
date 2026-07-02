@@ -72,13 +72,6 @@ class Database final{
 
     void WriteHeaderToFile() const;
 
-    DataStructures::PolymorphicArray<extent_id_t> AllocateNewExtents(
-        const ::Memory::IAllocator* allocator,
-        Int pagesToAllocate,
-        table_id_t tableId,
-        page_id_t& lowerLimit
-    );
-
     [[nodiscard]] const StorageTypes::Table *GetTable(table_id_t tableId) const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
@@ -161,6 +154,13 @@ public:
 
     void TruncateTable(table_id_t tableId) const;
 
+    DataStructures::PolymorphicArray<extent_id_t> ReserveExtents(
+        const ::Memory::IAllocator* allocator,
+        Int pagesToAllocate,
+        table_id_t tableId,
+        page_id_t& lowerLimit
+    );
+
     Pages::OverflowPageView CreateOverflowPage(
         const ::Memory::IAllocator* allocator,
         Int pagesToAllocate,
@@ -203,7 +203,7 @@ public:
     [[nodiscard]] Storage::FileKey GetDataFileKey() const;
     [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
 
-    static page_id_t CalculateExtentFirstPageId(const extent_id_t &extentId);
+    static page_id_t CalculateExtentFirstPageId(extent_id_t extentId);
 
     static page_id_t CalculateGamPageId(const extent_id_t &extentId);
 

@@ -1,11 +1,9 @@
 ﻿#pragma once
-#include <string>
 #include "SerializedRow.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../Indexing/BTree.h"
 #include "../Logger/Logger.h"
-#include "../Pages/OverflowPageView.h"
 #include "../BufferPool/FileManager.h"
 #include "../Memory/Allocator.h"
 #include "../Memory/PersistentAllocator.h"
@@ -146,7 +144,7 @@ namespace CoreEngine::StorageTypes{
                 const TableHeader &tableHeader,
                 const Headers::Index& primaryKey,
                 Database *database,
-                Int ordinalPosition
+                SmallInt ordinalPosition
             );
             void Destroy()const;
 
@@ -440,9 +438,10 @@ namespace CoreEngine::StorageTypes{
             void DeleteLargeObjectFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns);
             void DeleteOverflowedRowsFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
-            [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId) const;
-            [[nodiscard]] Pages::OverflowPageView GetOverflowPage(page_id_t pageId) const;
-            [[nodiscard]] Pages::PageView GetPage(page_id_t pageId) const;
+            void ReserveExtents(
+                const ::Memory::IAllocator* allocator,
+                Int numberOfPages
+            )const;
 
         /** @} End of: Page and Index Management Functions*/
 

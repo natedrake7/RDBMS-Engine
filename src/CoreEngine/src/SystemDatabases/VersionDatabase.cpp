@@ -124,7 +124,7 @@ namespace CoreEngine {
             DataStructures::PolymorphicArray<extent_id_t> extents(allocator);
             MultiThreading::WriterGuard gamPageLock(&gamPage.Latch());
             // Step 3: allocate an extent from the current (or new) GAM page
-            const auto allocatedExtentsCount = gamPage.AllocateExtentsNoLock(extents, 1);
+            const auto allocatedExtentsCount = gamPage.ReserveExtentsNoLock(extents, 1);
 
             newExtentId = extents[0];
             newPageId   = Database::CalculateExtentFirstPageId(newExtentId);

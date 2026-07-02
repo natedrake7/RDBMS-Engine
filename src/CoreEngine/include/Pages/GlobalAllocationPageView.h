@@ -1,6 +1,11 @@
 ﻿#pragma once
 #include "PageView.h"
 
+namespace CoreEngine::StorageTypes
+{
+    struct ExtentSegment;
+}
+
 namespace Pages{
     struct GlobalAllocationPageAdditionalHeader{
         UnsignedInt _freeExtentCount;
@@ -12,6 +17,11 @@ namespace Pages{
     class GlobalAllocationPageView final : public PageView{
         [[nodiscard]] GlobalAllocationPageAdditionalHeader* GetAdditionalHeader() const;
 
+        void SetBits(UnsignedInt startIndex, UnsignedInt numberOfBits) const;
+        void CollectRunsNoLock(
+
+        );
+
         public:
             explicit GlobalAllocationPageView(Frame* frame);
 
@@ -20,7 +30,9 @@ namespace Pages{
 
             [[nodiscard]] extent_id_t FindContiguousExtentsNoLock(extent_id_t startingIndex, Int numberOfExtents) const;
 
-            Int AllocateExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, Int numberOfExtents) const;
+            Int ReserveExtentsNoLock(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& extents, Int neededExtents) const;
+
+
             Int AllocateFragmentedExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, Int numberOfExtents) const;
             bool TryAllocateContiguousExtentsNoLock(DataStructures::PolymorphicArray<extent_id_t>& extents, Int numberOfExtents) const;
 

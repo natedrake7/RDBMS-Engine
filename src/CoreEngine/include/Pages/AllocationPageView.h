@@ -33,6 +33,6 @@ namespace Pages{
             void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;
             void SetNextPageId(page_id_t nextPageId) const;
             [[nodiscard]] page_id_t NextPageId() const;
-            static page_id_t CalculatePageIdOffsetByGamPageId(page_id_t globalAllocationMapPageId);
+            static extent_id_t CalculateExtentIdOffsetByGamPageId(page_id_t gamPageId);
     };
 }

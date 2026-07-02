@@ -648,7 +648,7 @@ namespace QueryPipeline::PhysicalPlan {
                 if (!page.IsValid()
                     || page.PageId() != evaluationContext.row->_pageId
                 ){
-                    page = table->GetPage(evaluationContext.row->_pageId);
+                    page = Storage::StorageManager::Get().GetPage<Pages::PageView>(table->GetDataFileKey(), evaluationContext.row->_pageId);
                     evaluationContext.page = &page;
                 }
 
@@ -788,7 +788,10 @@ namespace QueryPipeline::PhysicalPlan {
             if (!page.IsValid()
                 || page.PageId() != evaluationContext.row->_pageId
             ){
-                page = table->GetPage(evaluationContext.row->_pageId);
+                page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+                    table->GetDataFileKey(),
+                    evaluationContext.row->_pageId
+                );
                 evaluationContext.page = &page;
             }
 

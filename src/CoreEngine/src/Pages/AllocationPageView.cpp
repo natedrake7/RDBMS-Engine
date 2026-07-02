@@ -40,7 +40,7 @@ namespace Pages{
         const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId
     ) const{
-        const auto base = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(globalAllocationMapPageId);
         extent_id_t lastExtentId = 0;
         for (const auto extentId : extentIds){
             const extent_id_t bitMapId = extentId - base;
@@ -74,7 +74,7 @@ namespace Pages{
     ) const{
         allocatedExtents->Clear();
         const page_id_t globalAllocationMapPageId = CoreEngine::Database::GetGamAssociatedPage(this->_frame->Header()->pageId);
-        const page_id_t offSet = AllocationPageView::CalculatePageIdOffsetByGamPageId(globalAllocationMapPageId);
+        const page_id_t offSet = AllocationPageView::CalculateExtentIdOffsetByGamPageId(globalAllocationMapPageId);
 
         if(startingExtentIndex >= Constants::EXTENT_BIT_MAP_SIZE)
             return;
@@ -94,7 +94,7 @@ namespace Pages{
         return this->GetAdditionalHeader()->nextPageId;
     }
 
-    page_id_t AllocationPageView::CalculatePageIdOffsetByGamPageId(const page_id_t globalAllocationMapPageId) {
-        return (globalAllocationMapPageId - 2) * Constants::GAM_PAGE_SIZE;
+    extent_id_t AllocationPageView::CalculateExtentIdOffsetByGamPageId(const page_id_t gamPageId) {
+        return (gamPageId - 2) * Constants::GAM_PAGE_SIZE;
     }
 }
