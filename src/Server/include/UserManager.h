@@ -20,7 +20,6 @@ namespace Security {
         mutable MultiThreading::Mutex mutex;
 
     public:
-        UserManager();
         ~UserManager();
 
         [[nodiscard]] User* Authenticate(const DataTypes::StringView& name, const DataTypes::StringView& password)const;

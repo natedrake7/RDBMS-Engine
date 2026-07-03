@@ -1,8 +1,6 @@
 #pragma once
+#include "../Memory/PersistentAllocator.h"
 #include "../DatabaseConstants.h"
-#include <string>
-#include <vector>
-
 #include "BufferPoolMemoryManager.h"
 #include "FileManager.h"
 #include "Pages/AllocationPageView.h"
@@ -128,9 +126,8 @@ namespace Storage {
         Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(FileKey fileKey, page_id_t pageId);
         Pages::AllocationPageView CreateAllocationPage(
             FileKey fileKey,
-            table_id_t tableId,
             page_id_t pageId,
-            extent_id_t startingExtentId
+            page_id_t gamPageId
         );
         Pages::PageFreeSpaceView CreatePageFreeSpacePage(FileKey fileKey, page_id_t pageId);
         Pages::IndexPageView CreateIndexPage(

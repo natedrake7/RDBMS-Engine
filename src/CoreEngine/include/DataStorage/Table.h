@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "ExtentReservation.h"
 #include "SerializedRow.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
@@ -170,18 +171,18 @@ namespace CoreEngine::StorageTypes{
             );
             Errors::RuntimeStatus InsertRowPayload(
                 const ExecutionContext& executionContext,
-                SerializedRow& payload,
-                Int pagesToAllocate
+                ExtentReservation& extentReservation,
+                SerializedRow& payload
             );
             Errors::RuntimeStatus HeapInsert(
                 const ExecutionContext& executionContext,
-                const SerializedRow& payload,
-                Int pagesToAllocate
+                ExtentReservation& extentReservation,
+                const SerializedRow& payload
             )const;
             Errors::RuntimeStatus ClusteredIndexInsert(
                 const ExecutionContext& executionContext,
-                SerializedRow& payload,
-                Int pagesToAllocate
+                ExtentReservation& extentReservation,
+                SerializedRow& payload
             );
             // Errors::RuntimeStatus NonClusteredIndexInsert(
             //     const Row* row,
@@ -416,8 +417,8 @@ namespace CoreEngine::StorageTypes{
         * @{
         */
             Int CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices);
-            void UpdateIndexAllocationMapPageId(page_id_t indexAllocationMapPageId);
-            page_id_t GetIndexAllocationMapPageId()const;
+            void UpdateAllocationPageId(page_id_t allocationPageId);
+            page_id_t GetAllocationPageId()const;
 
             [[nodiscard]] page_id_t GetClusteredIndexPageId() const;
             void SetClusteredIndexPageId(page_id_t indexPageId);
@@ -438,9 +439,9 @@ namespace CoreEngine::StorageTypes{
             void DeleteLargeObjectFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns);
             void DeleteOverflowedRowsFromPage(RID* rowPtr, const HashSet<column_index_t>& updatedColumns)const;
 
-            void ReserveExtents(
+            ExtentReservation ReserveExtents(
                 const ::Memory::IAllocator* allocator,
-                Int numberOfPages
+                Int requiredPages
             )const;
 
         /** @} End of: Page and Index Management Functions*/

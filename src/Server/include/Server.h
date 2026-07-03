@@ -1,6 +1,5 @@
 #pragma once
 #include "../../CoreEngine/include/Errors.h"
-#include "../../CoreEngine/include/Database.h"
 #include "../../CoreEngine/include/SystemDatabases/VersionDatabase.h"
 #include "../../Systemic/include/Security/Security.h"
 #include "RoleManager.h"

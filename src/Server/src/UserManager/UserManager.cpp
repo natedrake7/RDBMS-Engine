@@ -4,17 +4,14 @@
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "../../../Systemic/include/Security/Security.h"
 
-#include <iostream>
 
 #include <argon2.h>
+#include <iostream>
 
-#include "../../../CoreEngine/include/Database.h"
 #include "../../../CoreEngine/include/Memory/PersistentAllocator.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace Security {
-    UserManager::UserManager() =  default;
-
     UserManager::~UserManager(){
         this->_allocator.Release();
     }

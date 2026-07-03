@@ -64,7 +64,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
         const auto* clusteredTree = this->GetClusteredIndexedTree();
-        clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
+        // clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
     }
 
     void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
@@ -277,9 +277,11 @@ namespace CoreEngine::StorageTypes {
 
         const auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
 
+        auto extentReservation = this->ReserveExtents(allocator, pagesNeeded);
+
         Errors::RuntimeStatus result;
         for (auto& payload: rows){
-            result = this->InsertRowPayload(executionContext, payload, pagesNeeded);
+            result = this->InsertRowPayload(executionContext, extentReservation, payload);
             if (!result.IsOk())
                 return result;
         }
@@ -311,10 +313,12 @@ namespace CoreEngine::StorageTypes {
         checkPoint.transactionId = executionContext.GetCurrentTransactionId();
         Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
 
+
         if (!status.IsOk())
             return status;
 
-        status = this->InsertRowPayload(executionContext, payload, 1);
+        auto extentReservation = this->ReserveExtents(executionContext.GetAllocator(), 1);
+        status = this->InsertRowPayload(executionContext, extentReservation, payload);
 
         if (!status.IsOk())
           return status;
@@ -360,7 +364,8 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        status = this->InsertRowPayload(executionContext, payload, 1);
+        auto extentReservation = this->ReserveExtents(executionContext.GetAllocator(), 1);
+        status = this->InsertRowPayload(executionContext, extentReservation, payload);
 
         if (!status.IsOk())
             return status;
@@ -373,16 +378,16 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::InsertRowPayload(
         const ExecutionContext& executionContext,
-        SerializedRow& payload,
-        const Int pagesToAllocate
+        ExtentReservation& extentReservation,
+        SerializedRow& payload
     ){
         //row_id
         auto status = this->IsClustered()
-            ? this->ClusteredIndexInsert(executionContext, payload, pagesToAllocate)
-            : this->HeapInsert(executionContext, payload, pagesToAllocate);
+            ? this->ClusteredIndexInsert(executionContext, extentReservation, payload)
+            : this->HeapInsert(executionContext, extentReservation, payload);
 
         // const auto rowId = status.rowId;
-        if (status.code != Errors::RuntimeError::Ok)
+        if (!status.IsOk())
             return status;
 
         //insert to NonClustered Indexes
@@ -471,8 +476,12 @@ namespace CoreEngine::StorageTypes {
       // }
     }
 
-    void Table::ReserveExtents(const ::Memory::IAllocator* allocator, Int numberOfPages) const{
-        this->database->ReserveExtents(allocator, numberOfPages);
+    ExtentReservation Table::ReserveExtents(const ::Memory::IAllocator* allocator, const Int requiredPages) const{
+        return this->database->ReserveExtents(
+            allocator,
+            requiredPages,
+            this->header.tableId
+        );
     }
 
     column_number_t Table::GetNumberOfColumns() const { return this->_columns.Size(); }
@@ -614,8 +623,8 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::HeapInsert(
         const ExecutionContext& executionContext,
-        const SerializedRow& payload,
-        const Int pagesToAllocate
+        ExtentReservation& extentReservation,
+        const SerializedRow& payload
     )const{
         const auto systemFileKey = this->database->GetSystemFileKey();
         const auto dataKey = this->database->GetDataFileKey();
@@ -623,21 +632,6 @@ namespace CoreEngine::StorageTypes {
         Errors::RuntimeStatus status;
         // while(payload.Size() > Constants::PAGE_SIZE_WITHOUT_HEADER)
         // this->HandleRowOverflow(row);
-
-      if (this->header.allocationPageId == INVALID_PAGE_ID){
-          const auto newPage = this->database->CreateDataPage(
-              executionContext.GetAllocator(),
-              this->header.ordinalPosition,
-              pagesToAllocate
-            );
-
-          MultiThreading::WriterGuard pageLock(&newPage.Latch());
-
-          // status.rowId.offset = newPage.InsertRow(payload);
-          // status.rowId.pageId = newPage.PageId();
-
-          return status;
-      }
 
       const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId);
 
@@ -684,11 +678,7 @@ namespace CoreEngine::StorageTypes {
           }
       }
 
-      const auto newPage = this->database->CreateDataPage(
-          executionContext.GetAllocator(),
-          this->header.ordinalPosition,
-          pagesToAllocate
-        );
+      const auto newPage = extentReservation.Next<Pages::PageView>();
 
       MultiThreading::WriterGuard pageLock(&newPage.Latch());
       //
@@ -817,8 +807,8 @@ namespace CoreEngine::StorageTypes {
       const Expressions::Expression *expression,
       const DataStructures::PolymorphicArray<Value> &updates
     ){
-      const auto* tree = this->GetClusteredIndexedTree();
-      tree->IndexScanUpdate(executionContext, expression, updates);
+        const auto* tree = this->GetClusteredIndexedTree();
+        tree->IndexScanUpdate(executionContext, expression, updates);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexScanUpdate(
@@ -870,11 +860,11 @@ namespace CoreEngine::StorageTypes {
         this->database->TruncateTable(this->header.tableId);
     }
 
-    void Table::UpdateIndexAllocationMapPageId(const page_id_t indexAllocationMapPageId){
-      this->header.allocationPageId = indexAllocationMapPageId;
+    void Table::UpdateAllocationPageId(const page_id_t allocationPageId){
+      this->header.allocationPageId = allocationPageId;
     }
 
-    page_id_t Table::GetIndexAllocationMapPageId() const{ return this->header.allocationPageId; }
+    page_id_t Table::GetAllocationPageId() const{ return this->header.allocationPageId; }
 
     void Table::AddColumn(Column *column) { this->_columns.Push(column); }
 
@@ -1053,14 +1043,15 @@ namespace CoreEngine::StorageTypes {
         if (page->UpdateRow(allocator, newPayload, row->_index))
             return status;
 
+        auto extentReservation = this->ReserveExtents(allocator, 1);
           //only for heap tables
-          auto insertResult = this->InsertRowPayload(context, newPayload, 1);
+        auto insertResult = this->InsertRowPayload(context, extentReservation, newPayload);
 
-          if (!insertResult.IsOk()) return insertResult;
+        if (!insertResult.IsOk()) return insertResult;
 
           //install forward referencing ptr to older row pos
           // page->SetForwardPointer(row->offset, insertResult.rowId);
-          return insertResult;
+        return insertResult;
     }
 
     Errors::RuntimeStatus Table::UpdateRowNoLock(
@@ -1105,8 +1096,10 @@ namespace CoreEngine::StorageTypes {
         if (page->UpdateRow(allocator, newPayload, row->_index))
             return status;
 
+        auto extentReservation = this->ReserveExtents(allocator, 1);
+
         //only for heap tables
-        auto insertResult = this->InsertRowPayload(context, newPayload, 1);
+        auto insertResult = this->InsertRowPayload(context, extentReservation, newPayload);
 
         if (!insertResult.IsOk())
             return insertResult;

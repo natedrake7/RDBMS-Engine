@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "PageView.h"
-#include "../../include/DataStorage/Table.h"
 
 namespace CoreEngine{
     struct DatabaseHeader;
@@ -27,7 +26,7 @@ namespace Pages{
             [[nodiscard]] CoreEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 
             // [[nodiscard]] const std::vector<CoreEngine::StorageTypes::TableHeader>& GetTableHeaders()const;
-            [[nodiscard]] CoreEngine::StorageTypes::TableHeader* GetTableHeader(Int ordinalPosition) const;
+            [[nodiscard]] CoreEngine::StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
 
             void SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const;
             void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header) const;

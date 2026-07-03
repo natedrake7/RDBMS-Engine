@@ -16,8 +16,8 @@ namespace CoreEngine::StorageTypes {
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
         const ExecutionContext& executionContext,
-        SerializedRow& payload,
-        const Int pagesToAllocate
+        ExtentReservation& extentReservation,
+        SerializedRow& payload
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
@@ -32,7 +32,7 @@ namespace CoreEngine::StorageTypes {
         auto status = tree->InsertRow(
             executionContext,
             tuple,
-            pagesToAllocate,
+            extentReservation,
             indexPosition
         );
 

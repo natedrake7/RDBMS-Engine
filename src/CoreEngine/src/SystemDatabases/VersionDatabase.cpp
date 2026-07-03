@@ -10,6 +10,7 @@
 
 #include "Contexts/ExecutionContext.h"
 #include "../../include/Extensions/StringExtensions.h"
+#include "DataStorage/SerializedRow.h"
 
 namespace CoreEngine {
     VersionDatabase& VersionDatabase::Get(){
@@ -102,48 +103,48 @@ namespace CoreEngine {
         page_id_t& newPageId,
         extent_id_t& newExtentId
     ){
-        {
-            const MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
-
-            auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
-                this->systemFileKey,
-                this->header.lastGamPageId
-            );
-
-            if (gamPage.IsFull()){
-                const auto nextGamPageId = Database::CalculateNextGamPageId(this->header.lastGamPageId);
-
-                gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(
-                    this->systemFileKey,
-                    nextGamPageId
-                );
-
-                this->header.lastGamPageId = gamPage.PageId();
-            }
-
-            DataStructures::PolymorphicArray<extent_id_t> extents(allocator);
-            MultiThreading::WriterGuard gamPageLock(&gamPage.Latch());
-            // Step 3: allocate an extent from the current (or new) GAM page
-            const auto allocatedExtentsCount = gamPage.ReserveExtentsNoLock(extents, 1);
-
-            newExtentId = extents[0];
-            newPageId   = Database::CalculateExtentFirstPageId(newExtentId);
-        }
-
-        // Step 4: ensure PFS page exists
-        const auto pfsPageId = Database::GetPfsAssociatedPage(newPageId);
-
-        {
-            MultiThreading::WriterGuard pfsLock(&this->pfsPageMutex);
-
-            if (pfsPageId > this->header.lastPageFreeSpacePageId) {
-                Storage::StorageManager::Get().CreatePageFreeSpacePage(
-                    this->systemFileKey,
-                    pfsPageId
-                );
-                this->header.lastPageFreeSpacePageId = pfsPageId;
-            }
-        }
+        // {
+        //     const MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
+        //
+        //     auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
+        //         this->systemFileKey,
+        //         this->header.lastGamPageId
+        //     );
+        //
+        //     if (gamPage.IsFull()){
+        //         const auto nextGamPageId = Database::CalculateNextGamPageId(this->header.lastGamPageId);
+        //
+        //         gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(
+        //             this->systemFileKey,
+        //             nextGamPageId
+        //         );
+        //
+        //         this->header.lastGamPageId = gamPage.PageId();
+        //     }
+        //
+        //     DataStructures::PolymorphicArray<extent_id_t> extents(allocator);
+        //     MultiThreading::WriterGuard gamPageLock(&gamPage.Latch());
+        //     // Step 3: allocate an extent from the current (or new) GAM page
+        //     const auto allocatedExtentsCount = gamPage.ReserveExtentsNoLock(extents, 1);
+        //
+        //     newExtentId = extents[0];
+        //     newPageId   = Database::CalculateExtentFirstPageId(newExtentId);
+        // }
+        //
+        // // Step 4: ensure PFS page exists
+        // const auto pfsPageId = Database::GetPfsAssociatedPage(newPageId);
+        //
+        // {
+        //     MultiThreading::WriterGuard pfsLock(&this->pfsPageMutex);
+        //
+        //     if (pfsPageId > this->header.lastPageFreeSpacePageId) {
+        //         Storage::StorageManager::Get().CreatePageFreeSpacePage(
+        //             this->systemFileKey,
+        //             pfsPageId
+        //         );
+        //         this->header.lastPageFreeSpacePageId = pfsPageId;
+        //     }
+        // }
 
         return true;
     }

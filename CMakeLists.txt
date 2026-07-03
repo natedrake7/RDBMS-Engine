@@ -195,6 +195,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.cpp
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.Binary.cpp
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.Cast.cpp
+        src/CoreEngine/src/DataStorage/ExtentReservation.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

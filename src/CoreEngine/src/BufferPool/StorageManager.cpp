@@ -74,7 +74,9 @@ void StorageManager::TryFlushFrameToDiskNoLock(const Pages::Frame *framePtr){
         return;
 
     const auto fd = this->fileManager.GetFile(framePtr->fileKey);
-    const auto offSet = framePtr->Header()->pageId * Constants::PAGE_SIZE;
+
+    const auto pageId = framePtr->Header()->pageId;
+    const auto offSet = pageId * Constants::PAGE_SIZE;
 
     const auto _ = File::Write(fd, framePtr->_data, Constants::PAGE_SIZE, offSet);
     File::Flush(fd);
@@ -224,8 +226,8 @@ Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(co
     auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM);
 
     auto* header = reinterpret_cast<Pages::GlobalAllocationPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
-    header->_appendExtentId = 0;
-    header->_firstFreeExtentId = 0;
+    header->_appendBitId = 0;
+    header->_firstFreeBitId = 0;
     header->_freeExtentCount = Constants::EXTENT_BIT_MAP_SIZE;
     std::memset(header->_reserved, 0, Constants::GAM_HEADER_RESERVED_SPACE);
 
@@ -234,11 +236,17 @@ Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(co
 
 Pages::AllocationPageView StorageManager::CreateAllocationPage(
     const FileKey fileKey,
-    const table_id_t tableId,
     const page_id_t pageId,
-    const extent_id_t startingExtentId
+    const page_id_t gamPageId
 ){
     auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::IAM);
+
+    auto* additionalHeader = reinterpret_cast<Pages::IndexAllocationPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
+
+    additionalHeader->nextPageId = INVALID_PAGE_ID;
+    additionalHeader->lastAllocatedExtentId = 0;
+    additionalHeader->gamPageId = gamPageId;
+
     return Pages::AllocationPageView(frame);
 }
 

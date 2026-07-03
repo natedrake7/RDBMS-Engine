@@ -28,6 +28,11 @@ namespace MultiThreading {
 }
 
 namespace CoreEngine{
+    namespace StorageTypes
+    {
+        class ExtentReservation;
+    }
+
     struct IndexState;
     class ExecutionContext;
     class Database;
@@ -80,16 +85,15 @@ namespace Indexing{
         );
 
         Pages::IndexPageView CreateRootPage(
-            const CoreEngine::ExecutionContext& context,
-            Int& indexPosition,
-            Int pagesToAllocate
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation,
+            Int& indexPosition
         );
 
         void SplitRoot(
             const CoreEngine::ExecutionContext& context,
             Pages::IndexPageView& root,
             MultiThreading::ReaderGuard& rootLock,
-            Int pagesToAllocate
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation
         );
 
         void SplitChild(
@@ -99,7 +103,7 @@ namespace Indexing{
             Int index,
             const Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childReadLock,
-            Int pagesToAllocate
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation
         );
 
         static void SplitLeafNoLock(
@@ -122,13 +126,13 @@ namespace Indexing{
             const Pages::IndexPageView& parent,
             Int index,
             const Pages::IndexPageView& child,
-            Int pagesToAllocate
-        );
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        ) const;
         Errors::RuntimeStatus InsertToNonFullNode(
             const CoreEngine::ExecutionContext& context,
             Pages::IndexPageView& root,
             const Pages::IndexInsertTuple& tuple,
-            Int pagesToAllocate,
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation,
             Int& indexPosition
         );
 
@@ -147,13 +151,6 @@ namespace Indexing{
 
         [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
         [[nodiscard]] Int CalculateTreeDegree(const CoreEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
-
-        [[nodiscard]] Pages::IndexPageView AllocateNewPage(
-            const ::Memory::IAllocator* allocator,
-            page_id_t parentPageId,
-            page_id_t splitChildPageId,
-            Int pagesToAllocate
-        );
 
         void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
@@ -218,7 +215,7 @@ namespace Indexing{
         Errors::RuntimeStatus InsertRow(
             const CoreEngine::ExecutionContext& context,
             const Pages::IndexInsertTuple& tuple,
-            Int pagesToAllocate,
+            CoreEngine::StorageTypes::ExtentReservation& extentReservation,
             Int& indexPosition
         );
 
@@ -352,7 +349,7 @@ namespace Indexing{
 
         [[nodiscard]] page_id_t GetFirstIndexPageId() const;
 
-        void InsertRowsToOtherTree(Int indexPos, Int pagesToAllocate)const;
+        void InsertRowsToOtherTree(CoreEngine::StorageTypes::ExtentReservation& extentReservation, Int indexPos)const;
 
         void InsertColumnToRow(column_index_t index, const Value& defaultValue)const;
 

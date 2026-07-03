@@ -6,7 +6,10 @@
 #include "BufferPool/FileManager.h"
 #include "DataStorage/Column.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "DataStorage/ExtentReservation.h"
 #include "Logger/Logger.h"
+#include "Pages/AllocationPageView.h"
+#include "Pages/GlobalAllocationPageView.h"
 #include "Pages/IndexPageView.h"
 #include "Pages/LargeObjectView.h"
 #include "Pages/OverflowPageView.h"
@@ -79,6 +82,13 @@ class Database final{
     static int CalculateExtentsToAllocate(Int pagesToAllocate);
 
     void InitializeStaticData();
+
+    Pages::GlobalAllocationPageView RollToNewGamPageNoLock();
+    Pages::AllocationPageView FindOrRollToNewAllocationPage(
+        page_id_t currentAllocationPageId,
+        page_id_t gamPageId,
+        page_id_t newAllocationPageId
+    ) const;
 
 public:
     Database(
@@ -154,11 +164,11 @@ public:
 
     void TruncateTable(table_id_t tableId) const;
 
-    DataStructures::PolymorphicArray<extent_id_t> ReserveExtents(
+    [[nodiscard]]
+    StorageTypes::ExtentReservation ReserveExtents(
         const ::Memory::IAllocator* allocator,
-        Int pagesToAllocate,
-        table_id_t tableId,
-        page_id_t& lowerLimit
+        Int requiredPages,
+        table_id_t tableId
     );
 
     Pages::OverflowPageView CreateOverflowPage(
@@ -169,8 +179,7 @@ public:
 
     Pages::PageView CreateDataPage(
         const ::Memory::IAllocator* allocator,
-        table_id_t tableId,
-        Int pagesToAllocate
+        table_id_t tableId
     );
 
     Pages::LargeObjectView CreateLargeDataPage(

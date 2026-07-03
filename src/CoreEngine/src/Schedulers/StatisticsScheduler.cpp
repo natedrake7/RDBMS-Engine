@@ -103,7 +103,7 @@ namespace CoreEngine {
     }
 
     void StatisticsScheduler::UpdateTableStatistics(StorageTypes::Table *table)const {
-        const auto iamPageId = table->GetIndexAllocationMapPageId();
+        const auto iamPageId = table->GetAllocationPageId();
 
         if (iamPageId == INVALID_PAGE_ID) return;
 

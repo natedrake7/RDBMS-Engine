@@ -1,10 +1,17 @@
 ﻿#pragma once
+#include <algorithm>
+#include <functional>
 #include <stdexcept>
 #include <cstring>
 #include "../DataTypes/DataTypes.h"
 #include "../Memory/IAllocator.h"
 
 namespace DataStructures{
+    enum class ArraySortType: UnsignedTinyInt{
+        ASC = 0,
+        DESC = 1
+    };
+
     template <typename T>
     class PolymorphicArray final{
         const Memory::IAllocator* _allocator;
@@ -77,7 +84,28 @@ namespace DataStructures{
             this->_capacity = other._capacity;
 
             other._data = nullptr;
+            other._allocator = nullptr;
+            other._size = 0;
+            other._capacity = 0;
 
+            return *this;
+        }
+
+        PolymorphicArray& PartialMove(PolymorphicArray& other, Int offSet) noexcept{
+            if (this == &other)
+                return *this;
+
+            this->_allocator = other._allocator;
+            this->_data = other._data;
+            this->_size = other._size;
+            this->_capacity = other._capacity;
+
+            other._data = nullptr;
+            other._allocator = nullptr;
+            other._size = 0;
+            other._capacity = 0;
+
+            this->_data += offSet;
             return *this;
         }
 
@@ -288,6 +316,24 @@ namespace DataStructures{
             Int index = pos - this->begin();
             this->Remove(index);
             return this->begin() + index;
+        }
+
+        template<ArraySortType TSort>
+        void Sort(){
+            if constexpr (TSort == ArraySortType::ASC)
+                std::sort(this->begin(), this->end(), std::less<T>{});
+            else
+                std::sort(this->begin(), this->end(), std::greater<T>{});
+        }
+
+        template<typename Compare>
+        void Sort(Compare compare){
+            std::sort(this->begin(), this->end(), std::move(compare));
+        }
+
+        template<typename Compare>
+        void SortWith(){
+            std::sort(this->begin(), this->end(), Compare{});
         }
     };
 }

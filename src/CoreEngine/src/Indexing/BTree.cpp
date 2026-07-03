@@ -125,17 +125,11 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::CreateRootPage(
-        const CoreEngine::ExecutionContext& context,
-        Int& indexPosition,
-        const Int pagesToAllocate
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
+        Int& indexPosition
     ) {
         //maybe root page is removed and need to be reopened
-        auto root = this->AllocateNewPage(
-            context.GetAllocator(),
-            INVALID_PAGE_ID,
-            INVALID_PAGE_ID,
-            pagesToAllocate
-        );
+        auto root = extentReservation.Next<Pages::IndexPageView>();
 
         {
             MultiThreading::WriterGuard lock(&root.Latch());
@@ -155,15 +149,10 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         Pages::IndexPageView& root,
         MultiThreading::ReaderGuard& rootLock,
-        const Int pagesToAllocate
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation
     ){
         {
-            auto newRoot = this->AllocateNewPage(
-                context.GetAllocator(),
-                this->rootPageId,
-                INVALID_PAGE_ID,
-                pagesToAllocate
-            );
+            auto newRoot = extentReservation.Next<Pages::IndexPageView>();
 
             auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root.Latch(), rootLock);
 
@@ -178,7 +167,7 @@ namespace Indexing{
             root.SetIsRoot(false);
             this->rootPageId = newRoot.PageId();
 
-            this->SplitChildNoLock(context, newRoot, 0, root, pagesToAllocate);
+            this->SplitChildNoLock(context, newRoot, 0, root, extentReservation);
             root = std::move(newRoot);
         }
 
@@ -196,12 +185,12 @@ namespace Indexing{
         const Int index,
         const Pages::IndexPageView& child,
         MultiThreading::ReaderGuard& childReadLock,
-        const Int pagesToAllocate
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation
     ){
         auto parentLock = MultiThreading::WriterGuard::Promote(&parent.Latch(), parentReadLock);
         auto childLock = MultiThreading::WriterGuard::Promote(&child.Latch(), childReadLock);
 
-        this->SplitChildNoLock(context, parent, index, child, pagesToAllocate);
+        this->SplitChildNoLock(context, parent, index, child, extentReservation);
     }
 
     void BTree::SplitLeafNoLock(
@@ -253,14 +242,9 @@ namespace Indexing{
         const Pages::IndexPageView &parent,
         const Int index,
         const Pages::IndexPageView &child,
-        const Int pagesToAllocate
-    ) {
-        const auto newChild = this->AllocateNewPage(
-            context.GetAllocator(),
-            parent.PageId(),
-            child.PageId(),
-            pagesToAllocate
-        );
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+    ) const{
+        const auto newChild = extentReservation.Next<Pages::IndexPageView>();
 
         MultiThreading::WriterGuard newChildLock(&newChild.Latch());
 
@@ -280,7 +264,7 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         Pages::IndexPageView& root,
         const Pages::IndexInsertTuple& tuple,
-        const Int pagesToAllocate,
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
         Int& indexPosition
     ){
         auto node = std::move(root);
@@ -307,7 +291,7 @@ namespace Indexing{
                     nodeLock,
                     childIndex, child,
                     childLock,
-                    pagesToAllocate
+                    extentReservation
                 );
 
                 MultiThreading::ReaderGuard newNodeLock(&node.Latch());
@@ -432,22 +416,6 @@ namespace Indexing{
         }
 
         return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
-    }
-
-    Pages::IndexPageView BTree::AllocateNewPage(
-        const ::Memory::IAllocator* allocator,
-        const page_id_t parentPageId,
-        const page_id_t splitChildPageId,
-        const Int pagesToAllocate
-    ){
-        return this->database->FindOrAllocateNextIndexPage(
-            allocator,
-            this->table,
-            parentPageId,
-            splitChildPageId,
-            pagesToAllocate,
-            this->nonClusteredIndexId
-        );
     }
 
     void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex) {
@@ -966,12 +934,12 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::InsertRow(
         const CoreEngine::ExecutionContext& context,
         const Pages::IndexInsertTuple& tuple,
-        const Int pagesToAllocate,
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
         Int &indexPosition
     ){
         //base case scenario
         if (this->IsEmpty()) {
-            const auto root =  this->CreateRootPage(context, indexPosition, pagesToAllocate);
+            const auto root =  this->CreateRootPage(extentReservation, indexPosition);
 
             if(this->nonClusteredIndexId != -1)
                 this->table->SetNonClusteredIndexPageId(this->rootPageId, this->nonClusteredIndexId);
@@ -989,10 +957,10 @@ namespace Indexing{
             MultiThreading::ReaderGuard rootLock(&root.Latch());
 
             if (root.Keys() == 2 * this->degree - 1) // root is full,
-                this->SplitRoot(context, root, rootLock, pagesToAllocate);
+                this->SplitRoot(context, root, rootLock, extentReservation);
         }
 
-        return this->InsertToNonFullNode(context, root, tuple, pagesToAllocate, indexPosition);
+        return this->InsertToNonFullNode(context, root, tuple, extentReservation, indexPosition);
     }
 
     void BTree::IndexSeekRange(
@@ -1844,7 +1812,7 @@ namespace Indexing{
     page_id_t BTree::GetFirstIndexPageId() const { return this->rootPageId; }
 
     //escalate to table lock
-    void BTree::InsertRowsToOtherTree(const Int indexPos, const Int pagesToAllocate)const{
+    void BTree::InsertRowsToOtherTree(CoreEngine::StorageTypes::ExtentReservation& extentReservation, const Int indexPos)const{
         if (this->IsEmpty())
             return;
 

@@ -59,6 +59,22 @@ namespace Pages{
         return INVALID_EXTENT_ID;
     }
 
+    void AllocationPageView::ReserveExtentsNoLock(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segments
+    ) const{
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->GamPageId());
+        for (const auto& [_extentId, _count] : segments){
+            const extent_id_t bitId = _extentId - base;
+
+            for (extent_id_t i = bitId; i < bitId + _count; i++){
+                this->SetBit(i);
+            }
+        }
+
+        const auto* back = segments.Back();
+        this->GetAdditionalHeader()->lastAllocatedExtentId = back->_firstExtentId + back->_count - 1;
+    }
+
     void AllocationPageView::SetDeallocatedExtent(const extent_id_t extentId) const{
         this->ClearBit(extentId);
         this->_frame->isDirty = true;
@@ -73,16 +89,16 @@ namespace Pages{
         const extent_id_t startingExtentIndex
     ) const{
         allocatedExtents->Clear();
-        const page_id_t globalAllocationMapPageId = CoreEngine::Database::GetGamAssociatedPage(this->_frame->Header()->pageId);
-        const page_id_t offSet = AllocationPageView::CalculateExtentIdOffsetByGamPageId(globalAllocationMapPageId);
+        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->GamPageId());
+        const auto lastExtentId = this->GetAdditionalHeader()->lastAllocatedExtentId;
 
         if(startingExtentIndex >= Constants::EXTENT_BIT_MAP_SIZE)
             return;
 
         MultiThreading::ReaderGuard lock(&this->_frame->latch);
-        for (extent_id_t id = startingExtentIndex - offSet; id < this->GetAdditionalHeader()->lastAllocatedExtentId; id++){
+        for (extent_id_t id = startingExtentIndex - base; id < lastExtentId; id++){
             if (this->GetBit(id))
-                allocatedExtents->Push(offSet + id);
+                allocatedExtents->Push(base + id);
         }
     }
 
@@ -92,6 +108,10 @@ namespace Pages{
 
     page_id_t AllocationPageView::NextPageId() const{
         return this->GetAdditionalHeader()->nextPageId;
+    }
+
+    page_id_t AllocationPageView::GamPageId() const{
+        return this->GetAdditionalHeader()->gamPageId;
     }
 
     extent_id_t AllocationPageView::CalculateExtentIdOffsetByGamPageId(const page_id_t gamPageId) {

@@ -18,7 +18,8 @@
 #include "Memory/Allocator.h"
 #include "Memory/PersistentAllocator.h"
 
-namespace CoreEngine{
+namespace CoreEngine
+{
     void Database::WriteHeaderToFile() const{
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
             this->systemFileKey,
@@ -102,6 +103,55 @@ namespace CoreEngine{
         this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
     }
 
+    Pages::GlobalAllocationPageView Database::RollToNewGamPageNoLock(){
+        this->header.lastGamPageId = Database::CalculateNextGamPageId(this->header.lastGamPageId);
+        auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
+            this->systemFileKey,
+            this->header.lastGamPageId
+        );
+        return gamPage;
+    }
+
+    Pages::AllocationPageView Database::FindOrRollToNewAllocationPage(
+        page_id_t currentAllocationPageId,
+        const page_id_t gamPageId,
+        const page_id_t newAllocationPageId
+    ) const{
+        if (currentAllocationPageId == INVALID_PAGE_ID)
+            return Storage::StorageManager::Get().CreateAllocationPage(
+                this->dataFileKey,
+                newAllocationPageId,
+                gamPageId
+            );
+
+        Pages::AllocationPageView prev, current;
+        while (currentAllocationPageId != INVALID_PAGE_ID){
+            current = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
+                this->dataFileKey,
+                currentAllocationPageId
+            );
+            if (current.GamPageId() == gamPageId)
+                return current;
+
+            currentAllocationPageId = current.NextPageId();
+            prev = std::move(current);
+        }
+
+        current = Storage::StorageManager::Get().CreateAllocationPage(
+            this->dataFileKey,
+            newAllocationPageId,
+            gamPageId
+        );
+
+        {
+            MultiThreading::WriterGuard prevGuard(&prev.Latch());
+            prev.SetNextPageId(current.PageId());
+        }
+
+        return current;
+
+    }
+
     Database::Database(
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
@@ -131,7 +181,7 @@ namespace CoreEngine{
         if (this->header.numberOfTables != masterDbData.Size()) return;
 
         for (int i = 0;i < masterDbData.Size(); i++)
-            this->CreateTable(masterDbData[i], *headerPage.GetTableHeader(i));
+            this->CreateTable(masterDbData[i], *headerPage.GetTableHeaderPtr(i));
     }
 
     Database::Database(
@@ -165,7 +215,7 @@ namespace CoreEngine{
                     index.columns[counter++] = j;
             }
 
-            this->CreateTable(tables[i], *headerPage.GetTableHeader(i), index, i);
+            this->CreateTable(tables[i], *headerPage.GetTableHeaderPtr(i), index, i);
         }
     }
 
@@ -352,16 +402,16 @@ namespace CoreEngine{
     }
 
     //    Table *Database::OpenTable(const string& schemaName, const string &tableName) const
-//    {
-//        for (const auto &table : this->_tables)
-//        {
-//            if (table->GetTableName() == tableName
-//                && table->GetSchema() == schemaName)
-//                return table;
-//        }
-//
-//        return nullptr;
-//    }
+    //    {
+    //        for (const auto &table : this->_tables)
+    //        {
+    //            if (table->GetTableName() == tableName
+    //                && table->GetSchema() == schemaName)
+    //                return table;
+    //        }
+    //
+    //        return nullptr;
+    //    }
 
     StorageTypes::Table * Database::OpenTable(const table_id_t tableId) const{
         return this->_tables[tableId];
@@ -492,154 +542,109 @@ namespace CoreEngine{
         //     }
         // }
 
-        table->UpdateIndexAllocationMapPageId(INVALID_PAGE_ID);
+        table->UpdateAllocationPageId(INVALID_PAGE_ID);
     }
 
-    DataStructures::PolymorphicArray<extent_id_t> Database::ReserveExtents(
+    StorageTypes::ExtentReservation Database::ReserveExtents(
         const ::Memory::IAllocator* allocator,
-        const Int pagesToAllocate,
-        const table_id_t tableId,
-        page_id_t& lowerLimit
+        const Int requiredPages,
+        const table_id_t tableId
     ){
-        const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(pagesToAllocate);
+        const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(requiredPages);
 
-        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(allocator, extentsToAllocate);
-
-        const auto* table = this->_tables[tableId];
-        const page_id_t indexAllocationMapPageId = table->GetHeader().allocationPageId;
-        bool newGamPageCreated = false;
+        //pre account for required allocation page
+        DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> segmentsRuns(allocator, extentsToAllocate);
 
         // Step 1: Allocate extents from GAM page
-        page_id_t initialGamPageId = 0;
-        page_id_t newPageId = 0;
-        extent_id_t newExtentId = 0;
         {
+            DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> localRuns(allocator, extentsToAllocate);
+            auto* table = this->_tables[tableId];
+            const page_id_t currentAllocationPageId = table->GetAllocationPageId();
+
+            MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
+
             auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
                 this->systemFileKey,
                 this->header.lastGamPageId
             );
 
-            MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
-            initialGamPageId = this->header.lastGamPageId;
-
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
-            Int remainingExtents = extentsToAllocate;
+            bool newAllocationPageRequired = currentAllocationPageId == INVALID_PAGE_ID;
+            UnsignedInt remainingExtents = extentsToAllocate + newAllocationPageRequired;
             while (remainingExtents > 0) {
-                if (gamPage.IsFull()) {
-                    newGamPageCreated = true;
-
-                    const auto nextGamPageId = Database::CalculateNextGamPageId(gamPage.PageId());
-
-                    gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(
-                        this->systemFileKey,
-                        nextGamPageId
-                    );
-
-                    this->header.lastGamPageId = nextGamPageId;
+                if (gamPage.IsFull()){
+                    gamPage = this->RollToNewGamPageNoLock();
+                    remainingExtents += 1;
+                    newAllocationPageRequired = true;
                 }
 
                 MultiThreading::WriterGuard gamPageLock(&gamPage.Latch());
 
                 // Allocate one extent from current GAM page
-                const auto extentsAllocated = gamPage.ReserveExtentsNoLock(allocatedExtents, remainingExtents);
+                const auto extentsAllocated = gamPage.ReserveExtentsNoLock(localRuns, remainingExtents);
+                remainingExtents-= extentsAllocated;
+
                 if (extentsAllocated == 0)
                     continue;
 
-                remainingExtents-= extentsAllocated;
+                {
+                    auto* localRunsFront = localRuns.Front();
+                    const auto newAllocationPageId = localRunsFront->_firstExtentId++ * Constants::EXTENT_SIZE;
+                    localRunsFront->_count--;
+
+                    auto allocPage = this->FindOrRollToNewAllocationPage(
+                        currentAllocationPageId,
+                        gamPage.PageId(),
+                        newAllocationPageId
+                    );
+                    MultiThreading::WriterGuard allocPageLock(&allocPage.Latch());
+
+                    if (currentAllocationPageId == INVALID_PAGE_ID)
+                        table->UpdateAllocationPageId(allocPage.PageId());
+                    allocPage.ReserveExtentsNoLock(localRuns);
+                }
+
+                if (remainingExtents <= 0 && !newAllocationPageRequired)
+                    segmentsRuns = std::move(localRuns);
+                else{
+                    for (const auto& localRun : localRuns)
+                        segmentsRuns.Push(localRun);
+                }
+
+                localRuns.Clear();
             }
 
-            if (allocatedExtents.Empty())
+            if (segmentsRuns.Empty())
                 throw std::runtime_error("Failed to allocate any extents");
 
-            // Set output parameters based on first allocated extent
-            newExtentId = allocatedExtents[0];
-            newPageId = Database::CalculateExtentFirstPageId(newExtentId);
-        }
-
-        // Step 2: Set up or update IAM page
-        {
-            Pages::AllocationPageView tableMapPage;
-
-            const bool isFirstExtent = indexAllocationMapPageId == INVALID_PAGE_ID;
-
-            if (isFirstExtent || newGamPageCreated) {
-                // First extent for this table - create new IAM page
-                tableMapPage = Storage::StorageManager::Get().CreateAllocationPage(
-                    this->dataFileKey,
-                    tableId,
-                    newPageId,
-                    newExtentId
-                );
-
-                lowerLimit = newPageId;
-
-                if (newGamPageCreated && !isFirstExtent) {
-                    const auto previousIamPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-                        this->dataFileKey,
-                        indexAllocationMapPageId
-                    );
-
-                    // Update GAM for the IAM page itself
-                    MultiThreading::WriterGuard gamLock(&previousIamPage.Latch());
-                    previousIamPage.SetNextPageId(tableMapPage.PageId());
-                }
-
-                // Update PFS for the IAM page itself
-                {
-                    const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
-                        this->systemFileKey,
-                        tableMapPage.PageId()
-                    );
-
-                    MultiThreading::WriterGuard pageIdLock(&pageFreeSpacePage.Latch());
-                    pageFreeSpacePage.SetPageMetaData(&tableMapPage);
-                }
-
-                // Update table header with new IAM page ID
-                this->_tables[tableId]->UpdateIndexAllocationMapPageId(newPageId);
-            }
-            else {
-                // Table already has IAM page - get it
-                tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-                    this->dataFileKey,
-                    indexAllocationMapPageId
-                );
-            }
-
-            // Record all allocated extents in IAM page
-            MultiThreading::WriterGuard tableMapLock(&tableMapPage.Latch());
-            extent_id_t lastNotRecordedExtent = 0;
-            const auto gamPageId = initialGamPageId;
-
-            while (lastNotRecordedExtent != INVALID_EXTENT_ID) {
-                //todo handle multiple iams
-                lastNotRecordedExtent = tableMapPage.SetExtentsAllocatedNoLock(allocatedExtents, gamPageId);
-            }
+            newAllocationPageRequired = false;
         }
 
         // Step 4: Ensure PFS pages exist for all allocated extents
         {
             MultiThreading::WriterGuard pfsLock(&this->pfsPageMutex);
 
-            for (const auto& extentId : allocatedExtents) {
-                const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
+            for (const auto& [_firstExtentId, _count] : segmentsRuns) {
+                for (Int extentId = _firstExtentId; extentId < _firstExtentId + _count; extentId++){
+                    const auto firstPageId = Database::CalculateExtentFirstPageId(extentId);
 
-                // Check each page in the extent
-                for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + Constants::EXTENT_SIZE; pageId++) {
-                    const page_id_t pfsPageId = Database::GetPfsAssociatedPage(pageId);
+                    // Check each page in the extent
+                    for (page_id_t pageId = firstPageId; pageId < firstPageId + Constants::EXTENT_SIZE; pageId++) {
+                        const auto pfsPageId = Database::GetPfsAssociatedPage(pageId);
 
-                    if (pfsPageId > this->header.lastPageFreeSpacePageId) {
-                        Storage::StorageManager::Get().CreatePageFreeSpacePage(
-                            this->systemFileKey,
-                            pfsPageId
-                        );
-                        this->header.lastPageFreeSpacePageId = pfsPageId;
+                        if (pfsPageId > this->header.lastPageFreeSpacePageId) {
+                            Storage::StorageManager::Get().CreatePageFreeSpacePage(
+                                this->systemFileKey,
+                                pfsPageId
+                            );
+                            this->header.lastPageFreeSpacePageId = pfsPageId;
+                        }
                     }
                 }
             }
         }
 
-        return allocatedExtents;
+        return StorageTypes::ExtentReservation(segmentsRuns, this, tableId);
     }
 
     Pages::OverflowPageView Database::CreateOverflowPage(
@@ -647,81 +652,78 @@ namespace CoreEngine{
         const Int pagesToAllocate,
         const table_id_t tableOrdinalPosition
     ){
-        page_id_t lowerLimit = 0;
-
         const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pagesToAllocate) / Constants::EXTENT_SIZE));
 
-        const auto extents = this->ReserveExtents(
+        const auto extentReservation = this->ReserveExtents(
             allocator, extentsToAllocate,
-            tableOrdinalPosition, lowerLimit
+            tableOrdinalPosition
         );
 
-        Pages::OverflowPageView firstPage;
-        for (const auto& extentId : extents) {
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+        // Pages::OverflowPageView firstPage;
+        // for (const auto& [_extentId, _cunt] : extentReservation) {
+        //     const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+        //
+        //     for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+        //
+        //         if (pageId == lowerLimit)
+        //             continue;
+        //
+        //         auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
+        //
+        //         auto overflowPage = Storage::StorageManager::Get().CreateOverflowPage(this->dataFileKey, pageId);
+        //
+        //         MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
+        //         MultiThreading::WriterGuard overflowLock(&overflowPage.Latch());
+        //
+        //         // pageFreeSpacePage.SetPageMetaData(overflowPage.Get());
+        //
+        //         if (!firstPage.IsValid())
+        //             firstPage = std::move(overflowPage);
+        //     }
+        // }
 
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
-
-                if (pageId == lowerLimit)
-                    continue;
-
-                auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
-
-                auto overflowPage = Storage::StorageManager::Get().CreateOverflowPage(this->dataFileKey, pageId);
-
-                MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
-                MultiThreading::WriterGuard overflowLock(&overflowPage.Latch());
-
-                // pageFreeSpacePage.SetPageMetaData(overflowPage.Get());
-
-                if (!firstPage.IsValid())
-                    firstPage = std::move(overflowPage);
-            }
-        }
-
-        return firstPage;
+        // return firstPage;
     }
 
     Pages::PageView Database::CreateDataPage(
         const ::Memory::IAllocator* allocator,
-        const table_id_t tableId,
-        const Int pagesToAllocate
+        const table_id_t tableId
     ) {
-        page_id_t lowerLimit = INVALID_PAGE_ID;
-
-        const auto extents = this->ReserveExtents(
-            allocator, pagesToAllocate,
-            tableId, lowerLimit
-        );
-
-        Pages::PageView page;
-        bool pageAllocated = false;
-
-        bool firstExtent = true;
-        for (const auto& extentId : extents) {
-            const auto firstExtentPageId = (lowerLimit != INVALID_PAGE_ID) && firstExtent
-                                               ? lowerLimit + 1
-                                               : Database::CalculateExtentFirstPageId(extentId);
-
-            firstExtent = false;
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
-
-                auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
-
-                auto dataPage = Storage::StorageManager::Get().CreatePage(this->dataFileKey, pageId);
-
-                MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
-                MultiThreading::WriterGuard dataPageLock(&dataPage.Latch());
-                pageFreeSpacePage.SetPageMetaData(&dataPage);
-
-                if (!pageAllocated){
-                    page = std::move(dataPage);
-                    pageAllocated = true;
-                }
-            }
-        }
-
-        return page;
+        // page_id_t lowerLimit = INVALID_PAGE_ID;
+        //
+        // const auto extents = this->ReserveExtents(
+        //     allocator, pagesToAllocate,
+        //     tableId, lowerLimit
+        // );
+        //
+        // Pages::PageView page;
+        // bool pageAllocated = false;
+        //
+        // bool firstExtent = true;
+        // for (const auto& extentId : extents) {
+        //     const auto firstExtentPageId = (lowerLimit != INVALID_PAGE_ID) && firstExtent
+        //                                        ? lowerLimit + 1
+        //                                        : Database::CalculateExtentFirstPageId(extentId);
+        //
+        //     firstExtent = false;
+        //     for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+        //
+        //         auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
+        //
+        //         auto dataPage = Storage::StorageManager::Get().CreatePage(this->dataFileKey, pageId);
+        //
+        //         MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
+        //         MultiThreading::WriterGuard dataPageLock(&dataPage.Latch());
+        //         pageFreeSpacePage.SetPageMetaData(&dataPage);
+        //
+        //         if (!pageAllocated){
+        //             page = std::move(dataPage);
+        //             pageAllocated = true;
+        //         }
+        //     }
+        // }
+        //
+        // return page;
     }
 
     Pages::LargeObjectView Database::CreateLargeDataPage(
@@ -729,36 +731,36 @@ namespace CoreEngine{
         const Int pagesToAllocate,
         const table_id_t tableOrdinalPosition
     ){
-        page_id_t lowerLimit = 0;
-
-        const auto extents = this->ReserveExtents(
-            allocator, pagesToAllocate,
-            tableOrdinalPosition, lowerLimit
-        );
-
-        Pages::LargeObjectView page;
-        for (const auto& extentId : extents) {
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
-
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
-
-                auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
-
-                auto dataPage = Storage::StorageManager::Get().CreateLargeDataPage(
-                    this->dataFileKey,
-                    pageId
-                );
-
-                MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
-                MultiThreading::WriterGuard dataPageLock(&dataPage.Latch());
-                pageFreeSpacePage.SetPageMetaData(&dataPage);
-
-                if (!page.IsValid())
-                    page = std::move(dataPage);
-            }
-        }
-
-        return page;
+        // page_id_t lowerLimit = 0;
+        //
+        // const auto extents = this->ReserveExtents(
+        //     allocator, pagesToAllocate,
+        //     tableOrdinalPosition, lowerLimit
+        // );
+        //
+        // Pages::LargeObjectView page;
+        // for (const auto& extentId : extents) {
+        //     const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+        //
+        //     for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+        //
+        //         auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
+        //
+        //         auto dataPage = Storage::StorageManager::Get().CreateLargeDataPage(
+        //             this->dataFileKey,
+        //             pageId
+        //         );
+        //
+        //         MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
+        //         MultiThreading::WriterGuard dataPageLock(&dataPage.Latch());
+        //         pageFreeSpacePage.SetPageMetaData(&dataPage);
+        //
+        //         if (!page.IsValid())
+        //             page = std::move(dataPage);
+        //     }
+        // }
+        //
+        // return page;
     }
 
     Pages::LargeObjectView Database::GetTableLastLargeDataPage(
@@ -917,53 +919,53 @@ namespace CoreEngine{
         const Constants::TreeType treeType,
         const page_id_t treeId
     ){
-        page_id_t lowerLimit = 0;
-
-        const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pageCount) / Constants::EXTENT_SIZE));
-
-        const auto extents = this->ReserveExtents(
-            allocator, extentsToAllocate,
-            tableOrdinalPosition, lowerLimit
-        );
-
-        const auto& table = this->_tables[tableOrdinalPosition];
-        const auto indexedColumnDatatypes = table->GetColumnTypeByTreeId(treeType);
-
-        Pages::IndexPageView page;
-        bool pageAssigned = false;
-        for (const auto& extentId : extents) {
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
-
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
-
-                if (pageId == lowerLimit)
-                    continue;
-
-                auto indexPage = Storage::StorageManager::Get().CreateIndexPage(this->dataFileKey, pageId);
-                auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
-
-                MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
-                MultiThreading::WriterGuard indexPageLock(&indexPage.Latch());
-
-                pageFreeSpacePage.SetPageMetaData(&indexPage);
-
-                const auto parentPageId = treeId == INVALID_PAGE_ID
-                                              ? page.PageId()
-                                              : treeId;
-
-                indexPage.SetTreeId(parentPageId);
-                indexPage.SetTreeType(treeType);
-                indexPage.SetKeyTypes(indexedColumnDatatypes);
-                indexPage.SetSubKeys(indexedColumnDatatypes.Size());
-
-                if (!pageAssigned){
-                    page = std::move(indexPage);
-                    pageAssigned = true;
-                }
-            }
-        }
-
-        return page;
+        // page_id_t lowerLimit = 0;
+        //
+        // const auto extentsToAllocate =  static_cast<int>(std::ceil(static_cast<float>(pageCount) / Constants::EXTENT_SIZE));
+        //
+        // const auto extents = this->ReserveExtents(
+        //     allocator, extentsToAllocate,
+        //     tableOrdinalPosition, lowerLimit
+        // );
+        //
+        // const auto& table = this->_tables[tableOrdinalPosition];
+        // const auto indexedColumnDatatypes = table->GetColumnTypeByTreeId(treeType);
+        //
+        // Pages::IndexPageView page;
+        // bool pageAssigned = false;
+        // for (const auto& extentId : extents) {
+        //     const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+        //
+        //     for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+        //
+        //         if (pageId == lowerLimit)
+        //             continue;
+        //
+        //         auto indexPage = Storage::StorageManager::Get().CreateIndexPage(this->dataFileKey, pageId);
+        //         auto pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
+        //
+        //         MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
+        //         MultiThreading::WriterGuard indexPageLock(&indexPage.Latch());
+        //
+        //         pageFreeSpacePage.SetPageMetaData(&indexPage);
+        //
+        //         const auto parentPageId = treeId == INVALID_PAGE_ID
+        //                                       ? page.PageId()
+        //                                       : treeId;
+        //
+        //         indexPage.SetTreeId(parentPageId);
+        //         indexPage.SetTreeType(treeType);
+        //         indexPage.SetKeyTypes(indexedColumnDatatypes);
+        //         indexPage.SetSubKeys(indexedColumnDatatypes.Size());
+        //
+        //         if (!pageAssigned){
+        //             page = std::move(indexPage);
+        //             pageAssigned = true;
+        //         }
+        //     }
+        // }
+        //
+        // return page;
     }
 
     Storage::FileKey Database::GetDataFileKey() const{ return this->dataFileKey; }
@@ -998,7 +1000,7 @@ namespace CoreEngine{
         }
 
         if (!pageAllocated || page.PageSize() > 0){
-            page = this->CreateDataPage(allocator, table.GetTableId(), pageToAllocate);
+            page = this->CreateDataPage(allocator, table.GetTableId());
             pageFreeSpacePage = Database::GetAssociatedPfsPage(this->systemFileKey, page.PageId());
         }
 
