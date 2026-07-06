@@ -3,14 +3,16 @@
 
 namespace CoreEngine::StorageTypes {
     RID::RID()
-        : _pageId(INVALID_PAGE_ID), _index(INVALID_INDEX_ID){}
+        :   _pageId(INVALID_PAGE_ID), _index(INVALID_INDEX_ID),
+            _flags(0){}
 
     RID::RID(const page_id_t pageId, const Int index)
-        : _pageId(pageId), _index(index){}
+        :   _pageId(pageId), _index(index),
+            _flags(0){}
 
     RowHeader::RowHeader()
         :   _createdTransactionId(INVALID_TRANSACTION_ID), _deletedTransactionId(INVALID_TRANSACTION_ID),
-            _oldVersionRID(){}
+            _versionRID(){}
 
     bool RowHeader::IsVisibleForTransaction(const Snapshot& snapshot) const{
         return this->_deletedTransactionId != FIRST_TRANSACTION_ID

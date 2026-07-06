@@ -141,7 +141,13 @@ namespace Pages{
         ) const;
         void SetForwardPointer(
             Int indexPosition,
-            const CoreEngine::StorageTypes::RID& rowId
+            const CoreEngine::StorageTypes::RID* rid
+        ) const;
+
+        void ResolveRID(
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+            const CoreEngine::Snapshot& snapshot,
+            Int indexPosition
         ) const;
 
         QueryResult MaterializeRow(
@@ -210,5 +216,15 @@ namespace Pages{
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
 
         [[nodiscard]] bool IsRowVisible(const CoreEngine::Snapshot& snapshot, Int indexPosition) const;
+        [[nodiscard]] static bool IsRowVisible(
+            const CoreEngine::Snapshot& snapshot,
+            const CoreEngine::StorageTypes::RowHeader* rowHeader
+        );
+
+        void RetrieveVisibleRow(
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+            const CoreEngine::Snapshot& snapshot,
+            const CoreEngine::StorageTypes::RID* rid
+        ) const;
     };
 }

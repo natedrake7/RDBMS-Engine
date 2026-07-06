@@ -211,6 +211,7 @@ namespace CoreEngine::StorageTypes{
             [[nodiscard]] column_number_t GetNumberOfColumns() const;
             [[nodiscard]] const TableHeader &GetHeader() const;
             [[nodiscard]] const DataStructures::PolymorphicArray<Column*>& GetColumns() const;
+            [[nodiscard]] const Column* GetColumn(column_index_t index) const;
             void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
             [[nodiscard]] const Headers::Index& GetNonClusteredIndexes(Int indexPos) const;
             [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
@@ -270,11 +271,11 @@ namespace CoreEngine::StorageTypes{
             );
             void HeapScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<RID> *result,
+                DataStructures::PolymorphicArray<RID>* result,
                 ScanState& state
             )const;
             void TemporaryDatabaseHeapScan(
-                DataStructures::PolymorphicArray<RID> *result,
+                DataStructures::PolymorphicArray<RID>* result,
                 ScanState& state,
                 Int batchSize
             )const;
@@ -327,7 +328,7 @@ namespace CoreEngine::StorageTypes{
             [[nodiscard]]
             Errors::RuntimeStatus UpdateRowNoLock(
                 const Pages::PageView* page,
-                const RID* row,
+                const RID* rid,
                 const ExecutionContext& context,
                 const DataStructures::PolymorphicArray<Value>& updates
             );

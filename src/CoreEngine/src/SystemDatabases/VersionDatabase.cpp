@@ -276,25 +276,28 @@ namespace CoreEngine {
         return StorageTypes::RID(page.PageId(), indexPosition);
     }
 
-    StorageTypes::RID VersionDatabase::RetrieveVersionedRid(
+    void VersionDatabase::RetrieveVersionedRID(
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
         const Snapshot& snapshot,
-        const StorageTypes::RowHeader& rowHeader
+        const StorageTypes::RowHeader* rowHeader
     )const {
-        {
+        while (true){
             const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
                 this->dataFileKey,
-                rowHeader._oldVersionRID._pageId
+                rowHeader->_versionRID._pageId
             );
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
-            if (!page.IsRowVisible(snapshot, rowHeader._oldVersionRID._index)){
-                const auto* versionRowHeader = page.PeekRowHeader(rowHeader._oldVersionRID._index);
-                if (versionRowHeader->HasOldVersion())
-                    return this->RetrieveVersionedRid(snapshot, *versionRowHeader);
+            if (page.IsRowVisible(snapshot, rowHeader->_versionRID._index)){
+                result->Push(StorageTypes::RID(page.PageId(), rowHeader->_versionRID._index));
+                return;
             }
 
-            return StorageTypes::RID(page.PageId(), rowHeader._oldVersionRID._index);
+            rowHeader = page.PeekRowHeader(rowHeader->_versionRID._index);
+
+            if (!rowHeader->HasOldVersion())
+                return;
         }
     }
 
@@ -304,6 +307,7 @@ namespace CoreEngine {
             this->header.lastGamPageId
         );
 
+        // return gamPage.GetAllocatedExtents(startingExtentId);
         return std::vector<extent_id_t>();
         // return gamPage.GetAllocatedExtents(startingExtentId);
     }
@@ -315,7 +319,7 @@ namespace CoreEngine {
         static auto& storageManager = Storage::StorageManager::Get();
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
-        for (const auto &extentId : extents){
+        for (const auto extentId : extents){
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * Constants::EXTENT_SIZE);
 
             bool isExtentEmpty = true;

@@ -74,10 +74,10 @@ namespace CoreEngine{
                 const ::Memory::IAllocator* allocator,
                 const Pages::RawRowReference& rowRef
             );
-            [[nodiscard]]
-            StorageTypes::RID RetrieveVersionedRid(
+            void RetrieveVersionedRID(
+                DataStructures::PolymorphicArray<StorageTypes::RID>* result,
                 const Snapshot& snapshot,
-                const StorageTypes::RowHeader& rowHeader
+                const StorageTypes::RowHeader* rowHeader
             )const;
             [[nodiscard]] std::vector<extent_id_t> GetAllocatedExtents(extent_id_t startingExtentId)const;
 

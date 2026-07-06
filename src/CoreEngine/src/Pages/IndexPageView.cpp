@@ -1,7 +1,4 @@
 ﻿#include "../../include/Pages/IndexPageView.h"
-
-#include <cassert>
-#include <cstring>
 #include "DataStorage/SerializedRow.h"
 #include "Pages/Additional/Frame.h"
 

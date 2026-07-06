@@ -7,6 +7,7 @@
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
 #include "DataStorage/Row.h"
+#include "SystemDatabases/VersionDatabase.h"
 
 namespace Pages{
     PageHeader::PageHeader(){
@@ -277,24 +278,23 @@ namespace Pages{
 
     Int PageView::InsertRow(const CoreEngine::StorageTypes::SerializedRow& payload) const{
         const auto rowSize = payload.Size();
+        const auto offset = this->NewInsertOffset();
 
-        auto nextOffset = this->NewInsertOffset();
-
-
-        std::memcpy(this->_frame->_data + nextOffset, payload.Data(), rowSize);
-        nextOffset += rowSize;
+        std::memcpy(this->_frame->_data + offset, payload.Data(), rowSize);
 
         const auto newSlot = SlotDirectory(
-            nextOffset, 0,
+            offset, 0,
             rowSize, 0, SlotDirectory::SLOT_USED
         );
         this->InsertNewSlot(newSlot);
 
-        this->_frame->Header()->size++;
-        this->_frame->isDirty = true;
-        this->_frame->Header()->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        auto* header = this->_frame->Header();
 
-        return this->_frame->Header()->size - 1;
+        header->size++;
+        header->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        this->_frame->isDirty = true;
+
+        return header->size - 1;
     }
 
     void PageView::InsertRow(
@@ -314,8 +314,10 @@ namespace Pages{
 
         this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize, 0);
 
-        this->_frame->Header()->bytesLeft -= (rowSize + SlotDirectory::SIZE);
-        this->_frame->Header()->size++;
+        auto* header = this->_frame->Header();
+
+        header->size++;
+        header->bytesLeft -= (rowSize + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -326,6 +328,8 @@ namespace Pages{
     ) const{
         if (this->IndexOutOfBounds(indexPosition))
             throw std::out_of_range("Page::UpdateRow: Index position is out of bounds.");
+
+        auto* header = this->_frame->Header();
 
         auto slot = this->GetSlotDirectory(indexPosition);
         const auto newSize = payload.Size();
@@ -342,7 +346,7 @@ namespace Pages{
             );
             this->UpdateSlotDirectory(updatedSlot, indexPosition);
 
-            this->_frame->Header()->bytesLeft += (slot.DataSize() - newSize);
+            header->bytesLeft += (slot.DataSize() - newSize);
             this->_frame->isDirty = true;
             return true;
         }
@@ -353,17 +357,17 @@ namespace Pages{
 
         // Defragment if not enough space for new data
         const auto requiredSpace = newSize + slot.KeySize();
-        if (this->_frame->Header()->bytesLeft < requiredSpace){
+        if (header->bytesLeft < requiredSpace){
             // Out-of-place update: mark old slot as dead, write new data at end
             // Mark old slot dead so defragment can reclaim it
             slot.SetFlag(SlotDirectory::SLOT_DEAD);
             this->UpdateSlotDirectory(slot, indexPosition);
 
             // Reclaim the old slot's bytes so defragment has accurate bytesLeft
-            this->_frame->Header()->bytesLeft += slot.Size();
+            header->bytesLeft += slot.Size();
             this->Defragment(allocator);
 
-            if (this->_frame->Header()->bytesLeft < requiredSpace)
+            if (header->bytesLeft < requiredSpace)
                 return false;  // truly full even after defragment
         }
 
@@ -390,20 +394,45 @@ namespace Pages{
         );
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
-        this->_frame->Header()->bytesLeft -= requiredSpace;
+        header->bytesLeft -= requiredSpace;
         this->_frame->isDirty = true;
         return true;
     }
 
-    void PageView::SetForwardPointer(const Int indexPosition, const CoreEngine::StorageTypes::RID& rowId) const{
+    void PageView::SetForwardPointer(
+        const Int indexPosition,
+        const CoreEngine::StorageTypes::RID* rid
+    ) const{
         auto slot = this->GetSlotDirectory(indexPosition);
         const auto offSet = slot.AbsoluteDataOffset();
 
-        std::memcpy(this->_frame->_data + offSet, &rowId, ROW_ID_SIZE);
+        std::memcpy(this->_frame->_data + offSet, rid, ROW_ID_SIZE);
 
         slot.SetFlag(SlotDirectory::SLOT_FORWARDED);
         slot.SetDataOffset(offSet);
         this->UpdateSlotDirectory(slot, indexPosition);
+    }
+
+    void PageView::ResolveRID(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        const CoreEngine::Snapshot& snapshot,
+        const Int indexPosition
+    ) const{
+        const auto slot = this->GetSlotDirectory(indexPosition);
+
+        CoreEngine::StorageTypes::RID rid;
+        switch (slot.GetFlag()){
+            case SlotDirectory::SLOT_USED:
+                rid = CoreEngine::StorageTypes::RID(this->PageId(), indexPosition);
+                break;
+            case SlotDirectory::SLOT_FORWARDED:
+                std::memcpy(&rid, this->_frame->_data + slot.AbsoluteDataOffset(), ROW_ID_SIZE);
+                break;
+            default:
+                return;
+        }
+
+        this->RetrieveVisibleRow(result, snapshot, &rid);
     }
 
     QueryResult PageView::MaterializeRow(
@@ -506,7 +535,7 @@ namespace Pages{
         return Value::FromExternalStorage(
             rowDataPtr + rowEntry._offset,
             rowEntry.Size(),
-            table->GetColumns()[columnIndex]->Type(),
+            table->GetColumn(columnIndex)->Type(),
             allocator
         );
     }
@@ -601,11 +630,36 @@ namespace Pages{
 
     bool PageView::IsRowVisible(const CoreEngine::Snapshot& snapshot, const Int indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
-        const auto* versionHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
+        const auto* rowHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
             this->_frame->_data + slot.AbsoluteDataOffset()
         );
 
-        return versionHeader->IsVisibleForTransaction(snapshot);
+        return rowHeader->IsVisibleForTransaction(snapshot);
+    }
+
+    bool PageView::IsRowVisible(
+        const CoreEngine::Snapshot& snapshot,
+        const CoreEngine::StorageTypes::RowHeader* rowHeader
+    ){
+        return rowHeader->IsVisibleForTransaction(snapshot);
+    }
+
+    void PageView::RetrieveVisibleRow(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        const CoreEngine::Snapshot& snapshot,
+        const CoreEngine::StorageTypes::RID* rid
+    ) const{
+        const auto slot = this->GetSlotDirectory(rid->_index);
+        const auto* rowHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
+            this->_frame->_data + slot.AbsoluteDataOffset()
+        );
+
+        if (PageView::IsRowVisible(snapshot, rowHeader)){
+            result->Push(*rid);
+            return;
+        }
+
+        CoreEngine::VersionDatabase::Get().RetrieveVersionedRID(result, snapshot, rowHeader);
     }
 
     template bool PageView::GetColumnAt<bool>(Int index, Int columnIndex, bool* outNull) const;

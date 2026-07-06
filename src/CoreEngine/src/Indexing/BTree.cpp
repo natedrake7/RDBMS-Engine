@@ -1086,6 +1086,7 @@ namespace Indexing{
             evaluationContext.page = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
+
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 

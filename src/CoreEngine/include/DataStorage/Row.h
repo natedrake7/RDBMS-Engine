@@ -9,23 +9,32 @@ namespace CoreEngine {
 
 namespace CoreEngine::StorageTypes{
     struct RID{
+        enum Storage: UnsignedTinyInt{
+            Table = 0,
+            Version = 1,
+            TemporaryDb = 2
+        };
+
         page_id_t _pageId;
-        Int _index;
+        UnsignedSmallInt _index;
+        UnsignedSmallInt _flags;
 
         RID();
         RID(page_id_t pageId, Int index);
         RID& operator=(const RID& other) = default;
         RID(const RID& other) = default;
+
+
     };
 
     struct RowHeader{
         transaction_id_t _createdTransactionId;
         transaction_id_t _deletedTransactionId;
 
-        RID _oldVersionRID;
+        RID _versionRID;
 
         explicit RowHeader();
-        [[nodiscard]] bool HasOldVersion()const { return this->_oldVersionRID._pageId != INVALID_PAGE_ID; }
+        [[nodiscard]] bool HasOldVersion()const { return this->_versionRID._pageId != INVALID_PAGE_ID; }
         [[nodiscard]] bool IsVisibleForTransaction(const Snapshot& snapshot)const;
         [[nodiscard]] bool IsDeletedForTransaction(const Snapshot& snapshot)const;
     };

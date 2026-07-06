@@ -22,7 +22,10 @@ namespace Errors {
 
     struct RuntimeStatus {
         DataTypes::String message;
+
         DataTypes::Indexing::Key primaryKey;
+        CoreEngine::StorageTypes::RID rid;
+
         RuntimeError code;
 
         explicit RuntimeStatus(const ::Memory::IAllocator* allocator)

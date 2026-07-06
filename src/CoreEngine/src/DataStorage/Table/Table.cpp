@@ -414,7 +414,11 @@ namespace CoreEngine::StorageTypes {
 
         const auto _ = newPage.InsertRow(payload);
         pfs.SetPageMetaData(&newPage);
-        return {};
+
+        Errors::RuntimeStatus result;
+        result.rid._pageId = newPage.PageId();
+        result.rid._index = 0;
+        return result;
     }
 
     Errors::RuntimeStatus Table::HeapInsert(
@@ -438,6 +442,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto rowCategory = Database::GetObjectSizeToCategory(payload.Size());
 
+        Errors::RuntimeStatus result;
         for (const auto extentId : tableExtentIds){
             const auto extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
@@ -462,11 +467,12 @@ namespace CoreEngine::StorageTypes {
                 if (payload.Size() > page.BytesLeft())
                     continue;
 
-                const auto _ = page.InsertRow(payload);
+                const auto index = page.InsertRow(payload);
                 pfs.SetPageMetaData(&page);
 
-                // status.rowId.pageId = pageId;
-                return {};
+                result.rid._pageId = pageId;
+                result.rid._index = index;
+                return result;
             }
         }
 
@@ -478,6 +484,10 @@ namespace CoreEngine::StorageTypes {
     const TableHeader &Table::GetHeader() const { return this->header; }
 
     const DataStructures::PolymorphicArray<Column*>& Table::GetColumns() const { return this->_columns; }
+
+    const Column* Table::GetColumn(const column_index_t index) const{
+        return this->_columns[index];
+    }
 
     void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
         for (const auto* column : this->_columns)
@@ -511,7 +521,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::HeapScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<RID> *result,
+        DataStructures::PolymorphicArray<RID>* result,
         ScanState& state
     )const{
         if(this->IsEmpty())
@@ -519,6 +529,8 @@ namespace CoreEngine::StorageTypes {
 
         const auto dataKey = this->database->DataFileKey();
         const auto systemFileKey = this->database->SystemFileKey();
+
+        const auto& snapshot = executionContext.GetSnapshot();
 
         const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->header.allocationPageId);
 
@@ -544,16 +556,13 @@ namespace CoreEngine::StorageTypes {
                 if (page.IsEmpty())
                     continue;
 
-                for (Int i = state.GetNextKeyIndex(); i < page.PageSize(); i++) {
-                    RID rid(currentPageId, i);
-                    result->Push(rid);
+                for (Int index = state.GetNextKeyIndex(); index < page.PageSize(); index++)
+                    page.ResolveRID(result, snapshot, index);
 
-                    if (result->Size() == executionContext.GetBatchSize()) {
-                        state.canFetchMore = true;
-                        state.Update(extentId, &rid);
-                        return;
-                    }
-
+                if (result->Size() >= executionContext.GetBatchSize()) {
+                    state.canFetchMore = true;
+                    state.Update(extentId, result->Back());
+                    return;
                 }
             }
         }
@@ -562,7 +571,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::TemporaryDatabaseHeapScan(
-        DataStructures::PolymorphicArray<RID> *result,
+        DataStructures::PolymorphicArray<RID>* result,
         ScanState& state,
         const Int batchSize
     ) const{
@@ -613,7 +622,7 @@ namespace CoreEngine::StorageTypes {
                 if (page.IsEmpty())
                     continue;
 
-                for (int i = 0; i < page.PageSize(); i++) {
+                for (Int i = 0; i < page.PageSize(); i++) {
                     auto row = RID(extentPageId, i);
                     evaluationContext.row = &row;
 
@@ -742,16 +751,16 @@ namespace CoreEngine::StorageTypes {
     //Handle overflow too dynamically probably during row insert
     Errors::RuntimeStatus Table::UpdateRowNoLock(
         const Pages::PageView* page,
-        const RID* row,
+        const RID* rid,
         const ExecutionContext& context,
         const DataStructures::PolymorphicArray<Value>& updates
     ){
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto* allocator = context.GetAllocator();
-        const auto versionRid = this->InsertToVersionDatabase(allocator, page->RawRowData(row->_index));
+        const auto versionRid = this->InsertToVersionDatabase(allocator, page->RawRowData(rid->_index));
 
-        auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
+        auto materializedRow = page->MaterializeRow(allocator, this, rid->_index);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
@@ -761,6 +770,7 @@ namespace CoreEngine::StorageTypes {
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
         rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
+        rowContext.header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
@@ -772,17 +782,17 @@ namespace CoreEngine::StorageTypes {
         if (!status.IsOk())
             return status;
 
-        if (page->UpdateRow(allocator, newPayload, row->_index))
+        if (page->UpdateRow(allocator, newPayload, rid->_index))
             return status;
 
-        auto extentReservation = this->ReserveExtents(allocator, 1);
+        ExtentReservation extentReservation = this->LazyReservation(allocator);
         //only for heap tables
         auto insertResult = this->InsertRowPayload(context, extentReservation, newPayload);
-
-        if (!insertResult.IsOk()) return insertResult;
+        if (!insertResult.IsOk())
+            return insertResult;
 
         //install forward referencing ptr to older row pos
-        // page->SetForwardPointer(row->offset, insertResult.rowId);
+        page->SetForwardPointer(rid->_index, &insertResult.rid);
         return insertResult;
     }
 
@@ -813,7 +823,7 @@ namespace CoreEngine::StorageTypes {
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
         rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
-        rowContext.header._oldVersionRID = versionRid;
+        rowContext.header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
@@ -862,7 +872,7 @@ namespace CoreEngine::StorageTypes {
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
         rowContext.header._createdTransactionId = FIRST_TRANSACTION_ID;
-        rowContext.header._oldVersionRID = versionRid;
+        rowContext.header._versionRID = versionRid;
 
         const auto newPayload = this->SerializeRow(
             status,
