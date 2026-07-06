@@ -120,7 +120,7 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  void PlanNode::UpdateScanState(const DataTypes::RowIdentifier& rowId){ }
+  void PlanNode::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){ }
 
   bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
@@ -239,9 +239,9 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
         if (this->session == nullptr || this->session->user == nullptr)
             return ExecutionResult(
-            Errors::RuntimeError::Error,
-            Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-             context.GetAllocator()
+                Errors::RuntimeError::Error,
+                Messages::FAILED_TO_RETRIEVE_USER_SESSION,
+                 context.GetAllocator()
             );
 
         const auto* allocator = context.GetAllocator();
@@ -498,12 +498,16 @@ namespace QueryPipeline::PhysicalPlan {
         if (result.canFetchMore == false)
             this->state.Reset();
 
+        context.AddTable(tablePtr);
         context.AddScanHandle(rows.Data(), rows.Size());
+
+        result.selectionVector->selectedRidsCount = rows.Size();
+        result.selectionVector->isIdentity = true;
         return result;
     }
 
-    void PhysicalTableScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->state.lastFetchedRowId = rowId;
+    void PhysicalTableScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->state._lastRID = *rid;
     }
 
   PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
@@ -541,9 +545,9 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  void PhysicalIndexScan::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-      this->state.pageId = rowId.pageId;
-      this->state.lastFetchedKeyIndex = rowId.indexId;
+  void PhysicalIndexScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+      this->state.pageId = rid->_pageId;
+      this->state.lastFetchedKeyIndex =  rid->_index;
   }
 
   PhysicalIndexSeek::PhysicalIndexSeek(
@@ -759,8 +763,8 @@ namespace QueryPipeline::PhysicalPlan {
                    : this->ExecuteStatement(context);
     }
 
-    void PhysicalProject::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
+    void PhysicalProject::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->child->UpdateScanState(rid);
     }
 
     void PhysicalFilter::ExecuteVectorizedMode(
@@ -825,8 +829,8 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalFilter::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
+    void PhysicalFilter::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->child->UpdateScanState(rid);
     }
 
     PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
@@ -844,8 +848,8 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalTop::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
+    void PhysicalTop::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->child->UpdateScanState(rid);
     }
 
     PhysicalDistinct::PhysicalDistinct(PlanNode *child)
@@ -885,8 +889,8 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalDistinct::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
+    void PhysicalDistinct::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->child->UpdateScanState(rid);
     }
 
     bool PhysicalOrderBy::CanBeSortedInMemory(const bool canFetchMore) const{
@@ -975,8 +979,8 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalOrderBy::UpdateScanState(const DataTypes::RowIdentifier& rowId){
-        this->child->UpdateScanState(rowId);
+    void PhysicalOrderBy::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->child->UpdateScanState(rid);
     }
 
     bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){

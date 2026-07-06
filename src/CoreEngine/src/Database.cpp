@@ -94,8 +94,8 @@ namespace CoreEngine
 
     }
 
-    int Database::CalculateExtentsToAllocate(const Int pagesToAllocate) {
-        return static_cast<int>(std::ceil(static_cast<float>(pagesToAllocate) / static_cast<float>(Constants::EXTENT_SIZE)));
+    Int Database::CalculateExtentsToAllocate(const Int pagesToAllocate) {
+        return static_cast<Int>(std::ceil(static_cast<float>(pagesToAllocate) / static_cast<float>(Constants::EXTENT_SIZE)));
     }
 
     void Database::InitializeStaticData(){
@@ -113,16 +113,21 @@ namespace CoreEngine
     }
 
     Pages::AllocationPageView Database::FindOrRollToNewAllocationPage(
+        StorageTypes::Table* tablePtr,
         page_id_t currentAllocationPageId,
         const page_id_t gamPageId,
         const page_id_t newAllocationPageId
     ) const{
-        if (currentAllocationPageId == INVALID_PAGE_ID)
-            return Storage::StorageManager::Get().CreateAllocationPage(
+        if (currentAllocationPageId == INVALID_PAGE_ID){
+            auto page = Storage::StorageManager::Get().CreateAllocationPage(
                 this->dataFileKey,
                 newAllocationPageId,
                 gamPageId
             );
+
+            tablePtr->UpdateAllocationPageId(page.PageId());
+            return page;
+        }
 
         Pages::AllocationPageView prev, current;
         while (currentAllocationPageId != INVALID_PAGE_ID){
@@ -149,7 +154,6 @@ namespace CoreEngine
         }
 
         return current;
-
     }
 
     Database::Database(
@@ -219,7 +223,7 @@ namespace CoreEngine
         }
     }
 
-    Database::~Database(){
+    void Database::Destroy(){
         // save db header;
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
@@ -435,8 +439,7 @@ namespace CoreEngine
         this->lastGamPageId = lastGamPageId;
     }
 
-    const StorageTypes::Table *Database::GetTable(const table_id_t tableId) const
-    {
+    const StorageTypes::Table *Database::GetTable(const table_id_t tableId) const{
         if (tableId >= this->_tables.Size())
             throw std::out_of_range("No table with ID: " + std::to_string(tableId) + " exists");
 
@@ -548,9 +551,10 @@ namespace CoreEngine
     StorageTypes::ExtentReservation Database::ReserveExtents(
         const ::Memory::IAllocator* allocator,
         const Int requiredPages,
-        const table_id_t tableId
+        const Int tableOrdinalPos
     ){
         const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(requiredPages);
+        auto* table = this->_tables[tableOrdinalPos];
 
         //pre account for required allocation page
         DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> segmentsRuns(allocator, extentsToAllocate);
@@ -558,7 +562,6 @@ namespace CoreEngine
         // Step 1: Allocate extents from GAM page
         {
             DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> localRuns(allocator, extentsToAllocate);
-            auto* table = this->_tables[tableId];
             const page_id_t currentAllocationPageId = table->GetAllocationPageId();
 
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
@@ -588,28 +591,26 @@ namespace CoreEngine
                     continue;
 
                 {
-                    auto* localRunsFront = localRuns.Front();
-                    const auto newAllocationPageId = localRunsFront->_firstExtentId++ * Constants::EXTENT_SIZE;
-                    localRunsFront->_count--;
+                    page_id_t newAllocationPageId = INVALID_PAGE_ID;
+                    if (newAllocationPageRequired){
+                        auto* localRunsFront = localRuns.Front();
+                        newAllocationPageId = localRunsFront->_firstExtentId++ * Constants::EXTENT_SIZE;
+                        localRunsFront->_count--;
+                    }
 
                     auto allocPage = this->FindOrRollToNewAllocationPage(
+                        table,
                         currentAllocationPageId,
                         gamPage.PageId(),
                         newAllocationPageId
                     );
-                    MultiThreading::WriterGuard allocPageLock(&allocPage.Latch());
 
-                    if (currentAllocationPageId == INVALID_PAGE_ID)
-                        table->UpdateAllocationPageId(allocPage.PageId());
+                    MultiThreading::WriterGuard allocPageLock(&allocPage.Latch());
                     allocPage.ReserveExtentsNoLock(localRuns);
                 }
 
-                if (remainingExtents <= 0 && !newAllocationPageRequired)
-                    segmentsRuns = std::move(localRuns);
-                else{
-                    for (const auto& localRun : localRuns)
-                        segmentsRuns.Push(localRun);
-                }
+                for (const auto& localRun : localRuns)
+                    segmentsRuns.Push(localRun);
 
                 localRuns.Clear();
             }
@@ -644,7 +645,7 @@ namespace CoreEngine
             }
         }
 
-        return StorageTypes::ExtentReservation(segmentsRuns, this, tableId);
+        return StorageTypes::ExtentReservation(segmentsRuns, this, tableOrdinalPos);
     }
 
     Pages::OverflowPageView Database::CreateOverflowPage(
@@ -968,9 +969,9 @@ namespace CoreEngine
         // return page;
     }
 
-    Storage::FileKey Database::GetDataFileKey() const{ return this->dataFileKey; }
+    Storage::FileKey Database::DataFileKey() const{ return this->dataFileKey; }
 
-    Storage::FileKey Database::GetSystemFileKey() const{ return this->systemFileKey; }
+    Storage::FileKey Database::SystemFileKey() const{ return this->systemFileKey; }
 
     Pages::PageView Database::FindOrAllocateNextDataPage(
         const ::Memory::IAllocator* allocator,

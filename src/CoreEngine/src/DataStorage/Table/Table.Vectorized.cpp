@@ -19,7 +19,7 @@ namespace CoreEngine::StorageTypes{
             const auto rid = scanHandle.rids[sv->selectedRids[0][i]];
 
             const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-                this->database->GetDataFileKey(),
+                this->database->DataFileKey(),
                 rid._pageId
             );
 
@@ -44,7 +44,7 @@ namespace CoreEngine::StorageTypes{
             const auto rid = scanHandle.rids[i];
 
             const auto page = Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-                this->database->GetDataFileKey(),
+                this->database->DataFileKey(),
                 rid._pageId
             );
 

@@ -96,7 +96,7 @@ namespace Pages{
             return;
 
         MultiThreading::ReaderGuard lock(&this->_frame->latch);
-        for (extent_id_t id = startingExtentIndex - base; id < lastExtentId; id++){
+        for (extent_id_t id = startingExtentIndex - base; id <= lastExtentId; id++){
             if (this->GetBit(id))
                 allocatedExtents->Push(base + id);
         }

@@ -106,6 +106,8 @@ namespace CoreEngine {
     }
 
     void TemporaryDatabase::Shutdown(){
+        this->_db->Destroy();
+
         delete this->_db;
         this->_db = nullptr;
         // this->ClearTemporaryFiles();

@@ -103,7 +103,7 @@ namespace QueryPipeline::PhysicalPlan {
             CoreEngine::ScanState& state
         ) const;
         virtual ExecutionResult Execute(CoreEngine::ExecutionContext& context) = 0;
-        virtual void UpdateScanState(const DataTypes::RowIdentifier& rowId);
+        virtual void UpdateScanState(const CoreEngine::StorageTypes::RID* rid);
 
         [[nodiscard]] bool UsesExternalStorage() const;
     };
@@ -239,7 +239,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalIndexScan final : public PlanNode {
@@ -251,7 +251,7 @@ namespace QueryPipeline::PhysicalPlan {
         explicit PhysicalIndexScan(Statements::DataSource* table, bool isClustered = false);
         explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalIndexSeek final : public PlanNode {
@@ -308,7 +308,7 @@ namespace QueryPipeline::PhysicalPlan {
             DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalFilter final : public PlanNode {
@@ -321,7 +321,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalFilter(PlanNode* child, Expressions::Expression* filter);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalTop final : public PlanNode {
@@ -330,7 +330,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalTop(PlanNode* child, BigInt top);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalDistinct final : public PlanNode {
@@ -338,7 +338,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalDistinct(PlanNode* child);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalOrderBy final : public PlanNode {
@@ -352,7 +352,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalOrderBy(PlanNode* child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const DataTypes::RowIdentifier& rowId) override;
+        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     /** @} End of Select Processing Classes */

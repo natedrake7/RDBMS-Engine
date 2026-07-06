@@ -79,12 +79,13 @@ class Database final{
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
 
-    static int CalculateExtentsToAllocate(Int pagesToAllocate);
+    [[nodiscard]] static Int CalculateExtentsToAllocate(Int pagesToAllocate);
 
     void InitializeStaticData();
 
     Pages::GlobalAllocationPageView RollToNewGamPageNoLock();
     Pages::AllocationPageView FindOrRollToNewAllocationPage(
+        StorageTypes::Table* tablePtr,
         page_id_t currentAllocationPageId,
         page_id_t gamPageId,
         page_id_t newAllocationPageId
@@ -105,7 +106,7 @@ public:
         const std::vector<Headers::sysTable>& tables
     );
 
-    ~Database();
+    void Destroy();
 
     static std::vector<Logging::LogEntry> RecoverLogs();
 
@@ -168,7 +169,7 @@ public:
     StorageTypes::ExtentReservation ReserveExtents(
         const ::Memory::IAllocator* allocator,
         Int requiredPages,
-        table_id_t tableId
+        Int tableOrdinalPos
     );
 
     Pages::OverflowPageView CreateOverflowPage(
@@ -209,8 +210,8 @@ public:
         page_id_t treeId = 0
     );
 
-    [[nodiscard]] Storage::FileKey GetDataFileKey() const;
-    [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
+    [[nodiscard]] Storage::FileKey DataFileKey() const;
+    [[nodiscard]] Storage::FileKey SystemFileKey() const;
 
     static page_id_t CalculateExtentFirstPageId(extent_id_t extentId);
 

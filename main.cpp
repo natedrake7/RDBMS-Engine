@@ -109,7 +109,9 @@
 //heavier join
 //SELECT * FROM dbo.sys_columns AS SC INNER JOIN dbo.sys_tables AS ST ON ST.table_id = SC.table_id
 
-//TODO check insert duplicate key error on 3rd insert
+//CREATE TABLE dbo.Movies(ID INT NOT NULL, Name STRING(200), Age INT)
+//INSERT INTO dbo.Movies(ID, Name, Age) VALUES(10, 'Kostas', 100)
+//select * from dbo.Movies
 //TODO make identity maybe templated
 
 

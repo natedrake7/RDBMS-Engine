@@ -156,6 +156,8 @@ namespace Pages{
         [[nodiscard]] page_size_t PageSize()const;
         [[nodiscard]] page_size_t BytesLeft()const;
 
+        [[nodiscard]] bool IsEmpty()const;
+
         [[nodiscard]] object_t* GetData() const;
 
         [[nodiscard]] Frame* GetFrame()const;

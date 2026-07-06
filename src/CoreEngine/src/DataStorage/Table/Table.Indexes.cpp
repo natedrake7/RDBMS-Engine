@@ -11,7 +11,7 @@
 
 namespace CoreEngine::StorageTypes {
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->GetDataFileKey(), indexPageId);
+        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->DataFileKey(), indexPageId);
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
@@ -94,9 +94,9 @@ namespace CoreEngine::StorageTypes {
         return {};
     }
 
-    Storage::FileKey Table::GetSystemFileKey() const{ return this->database->GetSystemFileKey(); }
+    Storage::FileKey Table::GetSystemFileKey() const{ return this->database->SystemFileKey(); }
 
-    Storage::FileKey Table::GetDataFileKey() const{ return this->database->GetDataFileKey(); }
+    Storage::FileKey Table::GetDataFileKey() const{ return this->database->DataFileKey(); }
 
     const Headers::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredIndexes[indexPos]; }
 
@@ -223,7 +223,7 @@ namespace CoreEngine::StorageTypes {
             executionContext
         );
 
-        const auto fileKey = this->database->GetDataFileKey();
+        const auto fileKey = this->database->DataFileKey();
         if (expression != nullptr) {
 
             for (const auto& rowId : rowIds) {

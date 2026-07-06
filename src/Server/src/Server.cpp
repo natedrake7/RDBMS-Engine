@@ -214,9 +214,11 @@ namespace Network {
 
   void Server::Shutdown(){
     const CoreEngine::Memory::Allocator allocator;
-    for (const auto &database: this->databases | std::views::values){
-          database->UpdateMasterDatabase(&allocator);
-          delete database;
+    for (auto* database: this->databases | std::views::values){
+        database->UpdateMasterDatabase(&allocator);
+        database->Destroy();
+
+        delete database;
     }
 
     this->temporaryDatabase->Shutdown();

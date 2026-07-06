@@ -460,6 +460,10 @@ namespace Pages{
         return this->_frame->Header()->bytesLeft;
     }
 
+    bool PageView::IsEmpty() const{
+        return this->_frame->Header()->size == 0;
+    }
+
     object_t* PageView::GetData() const{
         return this->_frame->_data;
     }

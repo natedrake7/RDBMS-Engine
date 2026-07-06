@@ -6,11 +6,18 @@
 
 namespace CoreEngine::StorageTypes{
     ExtentReservation::ExtentReservation(
+        const ::Memory::IAllocator* allocator,
+        Database* db,
+        const table_id_t tableOrdinalPos
+    )   : _segments(allocator), _db(db), _segmentIndex(0),
+          _segmentOffset(0), _extentIndex(0), _tableOrdinalPos(tableOrdinalPos){}
+
+    ExtentReservation::ExtentReservation(
         DataStructures::PolymorphicArray<ExtentSegment>& segments,
         Database* db,
-        const table_id_t tableId
+        const table_id_t tableOrdinalPos
     ):   _segments(std::move(segments)), _db(db), _segmentIndex(0),
-        _segmentOffset(0), _extentIndex(0), _tableId(tableId){}
+        _segmentOffset(0), _extentIndex(0), _tableOrdinalPos(tableOrdinalPos){}
 
     template <typename TView>
     TView ExtentReservation::Next(){
@@ -18,10 +25,10 @@ namespace CoreEngine::StorageTypes{
             const auto subReserve = this->_db->ReserveExtents(
                 this->_segments.GetAllocator(),
                 Constants::EXTENT_SIZE,
-                this->_tableId
+                this->_tableOrdinalPos
             );
 
-            for (const auto& segment : subReserve._segments)
+            for (const auto& segment: subReserve._segments)
                 this->_segments.Push(segment);
         }
 
@@ -39,13 +46,18 @@ namespace CoreEngine::StorageTypes{
             this->_segmentOffset = 0;
         }
 
+        const auto pfs = this->_db->GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
 
-
-
-        if constexpr (std::is_same_v<TView, Pages::PageView>)
-            return Storage::StorageManager::Get().CreatePage(this->_db->GetDataFileKey(), pageId);
-        else if constexpr (std::is_same_v<TView, Pages::IndexPageView>)
-            return Storage::StorageManager::Get().CreateIndexPage(this->_db->GetDataFileKey(), pageId);
+        if constexpr (std::is_same_v<TView, Pages::PageView>){
+            auto page = Storage::StorageManager::Get().CreatePage(this->_db->DataFileKey(), pageId);
+            pfs.SetPageMetaData(&page);
+            return page;
+        }
+        else if constexpr (std::is_same_v<TView, Pages::IndexPageView>){
+            auto page = Storage::StorageManager::Get().CreateIndexPage(this->_db->DataFileKey(), pageId);
+            pfs.SetPageMetaData(&page);
+            return page;
+        }
         else
             static_assert(sizeof(TView) == 0, "Invalid Page type specified on extent reservation");
 

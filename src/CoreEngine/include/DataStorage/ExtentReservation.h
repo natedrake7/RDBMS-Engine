@@ -22,13 +22,18 @@ namespace CoreEngine::StorageTypes{
         UnsignedSmallInt _segmentIndex;
         UnsignedSmallInt _segmentOffset;
         UnsignedSmallInt _extentIndex;
-        table_id_t _tableId;
+        table_id_t _tableOrdinalPos;
 
         public:
             ExtentReservation(
+                const :: Memory::IAllocator* allocator,
+                Database* db,
+                table_id_t tableOrdinalPos
+            );
+            ExtentReservation(
                 DataStructures::PolymorphicArray<ExtentSegment>& segments,
                 Database* db,
-                table_id_t tableId
+                table_id_t tableOrdinalPos
             );
 
             [[nodiscard]] bool HasNext() const;

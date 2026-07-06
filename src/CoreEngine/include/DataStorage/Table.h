@@ -174,6 +174,10 @@ namespace CoreEngine::StorageTypes{
                 ExtentReservation& extentReservation,
                 SerializedRow& payload
             );
+            Errors::RuntimeStatus HeapInsertToNewPage(
+                ExtentReservation& extentReservation,
+                const SerializedRow& payload
+            )const;
             Errors::RuntimeStatus HeapInsert(
                 const ExecutionContext& executionContext,
                 ExtentReservation& extentReservation,
@@ -444,6 +448,8 @@ namespace CoreEngine::StorageTypes{
                 Int requiredPages
             )const;
 
+            ExtentReservation LazyReservation(const ::Memory::IAllocator* allocator)const;
+
         /** @} End of: Page and Index Management Functions*/
 
             void Truncate();
@@ -464,6 +470,8 @@ namespace CoreEngine::StorageTypes{
             int HandleRowOverflow(RID* rowPtr, const Column* column)const;
 
             void InsertLargeObjectToPage(SerializedRow& payload);
+
+            [[nodiscard]] bool IsEmpty()const;
 
             void PopulateColumn(column_index_t index, const Value& defaultValue);
             void PopulateColumnByClusteredIndex(column_index_t index, const Value& defaultValue);

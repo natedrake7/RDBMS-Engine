@@ -701,6 +701,7 @@ namespace CoreEngine {
     void SystemCatalog::Shutdown(){
         const Memory::Allocator allocator;
         this->masterDb->UpdateMasterDatabase(&allocator);
+        this->masterDb->Destroy();
 
         delete this->masterDb;
         this->masterDb = nullptr;

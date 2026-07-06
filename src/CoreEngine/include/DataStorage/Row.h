@@ -14,6 +14,8 @@ namespace CoreEngine::StorageTypes{
 
         RID();
         RID(page_id_t pageId, Int index);
+        RID& operator=(const RID& other) = default;
+        RID(const RID& other) = default;
     };
 
     struct RowHeader{

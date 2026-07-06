@@ -253,11 +253,11 @@ namespace Indexing{
         newChild.SetTreeType(this->type);
 
         if (child.IsLeaf()){
-            Indexing::BTree::SplitLeafNoLock(context, parent, child, newChild, index);
+            BTree::SplitLeafNoLock(context, parent, child, newChild, index);
             return;
         }
 
-        Indexing::BTree::SplitInternalNodeNoLock(context, parent, child, newChild, index);
+        BTree::SplitInternalNodeNoLock(context, parent, child, newChild, index);
     }
 
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
@@ -296,12 +296,7 @@ namespace Indexing{
 
                 MultiThreading::ReaderGuard newNodeLock(&node.Latch());
 
-                // determine correct child after split
-                // if (node.CompareKeyAtIndex(tuple.key, childIndex) == Comparators::Comparator::Less)
-                //     childIndex++;
-
                 childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
-
                 childPageId = node.GetChild(childIndex);
                 child = this->GetNode(childPageId);
             }
@@ -382,7 +377,7 @@ namespace Indexing{
 
     Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
         return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-            this->database->GetDataFileKey(),
+            this->database->DataFileKey(),
             pageId
         );
     }
@@ -893,7 +888,7 @@ namespace Indexing{
 
     void BTree::UpdatePfsPage(const Pages::IndexPageView& page) const{
         const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
-            this->database->GetSystemFileKey(),
+            this->database->SystemFileKey(),
             page.PageId()
         );
 
