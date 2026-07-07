@@ -6,56 +6,53 @@
 #include "Contexts/ExecutionContext.h"
 
 namespace CoreEngine {
-  TransactionManager::TransactionManager(){
-    this->currentTransactionId = 0;
-  }
-
-  TransactionManager::~TransactionManager() = default;
-
-  TransactionManager& TransactionManager::Get(){
-    static TransactionManager instance;
-
-    return instance;
-  }
-
-  Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
-    Snapshot snapshot;
-
-    {
-      std::unique_lock lock(this->transactionMutex);
-
-      snapshot.maximumTransactionId = this->currentTransactionId;
-      snapshot.transactionId = this->currentTransactionId++;
+    TransactionManager::TransactionManager(){
+        this->currentTransactionId = 0;
     }
 
-    {
-      std::unique_lock lock(this->dictionaryMutex);
-
-      snapshot.minimumTransactionId = this->activeTransactions.FirstOrDefault().transactionId;
-
-      for (const auto &[activeTransactionId, _, modifications] : this->activeTransactions | std::views::values)
-        snapshot.activeTransactionIds.Add(activeTransactionId);
-
-      this->activeTransactions.Add(snapshot.transactionId, TransactionInfo(
-            snapshot.transactionId,
-            sessionId
-        ));
+    TransactionManager& TransactionManager::Get(){
+        static TransactionManager instance;
+        return instance;
     }
 
-    return snapshot;
-  }
+    Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
+        Snapshot snapshot;
 
-  void TransactionManager::SetTransactionId(const transaction_id_t transactionId) {
-    std::unique_lock lock(this->transactionMutex);
+        {
+            std::unique_lock lock(this->transactionMutex);
 
-    this->currentTransactionId = transactionId;
-  }
+            snapshot.maximumTransactionId = this->currentTransactionId;
+            snapshot.transactionId = this->currentTransactionId++;
+        }
 
-  void TransactionManager::CommitTransaction(const Snapshot& snapshot) {
-    std::unique_lock lock(this->dictionaryMutex);
+        {
+            std::unique_lock lock(this->dictionaryMutex);
 
-    this->activeTransactions.Remove(snapshot.transactionId);
-  }
+            snapshot.minimumTransactionId = (this->activeTransactions.size() == 0)
+                ? snapshot.transactionId
+                : this->activeTransactions.FirstOrDefault().transactionId;
+
+            for (const auto &[ activeTransactionId, _, modifications ] : this->activeTransactions | std::views::values)
+                snapshot.activeTransactionIds.Add(activeTransactionId);
+
+            this->activeTransactions.Add(snapshot.transactionId, TransactionInfo(
+                snapshot.transactionId,
+                sessionId
+            ));
+        }
+
+        return snapshot;
+    }
+
+    void TransactionManager::SetTransactionId(const transaction_id_t transactionId) {
+        std::unique_lock lock(this->transactionMutex);
+        this->currentTransactionId = transactionId;
+    }
+
+    void TransactionManager::CommitTransaction(const Snapshot& snapshot) {
+        std::unique_lock lock(this->dictionaryMutex);
+        this->activeTransactions.Remove(snapshot.transactionId);
+    }
 
   void TransactionManager::RollbackTransaction(const ExecutionContext& context){
     TransactionInfo transactionInfo;
@@ -79,9 +76,8 @@ namespace CoreEngine {
     //apply rollback mechanism
   }
 
-  transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
-    std::unique_lock lock(this->dictionaryMutex);
-
-    return this->activeTransactions.FirstOrDefault().transactionId;
-  }
+    transaction_id_t TransactionManager::GetOldestActiveTransactionId() {
+        std::unique_lock lock(this->dictionaryMutex);
+        return this->activeTransactions.FirstOrDefault().transactionId;
+    }
 }

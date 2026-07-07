@@ -12,11 +12,11 @@
 #include "ValidationMessages.h"
 
 namespace Network {
-   Server::Server(){
-    this->temporaryDatabase = nullptr;
-    this->systemCatalog = nullptr;
-    this->versionDatabase = nullptr;
-  }
+    Server::Server(){
+        this->temporaryDatabase = nullptr;
+        this->systemCatalog = nullptr;
+        this->versionDatabase = nullptr;
+    }
 
   void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
     const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);

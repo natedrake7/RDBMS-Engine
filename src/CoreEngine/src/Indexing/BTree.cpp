@@ -1,6 +1,5 @@
 ﻿#include "../../include/Indexing/BTree.h"
 #include <algorithm>
-#include <cassert>
 #include "../../include/DataStorage/Row.h"
 #include "../../include/DataStorage/Column.h"
 #include "../../include/DataStorage/Table.h"
@@ -9,7 +8,6 @@
 #include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "Schedulers/StatisticsScheduler.h"
-#include <cmath>
 
 #include "ScanState.h"
 #include "Contexts/ExecutionContext.h"
@@ -968,18 +966,19 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchKey(minKey);
+        const auto& snapshot = context.GetSnapshot();
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
+        CoreEngine::StorageTypes::RID rid;
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
 
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
-
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(rid);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1001,26 +1000,26 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchKey(minKey);
-        auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
+        const auto& snapshot = context.GetSnapshot();
 
+        Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            context
+        );
+
+        auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
+        CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            Expressions::EvaluationContext evaluationContext(
-                Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-                context
-            );
-
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
 
-                auto row = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
-                evaluationContext.row = &row;
-
+                evaluationContext.row = &rid;
                 if (Expressions::RowModeFilter(expression, evaluationContext))
-                    result->Push(row);
+                    result->Push(rid);
             }
 
             if(!currentNode.HasRightSibling())
@@ -1040,18 +1039,19 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchKey(key);
+        const auto& snapshot = context.GetSnapshot();
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
+        CoreEngine::StorageTypes::RID rid;
         while (true){
 
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
-
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(rid);
             }
 
             const auto rightSibling = currentNode.RightSibling();
@@ -1074,23 +1074,24 @@ namespace Indexing{
 
         auto currentNode = this->SearchKey(key);
 
+        const auto& snapshot = context.GetSnapshot();
         auto evaluationContext = Expressions::EvaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
+
+        CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             evaluationContext.page = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
                 if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(rid);
@@ -1179,19 +1180,21 @@ namespace Indexing{
         if (this->IsEmpty())
             return;
 
-        result->Reserve(context.GetBatchSize());
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
+        const auto& snapshot = context.GetSnapshot();
+
         state.canFetchMore = false;
+        CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++){
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(rid);
             }
 
             if(!currentNode.HasRightSibling()) {
@@ -1223,38 +1226,39 @@ namespace Indexing{
                                 ? this->SearchLeftMostLeafNode()
                                 : this->GetNode(state.pageId);
 
+        const auto& snapshot = context.GetSnapshot();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
         state.canFetchMore = false;
-        bool exprResult = false, exprNull = false;
+
+        CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             evaluationContext.page = &currentNode;
             for (Int i = state.GetNextKeyIndex(); i < currentNode.PageSize(); i++) {
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
-                Expressions::EvaluateExpression(expression, evaluationContext, &exprResult, &exprNull);
-                if (exprResult)
+                if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(rid);
-
-                if (result->Size() == context.GetBatchSize()) {
-                    state.lastFetchedKeyIndex = i;
-                    state.pageId = currentNode.PageId();
-                    state.canFetchMore = true;
-
-                    return;
-                }
             }
 
             if(!currentNode.HasRightSibling()) {
                 state.canFetchMore = false;
+                return;
+            }
+
+            if (result->Size() >= context.GetBatchSize()) {
+                const auto* back = result->Back();
+                state.lastFetchedKeyIndex = back->_index;
+                state.pageId = back->_pageId;
+                state.canFetchMore = true;
+
                 return;
             }
 
@@ -1272,25 +1276,24 @@ namespace Indexing{
             return;
 
         auto currentNode = this->SearchLeftMostLeafNode();
+
+        const auto& snapshot = context.GetSnapshot();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             context
         );
 
-        bool exprResult = false, exprNull = false;
+        CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-
             evaluationContext.page = &currentNode;
+
             for (Int i = 0;i < currentNode.PageSize();i++){
-                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
+                if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext.row = &rid;
-                Expressions::EvaluateExpression(expression, evaluationContext, &exprResult, &exprNull);
-
-                if(exprResult)
+                if (Expressions::RowModeFilter(expression, evaluationContext))
                     result->Push(rid);
             }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <cstdint>
 #include "Indexing/Key.h"
+#include "DataStorage/Row.h"
 
 namespace Errors {
     enum class RuntimeError : uint8_t {

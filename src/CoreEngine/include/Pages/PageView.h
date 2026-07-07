@@ -144,10 +144,11 @@ namespace Pages{
             const CoreEngine::StorageTypes::RID* rid
         ) const;
 
-        void ResolveRID(
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        [[nodiscard]]
+        bool ResolveRID(
             const CoreEngine::Snapshot& snapshot,
-            Int indexPosition
+            Int indexPosition,
+            CoreEngine::StorageTypes::RID* outRID
         ) const;
 
         QueryResult MaterializeRow(
@@ -216,15 +217,12 @@ namespace Pages{
         [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
 
         [[nodiscard]] bool IsRowVisible(const CoreEngine::Snapshot& snapshot, Int indexPosition) const;
-        [[nodiscard]] static bool IsRowVisible(
-            const CoreEngine::Snapshot& snapshot,
-            const CoreEngine::StorageTypes::RowHeader* rowHeader
-        );
 
-        void RetrieveVisibleRow(
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        [[nodiscard]]
+        bool RetrieveVisibleRow(
             const CoreEngine::Snapshot& snapshot,
-            const CoreEngine::StorageTypes::RID* rid
-        ) const;
+            Int indexPosition,
+            CoreEngine::StorageTypes::RID* outRID
+        )const;
     };
 }

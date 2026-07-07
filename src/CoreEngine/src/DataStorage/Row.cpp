@@ -10,32 +10,30 @@ namespace CoreEngine::StorageTypes {
         :   _pageId(pageId), _index(index),
             _flags(0){}
 
+    RID::RID(const page_id_t pageId, const Int index, const Source source)
+        : _pageId(pageId), _index(index), _flags(0){
+        this->SetSource(source);
+    }
+
+    void RID::SetSource(const Source source){
+        PackedWord<UnsignedSmallInt>::SetBits<SOURCE_SHIFT, SOURCE_MASK>(&this->_flags, source);
+    }
+
+    RID::Source RID::GetSource() const{
+        return PackedWord<UnsignedSmallInt>::ExtractBits<Source, SOURCE_SHIFT, SOURCE_MASK>(this->_flags);
+    }
+
     RowHeader::RowHeader()
         :   _createdTransactionId(INVALID_TRANSACTION_ID), _deletedTransactionId(INVALID_TRANSACTION_ID),
             _versionRID(){}
 
     bool RowHeader::IsVisibleForTransaction(const Snapshot& snapshot) const{
-        return this->_deletedTransactionId != FIRST_TRANSACTION_ID
-            && (
-                this->_deletedTransactionId < snapshot.maximumTransactionId
-                || this->_deletedTransactionId == INVALID_TRANSACTION_ID
-            )
-            && !snapshot.activeTransactionIds.Contains(this->_deletedTransactionId)
-            && this->_deletedTransactionId != snapshot.transactionId;
-    }
-
-    bool RowHeader::IsDeletedForTransaction(const Snapshot& snapshot) const{
-        if (snapshot.IsSystemTransaction())
-            return true;
-
-        if (this->_createdTransactionId < snapshot.minimumTransactionId)
-            return !this->IsVisibleForTransaction(snapshot);
-
-        if (this->_createdTransactionId == snapshot.transactionId
-            || this->_createdTransactionId >= snapshot.maximumTransactionId
-            || snapshot.activeTransactionIds.Contains(this->_createdTransactionId))
+        if (!Snapshot::IsWriteVisible(this->_createdTransactionId, snapshot))
             return false;
 
-        return !this->IsVisibleForTransaction(snapshot);
+        return (
+            this->_deletedTransactionId == INVALID_TRANSACTION_ID
+            || !Snapshot::IsWriteVisible(this->_deletedTransactionId, snapshot)
+        );
     }
 }

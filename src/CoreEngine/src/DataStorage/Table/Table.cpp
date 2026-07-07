@@ -538,6 +538,7 @@ namespace CoreEngine::StorageTypes {
         allocPage.GetAllocatedExtents(&tableExtentIds, state._extentId);
 
         state.canFetchMore = false;
+        RID rid;
         for (const auto extentId : tableExtentIds){
             const auto firstPageId = Database::CalculateExtentFirstPageId(extentId);
             const auto pfs = Database::GetAssociatedPfsPage(systemFileKey, firstPageId);
@@ -556,8 +557,11 @@ namespace CoreEngine::StorageTypes {
                 if (page.IsEmpty())
                     continue;
 
-                for (Int index = state.GetNextKeyIndex(); index < page.PageSize(); index++)
-                    page.ResolveRID(result, snapshot, index);
+                for (Int index = state.GetNextKeyIndex(); index < page.PageSize(); index++){
+                    if (!page.RetrieveVisibleRow(snapshot, index, &rid))
+                        continue;
+                    result->Push(rid);
+                }
 
                 if (result->Size() >= executionContext.GetBatchSize()) {
                     state.canFetchMore = true;

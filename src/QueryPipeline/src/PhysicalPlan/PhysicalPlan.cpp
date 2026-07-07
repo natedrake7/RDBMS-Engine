@@ -498,8 +498,9 @@ namespace QueryPipeline::PhysicalPlan {
         if (result.canFetchMore == false)
             this->state.Reset();
 
-        context.AddTable(tablePtr);
+        const auto index = context.AddTable(tablePtr);
         context.AddScanHandle(rows.Data(), rows.Size());
+        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -537,74 +538,77 @@ namespace QueryPipeline::PhysicalPlan {
       if (result.canFetchMore == false)
           this->state.Reset();
 
-      context.AddTable(tablePtr);
-      context.AddScanHandle(rows.Data(), rows.Size());
+        const auto index = context.AddTable(tablePtr);
+        context.AddScanHandle(rows.Data(), rows.Size());
+        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
 
       result.selectionVector->selectedRidsCount = rows.Size();
       result.selectionVector->isIdentity = true;
       return result;
   }
 
-  void PhysicalIndexScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-      this->state.pageId = rid->_pageId;
-      this->state.lastFetchedKeyIndex =  rid->_index;
-  }
+    void PhysicalIndexScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
+        this->state.pageId = rid->_pageId;
+        this->state.lastFetchedKeyIndex =  rid->_index;
+    }
 
-  PhysicalIndexSeek::PhysicalIndexSeek(
-      Statements::DataSource* table,
-      DataTypes::Indexing::Key& key,
-      Expressions::Expression* expression
-  ) : table(table), expression(expression), key(std::move(key)) {}
+    PhysicalIndexSeek::PhysicalIndexSeek(
+        Statements::DataSource* table,
+        DataTypes::Indexing::Key& key,
+        Expressions::Expression* expression
+    ) : table(table), expression(expression), key(std::move(key)) {}
 
-  ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
-      auto result = ExecutionResult(context);
+    ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
+        auto result = ExecutionResult(context);
 
-      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-      tablePtr->GetConstantColumns(&result.columns);
+        tablePtr->GetConstantColumns(&result.columns);
 
-      //select if to use clustered or non clustered index here
-      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-      tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
+        //select if to use clustered or non clustered index here
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+        tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
 
-      context.AddTable(tablePtr);
-      context.AddScanHandle(rows.Data(), rows.Size());
+        const auto index = context.AddTable(tablePtr);
+        context.AddScanHandle(rows.Data(), rows.Size());
+        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
 
-      result.selectionVector->selectedRidsCount = rows.Size();
-      result.selectionVector->isIdentity = true;
-      return result;
-  }
+        result.selectionVector->selectedRidsCount = rows.Size();
+        result.selectionVector->isIdentity = true;
+        return result;
+    }
 
-  PhysicalIndexSeekRange::PhysicalIndexSeekRange(
-      Statements::DataSource* table,
-      DataTypes::Indexing::Key& minKey,
-      DataTypes::Indexing::Key& maxKey,
-      Expressions::Expression* expression
-  ):    table(table), expression(expression),
+    PhysicalIndexSeekRange::PhysicalIndexSeekRange(
+        Statements::DataSource* table,
+        DataTypes::Indexing::Key& minKey,
+        DataTypes::Indexing::Key& maxKey,
+        Expressions::Expression* expression
+    ):  table(table), expression(expression),
         minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
 
-  ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
-      auto result = ExecutionResult(context);
+    ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
+        auto result = ExecutionResult(context);
 
-      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
 
-      tablePtr->GetConstantColumns(&result.columns);
+        tablePtr->GetConstantColumns(&result.columns);
 
-      //select if to use clustered or non clustered index here
-      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-      tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
+        //select if to use clustered or non clustered index here
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+        tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
 
-      context.AddTable(tablePtr);
-      context.AddScanHandle(rows.Data(), rows.Size());
+        const auto index = context.AddTable(tablePtr);
+        context.AddScanHandle(rows.Data(), rows.Size());
+        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
 
-      result.selectionVector->selectedRidsCount = rows.Size();
-      result.selectionVector->isIdentity = true;
-      return result;
-  }
+        result.selectionVector->selectedRidsCount = rows.Size();
+        result.selectionVector->isIdentity = true;
+        return result;
+    }
 
     void PhysicalProject::ExecuteVectorizedMode(
         const ExecutionResult& result,
@@ -623,8 +627,8 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     void PhysicalProject::ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context) const{
-        const Int rowCount    = result.selectionVector->selectedRidsCount;
-        const Int projectCount = this->resultExpressions.Size();
+        const auto rowCount = result.selectionVector->selectedRidsCount;
+        const auto projectCount = this->resultExpressions.Size();
 
         for (Int i = 0;i < projectCount; i++){
             const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
@@ -645,6 +649,8 @@ namespace QueryPipeline::PhysicalPlan {
 
         bool outNull = false;
         Pages::PageView page;
+
+        const auto* fileKeys = context.GetFileKeys(0);
         if (result.selectionVector->isIdentity){
             for (Int i = 0; i < rowCount; i++){
                 evaluationContext.row = &scanHandle.rids[i];
@@ -652,7 +658,10 @@ namespace QueryPipeline::PhysicalPlan {
                 if (!page.IsValid()
                     || page.PageId() != evaluationContext.row->_pageId
                 ){
-                    page = Storage::StorageManager::Get().GetPage<Pages::PageView>(table->GetDataFileKey(), evaluationContext.row->_pageId);
+                    page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+                        fileKeys[evaluationContext.row->GetSource()],
+                        evaluationContext.row->_pageId
+                    );
                     evaluationContext.page = &page;
                 }
 

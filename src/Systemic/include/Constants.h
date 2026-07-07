@@ -23,7 +23,7 @@ static constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<tabl
 static constexpr transaction_id_t INVALID_TRANSACTION_ID = std::numeric_limits<transaction_id_t>::max();
 static constexpr page_id_t INVALID_PAGE_ID = std::numeric_limits<page_id_t>::max();
 static constexpr extent_id_t INVALID_EXTENT_ID = std::numeric_limits<extent_id_t>::max();
-static constexpr Int INVALID_PAGE_INDEX_ID = -1;
+static constexpr UnsignedSmallInt INVALID_PAGE_INDEX_ID = std::numeric_limits<UnsignedSmallInt>::max();
 static constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(Int);
 
 static constexpr transaction_id_t FIRST_TRANSACTION_ID = 0;

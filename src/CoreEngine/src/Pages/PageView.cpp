@@ -413,26 +413,16 @@ namespace Pages{
         this->UpdateSlotDirectory(slot, indexPosition);
     }
 
-    void PageView::ResolveRID(
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+    bool PageView::ResolveRID(
         const CoreEngine::Snapshot& snapshot,
-        const Int indexPosition
+        const Int indexPosition,
+        CoreEngine::StorageTypes::RID* outRID
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
+        if (slot.GetFlag() != SlotDirectory::SLOT_USED)
+            return false;
 
-        CoreEngine::StorageTypes::RID rid;
-        switch (slot.GetFlag()){
-            case SlotDirectory::SLOT_USED:
-                rid = CoreEngine::StorageTypes::RID(this->PageId(), indexPosition);
-                break;
-            case SlotDirectory::SLOT_FORWARDED:
-                std::memcpy(&rid, this->_frame->_data + slot.AbsoluteDataOffset(), ROW_ID_SIZE);
-                break;
-            default:
-                return;
-        }
-
-        this->RetrieveVisibleRow(result, snapshot, &rid);
+        return this->RetrieveVisibleRow(snapshot, indexPosition, outRID);
     }
 
     QueryResult PageView::MaterializeRow(
@@ -637,29 +627,22 @@ namespace Pages{
         return rowHeader->IsVisibleForTransaction(snapshot);
     }
 
-    bool PageView::IsRowVisible(
+    bool PageView::RetrieveVisibleRow(
         const CoreEngine::Snapshot& snapshot,
-        const CoreEngine::StorageTypes::RowHeader* rowHeader
-    ){
-        return rowHeader->IsVisibleForTransaction(snapshot);
-    }
-
-    void PageView::RetrieveVisibleRow(
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        const CoreEngine::Snapshot& snapshot,
-        const CoreEngine::StorageTypes::RID* rid
+        const Int indexPosition,
+        CoreEngine::StorageTypes::RID* outRID
     ) const{
-        const auto slot = this->GetSlotDirectory(rid->_index);
+        const auto slot = this->GetSlotDirectory(indexPosition);
         const auto* rowHeader = reinterpret_cast<const CoreEngine::StorageTypes::RowHeader*>(
             this->_frame->_data + slot.AbsoluteDataOffset()
         );
 
-        if (PageView::IsRowVisible(snapshot, rowHeader)){
-            result->Push(*rid);
-            return;
+        if (rowHeader->IsVisibleForTransaction(snapshot)){
+            *outRID = CoreEngine::StorageTypes::RID(this->PageId(), indexPosition, CoreEngine::StorageTypes::RID::Table);
+            return true;
         }
 
-        CoreEngine::VersionDatabase::Get().RetrieveVersionedRID(result, snapshot, rowHeader);
+        return CoreEngine::VersionDatabase::Get().RetrieveVersionedRID(snapshot, rowHeader, outRID);
     }
 
     template bool PageView::GetColumnAt<bool>(Int index, Int columnIndex, bool* outNull) const;

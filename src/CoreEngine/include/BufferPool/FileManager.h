@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "FileKey.h"
 #include "../../../Systemic/include/Constants.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../../Systemic/include/Guards/Mutex.h"
@@ -8,39 +9,6 @@
 namespace DataTypes{
     class StringView;
 }
-namespace Storage{
-    enum class FileType : UnsignedTinyInt{
-        Data = 0,
-        System = 1
-    };
-
-    struct FileKey{
-        Int databaseId;
-        FileType type;
-
-        bool operator==(const FileKey& other) const{
-            return this->databaseId == other.databaseId
-                && this->type == other.type;
-        }
-
-        FileKey()
-            : databaseId(INVALID_DATABASE_ID), type(FileType::Data){}
-
-        FileKey(const Int databaseId, const FileType type)
-            : databaseId(databaseId), type(type){}
-
-        static FileKey Create(const Int databaseId, const FileType type){
-            return FileKey(databaseId, type);
-        }
-    };
-}
-
-template<>
-struct std::hash<Storage::FileKey>{
-    size_t operator()(const Storage::FileKey& key) const noexcept{
-        return std::hash<Int>()(key.databaseId) ^ std::hash<Storage::FileType>()(key.type);
-    }
-};
 
 namespace Storage{
     constexpr size_t MAX_OPEN_FILES = 2;

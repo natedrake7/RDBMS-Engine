@@ -2,10 +2,9 @@
 #include "DatabaseConstants.h"
 #include <vector>
 
-#include  "Memory/PersistentAllocator.h"
-#include "BufferPool/FileManager.h"
-#include "DataStorage/Column.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include  "Memory/PersistentAllocator.h"
+#include "DataStorage/Column.h"
 #include "DataStorage/ExtentReservation.h"
 #include "Logger/Logger.h"
 #include "Pages/AllocationPageView.h"
@@ -14,6 +13,7 @@
 #include "Pages/LargeObjectView.h"
 #include "Pages/OverflowPageView.h"
 #include "Pages/PageFreeSpaceView.h"
+#include "BufferPool/FileKey.h"
 
 
 namespace Memory{

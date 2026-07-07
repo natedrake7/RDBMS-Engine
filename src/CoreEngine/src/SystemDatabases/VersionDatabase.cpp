@@ -276,10 +276,10 @@ namespace CoreEngine {
         return StorageTypes::RID(page.PageId(), indexPosition);
     }
 
-    void VersionDatabase::RetrieveVersionedRID(
-        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+     bool VersionDatabase::RetrieveVersionedRID(
         const Snapshot& snapshot,
-        const StorageTypes::RowHeader* rowHeader
+        const StorageTypes::RowHeader* rowHeader,
+        StorageTypes::RID* outRID
     )const {
         while (true){
             const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
@@ -290,14 +290,13 @@ namespace CoreEngine {
             MultiThreading::ReaderGuard lock(&page.Latch());
 
             if (page.IsRowVisible(snapshot, rowHeader->_versionRID._index)){
-                result->Push(StorageTypes::RID(page.PageId(), rowHeader->_versionRID._index));
-                return;
+                *outRID = StorageTypes::RID(page.PageId(), rowHeader->_versionRID._index, CoreEngine::StorageTypes::RID::Version);
+                return true;
             }
 
             rowHeader = page.PeekRowHeader(rowHeader->_versionRID._index);
-
             if (!rowHeader->HasOldVersion())
-                return;
+                return false;
         }
     }
 

@@ -23,7 +23,7 @@ namespace CoreEngine{
     }
 
     class ExecutionContext;
-    class ScanState;
+    struct ScanState;
 }
 
 namespace Memory{

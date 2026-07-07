@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include "../DatabaseConstants.h"
-#include "../../../QueryPipeline/include/DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../Memory/Allocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
+#include "../BufferPool/FileKey.h"
+#include "../DataStorage/Row.h"
 
 namespace DataTypes{
     class String;
@@ -32,21 +33,18 @@ namespace CoreEngine {
         transaction_id_t maximumTransactionId;
         HashSet<transaction_id_t> activeTransactionIds;
 
-        Snapshot() {
-            this->transactionId = FIRST_TRANSACTION_ID;
-            this->minimumTransactionId = FIRST_TRANSACTION_ID;
-            this->maximumTransactionId = FIRST_TRANSACTION_ID;
-        }
+        Snapshot()
+            :   transactionId(FIRST_TRANSACTION_ID),
+                minimumTransactionId(FIRST_TRANSACTION_ID), maximumTransactionId(FIRST_TRANSACTION_ID){}
 
         Snapshot(const Snapshot& other) = default;
         Snapshot& operator=(const Snapshot& other) = default;
 
-        Snapshot(Snapshot&& other) noexcept{
-            this->transactionId = other.transactionId;
-            this->minimumTransactionId = other.minimumTransactionId;
-            this->maximumTransactionId = other.maximumTransactionId;
-            this->activeTransactionIds = std::move(other.activeTransactionIds);
-        }
+        Snapshot(Snapshot&& other) noexcept
+            :   transactionId(other.transactionId),
+                minimumTransactionId(other.minimumTransactionId),
+                maximumTransactionId(other.maximumTransactionId),
+                activeTransactionIds(std::move(other.activeTransactionIds)){}
 
         Snapshot& operator=(Snapshot&& other) noexcept{
             if (this == &other)
@@ -61,21 +59,34 @@ namespace CoreEngine {
         }
 
         [[nodiscard]] bool IsSystemTransaction()const{ return this->transactionId == FIRST_TRANSACTION_ID; }
+        static bool IsWriteVisible(const transaction_id_t transactionId, const Snapshot& snapshot){
+            if (transactionId == snapshot.transactionId)
+                return true;
+            if (transactionId < snapshot.minimumTransactionId)
+                return true;
+            if (transactionId >= snapshot.maximumTransactionId)
+                return false;
+            return snapshot.activeTransactionIds.Contains(transactionId);
+        }
     };
 
     struct ExecutionSchema{
         const StorageTypes::Table* tables[Constants::MAX_QUERY_JOINS];
+        Storage::FileKey fileKeys[Constants::MAX_QUERY_JOINS][StorageTypes::RID::Source::Count];
         UnsignedInt tableCount;
 
-        ExecutionSchema(): tables{nullptr}, tableCount(0){}
+        ExecutionSchema()
+            : tables{nullptr}, tableCount(0){}
     };
 
     struct ScanHandle{
         const StorageTypes::RID* rids;
         UnsignedInt size;
 
-        ScanHandle(): rids(nullptr), size(0){}
-        ScanHandle(const StorageTypes::RID* rids, const UnsignedInt size): rids(rids), size(size){}
+        ScanHandle()
+            : rids(nullptr), size(0){}
+        ScanHandle(const StorageTypes::RID* rids, const UnsignedInt size)
+            : rids(rids), size(size){}
     };
 
     struct ScanContext{
@@ -91,7 +102,9 @@ namespace CoreEngine {
 
         Snapshot snapshot;
         Memory::Allocator allocator;
+
         const Dictionary<DataTypes::String, Variable>* variables;
+
         Int batchSize;
 
         Constants::ExecutionMode mode;
@@ -120,8 +133,15 @@ namespace CoreEngine {
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
 
-            void AddTable(const StorageTypes::Table* table);
+            [[nodiscard]] Int AddTable(const StorageTypes::Table* table);
             const StorageTypes::Table* GetTable(UnsignedInt index) const;
+            const Storage::FileKey* GetFileKeys(UnsignedInt index) const;
+
+            void AddFileKey(
+                Storage::FileKey fileKey,
+                StorageTypes::RID::Source storageType,
+                Int indexPosition
+            );
 
             void AddScanHandle(const StorageTypes::RID* rids, UnsignedInt size);
             const ScanHandle& GetScanHandle(UnsignedInt index) const;

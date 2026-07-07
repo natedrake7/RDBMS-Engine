@@ -68,12 +68,26 @@ namespace CoreEngine{
         return this->snapshot;
     }
 
-    void ExecutionContext::AddTable(const StorageTypes::Table* table){
+    Int ExecutionContext::AddTable(const StorageTypes::Table* table){
+        const auto tableIndex = this->schema.tableCount;
         this->schema.tables[this->schema.tableCount++] = table;
+        return tableIndex;
     }
 
     const StorageTypes::Table* ExecutionContext::GetTable(const UnsignedInt index) const{
         return this->schema.tables[index];
+    }
+
+    const Storage::FileKey* ExecutionContext::GetFileKeys(const UnsignedInt index) const{
+        return this->schema.fileKeys[index];
+    }
+
+    void ExecutionContext::AddFileKey(
+        const Storage::FileKey fileKey,
+        const StorageTypes::RID::Source storageType,
+        const Int indexPosition
+    ){
+        this->schema.fileKeys[indexPosition][static_cast<Int>(storageType)] = fileKey;
     }
 
     void ExecutionContext::AddScanHandle(const StorageTypes::RID* rids, const UnsignedInt size){
