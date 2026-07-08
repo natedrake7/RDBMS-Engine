@@ -104,14 +104,16 @@ namespace Pages{
         return this->_frame->Header()->Type() == Constants::PageType::INDEX;
     }
 
-    PageView::PageView(){
-        this->_frame = nullptr;
-        this->initialOffset = Constants::PAGE_HEADER_SIZE;
-    }
+    PageView::PageView()
+        : _frame(nullptr), initialOffset(Constants::PAGE_HEADER_SIZE){}
 
-    PageView::PageView(Frame* framePtr){
-        this->_frame = framePtr;
-        this->initialOffset = Constants::PAGE_HEADER_SIZE;
+    PageView::PageView(Frame* framePtr)
+        : _frame(framePtr), initialOffset(Constants::PAGE_HEADER_SIZE){}
+
+    PageView::PageView(PageView&& other) noexcept
+        :   _frame(other._frame),
+            initialOffset(Constants::PAGE_HEADER_SIZE){
+        other._frame = nullptr;
     }
 
     PageView& PageView::operator=(PageView&& other) noexcept{
@@ -124,12 +126,6 @@ namespace Pages{
         this->_frame = other._frame;
         other._frame = nullptr;
         return *this;
-    }
-
-    PageView::PageView(PageView&& other) noexcept{
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-        other._frame = nullptr;
     }
 
     PageView::~PageView(){

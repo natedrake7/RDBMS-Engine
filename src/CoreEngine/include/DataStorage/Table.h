@@ -9,6 +9,11 @@
 #include "../Memory/Allocator.h"
 #include "../Memory/PersistentAllocator.h"
 
+namespace Expressions
+{
+    struct EvaluationContext;
+}
+
 namespace Pages{
     class LargeObjectView;
 }

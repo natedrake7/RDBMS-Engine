@@ -64,16 +64,6 @@ namespace Pages{
         this->GetAdditionalHeader()->SetTreeType(treeType);
     }
 
-    void IndexPageView::SetTreeId(const page_id_t treeId) const{
-        this->GetAdditionalHeader()->treeId = treeId;
-    }
-
-    void IndexPageView::SetKeyTypes(const DataStructures::StaticArray<DataType, 10>& keyTypes) const{
-        auto* additionalHeader = this->GetAdditionalHeader();
-        for (int i = 0;i < keyTypes.Size(); i++)
-            additionalHeader->keyTypes[i] = keyTypes[i];
-    }
-
     bool IndexPageView::IsEmpty() const{
         return this->_frame->Header()->size == 0;
     }
@@ -84,10 +74,6 @@ namespace Pages{
 
     bool IndexPageView::IsRoot() const{
         return this->GetAdditionalHeader()->IsRoot();
-    }
-
-    UnsignedTinyInt IndexPageView::SubKeys() const{
-        return this->GetAdditionalHeader()->SubKeys();
     }
 
     UnsignedSmallInt IndexPageView::Keys() const{
@@ -108,10 +94,6 @@ namespace Pages{
         additionalHeader->SetIsRoot(isRoot);
         additionalHeader->SetIsEmpty(false);
         this->_frame->isDirty = true;
-    }
-
-    void IndexPageView::SetSubKeys(const UnsignedTinyInt numberOfKeys) const{
-        this->GetAdditionalHeader()->SetNumberOfSubKeys(numberOfKeys);
     }
 
     void IndexPageView::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key) const{

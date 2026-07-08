@@ -113,6 +113,7 @@
 //INSERT INTO dbo.Movies(ID, Name, Age) VALUES(10, 'Kostas', 100)
 //select * from dbo.Movies
 //TODO make identity maybe templated
+//Potential improvement add timestamp to rowHeader and on MVCC use timestamp instead of active transactions
 
 
 int main(){

@@ -100,7 +100,6 @@ namespace Tests{
         frame.Header()->size = 0;
         frame.Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
         Pages::IndexPageView page(&frame);
-        page.SetSubKeys(1);
 
         Errors::RuntimeStatus status;
         auto insertValues = DataStructures::PolymorphicArray<Value>(&allocator, 2);

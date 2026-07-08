@@ -193,7 +193,7 @@ namespace CoreEngine {
 
             MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
 
-            auto undoPage = Storage::StorageManager::Get().CreatePage(
+            auto undoPage = Storage::StorageManager::Get().CreatePage<Pages::PageView>(
                 this->dataFileKey,
                 pageId
             );

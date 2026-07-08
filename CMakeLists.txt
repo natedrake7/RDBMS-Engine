@@ -16,9 +16,6 @@ set(BUILD_SHARED_LIBS ON)
 
 add_executable(
         Database main.cpp
-        Queries.h
-        main.h
-        UnitTests/include/UnitTests.h
         UnitTests/src/UnitTests.cpp
 )
 
@@ -58,7 +55,6 @@ set(ANTLR_SRC
     ${GENERATED_DIR}/SQLLexer.cpp
     ${GENERATED_DIR}/SQLBaseVisitor.cpp
     ${GENERATED_DIR}/SQLVisitor.cpp
-        src/CoreEngine/include/Pages/Additional/RowView.h
 )
 
 # Mark generated sources so CMake knows they will be created by the build process
@@ -140,7 +136,6 @@ target_link_libraries(PluginApi
 
 add_library(CoreEngine STATIC
         src/CoreEngine/src/Database.cpp
-        src/CoreEngine/src/Database.IndexHandlers.cpp
         src/CoreEngine/src/DataStorage/Table/Table.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Indexes.cpp
         src/CoreEngine/src/DataStorage/Table/Table.LargeObjects.cpp
@@ -185,7 +180,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/OverflowPageView.cpp
         src/CoreEngine/src/Managers/GlobalMemoryManager.cpp
         src/CoreEngine/src/Contexts/ExecutionContext.cpp
-        src/CoreEngine/include/Memory/Allocator.h
         src/CoreEngine/src/Memory/Allocator.cpp
         src/CoreEngine/src/Memory/PersistentAllocator.cpp
         src/CoreEngine/src/Extensions/StringExtensions.cpp

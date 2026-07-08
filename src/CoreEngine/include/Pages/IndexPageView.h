@@ -21,18 +21,14 @@ namespace Pages{
             [[nodiscard]] IndexPageAdditionalHeader* GetAdditionalHeader() const;
 
             void SetTreeType(Constants::TreeType treeType) const;
-            void SetTreeId(page_id_t treeId) const;
-            void SetKeyTypes(const DataStructures::StaticArray<DataType, 10>& keyTypes) const;
 
             [[nodiscard]] bool IsEmpty() const;
             [[nodiscard]] bool IsLeaf() const;
             [[nodiscard]] bool IsRoot() const;
-            [[nodiscard]] UnsignedTinyInt SubKeys() const;
             [[nodiscard]] UnsignedSmallInt Keys() const;
 
             void SetIsLeaf(bool isLeaf) const;
             void SetIsRoot(bool isRoot) const;
-            void SetSubKeys(UnsignedTinyInt numberOfKeys) const;
 
             void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key) const;
             void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int indexPosition) const;

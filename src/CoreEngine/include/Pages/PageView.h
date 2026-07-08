@@ -6,18 +6,8 @@
 #include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"
 
-namespace Expressions
-{
-    class Expression;
-    struct EvaluationContext;
-}
-
 namespace Memory{
     class IAllocator;
-}
-
-namespace DataTypes{
-    struct RowIdentifier;
 }
 
 namespace CoreEngine::StorageTypes{

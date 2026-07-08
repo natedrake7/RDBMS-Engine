@@ -3,6 +3,7 @@
 #include "Database.h"
 #include "../../include/BufferPool/StorageManager.h"
 #include "../../include/Pages/IndexPageView.h"
+#include "Guards/WriterGuard.h"
 
 namespace CoreEngine::StorageTypes{
     ExtentReservation::ExtentReservation(
@@ -46,26 +47,21 @@ namespace CoreEngine::StorageTypes{
             this->_segmentOffset = 0;
         }
 
-        const auto pfs = this->_db->GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
+        auto page = Storage::StorageManager::Get().CreatePage<TView>(this->_db->DataFileKey(), pageId);
 
-        if constexpr (std::is_same_v<TView, Pages::PageView>){
-            auto page = Storage::StorageManager::Get().CreatePage(this->_db->DataFileKey(), pageId);
+        {
+            const auto pfs = this->_db->GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
+            MultiThreading::WriterGuard lock(&pfs.Latch());
             pfs.SetPageMetaData(&page);
-            return page;
         }
-        else if constexpr (std::is_same_v<TView, Pages::IndexPageView>){
-            auto page = Storage::StorageManager::Get().CreateIndexPage(this->_db->DataFileKey(), pageId);
-            pfs.SetPageMetaData(&page);
-            return page;
-        }
-        else
-            static_assert(sizeof(TView) == 0, "Invalid Page type specified on extent reservation");
 
-        return TView();
+        return page;
     }
 
     template Pages::PageView ExtentReservation::Next<Pages::PageView>();
     template Pages::IndexPageView ExtentReservation::Next<Pages::IndexPageView>();
+    template Pages::OverflowPageView ExtentReservation::Next<Pages::OverflowPageView>();
+    template Pages::LargeObjectView ExtentReservation::Next<Pages::LargeObjectView>();
 
     bool ExtentReservation::HasNext() const{
         return this->_segmentIndex < this->_segments.Size();

@@ -3,9 +3,6 @@
 
 namespace Pages{
     class LargeObjectView final : public PageView{
-        page_size_t* objectSizePtr;
-        page_id_t* nextPageIdPtr;
-
         public:
             LargeObjectView();
             explicit LargeObjectView(Frame* framePtr);

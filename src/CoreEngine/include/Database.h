@@ -178,20 +178,21 @@ public:
         table_id_t tableOrdinalPosition
     );
 
-    Pages::PageView CreateDataPage(
-        const ::Memory::IAllocator* allocator,
-        table_id_t tableId
-    );
-
     Pages::LargeObjectView CreateLargeDataPage(
         const ::Memory::IAllocator* allocator,
         Int pagesToAllocate,
         table_id_t tableOrdinalPosition
     );
 
+    template<Constants::PageType TYPE, typename TVIew>
+    [[nodiscard]] page_id_t AllocateTableAvailablePageId(
+        const ::Memory::IAllocator* allocator,
+        page_id_t allocationPageId
+    ) const;
+
     [[nodiscard]] Pages::LargeObjectView GetTableLastLargeDataPage(
         const ::Memory::IAllocator* allocator,
-        table_id_t tableId
+        page_id_t allocatePageId
     )const;
 
     [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
@@ -202,14 +203,6 @@ public:
         const block_size_t& size
     );
 
-    Pages::IndexPageView CreateIndexPage(
-        const ::Memory::IAllocator* allocator,
-        table_id_t tableOrdinalPosition,
-        Int pageCount,
-        Constants::TreeType treeType,
-        page_id_t treeId = 0
-    );
-
     [[nodiscard]] Storage::FileKey DataFileKey() const;
     [[nodiscard]] Storage::FileKey SystemFileKey() const;
 
@@ -218,24 +211,6 @@ public:
     static page_id_t CalculateGamPageId(const extent_id_t &extentId);
 
     static extent_id_t CalculateExtentId(page_id_t pageId);
-
-    [[nodiscard]] Pages::PageView FindOrAllocateNextDataPage(
-        const ::Memory::IAllocator* allocator,
-        Pages::PageFreeSpaceView &pageFreeSpacePage,
-        page_id_t pageId,
-        page_id_t extentFirstPageId,
-        const StorageTypes::Table &table,
-        Int pageToAllocate
-    );
-
-    [[nodiscard]] Pages::IndexPageView FindOrAllocateNextIndexPage(
-        const ::Memory::IAllocator* allocator,
-        StorageTypes::Table*& table,
-        page_id_t parentPageId,
-        page_id_t splitChildPageId,
-        Int pagesToAllocate,
-        Int nonClusteredIndexId = -1
-    );
 
     void GetIdentityColumns(const ::Memory::IAllocator* allocator)const;
 

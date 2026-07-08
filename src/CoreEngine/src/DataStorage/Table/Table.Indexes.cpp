@@ -11,7 +11,10 @@
 
 namespace CoreEngine::StorageTypes {
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(this->database->DataFileKey(), indexPageId);
+        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
+            this->database->DataFileKey(),
+            indexPageId
+        );
     }
 
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
@@ -36,7 +39,8 @@ namespace CoreEngine::StorageTypes {
             indexPosition
         );
 
-        if (!status.IsOk()) return status;
+        if (!status.IsOk())
+            return status;
 
         //TODO
         // rowId->indexId = indexPosition;

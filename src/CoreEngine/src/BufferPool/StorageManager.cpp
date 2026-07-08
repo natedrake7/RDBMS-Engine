@@ -192,27 +192,6 @@ void StorageManager::OpenFile(const FileKey key, const DataTypes::StringView& fi
     this->fileManager.OpenFile(key, filename);
 }
 
-Pages::PageView StorageManager::CreatePage(
-    const FileKey fileKey,
-    const page_id_t pageId
-){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::DATA);
-    frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
-    return Pages::PageView(frame);
-}
-
-Pages::LargeObjectView StorageManager::CreateLargeDataPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::LOB);
-    frame->Header()->bytesLeft = Constants::LARGE_OBJECT_PAGE_SIZE;
-    return Pages::LargeObjectView(frame);
-}
-
-Pages::OverflowPageView StorageManager::CreateOverflowPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::OVERFLOWTYPE);
-    frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
-    return Pages::OverflowPageView(frame);
-}
-
 ////////////////////////////////////////////////////
 ////////////////////System Pages///////////////////
 //////////////////////////////////////////////////
@@ -254,20 +233,6 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
 Pages::PageFreeSpaceView StorageManager::CreatePageFreeSpacePage(const FileKey fileKey,const page_id_t pageId){
     auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREESPACE);
     return Pages::PageFreeSpaceView(frame);
-}
-
-Pages::IndexPageView StorageManager::CreateIndexPage(
-    const FileKey fileKey,
-    const page_id_t pageId
-){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::INDEX);
-
-    frame->Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
-    auto* additionalHeader = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
-    additionalHeader->nextNode = INVALID_PAGE_ID;
-    additionalHeader->previousNode = INVALID_PAGE_ID;
-
-    return Pages::IndexPageView(frame);
 }
 
 Pages::Frame* StorageManager::CreateFrame(

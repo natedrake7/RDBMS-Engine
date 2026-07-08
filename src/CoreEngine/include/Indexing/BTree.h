@@ -8,6 +8,11 @@
 #include "../DataStorage/Row.h"
 #include "../Pages/IndexPageView.h"
 
+namespace Expressions
+{
+    class Expression;
+}
+
 namespace Headers{
     struct ColumnStatistics;
     struct TableStatistics;

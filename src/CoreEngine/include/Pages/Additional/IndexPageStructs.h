@@ -20,31 +20,26 @@ namespace Pages{
 		static constexpr UnsignedTinyInt TREE_TYPE_BIT_MASK = 0x03;        // 0000 0011
 		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_MASK = 0x07; //
 
-        DataType keyTypes[Constants::MAX_NUMBER_OF_SUB_KEYS];
-		UnsignedTinyInt _flags;
-		page_id_t treeId;
-
 		page_id_t previousNode;
 		page_id_t nextNode;
+
+		UnsignedTinyInt _flags;
+        byte_t _reserved[Constants::GAM_HEADER_RESERVED_SPACE];
 
         [[nodiscard]] Constants::TreeType GetTreeType() const{
             return PackedByte::ExtractBits<Constants::TreeType>(_flags, TREE_TYPE_BIT_POS, TREE_TYPE_BIT_MASK);
         }
 
         [[nodiscard]] bool IsLeaf() const{
-            return PackedByte::GetBit(_flags, IS_LEAF_BIT_POS);
+            return PackedByte::GetBit<IS_LEAF_BIT_POS>(this->_flags);
         }
 
         [[nodiscard]] bool IsRoot() const{
-            return PackedByte::GetBit(_flags, IS_ROOT_BIT_POS);
+            return PackedByte::GetBit<IS_ROOT_BIT_POS>(this->_flags);
         }
 
         [[nodiscard]] bool IsEmpty() const{
-            return PackedByte::GetBit(_flags, IS_EMPTY_BIT_POS);
-        }
-
-        [[nodiscard]] UnsignedTinyInt SubKeys() const{
-            return PackedByte::ExtractBits<UnsignedTinyInt>(_flags, NUMBER_OF_SUB_KEYS_BIT_POS, NUMBER_OF_SUB_KEYS_BIT_MASK);
+            return PackedByte::GetBit<IS_EMPTY_BIT_POS>(this->_flags);
         }
 
         void SetTreeType(const Constants::TreeType type){
@@ -63,19 +58,14 @@ namespace Pages{
             PackedByte::SetBit<IS_EMPTY_BIT_POS>(&this->_flags, value);
         }
 
-        void SetNumberOfSubKeys(const UnsignedTinyInt count){
-            PackedByte::SetBits<NUMBER_OF_SUB_KEYS_BIT_POS, NUMBER_OF_SUB_KEYS_BIT_MASK>(&this->_flags, count);
-        }
-
 		IndexPageAdditionalHeader()
-		    :   keyTypes(), _flags(0),
-                treeId(0), previousNode(INVALID_PAGE_ID),
+		    :   _flags(0),
+                previousNode(INVALID_PAGE_ID),
                 nextNode(INVALID_PAGE_ID){
             this->SetTreeType(Constants::TreeType::NonClustered);
             this->SetIsLeaf(false);
             this->SetIsRoot(false);
             this->SetIsEmpty(true);
-            this->SetNumberOfSubKeys(0);
         }
 	};
 
