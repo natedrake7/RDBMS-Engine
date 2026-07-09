@@ -25,8 +25,9 @@ namespace CoreEngine::StorageTypes{
         table_id_t _tableOrdinalPos;
 
         public:
+            ExtentReservation();
             ExtentReservation(
-                const :: Memory::IAllocator* allocator,
+                const ::Memory::IAllocator* allocator,
                 Database* db,
                 table_id_t tableOrdinalPos
             );
@@ -35,6 +36,11 @@ namespace CoreEngine::StorageTypes{
                 Database* db,
                 table_id_t tableOrdinalPos
             );
+
+            ExtentReservation(const ExtentReservation& other) = delete;
+            ExtentReservation& operator=(const ExtentReservation& other) = delete;
+            ExtentReservation(ExtentReservation&& other) noexcept;
+            ExtentReservation& operator=(ExtentReservation&& other) noexcept;
 
             [[nodiscard]] bool HasNext() const;
 

@@ -47,15 +47,11 @@ namespace CoreEngine::StorageTypes{
             }
 
             if (value.Size() >= Constants::LARGE_OBJECT_THRESHOLD_SIZE){
-                block_size_t size = value.Size();
-                page_offset_t offSet = 0;
-                const auto pageId = this->StoreLargeObject(
+                const auto pageId = this->InsertLargeObject(
                     rowContext.allocator,
-                    value,
-                    offSet,
-                    size,
-                    nullptr
+                    value
                 );
+
                 const auto dataOffset = payload.SetData(&pageId, sizeof(page_id_t));
                 RowEntry rowEntry(dataOffset, RowEntry::LOB, sizeof(page_id_t));
                 payload.SetData(&rowEntry, sizeof(RowEntry), dataEntriesOffset);

@@ -18,4 +18,10 @@ namespace Math{
     static inline constexpr T Min(const T lhs, const T rhs){
         return lhs < rhs ? lhs : rhs;
     }
+
+    template<DataTypes::IsInteger T>
+    static inline constexpr T Ceil(const float value){
+        const auto truncated = static_cast<T>(value);
+        return (value > static_cast<float>(truncated)) ? truncated + 1 : truncated;
+    }
 }

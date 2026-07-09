@@ -84,23 +84,15 @@ namespace CoreEngine::StorageTypes{
 
             [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
 
-            static void LinkLargePageDataObjectChunks(
-                const Pages::LargeObjectView* dataObject,
-                page_id_t lastLargePageId
-            );
-            void InsertLargeDataObjectPointerToRow(
-                bool isFirstRecursion,
-                page_id_t lastLargePageId,
-                column_index_t largeBlockIndex
-            ) const;
-            page_id_t StoreLargeObject(
+            [[nodiscard]]
+            page_id_t InsertLargeObject(
                 const ::Memory::IAllocator* allocator,
-                const Value& value,
-                page_offset_t &offset,
-                block_size_t &remainingBlockSize,
-                const Pages::LargeObjectView* previousDataObject
+                const Value& value
             )const;
-            [[nodiscard]] Pages::LargeObjectView GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const;
+            page_id_t StoreLargeObject(
+                ExtentReservation& reservation,
+                const Value& value
+            )const;
 
         /** @} End of: Class Constructors and Destructors*/
 
@@ -474,8 +466,6 @@ namespace CoreEngine::StorageTypes{
 
             int HandleRowOverflow(RID* rowPtr) const;
             int HandleRowOverflow(RID* rowPtr, const Column* column)const;
-
-            void InsertLargeObjectToPage(SerializedRow& payload);
 
             [[nodiscard]] bool IsEmpty()const;
 

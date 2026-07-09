@@ -172,35 +172,18 @@ public:
         Int tableOrdinalPos
     );
 
-    Pages::OverflowPageView CreateOverflowPage(
+    template <typename TView>
+    [[nodiscard]] TView LazyAllocateSinglePage(
         const ::Memory::IAllocator* allocator,
-        Int pagesToAllocate,
-        table_id_t tableOrdinalPosition
+        table_id_t ordinalPos
     );
 
-    Pages::LargeObjectView CreateLargeDataPage(
+    template<typename TVIew>
+    [[nodiscard]]
+    TVIew LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        Int pagesToAllocate,
-        table_id_t tableOrdinalPosition
-    );
-
-    template<Constants::PageType TYPE, typename TVIew>
-    [[nodiscard]] page_id_t AllocateTableAvailablePageId(
-        const ::Memory::IAllocator* allocator,
-        page_id_t allocationPageId
-    ) const;
-
-    [[nodiscard]] Pages::LargeObjectView GetTableLastLargeDataPage(
-        const ::Memory::IAllocator* allocator,
-        page_id_t allocatePageId
-    )const;
-
-    [[nodiscard]] Pages::LargeObjectView GetLargeDataPage(page_id_t pageId, table_id_t tableId)const;
-
-    Pages::OverflowPageView GetLastOverflowPage(
-        const ::Memory::IAllocator* allocator,
-        table_id_t tableId,
-        const block_size_t& size
+        page_id_t allocationPageId,
+        table_id_t ordinalPos
     );
 
     [[nodiscard]] Storage::FileKey DataFileKey() const;

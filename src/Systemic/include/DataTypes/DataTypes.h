@@ -101,7 +101,8 @@ enum class StringComparisonType: UnsignedTinyInt{
     ContainsCase = 7
 };
 
-namespace DataTypes{
+namespace DataTypes
+{
     class StringView;
     class Guid;
     class DateTime;
@@ -133,6 +134,10 @@ namespace DataTypes{
         || std::is_same_v<T, std::string_view>
         || std::is_same_v<T, char*>
         || std::is_same_v<T, const char*>;
+
+    template<typename T>
+    concept IsArithmetic = std::is_arithmetic_v<T>
+        || std::is_same_v<T, Decimal>;
 
     template<typename T>
     concept IsInteger = std::is_integral_v<T>;

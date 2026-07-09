@@ -279,7 +279,7 @@ namespace DataTypes{
         }
         else {
             bool parsedDate = false;
-            for (const auto& validFormat: DateTimeFormats) {
+            for (const auto& validFormat: DATETIME_FORMATS) {
                 fields.Reset();
                 if (MatchFormat(validFormat, date, fields)) {
                     parsedDate = true;

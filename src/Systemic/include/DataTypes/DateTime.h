@@ -27,7 +27,7 @@ namespace DataTypes {
 
 	    using StringBuffer = DataStructures::StaticArray<char, DATETIME_TO_STRING_BUFFER_SIZE + DATETIME_TO_STRING_MS_BUFFER_SIZE>;
 
-		static constexpr DataStructures::StaticArray<StringView, 15> DateTimeFormats = {
+		static constexpr DataStructures::StaticArray<StringView, 15> DATETIME_FORMATS = {
 			// ISO 8601 with fractional seconds and timezone
 			StringView("%Y-%m-%dT%H:%M:%S.%OS%z"),   // e.g., 2025-08-26T19:30:20.123+0200
 			StringView("%Y-%m-%dT%H:%M:%S.%OSZ"),    // e.g., 2025-08-26T19:30:20.123Z

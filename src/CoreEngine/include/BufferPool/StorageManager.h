@@ -104,9 +104,6 @@ namespace Storage {
         );
         void RemovePage(Pages::Frame* framePtr);
 
-        template<typename TView>
-        static constexpr Constants::PageType DeducePageType();
-
     public:
         static StorageManager& Get();
         ~StorageManager();
@@ -140,6 +137,9 @@ namespace Storage {
             FileKey fileKey,
             page_id_t pageId
         );
+
+        template<typename TView>
+        static constexpr Constants::PageType DeducePageType();
     };
 
     template <typename TView>

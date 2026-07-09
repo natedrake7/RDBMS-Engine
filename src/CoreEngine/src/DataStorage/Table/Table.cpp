@@ -269,9 +269,9 @@ namespace CoreEngine::StorageTypes {
             this->header.ordinalPosition
         );
 
-        const float pageSize = this->IsClustered()
-                                   ? static_cast<float>(Constants::INDEX_PAGE_DEFAULT_SIZE)
-                                   : static_cast<float>(Constants::PAGE_SIZE_WITHOUT_HEADER);
+        const auto pageSize = this->IsClustered()
+           ? static_cast<float>(Constants::INDEX_PAGE_DEFAULT_SIZE)
+           : static_cast<float>(Constants::PAGE_SIZE_WITHOUT_HEADER);
 
         const auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
 

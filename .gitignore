@@ -15,3 +15,11 @@
 /out/
 /.cache/clangd/index
 /cmake-build-clang64-debug/
+.vscode/launch.json
+cmake/triplets/clang64-toolchain.cmake
+cmake/triplets/x64-clang-mingw-dynamic.cmake
+cmake/vcpkg-overlay-ports/antlr4/add-include-chrono.patch
+cmake/vcpkg-overlay-ports/antlr4/set-export-macro-define-as-private.patch
+cmake/vcpkg-overlay-ports/antlr4/vcpkg.json
+cmake/vcpkg-overlay-ports/antlr4/portfile.cmake
+cmake/vcpkg-overlay-ports/antlr4/allow-clang-windows-cxx17.patch

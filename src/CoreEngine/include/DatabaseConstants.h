@@ -117,7 +117,7 @@ namespace Constants{
     static constexpr Int LARGE_OBJECT_METADATA_SIZE = PAGE_HEADER_SIZE + sizeof(page_size_t) + sizeof(page_id_t) + 2; //2 is for alignment
     static constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
 
-    static constexpr size_t LARGE_DATA_OBJECT_SIZE = 8060;
+    static constexpr size_t LARGE_DATA_OBJECT_SIZE = PAGE_SIZE - LARGE_OBJECT_METADATA_SIZE;;
     static constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = PAGE_SIZE_WITHOUT_HEADER;
     static constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
 

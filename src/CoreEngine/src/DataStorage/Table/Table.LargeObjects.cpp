@@ -4,124 +4,55 @@
 #include "DataStorage/SerializedRow.h"
 
 namespace CoreEngine::StorageTypes {
-    void Table::InsertLargeObjectToPage(SerializedRow& payload) {
-        // Constants::LARGE_OBJECT_THRESHOLD_SIZE
+    page_id_t Table::InsertLargeObject(const ::Memory::IAllocator* allocator, const Value& value) const{
+        const auto numOfPages = Math::Ceil<Int>(
+            static_cast<float>(value.Size()) / static_cast<float>(Constants::LARGE_DATA_OBJECT_SIZE)
+        );
 
-        // for (const auto& column : this->_columns) {
-        //     // payload.
-        //     if (column->Size() < Constants::LARGE_OBJECT_THRESHOLD_SIZE)
-        //         continue;
-        //
-        //     // Handle large object insertion for this column
-        // }
+        ExtentReservation reservation;
+        if (numOfPages == 1)
+            reservation = this->LazyReservation(allocator);
+        else{
+            const auto numExtents = Math::Ceil<Int>(static_cast<float>(numOfPages) / Constants::EXTENT_SIZE);
+            reservation = this->ReserveExtents(allocator, numExtents);
+        }
 
-        // const vector<column_index_t> largeBlockIndexes = row->GetLargeBlocks();
-        //
-        // if (largeBlockIndexes.empty())
-        //     return;
-        //
-        // auto* rowHeader = row->GetHeader();
-        //
-        // const auto &rowData = row->GetData();
-        //
-        // for (const auto &largeBlockIndex : largeBlockIndexes)
-        // {
-        //     rowHeader->largeObjectBitMap.Set(largeBlockIndex, true);
-        //
-        //     page_offset_t offset = 0;
-        //     block_size_t remainingBlockSize = rowData[largeBlockIndex]->Size();
-        //
-        //     this->RecursiveInsertToLargePage(
-        //         row,
-        //         offset,
-        //         largeBlockIndex,
-        //         remainingBlockSize,
-        //         true,
-        //         nullptr
-        //     );
-        // }
+        return this->StoreLargeObject(reservation, value);
     }
 
     page_id_t Table::StoreLargeObject(
-        const ::Memory::IAllocator* allocator,
-        const Value& value,
-        page_offset_t &offset,
-        block_size_t& remainingBlockSize,
-        const Pages::LargeObjectView* previousDataObject
+        ExtentReservation& reservation,
+        const Value& value
     )const{
-        const auto page = this->GetOrCreateLargeDataPage(allocator);
+        const auto* data = value.Data();
+        block_size_t remaining = value.Size();
 
-        const auto pageSize = page.BytesLeft();
+        page_id_t headPageId = INVALID_PAGE_ID;
+        Pages::LargeObjectView previous;
 
-        const auto& data = value.Data();
+        while (true){
+            auto page = reservation.Next<Pages::LargeObjectView>();
 
-        // //can fit in page
-        if (remainingBlockSize + Constants::OBJECT_METADATA_SIZE_T < pageSize){
-            page.SetData(data + offset, remainingBlockSize);
+            const auto chunk = Math::Min<block_size_t>(remaining, Constants::LARGE_DATA_OBJECT_SIZE);
+            page.SetData(data, chunk);
 
-            const auto pfsPage = Database::GetAssociatedPfsPage(this->GetSystemFileKey(),page.PageId());
-            pfsPage.SetPageMetaData(&page);
+            const auto pfs = Database::GetAssociatedPfsPage(this->GetSystemFileKey(), page.PageId());
+            pfs.SetPageMetaData(&page);
 
-            if (previousDataObject != nullptr){
-                previousDataObject->SetNextPageId(page.PageId());
-                return 0;
-            }
+            if (headPageId == INVALID_PAGE_ID)
+                headPageId = page.PageId();
+            if (previous.IsValid())
+                previous.SetNextPageId(page.PageId());
 
-            //if previous object is null, it is first pass so we return the pageId
-            return page.PageId();
+            remaining -= chunk;
+            data += chunk;
+
+            if (remaining == 0)
+                break;
+
+            previous = std::move(page);
         }
 
-        // blockSize < pageSize
-        const auto bytesToBeInserted = pageSize - Constants::OBJECT_METADATA_SIZE_T;
-        remainingBlockSize -= bytesToBeInserted;
-        page.SetData(data + offset, bytesToBeInserted);
-
-        const auto pfsPage = Database::GetAssociatedPfsPage(this->GetSystemFileKey(), page.PageId());
-        pfsPage.SetPageMetaData(&page);
-
-        if (previousDataObject != nullptr)
-            previousDataObject->SetNextPageId(page.PageId());
-
-        offset += bytesToBeInserted;
-
-        this->StoreLargeObject(
-            allocator,
-            value,
-            offset,
-            remainingBlockSize,
-            &page
-        );
-
-        return page.PageId();
-    }
-
-    Pages::LargeObjectView Table::GetOrCreateLargeDataPage(const ::Memory::IAllocator* allocator) const{
-        auto largeDataPage = this->database->GetTableLastLargeDataPage(
-            allocator,
-            this->header.tableId
-        );
-
-        if (largeDataPage.IsValid())
-            return largeDataPage;
-
-        return this->database->CreateLargeDataPage(allocator, this->header.tableId, this->header.ordinalPosition);
-    }
-
-    void Table::LinkLargePageDataObjectChunks(const Pages::LargeObjectView* dataObject, const page_id_t lastLargePageId){
-        if (dataObject == nullptr)
-            return;
-
-        dataObject->SetNextPageId(lastLargePageId);
-    }
-
-    void Table::InsertLargeDataObjectPointerToRow(
-        const bool isFirstRecursion,
-        const page_id_t lastLargePageId,
-        const column_index_t largeBlockIndex
-    ) const{
-        if (!isFirstRecursion)
-            return;
-
-        // row->UpdateColumnData(block);
+        return headPageId;
     }
 }
