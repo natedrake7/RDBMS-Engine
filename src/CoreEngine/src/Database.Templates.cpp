@@ -13,7 +13,7 @@
 namespace CoreEngine{
     template <typename TView>
     TView Database::LazyAllocateSinglePage(const ::Memory::IAllocator* allocator, const table_id_t ordinalPos){
-        StorageTypes::ExtentReservation extentReservation(allocator, this, ordinalPos);
+        auto extentReservation = this->ReserveExtents(allocator, 1, ordinalPos);
         auto page = extentReservation.Next<TView>();
 
         {
@@ -33,15 +33,15 @@ namespace CoreEngine{
     template<typename TVIew>
     TVIew Database::LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        const page_id_t allocationPageId,
         const table_id_t ordinalPos
     ){
+        const auto allocationPageId = this->_tables[ordinalPos]->GetAllocationPageId();
+
         TVIew page;
         if (allocationPageId == INVALID_PAGE_ID)
             return this->LazyAllocateSinglePage<TVIew>(allocator, ordinalPos);
 
         constexpr auto PAGE_TYPE = Storage::StorageManager::DeducePageType<TVIew>();
-
         const auto allocationPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             this->dataFileKey,
             allocationPageId
@@ -55,15 +55,22 @@ namespace CoreEngine{
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
                 const auto pfs = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
 
-                MultiThreading::ReaderGuard lock(&pfs.Latch());
-                if (pfs.GetPageType(pageId) != PAGE_TYPE)
-                    break;
+                {
+                    MultiThreading::ReaderGuard lock(&pfs.Latch());
+                    if (pfs.GetPageType(pageId) != PAGE_TYPE)
+                        break;
 
-                if (!pfs.IsPageAllocated(pageId)){
+                    if (pfs.IsPageAllocated(pageId))
+                        continue;
+                }
+
+                {
+                    MultiThreading::WriterGuard lock(&pfs.Latch());
+                    if (pfs.IsPageAllocated(pageId))
+                        continue;
+
                     page = Storage::StorageManager::Get().CreatePage<TVIew>(this->dataFileKey, pageId);
-                    auto writeLock = MultiThreading::WriterGuard::Promote(&pfs.Latch(), lock);
                     pfs.SetPageMetaData(&page);
-                    return page;
                 }
             }
         }
@@ -72,8 +79,8 @@ namespace CoreEngine{
     }
 
 
-    template Pages::PageView Database::LazyAllocateTablePage<Pages::PageView>(const ::Memory::IAllocator* allocator, page_id_t allocationPageId, table_id_t ordinalPos);
-    template Pages::IndexPageView Database::LazyAllocateTablePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, page_id_t allocationPageId, table_id_t ordinalPos);
-    template Pages::LargeObjectView Database::LazyAllocateTablePage<Pages::LargeObjectView>(const ::Memory::IAllocator* allocator, page_id_t allocationPageId, table_id_t ordinalPos);
-    template Pages::OverflowPageView Database::LazyAllocateTablePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, page_id_t allocationPageId, table_id_t ordinalPos);
+    template Pages::PageView Database::LazyAllocateTablePage<Pages::PageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::IndexPageView Database::LazyAllocateTablePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::LargeObjectView Database::LazyAllocateTablePage<Pages::LargeObjectView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::OverflowPageView Database::LazyAllocateTablePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
 }

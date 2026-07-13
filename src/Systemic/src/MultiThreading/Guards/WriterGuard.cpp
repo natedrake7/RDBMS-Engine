@@ -1,5 +1,4 @@
 #include "../../../include/Guards/WriterGuard.h"
-#include "../../../include/Guards/ReaderGuard.h"
 #include "../../../include/Guards/Mutex.h"
 
 namespace MultiThreading {
@@ -28,7 +27,7 @@ namespace MultiThreading {
         other.mutex = nullptr;
     }
 
-    WriterGuard & WriterGuard::operator=(WriterGuard &&other) noexcept {
+    WriterGuard& WriterGuard::operator=(WriterGuard &&other) noexcept {
         if (this == &other)
             return *this;
 
@@ -45,39 +44,27 @@ namespace MultiThreading {
         this->mutex->PromoteLock();
     }
 
-  void WriterGuard::SetMutex(Mutex *mtx) {
-    this->mutex = mtx;
-  }
+    void WriterGuard::SetMutex(Mutex *mtx) {
+        this->mutex = mtx;
+    }
 
-  WriterGuard WriterGuard::Promote(Mutex *mtx, ReaderGuard& readGuard) {
-    auto guard = WriterGuard();
+    WriterGuard WriterGuard::TryLock(Mutex *mtx, bool& isSuccessful) {
+        WriterGuard guard;
+        guard.SetMutex(mtx);
 
-    readGuard.DisableMutex();
+        isSuccessful = mtx->UniqueTryLock();
+        if (!isSuccessful)
+            guard.DisableMutex();
 
-    guard.SetMutex(mtx);
-    guard.PromoteLock();
+        return guard;
+    }
 
-    return guard;
-  }
+    void WriterGuard::DisableMutex() {
+        this->mutex = nullptr;
+    }
 
-  WriterGuard WriterGuard::TryLock(Mutex *mtx, bool& isSuccessful) {
-    auto guard = WriterGuard();
-
-    guard.SetMutex(mtx);
-
-    isSuccessful = mtx->UniqueTryLock();
-    if (!isSuccessful)
-      guard.DisableMutex();
-
-    return guard;
-  }
-
-  void WriterGuard::DisableMutex() {
-    this->mutex = nullptr;
-  }
-
-  void WriterGuard::Release()const {
-    this->mutex->UniqueUnlock();
-  }
+    void WriterGuard::Release()const {
+        this->mutex->UniqueUnlock();
+    }
 
 }

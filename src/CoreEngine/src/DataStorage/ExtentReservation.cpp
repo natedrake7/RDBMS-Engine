@@ -27,7 +27,10 @@ namespace CoreEngine::StorageTypes{
     template <typename TView>
     TView ExtentReservation::Next(){
         if (this->_segmentIndex == this->_segments.Size()){
-            return this->_db->LazyAllocateSinglePage<TView>(this->_segments.GetAllocator(), this->_tableOrdinalPos);
+            return this->_db->LazyAllocateTablePage<TView>(
+                this->_segments.GetAllocator(),
+                this->_tableOrdinalPos
+            );
             // const auto subReserve = this->_db->ReserveExtents(
             //     this->_segments.GetAllocator(),
             //     Constants::EXTENT_SIZE,
@@ -55,7 +58,7 @@ namespace CoreEngine::StorageTypes{
         auto page = Storage::StorageManager::Get().CreatePage<TView>(this->_db->DataFileKey(), pageId);
 
         {
-            const auto pfs = this->_db->GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
+            const auto pfs = Database::GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
             MultiThreading::WriterGuard lock(&pfs.Latch());
             pfs.SetPageMetaData(&page);
         }

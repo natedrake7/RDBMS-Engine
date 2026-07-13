@@ -29,6 +29,7 @@ namespace Statistics {
 }
 
 namespace MultiThreading {
+    class WriterGuard;
     class ReaderGuard;
 }
 
@@ -94,22 +95,20 @@ namespace Indexing{
             Int& indexPosition
         );
 
-        void SplitRoot(
+        void SplitRootNoLock(
             const CoreEngine::ExecutionContext& context,
             Pages::IndexPageView& root,
-            MultiThreading::ReaderGuard& rootLock,
+            MultiThreading::WriterGuard& rootLock,
             CoreEngine::StorageTypes::ExtentReservation& extentReservation
         );
 
         void SplitChild(
             const CoreEngine::ExecutionContext& context,
             const Pages::IndexPageView& parent,
-            MultiThreading::ReaderGuard& parentReadLock,
             Int index,
             const Pages::IndexPageView& child,
-            MultiThreading::ReaderGuard& childReadLock,
             CoreEngine::StorageTypes::ExtentReservation& extentReservation
-        );
+        ) const;
 
         static void SplitLeafNoLock(
             const CoreEngine::ExecutionContext& context,
@@ -136,15 +135,15 @@ namespace Indexing{
         Errors::RuntimeStatus InsertToNonFullNode(
             const CoreEngine::ExecutionContext& context,
             Pages::IndexPageView& root,
+            MultiThreading::WriterGuard& rootLock,
             const Pages::IndexInsertTuple& tuple,
             CoreEngine::StorageTypes::ExtentReservation& extentReservation,
             Int& indexPosition
-        );
+        ) const;
 
-        static Errors::RuntimeStatus InsertToNode(
+        static Errors::RuntimeStatus InsertToNodeNoLock(
             const CoreEngine::ExecutionContext& context,
             const Pages::IndexPageView& node,
-            MultiThreading::ReaderGuard& readGuard,
             const Pages::IndexInsertTuple& tuple,
             Int& indexPosition
         );

@@ -24,7 +24,7 @@ namespace CoreEngine {
     if (catalogStats.tableId == INVALID_TABLE_ID)
       return stats;
 
-    auto writerLock = MultiThreading::WriterGuard::Promote(&this->tableStatisticsLatch, lock);
+    // auto writerLock = MultiThreading::WriterGuard::Promote(&this->tableStatisticsLatch, lock);
 
     //this->tableStatisticsCache.ForceAdd(tableId, catalogStats);
 
@@ -49,7 +49,7 @@ namespace CoreEngine {
     if (catalogStats.columnId == INVALID_TABLE_ID)
       return stats;
 
-    auto writerLock = MultiThreading::WriterGuard::Promote(&this->columnStatisticsLatch, lock);
+    // auto writerLock = MultiThreading::WriterGuard::Promote(&this->columnStatisticsLatch, lock);
 
     //this->columnStatisticsCache.ForceAdd(columnId, catalogStats);
 

@@ -235,15 +235,11 @@ namespace Network {
 
         if (databaseId == Constants::SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
 
-        MultiThreading::ReaderGuard lock(&this->databasesLatch);
+        MultiThreading::WriterGuard lock(&this->databasesLatch);
 
         if (this->databases.TryGetValue(databaseId, db)) return db;
 
         const auto dbHeader = this->systemCatalog->SelectDatabaseById(context.GetAllocator(), databaseId);
-
-        MultiThreading::WriterGuard::Promote(&this->databasesLatch, lock);
-
-        if (this->databases.TryGetValue(databaseId, db)) return db;
 
         db = new CoreEngine::Database(
             context.GetAllocator(),

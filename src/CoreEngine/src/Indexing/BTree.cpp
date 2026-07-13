@@ -143,16 +143,14 @@ namespace Indexing{
         return root;
     }
 
-    void BTree::SplitRoot(
+    void BTree::SplitRootNoLock(
         const CoreEngine::ExecutionContext& context,
         Pages::IndexPageView& root,
-        MultiThreading::ReaderGuard& rootLock,
+        MultiThreading::WriterGuard& rootLock,
         CoreEngine::StorageTypes::ExtentReservation& extentReservation
     ){
         {
             auto newRoot = extentReservation.Next<Pages::IndexPageView>();
-
-            auto promotedRootLock = MultiThreading::WriterGuard::Promote(&root.Latch(), rootLock);
 
             MultiThreading::WriterGuard newRootLock(&newRoot.Latch());
 
@@ -167,6 +165,7 @@ namespace Indexing{
 
             this->SplitChildNoLock(context, newRoot, 0, root, extentReservation);
             root = std::move(newRoot);
+            rootLock = std::move(newRootLock);
         }
 
         //let table mutexes handle this
@@ -179,14 +178,12 @@ namespace Indexing{
     void BTree::SplitChild(
         const CoreEngine::ExecutionContext& context,
         const Pages::IndexPageView& parent,
-        MultiThreading::ReaderGuard& parentReadLock,
         const Int index,
         const Pages::IndexPageView& child,
-        MultiThreading::ReaderGuard& childReadLock,
         CoreEngine::StorageTypes::ExtentReservation& extentReservation
-    ){
-        auto parentLock = MultiThreading::WriterGuard::Promote(&parent.Latch(), parentReadLock);
-        auto childLock = MultiThreading::WriterGuard::Promote(&child.Latch(), childReadLock);
+    ) const{
+        MultiThreading::WriterGuard parentLock(&parent.Latch());
+        MultiThreading::WriterGuard childLock(&child.Latch());
 
         this->SplitChildNoLock(context, parent, index, child, extentReservation);
     }
@@ -261,64 +258,56 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::InsertToNonFullNode(
         const CoreEngine::ExecutionContext& context,
         Pages::IndexPageView& root,
+        MultiThreading::WriterGuard& rootLock,
         const Pages::IndexInsertTuple& tuple,
         CoreEngine::StorageTypes::ExtentReservation& extentReservation,
         Int& indexPosition
-    ){
+    ) const{
         auto node = std::move(root);
-        while (true){
-            MultiThreading::ReaderGuard nodeLock(&node.Latch());
+        auto nodeLock = std::move(rootLock);
 
-            // Leaf node => insert here
+        while (true){
             if (node.IsLeaf())
-                return BTree::InsertToNode(
-                    context,
-                    node, nodeLock,
-                    tuple, indexPosition
-                );
+                return BTree::InsertToNodeNoLock(context, node, tuple, indexPosition);
 
             auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
-            auto childPageId = node.GetChild(childIndex);
+            const auto childPageId = node.GetChild(childIndex);
             auto child = this->GetNode(childPageId);
 
-            MultiThreading::ReaderGuard childLock(&child.Latch());
+            MultiThreading::WriterGuard childLock(&child.Latch());
 
             if (this->ShouldSplit(child)){
-                this->SplitChild(
+                this->SplitChildNoLock(
                     context,node,
-                    nodeLock,
                     childIndex, child,
-                    childLock,
                     extentReservation
                 );
 
-                MultiThreading::ReaderGuard newNodeLock(&node.Latch());
-
                 childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
-                childPageId = node.GetChild(childIndex);
-                child = this->GetNode(childPageId);
+                const auto newChildPageId = node.GetChild(childIndex);
+                if (newChildPageId != child.PageId()){
+                    child = this->GetNode(newChildPageId);
+                    childLock = MultiThreading::WriterGuard(&child.Latch());
+                }
             }
 
             // descend iteratively
             node = std::move(child);
-            // locks released automatically here
+            nodeLock = std::move(childLock);
         }
     }
 
-    Errors::RuntimeStatus BTree::InsertToNode(
+    Errors::RuntimeStatus BTree::InsertToNodeNoLock(
         const CoreEngine::ExecutionContext& context,
         const Pages::IndexPageView &node,
-        MultiThreading::ReaderGuard& readGuard,
         const Pages::IndexInsertTuple& tuple,
         Int& indexPosition
     ){
         indexPosition = BTree::LeafLowerBound(node, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
-
-        auto writerGuard = MultiThreading::WriterGuard::Promote(&node.Latch(), readGuard);
         node.InsertTuple(tuple, indexPosition);
-        return {};
+        return Errors::RuntimeStatus();
     }
 
     Pages::IndexPageView BTree::SearchKey(const DataTypes::Indexing::Key &key) const{
@@ -622,7 +611,7 @@ namespace Indexing{
                 && this->TryRedistributeLeafWithLeftSibling(child, sibling, childLock, siblingLock)) {
 
                 // Update parent separator key between left sibling and child
-                auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent.Latch(), parentLock);
+                // auto parentWriteLock = MultiThreading::WriterGuard::Promote(&parent.Latch(), parentLock);
 
                 if (childIndex > 0) {
                     const auto childKey = child.GetKeyByIndex(childIndex - 1);
@@ -674,8 +663,8 @@ namespace Indexing{
         if (keysToMove <= 0)
             return false;
 
-        MultiThreading::WriterGuard::Promote(&child.Latch(), childLock);
-        MultiThreading::WriterGuard::Promote(&sibling.Latch(), siblingLock);
+        // MultiThreading::WriterGuard::Promote(&child.Latch(), childLock);
+        // MultiThreading::WriterGuard::Promote(&sibling.Latch(), siblingLock);
 
         // Move exactly keysToMove keys from child to sibling
         // const auto srcKeyEnd = childKeys->begin() + keysToMove;
@@ -946,14 +935,22 @@ namespace Indexing{
 
         auto root = this->GetNode(this->rootPageId);
 
-        {
-            MultiThreading::ReaderGuard rootLock(&root.Latch());
+        while (true){
+            MultiThreading::WriterGuard rootLock(&root.Latch());
+
+            if (root.PageId() != this->rootPageId)
+                continue;
 
             if (root.Keys() == 2 * this->degree - 1) // root is full,
-                this->SplitRoot(context, root, rootLock, extentReservation);
-        }
+                this->SplitRootNoLock(context, root, rootLock, extentReservation);
 
-        return this->InsertToNonFullNode(context, root, tuple, extentReservation, indexPosition);
+            return this->InsertToNonFullNode(
+                context, root,
+                rootLock, tuple,
+                extentReservation,
+                indexPosition
+            );
+        }
     }
 
     void BTree::IndexSeekRange(

@@ -182,7 +182,6 @@ public:
     [[nodiscard]]
     TVIew LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        page_id_t allocationPageId,
         table_id_t ordinalPos
     );
 
