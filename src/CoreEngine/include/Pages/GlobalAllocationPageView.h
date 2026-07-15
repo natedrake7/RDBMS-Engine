@@ -32,7 +32,7 @@ namespace Pages{
 
             [[nodiscard]] UnsignedInt ReserveExtentsNoLock(
                 DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,
-                Int neededExtents
+                UnsignedInt neededExtents
             ) const;
 
             [[nodiscard]] DataStructures::PolymorphicArray<extent_id_t> GetAllocatedExtents(const ::Memory::IAllocator* allocator) const;

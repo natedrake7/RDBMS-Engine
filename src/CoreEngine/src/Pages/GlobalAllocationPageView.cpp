@@ -84,7 +84,7 @@ namespace Pages{
 
     UnsignedInt GlobalAllocationPageView::ReserveExtentsNoLock(
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,
-        const Int neededExtents
+        const UnsignedInt neededExtents
     ) const{
         auto* additionalHeader = this->GetAdditionalHeader();
         if (additionalHeader->_freeExtentCount == 0 || neededExtents <= 0)

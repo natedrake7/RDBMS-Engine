@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../../../Systemic/include/Constants.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.h"
 #include "./../../Systemic/include/DataStructures/PolymorphicArray.h"
 
@@ -7,6 +8,16 @@ namespace CoreEngine{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct AllocationCursor{
+        extent_id_t _extentId;
+        UnsignedInt _offset;
+
+        AllocationCursor()
+            : _extentId(INVALID_EXTENT_ID), _offset(0) {}
+        AllocationCursor(const extent_id_t extentId, const UnsignedInt offset)
+            : _extentId(extentId), _offset(offset) {}
+    };
+
     struct ExtentSegment{
         extent_id_t _firstExtentId;
         UnsignedInt _count;

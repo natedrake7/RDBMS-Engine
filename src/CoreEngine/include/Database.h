@@ -37,13 +37,13 @@ namespace CoreEngine {
     struct DatabaseHeader {
         table_number_t numberOfTables;
         table_id_t lastTableId;
-        page_id_t lastPageFreeSpacePageId;
+        page_id_t lastPfsPageId;
         page_id_t lastGamPageId;
 
         DatabaseHeader();
         DatabaseHeader(
             table_number_t numberOfTables,
-            page_id_t lastPageFreeSpacePageId,
+            page_id_t lastPfsPageId,
             page_id_t lastGamPageId
         );
     };
@@ -134,7 +134,6 @@ public:
 
     static page_id_t GetGamAssociatedPage(page_id_t pageId);
     static page_id_t GetPfsAssociatedPage(page_id_t pageId);
-    static page_id_t CalculateSystemPageOffset(page_id_t pageId);
     static page_id_t CalculateNextGamPageId(page_id_t currentGamPageId);
     static byte_t GetObjectSizeToCategory(const row_size_t &size);
 

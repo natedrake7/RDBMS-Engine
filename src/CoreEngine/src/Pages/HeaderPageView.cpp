@@ -53,8 +53,8 @@ namespace Pages{
         this->_frame->isDirty = true;
     }
 
-    void HeaderPageView::SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header) const{
-        auto* dataOffset = this->GetTableHeaderDataOffset(header.ordinalPosition);
+    void HeaderPageView::SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header, const SmallInt ordinalPosition) const{
+        auto* dataOffset = this->GetTableHeaderDataOffset(ordinalPosition);
         std::memcpy(dataOffset, &header, sizeof(CoreEngine::StorageTypes::TableHeader));
         this->_frame->isDirty = true;
     }

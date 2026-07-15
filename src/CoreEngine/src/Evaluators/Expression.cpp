@@ -1165,7 +1165,7 @@ namespace Expressions{
         const Expression* expression,
         const EvaluationContext& context
     ){
-        bool keep = false, isNull = false;
+        auto keep = false, isNull = false;
         expression->rowKernel(expression, context, &keep, &isNull);
         return !isNull && keep;
     }
@@ -1179,7 +1179,7 @@ namespace Expressions{
         case ExpressionType::Binary:
             return expression->AsBinary()->GetReturnType();
         case ExpressionType::Logical:
-            return expression->AsLogical()->GetReturnType();
+            return LogicalExpression::GetReturnType();
         case ExpressionType::Variable:
             return expression->AsVariable()->GetReturnType();
         case ExpressionType::Branch:

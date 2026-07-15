@@ -29,6 +29,6 @@ namespace Pages{
             [[nodiscard]] CoreEngine::StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
 
             void SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const;
-            void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header) const;
+            void SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header, SmallInt ordinalPosition) const;
     };
 }

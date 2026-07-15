@@ -12,7 +12,7 @@
 namespace CoreEngine::StorageTypes {
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
         return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-            this->database->DataFileKey(),
+            this->_db->DataFileKey(),
             indexPageId
         );
     }
@@ -30,22 +30,17 @@ namespace CoreEngine::StorageTypes {
             payload
         );
 
-        Int indexPosition = 0;
         auto tuple = Pages::IndexInsertTuple(key, &payload);
         auto status = tree->InsertRow(
             executionContext,
             tuple,
-            extentReservation,
-            indexPosition
+            extentReservation
         );
 
         if (!status.IsOk())
             return status;
 
-        //TODO
-        // rowId->indexId = indexPosition;
-        // rowId->pageId = node->GetPageId();
-
+        //since we already have the key we use that
         status.primaryKey = std::move(tuple.key);
         return status;
     }
@@ -98,13 +93,13 @@ namespace CoreEngine::StorageTypes {
         return {};
     }
 
-    Storage::FileKey Table::GetSystemFileKey() const{ return this->database->SystemFileKey(); }
+    Storage::FileKey Table::GetSystemFileKey() const{ return this->_db->SystemFileKey(); }
 
-    Storage::FileKey Table::GetDataFileKey() const{ return this->database->DataFileKey(); }
+    Storage::FileKey Table::GetDataFileKey() const{ return this->_db->DataFileKey(); }
 
-    const Headers::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredIndexes[indexPos]; }
+    const Headers::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredHeaders[indexPos]; }
 
-    const DataStructures::StaticArray<column_index_t, 10>& Table::GetClusteredIndex() const { return this->clusteredIndexHeader.columns; }
+    const DataStructures::StaticArray<column_index_t, 10>& Table::GetClusteredIndex() const { return this->clusteredHeader.columns; }
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionContext& executionContext,
@@ -116,11 +111,11 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->IndexSeekRange(executionContext, minKey, maxKey, selectedRows, expression);
+            tree->SeekRange(executionContext, minKey, maxKey, selectedRows, expression);
             return;
         }
 
-        tree->IndexSeekRange(executionContext, minKey, maxKey, selectedRows);
+        tree->SeekRange(executionContext, minKey, maxKey, selectedRows);
     }
 
     void Table::ClusteredIndexSeek(
@@ -132,11 +127,11 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->IndexSeek(executionContext, key, selectedRows, expression);
+            tree->Seek(executionContext, key, selectedRows, expression);
             return;
         }
 
-        tree->IndexSeek(executionContext, key, selectedRows);
+        tree->Seek(executionContext, key, selectedRows);
     }
 
     void Table::SystemClusteredIndexSeek(
@@ -148,11 +143,11 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr){
-            tree->SystemIndexSeek(allocator, key, selectedRows, expression);
+            tree->SystemSeek(allocator, key, selectedRows, expression);
             return;
         }
 
-        tree->SystemIndexSeek(key, selectedRows);
+        tree->SystemSeek(key, selectedRows);
     }
 
     void Table::ClusteredIndexScan(
@@ -161,17 +156,17 @@ namespace CoreEngine::StorageTypes {
         IndexState& state,
         const Expressions::Expression* expression
     ){
-        if (this->header.allocationPageId == INVALID_PAGE_ID)
+        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->IndexScan(executionContext, selectedRows, state, expression);
+            tree->Scan(executionContext, selectedRows, state, expression);
             return;
         }
 
-        tree->IndexScan(executionContext, selectedRows, state);
+        tree->Scan(executionContext, selectedRows, state);
     }
 
     void Table::ClusteredIndexScan(
@@ -179,17 +174,17 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<RID> *selectedRows,
         const Expressions::Expression *expression
     ){
-        if (this->header.allocationPageId == INVALID_PAGE_ID)
+        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->IndexScan(executionContext, selectedRows, expression);
+            tree->Scan(executionContext, selectedRows, expression);
             return;
         }
 
-        tree->IndexScan(executionContext, selectedRows);
+        tree->Scan(executionContext, selectedRows);
     }
 
     void Table::SystemClusteredIndexScan(
@@ -197,17 +192,17 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<RID>* selectedRows,
         const Expressions::Expression* expression
     ){
-        if (this->header.allocationPageId == INVALID_PAGE_ID)
+        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->SystemIndexScan(allocator, selectedRows, expression);
+            tree->SystemScan(allocator, selectedRows, expression);
             return;
         }
 
-        tree->SystemIndexScan(selectedRows);
+        tree->SystemScan(selectedRows);
     }
 
     void Table::NonClusteredIndexScan(
@@ -220,14 +215,14 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetNonClusteredIndexTree(indexPos);
 
         DataStructures::PolymorphicArray<DataTypes::RowIdentifier> rowIds(executionContext.GetAllocator());
-        tree->IndexScan(&rowIds, state, executionContext.GetBatchSize());
+        tree->Scan(&rowIds, state, executionContext.GetBatchSize());
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
             executionContext
         );
 
-        const auto fileKey = this->database->DataFileKey();
+        const auto fileKey = this->_db->DataFileKey();
         if (expression != nullptr) {
 
             for (const auto& rowId : rowIds) {
@@ -310,72 +305,73 @@ namespace CoreEngine::StorageTypes {
 
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
         const Headers::Index index(columnIndices.Data(), columnIndices.Size());
-        this->nonClusteredIndexes.Push(index);
-        return this->nonClusteredIndexes.Size() - 1;
+        this->nonClusteredHeaders.Push(index);
+        return this->nonClusteredHeaders.Size() - 1;
     }
 
-    page_id_t Table::GetClusteredIndexPageId() const { return this->header.clusteredIndexPageId; }
+    page_id_t Table::GetClusteredIndexPageId() const { return this->_header.GetClusteredIndexPageId(); }
 
-    void Table::SetClusteredIndexPageId(const page_id_t indexPageId) {
-        this->header.clusteredIndexPageId = indexPageId;
+    void Table::SetClusteredIndexPageId(const page_id_t pageId) const{
+        this->_header.SetClusteredIndexPageId(pageId);
     }
 
     page_id_t Table::GetNonClusteredIndexPageId(const Int indexPosition) const{
-        return this->header.nonClusteredIndexPageIds[indexPosition];
+        return INVALID_PAGE_ID;
+        // return this->_header.nonClusteredIndexPageIds[indexPosition];
     }
 
     void Table::SetNonClusteredIndexPageId(const page_id_t indexPageId, const Int indexPosition){
-        this->header.nonClusteredIndexPageIds[indexPosition] = indexPageId;
+        // this->_header.nonClusteredIndexPageIds[indexPosition] = indexPageId;
     }
 
     Indexing::BTree* Table::GetClusteredIndexedTree(){
-        if(this->clusteredIndexedTree != nullptr)
-            return this->clusteredIndexedTree;
+        if(this->_clusteredTree != nullptr)
+            return this->_clusteredTree;
 
-        this->clusteredIndexedTree = this->_allocator.Allocate<Indexing::BTree>(
+        this->_clusteredTree = this->_allocator.Allocate<Indexing::BTree>(
             this,
-            this->header.clusteredIndexPageId,
+            this->_header.GetClusteredIndexPageId(),
             Constants::TreeType::Clustered
         );
 
-        if (this->header.clusteredIndexPageId == INVALID_PAGE_ID)
-            return this->clusteredIndexedTree;
+        if (this->_header.GetClusteredIndexPageId() == INVALID_PAGE_ID)
+            return this->_clusteredTree;
 
-        this->clusteredIndexedTree->SetTreeType(Constants::TreeType::Clustered);
-        return this->clusteredIndexedTree;
+        this->_clusteredTree->SetTreeType(Constants::TreeType::Clustered);
+        return this->_clusteredTree;
     }
 
       Indexing::BTree* Table::GetNonClusteredIndexTree(const Int nonClusteredIndexId){
-          const auto numOfIndexes = this->nonClusteredIndexes.Size();
+          const auto numOfIndexes = this->nonClusteredHeaders.Size();
 
-          if(this->nonClusteredIndexedTrees.Empty())
-              this->nonClusteredIndexedTrees.Resize(numOfIndexes);
+          if(this->_nonClusteredTrees.Empty())
+              this->_nonClusteredTrees.Resize(numOfIndexes);
 
           // if (this->header.nonClusteredIndexPageIds.Size() < numOfIndexes)
           //     this->header.nonClusteredIndexPageIds.Resize(numOfIndexes);
 
-          auto* nonClusteredTree = this->nonClusteredIndexedTrees[nonClusteredIndexId];
+          auto* nonClusteredTree = this->_nonClusteredTrees[nonClusteredIndexId];
 
-          if (nonClusteredTree == nullptr){
-              const auto indexPageId = this->header.nonClusteredIndexPageIds[nonClusteredIndexId];
-
-              nonClusteredTree = this->_allocator.Allocate<Indexing::BTree>(
-                  this,
-                  indexPageId,
-                  Constants::TreeType::NonClustered,
-                  nonClusteredIndexId
-              );
-
-              if (indexPageId == INVALID_PAGE_ID)
-                  return nonClusteredTree;
-
-              this->clusteredIndexedTree->SetTreeType(Constants::TreeType::NonClustered);
-          }
+          // if (nonClusteredTree == nullptr){
+          //     const auto indexPageId = this->_header.nonClusteredIndexPageIds[nonClusteredIndexId];
+          //
+          //     nonClusteredTree = this->_allocator.Allocate<Indexing::BTree>(
+          //         this,
+          //         indexPageId,
+          //         Constants::TreeType::NonClustered,
+          //         nonClusteredIndexId
+          //     );
+          //
+          //     if (indexPageId == INVALID_PAGE_ID)
+          //         return nonClusteredTree;
+          //
+          //     this->_clusteredTree->SetTreeType(Constants::TreeType::NonClustered);
+          // }
 
           return nonClusteredTree;
       }
 
-    bool Table::HasNonClusteredIndexes() const { return !this->nonClusteredIndexes.Empty(); }
+    bool Table::HasNonClusteredIndexes() const { return !this->nonClusteredHeaders.Empty(); }
 
     DataTypes::Indexing::Key Table::CreateKey(
         const ExecutionContext& executionContext,
@@ -399,7 +395,7 @@ namespace CoreEngine::StorageTypes {
             return this->CalculateNonClusteredIndexKeySize(indexPos);
 
         key_size_t keySize = 0;
-        for(const auto columnOrdinalPos : this->clusteredIndexHeader.columns){
+        for(const auto columnOrdinalPos : this->clusteredHeader.columns){
             const auto* column = this->_columns[columnOrdinalPos];
             keySize += column->Size();
         }
@@ -409,7 +405,7 @@ namespace CoreEngine::StorageTypes {
 
     key_size_t Table::CalculateNonClusteredIndexKeySize(const Int indexPos) const{
         key_size_t keySize = 0;
-        for(const auto columnOrdinalPos : this->nonClusteredIndexes[indexPos].columns){
+        for(const auto columnOrdinalPos : this->nonClusteredHeaders[indexPos].columns){
             const auto* column = this->_columns[columnOrdinalPos];
             keySize += column->Size();
         }

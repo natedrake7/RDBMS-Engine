@@ -122,12 +122,11 @@ namespace Indexing{
         return Errors::RuntimeStatus(Errors::RuntimeError::DuplicateKey, std::move(str));
     }
 
-    Pages::IndexPageView BTree::CreateRootPage(
+    Errors::RuntimeStatus BTree::InsertToEmptyTree(
         CoreEngine::StorageTypes::ExtentReservation& extentReservation,
-        Int& indexPosition
-    ) {
-        //maybe root page is removed and need to be reopened
-        auto root = extentReservation.Next<Pages::IndexPageView>();
+        const Pages::IndexInsertTuple& tuple
+    ){
+        const auto root = extentReservation.Next<Pages::IndexPageView>();
 
         {
             MultiThreading::WriterGuard lock(&root.Latch());
@@ -135,12 +134,17 @@ namespace Indexing{
             root.SetIsRoot(true);
             root.SetIsLeaf(true);
             root.SetTreeType(this->type);
+            root.InsertTuple(tuple);
+            this->UpdatePfsPageNoLock(root);
         }
 
         this->rootPageId = root.PageId();
-        indexPosition = 0;
+        if(this->nonClusteredIndexId != -1)
+            this->table->SetNonClusteredIndexPageId(this->rootPageId, this->nonClusteredIndexId);
+        else
+            this->table->SetClusteredIndexPageId(this->rootPageId);
 
-        return root;
+        return Errors::RuntimeStatus();
     }
 
     void BTree::SplitRootNoLock(
@@ -255,55 +259,99 @@ namespace Indexing{
         BTree::SplitInternalNodeNoLock(context, parent, child, newChild, index);
     }
 
-    Errors::RuntimeStatus BTree::InsertToNonFullNode(
+    Errors::RuntimeStatus BTree::InsertRowOptimistic(
         const CoreEngine::ExecutionContext& context,
-        Pages::IndexPageView& root,
-        MultiThreading::WriterGuard& rootLock,
         const Pages::IndexInsertTuple& tuple,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
-        Int& indexPosition
+        bool* outSuccess
     ) const{
-        auto node = std::move(root);
-        auto nodeLock = std::move(rootLock);
+        *outSuccess = false;
+        auto node = this->GetNode(this->rootPageId);
+
+        MultiThreading::ReaderGuard nodeLock(&node.Latch());
+
+        if (
+            node.PageId() != this->rootPageId
+            || node.IsLeaf()
+        ) return Errors::RuntimeStatus();
 
         while (true){
-            if (node.IsLeaf())
-                return BTree::InsertToNodeNoLock(context, node, tuple, indexPosition);
-
-            auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
+            const auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
             const auto childPageId = node.GetChild(childIndex);
             auto child = this->GetNode(childPageId);
 
-            MultiThreading::WriterGuard childLock(&child.Latch());
-
-            if (this->ShouldSplit(child)){
-                this->SplitChildNoLock(
-                    context,node,
-                    childIndex, child,
-                    extentReservation
-                );
-
-                childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
-                const auto newChildPageId = node.GetChild(childIndex);
-                if (newChildPageId != child.PageId()){
-                    child = this->GetNode(newChildPageId);
-                    childLock = MultiThreading::WriterGuard(&child.Latch());
-                }
+            bool isLeaf = false;
+            {
+                MultiThreading::ReaderGuard childLock(&child.Latch());
+                isLeaf = child.IsLeaf();
             }
 
-            // descend iteratively
+            if (isLeaf){
+                MultiThreading::WriterGuard childLock(&child.Latch());
+                if (this->ShouldSplit(child))
+                    return Errors::RuntimeStatus();
+
+                *outSuccess = true;
+                return BTree::InsertToNodeNoLock(context, child, tuple);
+            }
+
             node = std::move(child);
-            nodeLock = std::move(childLock);
+            nodeLock = MultiThreading::ReaderGuard(&node.Latch());
+        }
+    }
+
+    Errors::RuntimeStatus BTree::InsertRowPessimistic(
+        const CoreEngine::ExecutionContext& context,
+        const Pages::IndexInsertTuple& tuple,
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+    ){
+        while (true){
+            auto node = this->GetNode(this->rootPageId);
+            MultiThreading::WriterGuard nodeLock(&node.Latch());
+
+            if (node.PageId() != this->rootPageId)
+                continue;
+
+            if (this->ShouldSplit(node)) // root is full,
+                this->SplitRootNoLock(context, node, nodeLock, extentReservation);
+
+            while (true){
+                if (node.IsLeaf())
+                    return BTree::InsertToNodeNoLock(context, node, tuple);
+
+                auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
+                const auto childPageId = node.GetChild(childIndex);
+                auto child = this->GetNode(childPageId);
+
+                MultiThreading::WriterGuard childLock(&child.Latch());
+
+                if (this->ShouldSplit(child)){
+                    this->SplitChildNoLock(
+                        context,node,
+                        childIndex, child,
+                        extentReservation
+                    );
+
+                    childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
+                    const auto newChildPageId = node.GetChild(childIndex);
+                    if (newChildPageId != child.PageId()){
+                        child = this->GetNode(newChildPageId);
+                        childLock = MultiThreading::WriterGuard(&child.Latch());
+                    }
+                }
+
+                // descend iteratively
+                node = std::move(child);
+                nodeLock = std::move(childLock);
+            }
         }
     }
 
     Errors::RuntimeStatus BTree::InsertToNodeNoLock(
         const CoreEngine::ExecutionContext& context,
         const Pages::IndexPageView &node,
-        const Pages::IndexInsertTuple& tuple,
-        Int& indexPosition
+        const Pages::IndexInsertTuple& tuple
     ){
-        indexPosition = BTree::LeafLowerBound(node, tuple.key);
+        const auto indexPosition = BTree::LeafLowerBound(node, tuple.key);
         if (indexPosition == -1)
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
         node.InsertTuple(tuple, indexPosition);
@@ -873,16 +921,14 @@ namespace Indexing{
         tableStatistics.averageRowSize = static_cast<Int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
-    void BTree::UpdatePfsPage(const Pages::IndexPageView& page) const{
-        const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
+    void BTree::UpdatePfsPageNoLock(const Pages::IndexPageView& page) const{
+        const auto pfs = CoreEngine::Database::GetAssociatedPfsPage(
             this->database->SystemFileKey(),
             page.PageId()
         );
 
-        MultiThreading::WriterGuard pfsPageLock(&pageFreeSpacePage.Latch());
-        MultiThreading::WriterGuard pageLock(&page.Latch());
-
-        pageFreeSpacePage.SetPageMetaData(&page);
+        MultiThreading::WriterGuard pfsPageLock(&pfs.Latch());
+        pfs.SetPageMetaData(&page);
     }
 
     BTree::BTree(
@@ -916,44 +962,29 @@ namespace Indexing{
     Errors::RuntimeStatus BTree::InsertRow(
         const CoreEngine::ExecutionContext& context,
         const Pages::IndexInsertTuple& tuple,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
-        Int &indexPosition
+        CoreEngine::StorageTypes::ExtentReservation& extentReservation
     ){
         //base case scenario
-        if (this->IsEmpty()) {
-            const auto root =  this->CreateRootPage(extentReservation, indexPosition);
+        if (this->IsEmpty())
+            return this->InsertToEmptyTree(extentReservation, tuple);
 
-            if(this->nonClusteredIndexId != -1)
-                this->table->SetNonClusteredIndexPageId(this->rootPageId, this->nonClusteredIndexId);
-            else
-                this->table->SetClusteredIndexPageId(this->rootPageId);
+        bool outSuccess = false;
+        auto result = this->InsertRowOptimistic(
+            context,
+            tuple,
+            &outSuccess
+        );
+        if (outSuccess)
+            return result;
 
-            root.InsertTuple(tuple);
-            this->UpdatePfsPage(root);
-            return Errors::RuntimeStatus();
-        }
-
-        auto root = this->GetNode(this->rootPageId);
-
-        while (true){
-            MultiThreading::WriterGuard rootLock(&root.Latch());
-
-            if (root.PageId() != this->rootPageId)
-                continue;
-
-            if (root.Keys() == 2 * this->degree - 1) // root is full,
-                this->SplitRootNoLock(context, root, rootLock, extentReservation);
-
-            return this->InsertToNonFullNode(
-                context, root,
-                rootLock, tuple,
-                extentReservation,
-                indexPosition
-            );
-        }
+        return this->InsertRowPessimistic(
+            context,
+            tuple,
+            extentReservation
+        );
     }
 
-    void BTree::IndexSeekRange(
+    void BTree::SeekRange(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
@@ -986,7 +1017,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexSeekRange(
+    void BTree::SeekRange(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
@@ -1027,7 +1058,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexSeek(
+    void BTree::Seek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
@@ -1060,7 +1091,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexSeek(
+    void BTree::Seek(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
@@ -1103,7 +1134,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::SystemIndexSeek(
+    void BTree::SystemSeek(
         const DataTypes::Indexing::Key& key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     ) const{
@@ -1129,7 +1160,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::SystemIndexSeek(
+    void BTree::SystemSeek(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
@@ -1169,7 +1200,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(
+    void BTree::Scan(
         const CoreEngine::ExecutionContext& context,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         CoreEngine::IndexState& state
@@ -1210,7 +1241,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(
+    void BTree::Scan(
         const CoreEngine::ExecutionContext& context,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         CoreEngine::IndexState& state,
@@ -1264,7 +1295,7 @@ namespace Indexing{
     }
 
 
-    void BTree::IndexScan(
+    void BTree::Scan(
         const CoreEngine::ExecutionContext& context,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression *expression
@@ -1301,7 +1332,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::SystemIndexScan(
+    void BTree::SystemScan(
         const ::Memory::IAllocator* allocator,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
         const Expressions::Expression* expression
@@ -1337,7 +1368,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::SystemIndexScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result) const{
+    void BTree::SystemScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result) const{
         if (this->IsEmpty())
             return;
 
@@ -1355,7 +1386,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(
+    void BTree::Scan(
         const CoreEngine::ExecutionContext& context,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
     )const{
@@ -1379,7 +1410,7 @@ namespace Indexing{
         }
     }
 
-    void BTree::IndexScan(
+    void BTree::Scan(
      DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result,
         CoreEngine::IndexState& state,
         const Int rowsToSelect
@@ -1432,7 +1463,7 @@ namespace Indexing{
         // }
     }
 
-    void BTree::IndexScan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
+    void BTree::Scan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result, const Expressions::Expression *expression)const{
         if (this->IsEmpty())
             return;
 
@@ -1457,7 +1488,7 @@ namespace Indexing{
         // }
     }
 
-    void BTree::IndexScanUpdate(
+    void BTree::ScanUpdate(
         const CoreEngine::ExecutionContext& context,
         const Expressions::Expression *expression,
         const DataStructures::PolymorphicArray<Value> &updates
@@ -1503,7 +1534,7 @@ namespace Indexing{
         }
     }
 
-    Errors::RuntimeStatus BTree::IndexScanUpdate(
+    Errors::RuntimeStatus BTree::ScanUpdate(
         const CoreEngine::ExecutionContext& context,
         const Expressions::Expression *expression,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
@@ -1552,7 +1583,7 @@ namespace Indexing{
         return {};
     }
 
-   Errors::RuntimeStatus BTree::IndexScanUpdate(
+   Errors::RuntimeStatus BTree::ScanUpdate(
        const CoreEngine::ExecutionContext& context,
        const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     )const{
@@ -1589,7 +1620,7 @@ namespace Indexing{
         return {};
     }
 
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+    Errors::RuntimeStatus BTree::SeekUpdate(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
         const DataStructures::PolymorphicArray<Value> &updates
@@ -1628,7 +1659,7 @@ namespace Indexing{
         }
     }
 
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+    Errors::RuntimeStatus BTree::SeekUpdate(
         const CoreEngine::ExecutionContext& context,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
@@ -1679,7 +1710,7 @@ namespace Indexing{
         }
     }
 
-    Errors::RuntimeStatus BTree::IndexSeekUpdate(
+    Errors::RuntimeStatus BTree::SeekUpdate(
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,

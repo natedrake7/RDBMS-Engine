@@ -44,32 +44,42 @@ namespace ByteMaps{
 
 namespace CoreEngine::StorageTypes{
     struct TableHeader{
-        DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
-        page_id_t allocationPageId;
-        page_id_t clusteredIndexPageId;
+        private:
+            DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
+            mutable page_id_t _allocationPageId;
+            mutable page_id_t _clusteredIndexPageId;
 
-        table_id_t tableId;
-        SmallInt ordinalPosition;
+            mutable AllocationCursor _allocationCursor;
 
-        column_number_t numberOfColumns;
+        public:
+            TableHeader();
+            TableHeader &operator=(const TableHeader &other);
 
-        TableHeader();
-        TableHeader &operator=(const TableHeader &tableHeader);
+            page_id_t GetAllocationPageId() const;
+            void SetAllocationPageId(page_id_t allocationPageId) const;
+
+            page_id_t GetClusteredIndexPageId() const;
+            void SetClusteredIndexPageId(page_id_t indexPageId) const;
+
+
     };
 
     class Table final{
         HashSet<column_id_t> clusteredIndexColumnsCache;
-        TableHeader header;
-        DataStructures::PolymorphicArray<Indexing::BTree*> nonClusteredIndexedTrees;
+        TableHeader _header;
+        DataStructures::PolymorphicArray<Indexing::BTree*> _nonClusteredTrees;
         DataStructures::PolymorphicArray<Column*> _columns;
 
         Memory::PersistentAllocator _allocator;
 
-        Headers::Index clusteredIndexHeader;
-        DataStructures::PolymorphicArray<Headers::Index> nonClusteredIndexes;
+        Headers::Index clusteredHeader;
+        DataStructures::PolymorphicArray<Headers::Index> nonClusteredHeaders;
 
-        Database *database;
-        Indexing::BTree* clusteredIndexedTree;
+        Database* _db;
+        Indexing::BTree* _clusteredTree;
+
+        SmallInt _ordinalPosition;
+        Int _id;
 
         protected:
             static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
@@ -135,7 +145,7 @@ namespace CoreEngine::StorageTypes{
         * Functions to create and destroy Table objects.
         * @{
         */
-            Table(table_id_t tableId, SmallInt ordinalPosition, Database *database);
+            Table(table_id_t tableId, SmallInt ordinalPosition, Database *db);
             Table(const Headers::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(
                 const Headers::sysTable& systemHeader,
@@ -419,11 +429,11 @@ namespace CoreEngine::StorageTypes{
         * @{
         */
             Int CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices);
-            void UpdateAllocationPageId(page_id_t allocationPageId);
+            void UpdateAllocationPageId(page_id_t allocationPageId) const;
             page_id_t GetAllocationPageId()const;
 
             [[nodiscard]] page_id_t GetClusteredIndexPageId() const;
-            void SetClusteredIndexPageId(page_id_t indexPageId);
+            void SetClusteredIndexPageId(page_id_t pageId) const;
 
             [[nodiscard]] page_id_t GetNonClusteredIndexPageId(Int indexPosition) const;
             void SetNonClusteredIndexPageId(page_id_t indexPageId, Int indexPosition);
@@ -453,16 +463,14 @@ namespace CoreEngine::StorageTypes{
             void Truncate();
 
             [[nodiscard]] row_size_t GetMaximumRowSize() const;
-
             [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
 
             [[nodiscard]] key_size_t CalculateIndexKeySize(Int indexPos = -1) const;
-
             [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
-
             [[nodiscard]] row_size_t CalculateInsertPayloadSize()const;
-
             [[nodiscard]] Database* GetDatabase() const;
+
+            [[nodiscard]] SmallInt GetOrdinalPosition() const;
 
             int HandleRowOverflow(RID* rowPtr) const;
             int HandleRowOverflow(RID* rowPtr, const Column* column)const;
