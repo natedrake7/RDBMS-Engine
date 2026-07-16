@@ -88,14 +88,14 @@ namespace QueryPipeline {
 
         statement->distinct = context->distinct() != nullptr;
 
-        statement->results = std::any_cast<DataStructures::PolymorphicArray<Expressions::Expression*>>(visitResultList(context->resultList()));
+        statement->_projections = std::any_cast<DataStructures::PolymorphicArray<Expressions::Expression*>>(visitResultList(context->resultList()));
 
         statement->table = (context->datasource() != nullptr)
             ? std::any_cast<Statements::DataSource*>(visit(context->datasource()))
             : nullptr;
 
         for (auto* join : context->joinStatement())
-            statement->joins.Push(std::any_cast<Statements::JoinStatement*>(visit(join)));
+            statement->_joins.Push(std::any_cast<Statements::JoinStatement*>(visit(join)));
 
         if (context->whereClause() != nullptr)
             statement->where = std::any_cast<Statements::WhereClause>(visit(context->whereClause()));

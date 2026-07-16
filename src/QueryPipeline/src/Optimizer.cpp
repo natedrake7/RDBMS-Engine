@@ -432,14 +432,14 @@ namespace QueryPipeline {
         case Expressions::ExpressionType::Column:{
                 const auto* columnExpr = expression->AsColumn();
                 info.leftColumnId = columnExpr->columnId;
-                info.leftColumnIndex = columnExpr->columnIndex;
+                info.leftColumnIndex = columnExpr->ordinalPosition;
                 info.leftTableId = columnExpr->tableId;
                 break;
         }
         case Expressions::ExpressionType::Json:{
                 const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
                 info.leftColumnId = columnExpr->columnId;
-                info.leftColumnIndex = columnExpr->columnIndex;
+                info.leftColumnIndex = columnExpr->ordinalPosition;
                 info.leftTableId = columnExpr->tableId;
                 break;
         }
@@ -456,14 +456,14 @@ namespace QueryPipeline {
         case Expressions::ExpressionType::Column:{
                 const auto* columnExpr = expression->AsColumn();
                 info.rightColumnId = columnExpr->columnId;
-                info.rightColumnIndex = columnExpr->columnIndex;
+                info.rightColumnIndex = columnExpr->ordinalPosition;
                 info.rightTableId = columnExpr->tableId;
                 break;
         }
         case Expressions::ExpressionType::Json:{
                 const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
                 info.rightColumnId = columnExpr->columnId;
-                info.rightColumnIndex = columnExpr->columnIndex;
+                info.rightColumnIndex = columnExpr->ordinalPosition;
                 info.rightTableId = columnExpr->tableId;
                 break;
         }
@@ -592,18 +592,18 @@ namespace QueryPipeline {
         if (statement->IsConstant()) return result;
 
         if (!statement->HasJoins()){
-            result.order.Push(statement->table->tableId);
+            result.order.Push(statement->table->_tableId);
             return result;
         }
 
         DataStructures::PolymorphicArray<JoinOrderAnalyzeInfo> infoVector(this->context->_compileContext.GetAllocator());
-        const auto baseSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(statement->table->tableId);
+        const auto baseSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(statement->table->_tableId);
 
         //optimize by using hasIndex bool on tableStats to avoid lookups
-        const auto baseSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->tableId);
+        const auto baseSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(statement->table->_tableId);
 
         const JoinOrderAnalyzeInfo baseInfo(
-            statement->table->tableId,
+            statement->table->_tableId,
             baseSourceStats.rowCount,
             !baseSourceIndexStats.Empty()
         );
@@ -612,24 +612,24 @@ namespace QueryPipeline {
         infoVector.Push(baseInfo);
 
         //each join info
-        for (const auto& join : statement->joins) {
+        for (const auto& join : statement->_joins) {
             if (join->IsRightJoin()){
-                result.order.Insert(join->table->tableId, 0);
+                result.order.Insert(join->table->_tableId, 0);
                 result.orderedJoins.Insert(join, 0);
                 continue;
             }
 
             if (!join->IsInnerJoin()) {
-                result.order.Push(join->table->tableId);
+                result.order.Push(join->table->_tableId);
                 result.orderedJoins.Push(join);
                 continue;
             }
 
-            const auto joinSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(join->table->tableId);
-            const auto joinSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(join->table->tableId);
+            const auto joinSourceStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(join->table->_tableId);
+            const auto joinSourceIndexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(join->table->_tableId);
 
             const JoinOrderAnalyzeInfo joinInfo(
-                join->table->tableId,
+                join->table->_tableId,
                 joinSourceStats.rowCount,
                 !joinSourceIndexStats.Empty(),
                 join
@@ -672,7 +672,7 @@ namespace QueryPipeline {
 
         //remove the first which is always null
         result.orderedJoins.erase(result.orderedJoins.begin());
-        result.isReordered = result.order[0] != statement->table->tableId;
+        result.isReordered = result.order[0] != statement->table->_tableId;
 
         return result;
     }

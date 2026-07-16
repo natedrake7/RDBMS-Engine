@@ -36,13 +36,13 @@ namespace CoreEngine::VectorizedKernels{
             table->MaterializeColumnFromPage<T>(
                 context, sv->selectedRidsCount,
                 dataVector->_data,
-                columnExpression->columnIndex
+                columnExpression->ordinalPosition
             );
         }
         else{
             table->MaterializeColumnFromPage<T>(
                 context, sv, dataVector->_data,
-                columnExpression->columnIndex
+                columnExpression->ordinalPosition
             );
         }
 

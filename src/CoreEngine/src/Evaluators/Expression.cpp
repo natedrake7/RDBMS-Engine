@@ -59,70 +59,57 @@ namespace Expressions{
         Pair(Constants::FunctionType::Coalesce, &FunctionExpression::ValidateCoalesce),
     };
 
-    EvaluationContext::EvaluationContext(const Memory::IAllocator* allocator)
+    EvaluationContext::EvaluationContext(const ::Memory::IAllocator* allocator)
         :   row(nullptr), page(nullptr),
-            joinRow(nullptr), allocator(allocator),
-            table(nullptr), variables(nullptr),
+            _executionContext(nullptr),
+            allocator(allocator),
             type(EvaluationContextType::Constant) {}
 
     EvaluationContext::EvaluationContext(
         const EvaluationContextType type,
-        const Memory::IAllocator* allocator,
-        const CoreEngine::StorageTypes::Table* table
+        const CoreEngine::ExecutionContext* executionContext
     ):  row(nullptr), page(nullptr),
-        joinRow(nullptr), allocator(allocator),
-        table(table), variables(nullptr),
+        _executionContext(executionContext),
+        allocator(executionContext->GetAllocator()),
         type(type){}
 
     EvaluationContext::EvaluationContext(
-        const EvaluationContextType type,
-        const CoreEngine::ExecutionContext& executionContext
-    ) : row(nullptr), page(nullptr),
-        joinRow(nullptr), allocator(executionContext.GetAllocator()),
-        table(executionContext.GetTable(0)), variables(executionContext.GetVariables()), type(type){}
-
-    EvaluationContext::EvaluationContext(
         const CoreEngine::StorageTypes::RID* row,
-        const CoreEngine::ExecutionContext& executionContext
-    ){
-        this->type = EvaluationContextType::SingleRow;
-        this->row = row;
-        this->joinRow = nullptr;
-        this->allocator = executionContext.GetAllocator();
-        this->table = executionContext.GetTable(0);
-        this->variables = executionContext.GetVariables();
-    }
+        const CoreEngine::ExecutionContext* executionContext
+    ) : row(row), page(nullptr),
+        _executionContext(executionContext), allocator(executionContext->GetAllocator()),
+        type(EvaluationContextType::SingleRow){}
 
-    EvaluationContext::EvaluationContext(
-        const QueryResult &row,
-        const CoreEngine::ExecutionContext& executionContext
-    ) {
-        this->type = EvaluationContextType::MaterializedRow;
-        this->allocator = executionContext.GetAllocator();
-        this->table = executionContext.GetTable(0);
-        this->variables = executionContext.GetVariables();
-        this->materializedRow = row;
-        this->row = nullptr;
-        this->joinRow = nullptr;
-    }
-
-    EvaluationContext::EvaluationContext(
-        const CoreEngine::StorageTypes::RID* row,
-        const CoreEngine::StorageTypes::RID* joinRow,
-        const CoreEngine::ExecutionContext& executionContext
-    ) :     row(row), joinRow(joinRow),
-            allocator(executionContext.GetAllocator()),
-            table(executionContext.GetTable(0)),
-            variables(executionContext.GetVariables()),
-            type(EvaluationContextType::Join){}
-
-    EvaluationContext EvaluationContext::CreateJoinContext(
-        const CoreEngine::StorageTypes::RID* outerRow,
-        const CoreEngine::StorageTypes::RID* innerRow,
-        const CoreEngine::ExecutionContext& executionContext
-    ){
-        return EvaluationContext(outerRow, innerRow, executionContext);
-    }
+    // EvaluationContext::EvaluationContext(
+    //     const QueryResult &row,
+    //     const CoreEngine::ExecutionContext* executionContext
+    // ) {
+    //     this->type = EvaluationContextType::MaterializedRow;
+    //     this->allocator = executionContext.GetAllocator();
+    //     this->table = executionContext.GetTable(0);
+    //     this->variables = executionContext.GetVariables();
+    //     this->materializedRow = row;
+    //     this->row = nullptr;
+    //     this->joinRow = nullptr;
+    // }
+    //
+    // EvaluationContext::EvaluationContext(
+    //     const CoreEngine::StorageTypes::RID* row,
+    //     const CoreEngine::StorageTypes::RID* joinRow,
+    //     const CoreEngine::ExecutionContext& executionContext
+    // ) :     row(row), joinRow(joinRow),
+    //         allocator(executionContext.GetAllocator()),
+    //         table(executionContext.GetTable(0)),
+    //         variables(executionContext.GetVariables()),
+    //         type(EvaluationContextType::Join){}
+    //
+    // EvaluationContext EvaluationContext::CreateJoinContext(
+    //     const CoreEngine::StorageTypes::RID* outerRow,
+    //     const CoreEngine::StorageTypes::RID* innerRow,
+    //     const CoreEngine::ExecutionContext& executionContext
+    // ){
+    //     return EvaluationContext(outerRow, innerRow, executionContext);
+    // }
 
     Value Expression::EvaluateJoin(const EvaluationContext& context) const{
         // auto previousColumns = context.row->numberOfColumns;
@@ -145,7 +132,7 @@ namespace Expressions{
     }
 
     Expression::Expression()
-        : columnIndex(0), expressionType(ExpressionType::Expression) {}
+        : ordinalPosition(0), expressionType(ExpressionType::Expression) {}
 
     bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
     bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
@@ -181,7 +168,7 @@ namespace Expressions{
             || this->expressionType == ExpressionType::Json;
     }
 
-    void Expression::SetIndex(const column_index_t index){ this->columnIndex = index; }
+    void Expression::SetIndex(const column_index_t index){ this->ordinalPosition = index; }
 
     // Value ColumnExpression::EvaluateSingleRow(const EvaluationContext& context) const{
     //     return context.table->MaterializeColumn(context.allocator, context.row, this->columnIndex);
@@ -264,9 +251,10 @@ namespace Expressions{
         this->alias = name;
         this->tableAlias = tableAlias;
 
+        this->_slotIndex = DEFAULT_SLOT_INDEX;
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
-        this->columnIndex = 0;
+        this->ordinalPosition = 0;
         this->size = 0;
         this->returnType = DataType::Null;
         this->expressionType = ExpressionType::Column;
@@ -276,12 +264,14 @@ namespace Expressions{
         :   alias(std::move(name)), tableAlias(std::move(tableAlias)),
             tableId(INVALID_TABLE_ID), columnId(INVALID_COLUMN_ID),
             returnType(DataType::Null), size(0) {
-        this->columnIndex = 0;
+        this->_slotIndex = DEFAULT_SLOT_INDEX;
+        this->ordinalPosition = 0;
         this->expressionType = ExpressionType::Column;
     }
 
     ColumnExpression::ColumnExpression(const column_index_t index, const DataType dataType){
-        this->columnIndex = index;
+        this->_slotIndex = DEFAULT_SLOT_INDEX;
+        this->ordinalPosition = index;
         this->size = 0;
         this->returnType = dataType;
         this->tableId = INVALID_TABLE_ID;
@@ -1037,7 +1027,7 @@ namespace Expressions{
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
-        return context.variables->Get(this->normalizedName).GetValue();
+        return context._executionContext->GetVariables()->Get(this->normalizedName).GetValue();
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }

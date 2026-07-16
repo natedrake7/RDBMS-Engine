@@ -83,7 +83,7 @@ namespace QueryPipeline {
         : table(table), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalTableScan::ToPhysical(QueryContext& context){
-        auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->tableId);
+        auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->_tableId);
 
         // If no indexes are available, use heap scan
         if (indexes.Empty())
@@ -99,7 +99,7 @@ namespace QueryPipeline {
             return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
         }
 
-        const auto tableStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(this->table->tableId);
+        const auto tableStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(this->table->_tableId);
 
         // No table stats yet, or small table
         if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
@@ -327,7 +327,7 @@ namespace QueryPipeline {
         : table(table), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalDelete::ToPhysical(QueryContext& context){
-        const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->tableId);
+        const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->_tableId);
 
         // If no indexes are available, heap scan
         if (indexes.Empty())
@@ -359,7 +359,7 @@ namespace QueryPipeline {
     ) : table(table), updates(std::move(updates)), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalUpdate::ToPhysical(QueryContext& context){
-        const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->tableId);
+        const auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->_tableId);
 
         // If no indexes are available, heap scan
         if (indexes.Empty())

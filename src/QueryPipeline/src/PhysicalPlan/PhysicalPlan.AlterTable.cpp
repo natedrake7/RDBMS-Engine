@@ -30,7 +30,7 @@ namespace QueryPipeline::PhysicalPlan{
     result.status =
         this->catalog->InsertColumnToMasterDb(
           context,
-          this->table->tableId,
+          this->table->_tableId,
           this->column->name.name.ToView(),
           columnType,
           this->column->type.size,
@@ -58,9 +58,9 @@ namespace QueryPipeline::PhysicalPlan{
             );
      }
 
-    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
     auto* columnPtr = tablePtr->AddColumn(
         this->column->name.name.ToView(),
@@ -96,9 +96,9 @@ namespace QueryPipeline::PhysicalPlan{
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
-    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
     tablePtr->RemoveColumn(context, this->column->index);
 
@@ -118,9 +118,9 @@ namespace QueryPipeline::PhysicalPlan{
         context.GetAllocator()
       );
 
-    const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-    const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+    const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
     const auto updates = DataStructures::PolymorphicArray<Value>::From(
         context.GetAllocator(),

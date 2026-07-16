@@ -246,16 +246,16 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* allocator = context.GetAllocator();
 
-        auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+        auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
 
-        const auto& tables = this->catalog->SelectTables(allocator, this->table->databaseId);
+        const auto& tables = this->catalog->SelectTables(allocator, this->table->_databaseId);
 
         const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
 
         const auto tableResult = this->catalog->InsertTableToMasterDb(
             context,
-            this->table->databaseId,
-            this->table->schemaId,
+            this->table->_databaseId,
+            this->table->_schemaId,
             this->table->name.ToView(),
             index,
             false,
@@ -411,15 +411,15 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalIndexCreate::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
-      const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+      const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
-      const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->tableId);
+      const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->_tableId);
 
       const auto indexResult =this->catalog->InsertIndexToMasterDb(
           context,
-          this->table->tableId,
+          this->table->_tableId,
           this->constraintName.ToView(),
           false,
           false,
@@ -430,7 +430,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
           context,
-          this->table->tableId,
+          this->table->_tableId,
           this->constraintName.ToView(),
           Headers::ConstraintType::IndexKey,
           false,
@@ -463,7 +463,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
           context,
-          this->table->tableId,
+          this->table->_tableId,
           indexId
       );
 
@@ -484,9 +484,9 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+        const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-        const auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->GetConstantColumns(&result.columns);
 
@@ -498,9 +498,9 @@ namespace QueryPipeline::PhysicalPlan {
         if (result.canFetchMore == false)
             this->state.Reset();
 
-        const auto index = context.AddTable(tablePtr);
-        context.AddScanHandle(rows.Data(), rows.Size());
-        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
+        context.SetTable(tablePtr, this->table->_slotIndex);
+        context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -511,41 +511,41 @@ namespace QueryPipeline::PhysicalPlan {
         this->state._lastRID = *rid;
     }
 
-  PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
-      : table(table), expression(nullptr), isClustered(isClustered) {}
+    PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
+        : table(table), expression(nullptr), isClustered(isClustered) {}
 
-  PhysicalIndexScan::PhysicalIndexScan(
-      Statements::DataSource *table,
-      Expressions::Expression *expression,
-      const bool isClustered
-  ): table(table), expression(expression), isClustered(isClustered) {}
+    PhysicalIndexScan::PhysicalIndexScan(
+        Statements::DataSource *table,
+        Expressions::Expression *expression,
+        const bool isClustered
+    ): table(table), expression(expression), isClustered(isClustered) {}
 
-  ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
-      auto result = ExecutionResult(context);
+    ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
+        auto result = ExecutionResult(context);
 
-      const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
-      tablePtr->GetConstantColumns(&result.columns);
+        tablePtr->GetConstantColumns(&result.columns);
 
-      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-      if (this->isClustered)
-          tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
-      else
-          tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+        if (this->isClustered)
+            tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
+        else
+            tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
 
-      result.canFetchMore = this->state.canFetchMore;
-      if (result.canFetchMore == false)
-          this->state.Reset();
+        result.canFetchMore = this->state.canFetchMore;
+        if (result.canFetchMore == false)
+            this->state.Reset();
 
-        const auto index = context.AddTable(tablePtr);
-        context.AddScanHandle(rows.Data(), rows.Size());
-        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
+        context.SetTable(tablePtr, this->table->_slotIndex);
+        context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
 
-      result.selectionVector->selectedRidsCount = rows.Size();
-      result.selectionVector->isIdentity = true;
-      return result;
-  }
+        result.selectionVector->selectedRidsCount = rows.Size();
+        result.selectionVector->isIdentity = true;
+        return result;
+    }
 
     void PhysicalIndexScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
         this->state.pageId = rid->_pageId;
@@ -561,9 +561,9 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->GetConstantColumns(&result.columns);
 
@@ -571,9 +571,9 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
         tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
 
-        const auto index = context.AddTable(tablePtr);
-        context.AddScanHandle(rows.Data(), rows.Size());
-        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
+        context.SetTable(tablePtr, this->table->_slotIndex);
+        context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -591,9 +591,9 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->GetConstantColumns(&result.columns);
 
@@ -601,9 +601,9 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
         tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
 
-        const auto index = context.AddTable(tablePtr);
-        context.AddScanHandle(rows.Data(), rows.Size());
-        context.AddFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, index);
+        context.SetTable(tablePtr, this->table->_slotIndex);
+        context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -1049,8 +1049,8 @@ namespace QueryPipeline::PhysicalPlan {
     ): insertPlan(std::move(insertPlan)), fields(std::move(fields)), table(table), child(child) {}
 
     ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         return (this->child != nullptr)
                    ? this->InsertFromChild(tablePtr, context)
@@ -1066,8 +1066,8 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalHeapUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         result.status = tablePtr->HeapUpdate(context, this->expression, this->updates);
         return result;
@@ -1082,8 +1082,8 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexScanUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         result.status = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
         return result;
@@ -1096,9 +1096,9 @@ namespace QueryPipeline::PhysicalPlan {
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
   ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
-      const auto* db = this->server->UseDatabase(context, this->table->databaseId);
+      const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
       DataTypes::Indexing::Key key;
 
@@ -1115,9 +1115,9 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalHeapDelete::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
-      const auto* db = Network::Server::Get().UseDatabase(context, this->table->databaseId);
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-      const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
       tablePtr->HeapDelete(context, this->expression);
 
@@ -1130,9 +1130,9 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
-      const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+      const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
       tablePtr->ClusteredIndexScanDelete(context, this->expression, state);
 
@@ -1145,9 +1145,9 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->databaseId);
+        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->ordinalPosition);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->ClusteredIndexSeekDelete(context, this->expression, this->state);
 

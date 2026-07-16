@@ -1032,7 +1032,7 @@ namespace Indexing{
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
@@ -1105,7 +1105,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
         auto evaluationContext = Expressions::EvaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
@@ -1257,7 +1257,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         state.canFetchMore = false;
@@ -1308,7 +1308,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         CoreEngine::StorageTypes::RID rid;
@@ -1499,7 +1499,7 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         bool exprResult = false, exprNull = false;
@@ -1545,7 +1545,7 @@ namespace Indexing{
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         bool exprResult = false, exprNull = false;
@@ -1671,7 +1671,7 @@ namespace Indexing{
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
         auto currentNode = this->SearchKey(*minKey);

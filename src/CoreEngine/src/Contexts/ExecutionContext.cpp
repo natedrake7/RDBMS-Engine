@@ -68,38 +68,39 @@ namespace CoreEngine{
         return this->snapshot;
     }
 
-    Int ExecutionContext::AddTable(const StorageTypes::Table* table){
-        const auto tableIndex = this->schema.tableCount;
-        this->schema.tables[this->schema.tableCount++] = table;
-        return tableIndex;
+    void ExecutionContext::SetTable(
+        const StorageTypes::Table* table,
+        const UnsignedSmallInt slotIndex
+    ){
+        this->schema.tables[slotIndex] = table;
     }
 
-    const StorageTypes::Table* ExecutionContext::GetTable(const UnsignedInt index) const{
+    const StorageTypes::Table* ExecutionContext::GetTable(const UnsignedSmallInt index) const{
         return this->schema.tables[index];
     }
 
-    const Storage::FileKey* ExecutionContext::GetFileKeys(const UnsignedInt index) const{
+    const Storage::FileKey* ExecutionContext::GetFileKeys(const UnsignedSmallInt index) const{
         return this->schema.fileKeys[index];
     }
 
-    void ExecutionContext::AddFileKey(
+    void ExecutionContext::SetFileKey(
         const Storage::FileKey fileKey,
         const StorageTypes::RID::Source storageType,
-        const Int indexPosition
+        const UnsignedSmallInt slotIndex
     ){
-        this->schema.fileKeys[indexPosition][static_cast<Int>(storageType)] = fileKey;
+        this->schema.fileKeys[slotIndex][static_cast<Int>(storageType)] = fileKey;
     }
 
-    void ExecutionContext::AddScanHandle(const StorageTypes::RID* rids, const UnsignedInt size){
-        this->scanContext.scanHandles[this->scanContext.scanHandleCount++] = ScanHandle(rids, size);
+    void ExecutionContext::SetScanHandle(const StorageTypes::RID* rids, const UnsignedInt size, const UnsignedSmallInt slotIndex){
+        this->scanHandles[slotIndex] = ScanHandle(rids, size);
     }
 
     const ScanHandle& ExecutionContext::GetScanHandle(const UnsignedInt index) const{
-        return this->scanContext.scanHandles[index];
+        return this->scanHandles[index];
     }
 
     const StorageTypes::RID* ExecutionContext::GetRid(const UnsignedInt scanHandleIndex, const UnsignedInt ridIndex) const{
-        return &this->scanContext.scanHandles[scanHandleIndex].rids[ridIndex];
+        return &this->scanHandles[scanHandleIndex].rids[ridIndex];
     }
 
     Constants::ExecutionMode ExecutionContext::GetMode() const{

@@ -31,12 +31,13 @@ namespace QueryPipeline{
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
+        UnsignedSmallInt _slotCount;
         bool hasMore;
 
         Constants::ExecutionMode _executionMode;
 
         QueryContext();
-        explicit QueryContext(const Errors::Error& error);
+        explicit QueryContext(Errors::Error&  error);
 
         QueryContext(const QueryContext&) = delete;
         QueryContext& operator=(const QueryContext&) = delete;

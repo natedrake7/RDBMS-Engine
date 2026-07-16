@@ -89,15 +89,8 @@ namespace CoreEngine {
             : rids(rids), size(size){}
     };
 
-    struct ScanContext{
-        ScanHandle scanHandles[Constants::MAX_QUERY_JOINS];
-        UnsignedInt scanHandleCount;
-
-        ScanContext(): scanHandles{}, scanHandleCount(0) {}
-    };
-
     class ExecutionContext {
-        ScanContext scanContext;
+        ScanHandle scanHandles[Constants::MAX_QUERY_JOINS];
         ExecutionSchema schema;
 
         Snapshot snapshot;
@@ -133,17 +126,17 @@ namespace CoreEngine {
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
 
-            [[nodiscard]] Int AddTable(const StorageTypes::Table* table);
-            const StorageTypes::Table* GetTable(UnsignedInt index) const;
-            const Storage::FileKey* GetFileKeys(UnsignedInt index) const;
+            void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
+            const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;
+            const Storage::FileKey* GetFileKeys(UnsignedSmallInt index) const;
 
-            void AddFileKey(
+            void SetFileKey(
                 Storage::FileKey fileKey,
                 StorageTypes::RID::Source storageType,
-                Int indexPosition
+                UnsignedSmallInt slotIndex
             );
 
-            void AddScanHandle(const StorageTypes::RID* rids, UnsignedInt size);
+            void SetScanHandle(const StorageTypes::RID* rids, UnsignedInt size, UnsignedSmallInt slotIndex);
             const ScanHandle& GetScanHandle(UnsignedInt index) const;
 
             [[nodiscard]] const StorageTypes::RID* GetRid(UnsignedInt scanHandleIndex, UnsignedInt ridIndex) const;

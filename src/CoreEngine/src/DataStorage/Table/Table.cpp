@@ -822,7 +822,7 @@ namespace CoreEngine::StorageTypes {
         const Expressions::EvaluationContext evaluationContext(row, context);
         for (const auto* updateExpr : updates) {
             auto updatedValue = Expressions::EvaluateExpression(updateExpr, evaluationContext);
-            updatedValue.SetColumnIndex(updateExpr->columnIndex);
+            updatedValue.SetColumnIndex(updateExpr->ordinalPosition);
             materializedRow.Update(updatedValue);
         }
 

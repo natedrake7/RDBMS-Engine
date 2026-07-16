@@ -14,7 +14,7 @@ namespace CoreEngine::RowKernels{
         const auto* columnExpr = self->AsColumn();
         if constexpr (DataTypes::NonPrimitiveType<T>){
             UnsignedSmallInt size = 0;
-            auto* data = context.page->GetColumnAt(context.row->_index, columnExpr->columnIndex, size, outNull);
+            auto* data = context.page->GetColumnAt(context.row->_index, columnExpr->ordinalPosition, size, outNull);
             if (*outNull) return;
 
             if constexpr (DataTypes::IsString<T>)
@@ -26,7 +26,7 @@ namespace CoreEngine::RowKernels{
         }
         else if constexpr (DataTypes::Primitive<T>) {
             *static_cast<T*>(outVal) =
-                context.page->GetColumnAt<T>(context.row->_index, columnExpr->columnIndex, outNull);
+                context.page->GetColumnAt<T>(context.row->_index, columnExpr->ordinalPosition, outNull);
         }
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ColumnScanKernel: unsupported type");

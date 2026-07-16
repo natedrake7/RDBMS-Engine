@@ -219,7 +219,7 @@ namespace CoreEngine::StorageTypes {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            executionContext
+            &executionContext
         );
 
         const auto fileKey = this->_db->DataFileKey();
@@ -281,7 +281,7 @@ namespace CoreEngine::StorageTypes {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            executionContext
+            &executionContext
         );
 
         for(const auto& row : results){

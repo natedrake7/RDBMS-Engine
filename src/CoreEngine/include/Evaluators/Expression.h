@@ -55,47 +55,23 @@ namespace Expressions{
             Window = 5,
         };
 
-        QueryResult materializedRow;
-
         const CoreEngine::StorageTypes::RID* row;
 
         const Pages::PageView* page;
-        const CoreEngine::StorageTypes::RID* joinRow;
 
-        const Memory::IAllocator* allocator;
-        const CoreEngine::StorageTypes::Table* table;
-
-        const Dictionary<DataTypes::String, Variable>* variables;
+        const CoreEngine::ExecutionContext* _executionContext;
+        const ::Memory::IAllocator* allocator;
 
         EvaluationContextType type;
 
         explicit EvaluationContext(const ::Memory::IAllocator* allocator);
         EvaluationContext(
             EvaluationContextType type,
-            const ::Memory::IAllocator* allocator,
-            const CoreEngine::StorageTypes::Table* table
-        );
-        explicit EvaluationContext(
-            EvaluationContextType type,
-            const CoreEngine::ExecutionContext& executionContext
+            const CoreEngine::ExecutionContext* executionContext
         );
         explicit EvaluationContext(
             const CoreEngine::StorageTypes::RID* row,
-            const CoreEngine::ExecutionContext& executionContext
-        );
-        explicit EvaluationContext(
-            const QueryResult& row,
-            const CoreEngine::ExecutionContext& executionContext
-        );
-        explicit EvaluationContext(
-            const CoreEngine::StorageTypes::RID* row,
-            const CoreEngine::StorageTypes::RID* joinRow,
-            const CoreEngine::ExecutionContext& executionContext
-        );
-        static EvaluationContext CreateJoinContext(
-            const CoreEngine::StorageTypes::RID* outerRow,
-            const CoreEngine::StorageTypes::RID* innerRow,
-            const CoreEngine::ExecutionContext& executionContext
+            const CoreEngine::ExecutionContext* executionContext
         );
     };
 
@@ -122,7 +98,7 @@ namespace Expressions{
         VectorizedKernelFunction vectorizedKernel = nullptr;
         RowKernelFunction rowKernel = nullptr;
 
-        column_index_t columnIndex;
+        column_index_t ordinalPosition;
         ExpressionType expressionType;
 
         Expression();
@@ -171,6 +147,8 @@ namespace Expressions{
 
         Int tableId;
         Int columnId;
+
+        UnsignedSmallInt _slotIndex;
 
         DataType returnType;
         block_size_t size;

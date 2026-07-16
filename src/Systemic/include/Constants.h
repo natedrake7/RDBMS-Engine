@@ -9,6 +9,8 @@
 static constexpr Int ITOS_BUFFER_SIZE = 32;
 static constexpr Int NUMBER_OF_HISTOGRAM_BUCKETS = 100;
 
+static constexpr Int DEFAULT_SLOT_INDEX = 0;
+
 static constexpr Int INVALID_DATABASE_ID = -1;
 static constexpr Int INVALID_TABLE_ID = -1;
 static constexpr Int INVALID_COLUMN_ID = -1;
