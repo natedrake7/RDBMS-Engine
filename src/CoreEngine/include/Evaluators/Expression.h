@@ -55,16 +55,18 @@ namespace Expressions{
             Window = 5,
         };
 
-        const CoreEngine::StorageTypes::RID* row;
-
-        const Pages::PageView* page;
+        const CoreEngine::StorageTypes::RID* _rids;
+        const Pages::PageView* _pages;
 
         const CoreEngine::ExecutionContext* _executionContext;
-        const ::Memory::IAllocator* allocator;
+        const ::Memory::IAllocator* _allocator;
 
-        EvaluationContextType type;
+        EvaluationContextType _type;
 
-        explicit EvaluationContext(const ::Memory::IAllocator* allocator);
+        explicit EvaluationContext(
+            EvaluationContextType type,
+            const ::Memory::IAllocator* allocator
+        );
         EvaluationContext(
             EvaluationContextType type,
             const CoreEngine::ExecutionContext* executionContext

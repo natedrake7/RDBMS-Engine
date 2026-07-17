@@ -28,7 +28,7 @@ namespace CoreEngine::RowKernels{
         if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = Op{}(left, right);
         else if constexpr (DataTypes::IsString<T>)
-            new (outVal) DataTypes::String(DataTypes::String::Concat(context.allocator, left, right));
+            new (outVal) DataTypes::String(DataTypes::String::Concat(context._allocator, left, right));
         else if constexpr (DataTypes::IsDecimal<T>)
             *static_cast<T*>(outVal) = std::move(Op{}(left, right));
         else

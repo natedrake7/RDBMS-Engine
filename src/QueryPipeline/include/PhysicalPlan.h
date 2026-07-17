@@ -106,6 +106,12 @@ namespace QueryPipeline::PhysicalPlan {
         virtual void UpdateScanState(const CoreEngine::StorageTypes::RID* rid);
 
         [[nodiscard]] bool UsesExternalStorage() const;
+        static void LazyCachePage(
+            const CoreEngine::ExecutionContext& context,
+            CoreEngine::StorageTypes::RID rid,
+            UnsignedSmallInt slotIndex,
+            Pages::PageView* pagePtr
+        );
     };
 
     /**
@@ -294,6 +300,7 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
         DataStructures::PolymorphicArray<Headers::ColumnHeader> columnHeaders;
         PlanNode* child;
+        UnsignedSmallInt _slotCount;
 
         inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
         inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
@@ -305,7 +312,8 @@ namespace QueryPipeline::PhysicalPlan {
         PhysicalProject(
             PlanNode* child,
             DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-            DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders
+            DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders,
+            UnsignedSmallInt slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
@@ -314,12 +322,17 @@ namespace QueryPipeline::PhysicalPlan {
     class PhysicalFilter final : public PlanNode {
         Expressions::Expression* filter;
         PlanNode* child;
+        UnsignedSmallInt _slotCount;
 
         inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
         inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
 
     public:
-        PhysicalFilter(PlanNode* child, Expressions::Expression* filter);
+        PhysicalFilter(
+            PlanNode* child,
+            Expressions::Expression* filter,
+            UnsignedSmallInt slotCount
+        );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };

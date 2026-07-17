@@ -66,18 +66,21 @@ namespace QueryPipeline {
       PhysicalPlan::PhysicalUseDatabase* ToPhysical(QueryContext& context)override;
   };
 
-  class LogicalProject final: public LogicalPlan {
+    class LogicalProject final: public LogicalPlan {
     public:
-      LogicalPlan* child;
-      DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
-      DataStructures::PolymorphicArray<Headers::ColumnHeader> columnsHeaders;
+        LogicalPlan* child;
+        DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
+        DataStructures::PolymorphicArray<Headers::ColumnHeader> columnsHeaders;
+        UnsignedSmallInt _slotCount;
 
-      LogicalProject(
-        LogicalPlan* child,
-        DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders);
-      PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;
-  };
+        LogicalProject(
+            LogicalPlan* child,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
+            DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders,
+            UnsignedSmallInt slotCount
+        );
+        PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;
+    };
 
   class LogicalTableScan final : public LogicalPlan {
     [[nodiscard]] bool HasPredicate()const;
@@ -122,8 +125,9 @@ namespace QueryPipeline {
     public:
       LogicalPlan* child;
       Expressions::Expression* filter;
+      UnsignedSmallInt _slotCount;
 
-      explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter);
+      explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter, UnsignedSmallInt slotCount);
       PhysicalPlan::PhysicalFilter* ToPhysical(QueryContext& context)override;
   };
 

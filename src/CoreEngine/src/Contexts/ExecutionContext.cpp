@@ -83,6 +83,10 @@ namespace CoreEngine{
         return this->schema.fileKeys[index];
     }
 
+    Storage::FileKey ExecutionContext::GetFileKey(const UnsignedSmallInt slotIndex, const UnsignedSmallInt index) const{
+        return this->schema.fileKeys[slotIndex][index];
+    }
+
     void ExecutionContext::SetFileKey(
         const Storage::FileKey fileKey,
         const StorageTypes::RID::Source storageType,
@@ -99,8 +103,16 @@ namespace CoreEngine{
         return this->scanHandles[index];
     }
 
-    const StorageTypes::RID* ExecutionContext::GetRid(const UnsignedInt scanHandleIndex, const UnsignedInt ridIndex) const{
-        return &this->scanHandles[scanHandleIndex].rids[ridIndex];
+    UnsignedInt ExecutionContext::GetScanHandleSize(const UnsignedInt index) const{
+        return this->scanHandles[index].size;
+    }
+
+    const StorageTypes::RID* ExecutionContext::GetRIDPtr(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
+        return &this->scanHandles[slotIndex].rids[ridIndex];
+    }
+
+    StorageTypes::RID ExecutionContext::GetRID(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
+        return this->scanHandles[slotIndex].rids[ridIndex];
     }
 
     Constants::ExecutionMode ExecutionContext::GetMode() const{

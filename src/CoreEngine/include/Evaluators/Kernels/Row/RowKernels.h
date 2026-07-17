@@ -2,6 +2,7 @@
 #include "../../Expression.h"
 #include "../../../Pages/PageView.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
+#include "../../../Contexts/ExecutionContext.h"
 
 namespace CoreEngine::RowKernels{
     template<typename T>
@@ -14,19 +15,25 @@ namespace CoreEngine::RowKernels{
         const auto* columnExpr = self->AsColumn();
         if constexpr (DataTypes::NonPrimitiveType<T>){
             UnsignedSmallInt size = 0;
-            auto* data = context.page->GetColumnAt(context.row->_index, columnExpr->ordinalPosition, size, outNull);
+            auto* data = context._pages[columnExpr->_slotIndex].GetColumnAt(
+                context._rids[columnExpr->_slotIndex]._index,
+                columnExpr->ordinalPosition, size, outNull
+            );
             if (*outNull) return;
 
             if constexpr (DataTypes::IsString<T>)
-                new (outVal) DataTypes::String(data, size, context.allocator);
+                new (outVal) DataTypes::String(data, size, context._allocator);
             else if constexpr (DataTypes::IsJson<T>)
-                new (outVal) DataTypes::JsonBinary(context.allocator, data, size);
+                new (outVal) DataTypes::JsonBinary(context._allocator, data, size);
             else if constexpr (DataTypes::IsDecimal<T>)
                 new (outVal) DataTypes::Decimal(data, size);
         }
         else if constexpr (DataTypes::Primitive<T>) {
             *static_cast<T*>(outVal) =
-                context.page->GetColumnAt<T>(context.row->_index, columnExpr->ordinalPosition, outNull);
+                context._pages[columnExpr->_slotIndex].GetColumnAt<T>(
+                    context._rids[columnExpr->_slotIndex]._index,
+                    columnExpr->ordinalPosition, outNull
+                );
         }
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ColumnScanKernel: unsupported type");
@@ -46,9 +53,9 @@ namespace CoreEngine::RowKernels{
         if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
         else if constexpr (DataTypes::IsString<T>)
-            new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
+            new (outVal) DataTypes::String(value.Data(), value.Size(), context._allocator);
         else if constexpr (DataTypes::IsJson<T>)
-            new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
+            new (outVal) DataTypes::JsonBinary(context._allocator, value.Data(), value.Size());
         else if constexpr (DataTypes::IsDecimal<T>)
             new (outVal) DataTypes::Decimal(value.Data(), value.Size());
         else
@@ -70,16 +77,16 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     ){
         const auto* variableExpr = self->AsVariable();
-        const auto& value = context.variables->Get(variableExpr->name).GetValue();
+        const auto& value = context._executionContext->GetVariables()->Get(variableExpr->name).GetValue();
         *outNull = value.IsNull();
         if (*outNull) return;
 
         if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
         else if constexpr (DataTypes::IsString<T>)
-            new (outVal) DataTypes::String(value.Data(), value.Size(), context.allocator);
+            new (outVal) DataTypes::String(value.Data(), value.Size(), context._allocator);
         else if constexpr (DataTypes::IsJson<T>)
-            new (outVal) DataTypes::JsonBinary(context.allocator, value.Data(), value.Size());
+            new (outVal) DataTypes::JsonBinary(context._allocator, value.Data(), value.Size());
         else if constexpr (DataTypes::IsDecimal<T>)
             new (outVal) DataTypes::Decimal(value.Data(), value.Size());
         else
@@ -109,8 +116,8 @@ namespace CoreEngine::RowKernels{
         T out;
         self->rowKernel(self, context, &out, &outNull);
         if (outNull)
-            return Value::Null(context.allocator);
+            return Value::Null(context._allocator);
 
-        return Value(out, context.allocator);
+        return Value(out, context._allocator);
     }
 }

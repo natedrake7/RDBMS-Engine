@@ -120,24 +120,40 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  void PlanNode::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){ }
+    void PlanNode::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){ }
 
-  bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
+    bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
-  PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
-      : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
+    void PlanNode::LazyCachePage(
+        const CoreEngine::ExecutionContext& context,
+        const CoreEngine::StorageTypes::RID rid,
+        const UnsignedSmallInt slotIndex,
+        Pages::PageView* pagePtr
+    ){
+        if (!pagePtr->IsValid()
+           || pagePtr->PageId() != rid._pageId
+       ){
+            *pagePtr = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+                context.GetFileKey(slotIndex, rid.GetSource()),
+                rid._pageId
+            );
+       }
+    }
 
-  ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
-      auto result = ExecutionResult(context);
+    PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
+        : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
-      if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
-          result.status = Errors::RuntimeStatus(
-              Errors::RuntimeError::Error,
-              Messages::FAILED_TO_CREATE_USER,
-              context.GetAllocator()
-          );
+    ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
+        auto result = ExecutionResult(context);
 
-      return result;
+        if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
+        result.status = Errors::RuntimeStatus(
+          Errors::RuntimeError::Error,
+          Messages::FAILED_TO_CREATE_USER,
+          context.GetAllocator()
+        );
+
+        return result;
   }
 
   PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
@@ -636,33 +652,25 @@ namespace QueryPipeline::PhysicalPlan {
             result.vectorBatch.SetColumn(column, i);
         }
 
-        auto* table = context.GetTable(0);
-
         // 2. Transpose: evaluate each row scalar-wise, scatter every Value into its column slot.
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context.GetAllocator(),
-            table
+            &context
         );
 
-        const auto& scanHandle = context.GetScanHandle(0);
+
+        Pages::PageView pages[Constants::MAX_QUERY_JOINS];
+        CoreEngine::StorageTypes::RID rids[Constants::MAX_QUERY_JOINS];
+
+        evaluationContext._pages = pages;
+        evaluationContext._rids = rids;
 
         bool outNull = false;
-        Pages::PageView page;
-
-        const auto* fileKeys = context.GetFileKeys(0);
         if (result.selectionVector->isIdentity){
             for (Int i = 0; i < rowCount; i++){
-                evaluationContext.row = &scanHandle.rids[i];
-
-                if (!page.IsValid()
-                    || page.PageId() != evaluationContext.row->_pageId
-                ){
-                    page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                        fileKeys[evaluationContext.row->GetSource()],
-                        evaluationContext.row->_pageId
-                    );
-                    evaluationContext.page = &page;
+                for (Int j = 0; j < this->_slotCount; j++){
+                    rids[j] = context.GetRID(j, i);
+                    PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
                 }
 
                 for (Int j = 0; j < projectCount; j++){
@@ -680,7 +688,11 @@ namespace QueryPipeline::PhysicalPlan {
         }
 
         for (Int i = 0; i < rowCount; i++){
-            evaluationContext.row = &scanHandle.rids[result.selectionVector->selectedRids[0][i]];
+            for (Int j = 0; j < this->_slotCount; j++){
+                rids[j] = context.GetRID(j, result.selectionVector->selectedRids[j][i]);
+                PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
+            }
+
             for (Int j = 0; j < projectCount; j++){
                 Expressions::EvaluateExpression(
                     this->resultExpressions[j],
@@ -741,7 +753,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Constant,
-            context
+            &context
         );
 
         auto outNull = false;
@@ -763,8 +775,10 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalProject:: PhysicalProject(
         PlanNode *child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders
-    ): resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)), child(child) {}
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders,
+        const UnsignedSmallInt slotCount
+    ):  resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)),
+        child(child), _slotCount(slotCount) {}
 
     ExecutionResult PhysicalProject::Execute(CoreEngine::ExecutionContext& context){
         return (this->child == nullptr)
@@ -787,34 +801,74 @@ namespace QueryPipeline::PhysicalPlan {
         const ExecutionResult& result,
         const CoreEngine::ExecutionContext& context
     ) const{
+        auto* selectionVector = result.selectionVector;
+
+        const bool isIdentity = selectionVector->isIdentity;
+        const Int rowCount = isIdentity
+            ? static_cast<Int>(context.GetScanHandleSize(0))
+            : selectionVector->selectedRidsCount;
+
+        if (isIdentity)
+            for (Int j = 0; j < this->_slotCount; j++)
+                selectionVector->AllocateRids(context.GetAllocator(), j, rowCount);
+
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            context
+            &context
         );
 
-        const auto& firstHandle = context.GetScanHandle(0);
-        const auto* table = context.GetTable(0);
+        Pages::PageView pages[Constants::MAX_QUERY_JOINS];
+        CoreEngine::StorageTypes::RID rids[Constants::MAX_QUERY_JOINS];
 
-        Pages::PageView page;
-        for (Int i = 0; i < firstHandle.size; i++){
-            evaluationContext.row = &firstHandle.rids[i];
-            if (!page.IsValid()
-                || page.PageId() != evaluationContext.row->_pageId
-            ){
-                page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                    table->GetDataFileKey(),
-                    evaluationContext.row->_pageId
-                );
-                evaluationContext.page = &page;
+        evaluationContext._pages = pages;
+        evaluationContext._rids = rids;
+
+        Int outputCount = 0;
+        if (isIdentity){
+            for (Int i = 0; i < rowCount; i++){
+                for (Int j = 0; j < this->_slotCount; j++){
+                    rids[j] = context.GetRID(j, i);
+                    PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
+                }
+
+                if (!Expressions::RowModeFilter(this->filter, evaluationContext))
+                    continue;
+
+                // Record the surviving row's per-slot source index into every slot.
+                for (Int j = 0; j < this->_slotCount; j++)
+                    selectionVector->selectedRids[j][outputCount] = i;
+
+                outputCount++;
+
             }
-
-            if (Expressions::RowModeFilter(this->filter, evaluationContext))
-                result.selectionVector->selectedRids[0][result.selectionVector->selectedRidsCount++] = i;
         }
+        else{
+            for (Int i = 0; i < rowCount; i++){
+                for (Int j = 0; j < this->_slotCount; j++){
+                    rids[j] = context.GetRID(j, selectionVector->selectedRids[j][i]);
+                    PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
+                }
+
+                if (!Expressions::RowModeFilter(this->filter, evaluationContext))
+                    continue;
+
+                // Record the surviving row's per-slot source index into every slot.
+                for (Int j = 0; j < this->_slotCount; j++)
+                    selectionVector->selectedRids[j][outputCount] = selectionVector->selectedRids[j][i];
+
+                outputCount++;
+            }
+        }
+
+        selectionVector->selectedRidsCount = outputCount;
+        selectionVector->isIdentity = false;
     }
 
-    PhysicalFilter::PhysicalFilter(PlanNode *child, Expressions::Expression* filter)
-        : filter(filter) , child(child) {}
+    PhysicalFilter::PhysicalFilter(
+        PlanNode *child,
+        Expressions::Expression* filter,
+        const UnsignedSmallInt slotCount
+    ): filter(filter) , child(child), _slotCount(slotCount) {}
 
     ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
@@ -823,13 +877,8 @@ namespace QueryPipeline::PhysicalPlan {
         if (firstHandle.size == 0)
             return result;
 
-        result.selectionVector->AllocateRids(
-            context.GetAllocator(),
-            0,
-            firstHandle.size
-        );
-        result.selectionVector->selectedRidsCount = 0;
-
+        // Allocation and count are Model-B concerns owned by the mode implementation:
+        // identity input allocates per-slot arrays; non-identity compacts in place.
         if (context.GetMode() == Constants::ExecutionMode::Vectorized)
             this->ExecuteVectorizedMode(result, context);
         else
@@ -1162,7 +1211,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Constant,
-            context
+            &context
         );
 
         auto value = Expressions::EvaluateExpression(this->expression, evaluationContext);

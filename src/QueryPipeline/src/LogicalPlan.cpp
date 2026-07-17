@@ -17,10 +17,8 @@ namespace QueryPipeline {
     LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
         : sessionId(sessionId), databaseId(INVALID_DATABASE_ID) {}
 
-    LogicalPlan::LogicalPlan(){
-        this->sessionId = DataTypes::Guid();
-        this->databaseId = INVALID_DATABASE_ID;
-    }
+    LogicalPlan::LogicalPlan()
+        : sessionId(DataTypes::Guid()), databaseId(INVALID_DATABASE_ID) {}
 
     LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
@@ -61,8 +59,10 @@ namespace QueryPipeline {
     LogicalProject::LogicalProject(
         LogicalPlan *child,
         DataStructures::PolymorphicArray<Expressions::Expression*> &resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders)
-        : child(child), resultExpressions(std::move(resultExpressions)), columnsHeaders(std::move(columnsHeaders)) {}
+        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders,
+        const UnsignedSmallInt slotCount
+    ):   child(child), resultExpressions(std::move(resultExpressions)),
+            columnsHeaders(std::move(columnsHeaders)), _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
         for (auto* expression : this->resultExpressions)
@@ -71,7 +71,8 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
             (this->child != nullptr) ? this->child->ToPhysical(context) : nullptr,
             this->resultExpressions,
-            this->columnsHeaders
+            this->columnsHeaders,
+            this->_slotCount
         );
     }
 
@@ -267,12 +268,15 @@ namespace QueryPipeline {
         }
     }
 
-    LogicalFilter::LogicalFilter(LogicalPlan* child, Expressions::Expression* filter)
-        : child(child), filter(filter) {}
+    LogicalFilter::LogicalFilter(
+        LogicalPlan* child,
+        Expressions::Expression* filter,
+        const UnsignedSmallInt slotCount
+    ): child(child), filter(filter), _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
         Expressions::BindExpressionKernel(this->filter, context._executionMode);
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter);
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter, this->_slotCount);
     }
 
     LogicalOrder::LogicalOrder(LogicalPlan *child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions)

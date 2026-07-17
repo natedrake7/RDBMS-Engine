@@ -346,7 +346,7 @@ namespace CoreEngine::StorageTypes {
 
         const Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            executionContext
+            &executionContext
         );
 
         const auto payloadCapacity = this->CalculateInsertPayloadSize();
@@ -622,7 +622,7 @@ namespace CoreEngine::StorageTypes {
 
             Expressions::EvaluationContext evaluationContext(
                 Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-                executionContext
+                &executionContext
             );
 
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
@@ -636,7 +636,7 @@ namespace CoreEngine::StorageTypes {
 
                 for (Int i = 0; i < page.PageSize(); i++) {
                     auto row = RID(extentPageId, i);
-                    evaluationContext.row = &row;
+                    evaluationContext._rids = &row;
 
                     const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool()) continue;
@@ -680,7 +680,7 @@ namespace CoreEngine::StorageTypes {
 
             Expressions::EvaluationContext evaluationContext(
                 Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-                executionContext
+                &executionContext
             );
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
@@ -690,7 +690,7 @@ namespace CoreEngine::StorageTypes {
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto row = RID(extentPageId, i);
-                    evaluationContext.row = &row;
+                    evaluationContext._rids = &row;
 
                     const auto value = Expressions::EvaluateExpression(expression, evaluationContext);
                     if(!value.AsBool())
@@ -819,7 +819,7 @@ namespace CoreEngine::StorageTypes {
 
         auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
 
-        const Expressions::EvaluationContext evaluationContext(row, context);
+        const Expressions::EvaluationContext evaluationContext(row, &context);
         for (const auto* updateExpr : updates) {
             auto updatedValue = Expressions::EvaluateExpression(updateExpr, evaluationContext);
             updatedValue.SetColumnIndex(updateExpr->ordinalPosition);

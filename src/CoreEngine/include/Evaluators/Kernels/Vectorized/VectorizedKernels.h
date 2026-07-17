@@ -28,7 +28,7 @@ namespace CoreEngine::VectorizedKernels{
         const SelectionVector* sv
     ){
         const auto* columnExpression = self->AsColumn();
-        auto* table = context.GetTable(0);
+        auto* table = context.GetTable(columnExpression->_slotIndex);
         auto* dataVector = context.Allocate<DataVector>(columnExpression->returnType);
 
         dataVector->_data = static_cast<object_t*>(context.Allocate(sizeof(T) * sv->selectedRidsCount));
@@ -61,7 +61,7 @@ namespace CoreEngine::VectorizedKernels{
         SelectionVector* sv
     ){
         const auto* columnExpression = self->AsColumn();
-        auto* table = context.GetTable(columnExpression->tableId);
+        auto* table = context.GetTable(columnExpression->_slotIndex);
         auto* dataVector = context.Allocate<DataVector>(columnExpression->returnType);
 
         dataVector->_data = static_cast<object_t*>(context.Allocate(sizeof(T) * sv->selectedRidsCount));

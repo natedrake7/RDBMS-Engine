@@ -52,7 +52,7 @@ namespace QueryPipeline::Statements {
         int* _indexPos;
         Statement* _statement;
 
-        StatementValidationScope() = default;
+        StatementValidationScope(const ::Memory::IAllocator* allocator, UnsignedSmallInt numberOfTables);
         StatementValidationScope(
             Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
             DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>>& tableColumnsArray,
@@ -182,8 +182,9 @@ namespace QueryPipeline::Statements {
         [[nodiscard]] DataTypes::String GetAlias(const QueryContext& context) const;
         [[nodiscard]] DataTypes::String GetFullName(const QueryContext& context) const;
         [[nodiscard]] Errors::ValidationStatus Compile(
-            QueryContext& context,
-            Int databaseId
+            const QueryContext& context,
+            Int databaseId,
+            UnsignedSmallInt& outSlotCount
         );
         [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
     };
@@ -196,6 +197,7 @@ namespace QueryPipeline::Statements {
         DataTypes::Guid sessionId;
         DataSource* table;
         Int databaseId;
+        UnsignedSmallInt _slotCount;
 
         Statement();
         virtual ~Statement() = default;

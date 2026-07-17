@@ -95,7 +95,7 @@ namespace QueryPipeline{
 
     QueryContext::QueryContext()
         :   status(this->_compileContext.GetAllocator()), hasMore(false),
-            _executionMode(Constants::ExecutionMode::Row), _slotCount(DEFAULT_SLOT_INDEX){
+            _executionMode(Constants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
@@ -113,7 +113,7 @@ namespace QueryPipeline{
      }
 
      QueryContext::QueryContext(Errors::Error& error)
-         :      status(std::move(error)), _slotCount(DEFAULT_SLOT_INDEX),
+         :      status(std::move(error)),
                 hasMore(false), _executionMode(Constants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
@@ -121,18 +121,17 @@ namespace QueryPipeline{
     QueryContext::QueryContext(QueryContext&& other) noexcept
         :   _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
             cursors(std::move(other.cursors)), status(std::move(other.status)),
-            _slotCount(other._slotCount), hasMore(other.hasMore), _executionMode(other._executionMode){}
+            hasMore(other.hasMore), _executionMode(other._executionMode){}
 
     QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
-        if (this == &other) return *this;
+        if (this == &other)
+            return *this;
 
         this->status = other.status;
         this->hasMore = other.hasMore;
         this->_scope = std::move(other._scope);
         this->_executionMode = other._executionMode;
         this->cursors = std::move(other.cursors);
-        this->_slotCount = other._slotCount;
-
         return *this;
     }
 

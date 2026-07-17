@@ -19,7 +19,7 @@ namespace CoreEngine::RowKernels{
             return;
         }
 
-        auto result = DataTypes::Coercions::To<TFrom, TTo>(from, context.allocator);
+        auto result = DataTypes::Coercions::To<TFrom, TTo>(from, context._allocator);
 
         if constexpr (DataTypes::Primitive<TTo>)
             *static_cast<TTo*>(outVal) = result;

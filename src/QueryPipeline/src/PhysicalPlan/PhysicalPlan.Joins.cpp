@@ -3,6 +3,7 @@
 #include "Database.h"
 #include "../../include/PhysicalPlan.h"
 #include "Contexts/ExecutionContext.h"
+#include "Vectorization/Vectorization.h"
 
 namespace QueryPipeline::PhysicalPlan {
     void PerformNullJoin(
@@ -50,29 +51,30 @@ namespace QueryPipeline::PhysicalPlan {
     ) const {
         const auto* allocator = context.GetAllocator();
 
-        auto result = ExecutionResult(context);
+        ExecutionResult result(context);
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
-            context
+            &context
         );
 
         bool canFetchMore = true;
 
+        Pages::PageView pages[Constants::MAX_QUERY_JOINS];
+        CoreEngine::StorageTypes::RID rids[Constants::MAX_QUERY_JOINS];
         while (canFetchMore) {
             auto rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
 
-            // for (const auto& outerRow: leftResult.rows) {
-            //     for (const auto& innerRow: rightResult.rows) {
-            //         evaluationContext.row = &outerRow;
-            //         evaluationContext.joinRow = &innerRow;
-            //         if (!Expressions::EvaluateExpression(this->expression, evaluationContext).AsBool())
-            //             continue;
-            //
-            //          // PerformJoin(allocator, result, outerRow, innerRow);
-            //     }
-            // }
+            if (
+                leftResult.selectionVector->isIdentity
+                && rightResult.selectionVector->isIdentity
+            ){
+                 for (Int i = 0;i < leftResult.selectionVector->selectedRidsCount; i++){
+
+                 }
+            }
+
         }
 
         return result;
@@ -101,7 +103,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
-            context
+            &context
         );
 
         bool canFetchMore = true;
@@ -229,7 +231,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
-            context
+            &context
         );
 
         auto rightResult = this->right->Execute(context);
@@ -511,7 +513,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
-            context
+            &context
         );
 
         bool canFetchMore = true;
@@ -567,7 +569,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Join,
-            context
+            &context
         );
 
         bool canFetchMore = true;

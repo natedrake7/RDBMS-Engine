@@ -31,7 +31,6 @@ namespace QueryPipeline{
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
-        UnsignedSmallInt _slotCount;
         bool hasMore;
 
         Constants::ExecutionMode _executionMode;

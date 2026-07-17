@@ -129,6 +129,7 @@ namespace CoreEngine {
             void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
             const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;
             const Storage::FileKey* GetFileKeys(UnsignedSmallInt index) const;
+            Storage::FileKey GetFileKey(UnsignedSmallInt slotIndex, UnsignedSmallInt index) const;
 
             void SetFileKey(
                 Storage::FileKey fileKey,
@@ -138,8 +139,10 @@ namespace CoreEngine {
 
             void SetScanHandle(const StorageTypes::RID* rids, UnsignedInt size, UnsignedSmallInt slotIndex);
             const ScanHandle& GetScanHandle(UnsignedInt index) const;
+            [[nodiscard]] UnsignedInt GetScanHandleSize(UnsignedInt index) const;
 
-            [[nodiscard]] const StorageTypes::RID* GetRid(UnsignedInt scanHandleIndex, UnsignedInt ridIndex) const;
+            [[nodiscard]] const StorageTypes::RID* GetRIDPtr(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
+            [[nodiscard]] StorageTypes::RID GetRID(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
 
             Constants::ExecutionMode GetMode()const;
 

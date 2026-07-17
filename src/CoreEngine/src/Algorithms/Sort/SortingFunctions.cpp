@@ -77,7 +77,7 @@ bool SortingFunctions::CompareRows(
 ){
     Expressions::EvaluationContext evaluationContext(
         Expressions::EvaluationContext::EvaluationContextType::MaterializedRow,
-        context
+        &context
     );
 
     for (const auto& condition : sortConditions)
