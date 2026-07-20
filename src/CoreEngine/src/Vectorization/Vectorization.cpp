@@ -9,11 +9,6 @@ namespace CoreEngine{
         this->isIdentity = false;
     }
 
-    void SelectionVector::AllocateNullMask(const ::Memory::IAllocator* allocator, const Int index, const Int size){
-        this->nullMask[index] = static_cast<UnsignedTinyInt*>(allocator->AllocateRaw(size));
-        this->isIdentity = false;
-    }
-
     DataVector::DataVector(const DataType type)
         :   _data{nullptr}, _validity{nullptr},
             _count(0), _type(type),
@@ -43,7 +38,7 @@ namespace CoreEngine{
         dataVector->_count = count;
         dataVector->_kind  = DataVectorKind::Flat;
         dataVector->_type = type;
-        dataVector->_dataEntrySize = COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
+        dataVector->_dataEntrySize = VECTOR_COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
         dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize * count));
 
         const Int validityWords = (count + 63) / 64;

@@ -31,6 +31,7 @@ namespace CoreEngine::RowKernels{
         else if constexpr (DataTypes::Primitive<T>) {
             *static_cast<T*>(outVal) =
                 context._pages[columnExpr->_slotIndex].GetColumnAt<T>(
+                        context._allocator,
                     context._rids[columnExpr->_slotIndex]._index,
                     columnExpr->ordinalPosition, outNull
                 );

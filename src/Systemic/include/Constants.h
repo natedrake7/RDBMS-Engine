@@ -1,10 +1,7 @@
 #pragma once
 #include "DataTypes/DataTypes.h"
-#include <limits>
-#include <string_view>
-
 #include "DataTypes/DateTime.h"
-
+#include <limits>
 
 static constexpr Int ITOS_BUFFER_SIZE = 32;
 static constexpr Int NUMBER_OF_HISTOGRAM_BUCKETS = 100;
@@ -29,7 +26,6 @@ static constexpr UnsignedSmallInt INVALID_PAGE_INDEX_ID = std::numeric_limits<Un
 static constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(Int);
 
 static constexpr transaction_id_t FIRST_TRANSACTION_ID = 0;
-static constexpr Int DEFAULT_BATCH_SIZE = 10000;
 
 static constexpr DataTypes::StringView WILDCARD = "*";
 

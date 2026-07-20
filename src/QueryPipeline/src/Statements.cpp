@@ -734,7 +734,12 @@ namespace QueryPipeline::Statements {
         DataSource* table,
         const PredicatePushDownResult& predicatesResult
     ){
-        return context._compileContext.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->_tableId));
+        auto* current = context._compileContext.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->_tableId));
+        return context._compileContext.Allocate<LogicalMaterialize>(
+            current,
+            table->_tableId,
+            table->_slotIndex
+        );
     }
 
     LogicalPlan* SelectStatement::BuildJoinsPlan(

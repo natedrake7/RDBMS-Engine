@@ -8,6 +8,7 @@
 
 #include "DatabaseConstants.h"
 #include "Parser.h"
+#include "../../Systemic/include/DataTypes/StringValue.h"
 
 
 namespace QueryPipeline {
@@ -19,6 +20,64 @@ namespace QueryPipeline {
 
     LogicalPlan::LogicalPlan()
         : sessionId(DataTypes::Guid()), databaseId(INVALID_DATABASE_ID) {}
+
+    LogicalMaterialize::LogicalMaterialize(
+        LogicalPlan* child,
+        const table_id_t tableId,
+        const UnsignedSmallInt slotIndex
+    ):  child(child), tableId(tableId),
+        _slotIndex(slotIndex){}
+
+    PhysicalPlan::PlanNode* LogicalMaterialize::ToPhysical(QueryContext& context){
+        const auto headers = CoreEngine::SystemCatalog::Get().SelectColumns(context._compileContext.GetAllocator(), this->tableId);
+
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction> functions(
+            context._compileContext.GetAllocator(),
+            headers.Size()
+        );
+
+        auto* childPhysical = this->child->ToPhysical(context);
+
+        for (const auto& header : headers){
+            switch (static_cast<DataType>(header.dataType)) {
+            case DataType::String:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::StringValue>);
+                break;
+            case DataType::Bool:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<bool>);
+                break;
+            case DataType::TinyInt:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<TinyInt>);
+                break;
+            case DataType::SmallInt:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<SmallInt>);
+                break;
+            case DataType::Int:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<Int>);
+                break;
+            case DataType::BigInt:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<BigInt>);
+                break;
+            case DataType::Decimal:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::Decimal>);
+                break;
+            case DataType::DateTime:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::DateTime>);
+                break;
+            case DataType::Guid:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::Guid>);
+                break;
+            case DataType::Json:
+                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::JsonBinary>);
+                break;
+            case DataType::Null:
+            case DataType::RowIdentifier:
+                break;
+            }
+        }
+
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(functions, childPhysical, this->_slotIndex);
+    }
 
     LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}

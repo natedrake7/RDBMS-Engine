@@ -325,11 +325,6 @@ namespace QueryPipeline::Statements {
             const JoinOrderAnalyzeResult& joinReorderResult,
             const PredicatePushDownResult& predicatesResult
         ) const;
-        // [[nodiscard]] Dictionary<Int, column_index_t> BuildColumnsIndicesDictionary(
-        //     const QueryContext& context,
-        //     const DataStructures::PolymorphicArray<table_id_t>& joinOrder
-        // ) const;
-        // void AssignColumnsToIndices(const QueryContext& context, const DataStructures::PolymorphicArray<table_id_t>& order) const;
         void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary) const;
         [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;

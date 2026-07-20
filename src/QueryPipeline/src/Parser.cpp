@@ -265,7 +265,7 @@ namespace QueryPipeline{
 
             //TODO set batch size correctly
             CoreEngine::ExecutionContext executionContext(
-                snapshot, 10000,
+                snapshot, Constants::DEFAULT_BATCH_SIZE,
                 session->variables, queryContext._executionMode
             );
 

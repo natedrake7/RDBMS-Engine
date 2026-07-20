@@ -177,38 +177,38 @@ namespace Expressions{
     // }
 
     void ColumnExpression::BindVectorizedKernel(){
-        switch (this->returnType){
-        case DataType::String:
-            break;
-        case DataType::Bool:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<bool>;
-            break;
-        case DataType::TinyInt:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<TinyInt>;
-            break;
-        case DataType::SmallInt:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<SmallInt>;
-            break;
-        case DataType::Int:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<Int>;
-            break;
-        case DataType::BigInt:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<BigInt>;
-            break;
-        case DataType::Decimal:
-            break;
-        case DataType::DateTime:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
-            break;
-        case DataType::Guid:
-            this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
-            break;
-        case DataType::Json:
-            break;
-        case DataType::Null:
-        case DataType::RowIdentifier:
-            break;
-        }
+        // switch (this->returnType){
+        // case DataType::String:
+        //     break;
+        // case DataType::Bool:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<bool>;
+        //     break;
+        // case DataType::TinyInt:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<TinyInt>;
+        //     break;
+        // case DataType::SmallInt:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<SmallInt>;
+        //     break;
+        // case DataType::Int:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<Int>;
+        //     break;
+        // case DataType::BigInt:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<BigInt>;
+        //     break;
+        // case DataType::Decimal:
+        //     break;
+        // case DataType::DateTime:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
+        //     break;
+        // case DataType::Guid:
+        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
+        //     break;
+        // case DataType::Json:
+        //     break;
+        // case DataType::Null:
+        // case DataType::RowIdentifier:
+        //     break;
+        // }
     }
 
     void ColumnExpression::BindRowKernel(){

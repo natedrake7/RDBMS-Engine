@@ -28,53 +28,37 @@ namespace QueryPipeline {
     ) : algorithm(algorithm), leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)), remainingPredicate(expression){
     }
 
-    Range::Range(){
-        this->hasRange = false;
-        this->canSeek = false;
-        this->remainingPredicate = nullptr;
-    }
+    Range::Range()
+        :   hasRange(false), canSeek(false),
+            remainingPredicate(nullptr){}
 
-    SeekRange::SeekRange() {
-        this->endInclusive = false;
-        this->startInclusive = false;
-        this->hasRange = false;
-    }
+    SeekRange::SeekRange()
+        :   startInclusive(false), endInclusive(false),
+            hasRange(false){}
 
     SeekRange::SeekRange(
         const Value &otherStart,
         const Value &otherEnd,
         const bool includeStart,
         const bool includeEnd
-    ) {
-        this->start = otherStart;
-        this->end = otherEnd;
-        this->startInclusive = includeStart;
-        this->endInclusive = includeEnd;
-        this->hasRange = this->start < this->end;
-    }
+    )   :   start(otherStart), end(otherEnd),
+            startInclusive(includeStart), endInclusive(includeEnd),
+            hasRange(this->start < this->end){}
 
     bool SeekRange::HasStart() const{ return !this->start.IsNull(); }
 
     bool SeekRange::HasEnd() const{ return !this->end.IsNull(); }
 
-    IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults() {
-        this->expression = nullptr;
-        this->canIndexSeek = false;
-        this->needsParameterBinding = false;
-        this->columnId = INVALID_COLUMN_ID;
-    }
+    IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults()
+        :   canIndexSeek(false), needsParameterBinding(false),
+            columnId(INVALID_COLUMN_ID), expression(nullptr){}
 
-    IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults(Expressions::Expression *otherExpr) {
-        this->expression = otherExpr;
-        this->canIndexSeek = false;
-        this->needsParameterBinding = false;
-        this->columnId = INVALID_COLUMN_ID;
-    }
+    IndexSeekColumnAnalysisResults::IndexSeekColumnAnalysisResults(Expressions::Expression *otherExpr)
+        :   canIndexSeek(false), needsParameterBinding(false),
+            columnId(INVALID_COLUMN_ID), expression(otherExpr){}
 
     JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator)
-        : order(allocator), orderedJoins(allocator) {
-        this->isReordered = false;
-    }
+        : order(allocator), orderedJoins(allocator), isReordered(false) {}
 
     JoinAlgorithmAnalysisResult Optimizer::ReturnNestedLoopJoinAlgorithm(
         DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo

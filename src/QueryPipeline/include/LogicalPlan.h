@@ -2,69 +2,83 @@
 #include "PhysicalPlan.h"
 
 namespace QueryPipeline {
-  struct JoinAlgorithmAnalysisResult;
+    struct JoinAlgorithmAnalysisResult;
 
-  class LogicalPlan {
+    class LogicalPlan {
     public:
-      DataTypes::Guid sessionId;
-      Int databaseId;
+        DataTypes::Guid sessionId;
+        Int databaseId;
 
-      LogicalPlan(const DataTypes::Guid& sessionId, Int databaseId);
-      explicit LogicalPlan(const DataTypes::Guid& sessionId);
-      LogicalPlan();
-      virtual ~LogicalPlan() = default;
-      virtual PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) = 0;
-  };
+        LogicalPlan(const DataTypes::Guid& sessionId, Int databaseId);
+        explicit LogicalPlan(const DataTypes::Guid& sessionId);
+        LogicalPlan();
+        virtual ~LogicalPlan() = default;
+        virtual PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) = 0;
+    };
 
-  class LogicalDeclareVariable final : public LogicalPlan {
+    class LogicalMaterialize : public LogicalPlan{
+        LogicalPlan* child;
+        table_id_t tableId;
+        UnsignedSmallInt _slotIndex;
+
     public:
-      Variable variable;
-      Expressions::Expression* expression;
+        LogicalMaterialize(
+            LogicalPlan* child,
+            table_id_t tableId,
+            UnsignedSmallInt slotIndex
+        );
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
+    };
 
-      LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
-      PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
-  };
-
-  class LogicalCreateUser final : public LogicalPlan {
+    class LogicalDeclareVariable final : public LogicalPlan {
     public:
-      DataTypes::String username;
-      DataTypes::String password;
-      DataTypes::String role;
+        Variable variable;
+        Expressions::Expression* expression;
 
-    explicit LogicalCreateUser(
-      const DataTypes::Guid& sessionId,
-      DataTypes::String&  username,
-      DataTypes::String& password,
-      DataTypes::String& role
-    );
-    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
-  };
+        LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
+        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+    };
 
-  class LogicalGrantRole final: public LogicalPlan {
+    class LogicalCreateUser final : public LogicalPlan {
     public:
-      DataTypes::String username;
-      DataTypes::String role;
+        DataTypes::String username;
+        DataTypes::String password;
+        DataTypes::String role;
 
-    explicit LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String & username, DataTypes::String & role);
-    ~LogicalGrantRole()override = default;
-    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
-  };
+        explicit LogicalCreateUser(
+            const DataTypes::Guid& sessionId,
+            DataTypes::String&  username,
+            DataTypes::String& password,
+            DataTypes::String& role
+        );
+        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+    };
 
-  class LogicalCreateDatabase final : public LogicalPlan {
+    class LogicalGrantRole final: public LogicalPlan {
     public:
-      DataTypes::String dbName;
-      explicit LogicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& dbName);
-      PhysicalPlan::PhysicalCreateDatabase* ToPhysical(QueryContext& context)override;
-  };
+        DataTypes::String username;
+        DataTypes::String role;
 
-  class LogicalUseDatabase final : public LogicalPlan {
+        explicit LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String & username, DataTypes::String & role);
+        ~LogicalGrantRole()override = default;
+        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+    };
+
+    class LogicalCreateDatabase final : public LogicalPlan {
     public:
-      Int databaseId;
-      DataTypes::Guid sessionId;
+        DataTypes::String dbName;
+        explicit LogicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& dbName);
+        PhysicalPlan::PhysicalCreateDatabase* ToPhysical(QueryContext& context)override;
+    };
 
-      explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
-      PhysicalPlan::PhysicalUseDatabase* ToPhysical(QueryContext& context)override;
-  };
+    class LogicalUseDatabase final : public LogicalPlan {
+    public:
+        Int databaseId;
+        DataTypes::Guid sessionId;
+
+        explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
+        PhysicalPlan::PhysicalUseDatabase* ToPhysical(QueryContext& context)override;
+    };
 
     class LogicalProject final: public LogicalPlan {
     public:

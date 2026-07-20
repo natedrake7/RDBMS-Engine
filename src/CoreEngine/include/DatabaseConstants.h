@@ -18,6 +18,8 @@ namespace Constants{
 
     static constexpr size_t LOG_BATCH_SIZE = 1024 * 1024; // 1 MB
 
+    static constexpr size_t DEFAULT_BATCH_SIZE = 2048;
+
     enum class AlterTableType: UnsignedTinyInt {
         AddColumn = 0,
         AlterColumn = 1,
@@ -119,7 +121,7 @@ namespace Constants{
 
     static constexpr size_t LARGE_DATA_OBJECT_SIZE = PAGE_SIZE - LARGE_OBJECT_METADATA_SIZE;;
     static constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = PAGE_SIZE_WITHOUT_HEADER;
-    static constexpr size_t LARGE_DATA_MAX_SIZE = 2147483648;
+    static constexpr size_t LARGE_DATA_MAX_SIZE = 2 * 1024 * 1024; //2 * Byte -> KB -> MB -> GB;
 
     enum class FunctionType : UnsignedTinyInt {
         // -----------------------

@@ -28,7 +28,7 @@ namespace QueryPipeline::PhysicalPlan{
 
       //if add occurs in a different index pos chaos ensues
     result.status =
-        this->catalog->InsertColumnToMasterDb(
+        CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
           context,
           this->table->_tableId,
           this->column->name.name.ToView(),
@@ -51,14 +51,14 @@ namespace QueryPipeline::PhysicalPlan{
         const auto value = this->column->defaultValue.AsString();
 
         const auto defaultValueResult =
-            this->catalog->InsertDefaultValuesToMasterDb(
+            CoreEngine::SystemCatalog::Get().InsertDefaultValuesToMasterDb(
               context,
               columnId,
               this->column->defaultValue
             );
      }
 
-    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+    const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -96,7 +96,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     //update master db set isDeleted to 1
     //remove it from table, remove it from rows. Adjust column indexes if need be.
-    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+    const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
     auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -118,7 +118,7 @@ namespace QueryPipeline::PhysicalPlan{
         context.GetAllocator()
       );
 
-    const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+    const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
     const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -129,7 +129,7 @@ namespace QueryPipeline::PhysicalPlan{
         Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
     );
 
-    const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
+    const auto _ = CoreEngine::SystemCatalog::Get().UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
     tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
@@ -156,7 +156,7 @@ namespace QueryPipeline::PhysicalPlan{
       Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
     );
 
-    const auto _ = this->catalog->UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
+    const auto _ = CoreEngine::SystemCatalog::Get().UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
     return result;
   }

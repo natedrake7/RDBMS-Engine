@@ -58,17 +58,13 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PlanNode::PlanNode() {
-        this->catalog = &CoreEngine::SystemCatalog::Get();
-        this->server = &Network::Server::Get();
         this->session = nullptr;
         this->temporaryTableId = INVALID_TABLE_ID;
     }
 
     PlanNode::PlanNode(const DataTypes::Guid &currentSessionId){
         this->sessionId = currentSessionId;
-        this->catalog = &CoreEngine::SystemCatalog::Get();
-        this->server = &Network::Server::Get();
-        this->session = this->server->GetSession(this->sessionId);
+        this->session = Network::Server::Get().GetSession(this->sessionId);
         this->temporaryTableId = INVALID_TABLE_ID;
     }
 
@@ -140,18 +136,44 @@ namespace QueryPipeline::PhysicalPlan {
        }
     }
 
+    PhysicalMaterialize::PhysicalMaterialize(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction>& functions,
+        PlanNode* child, const UnsignedSmallInt slotIndex
+    ):  _functions(std::move(functions)), child(child), _slotIndex(slotIndex){}
+
+    ExecutionResult PhysicalMaterialize::Execute(CoreEngine::ExecutionContext& context){
+        auto result = this->child->Execute(context);
+
+        const auto size = result.selectionVector->selectedRidsCount;
+
+        const auto* table = context.GetTable(this->_slotIndex);
+
+        const auto& columns = table->GetColumns();
+
+        result.vectorBatch.AllocateColumns(context.GetAllocator(), columns.Size());
+
+        for (Int ordinalPosition = 0; ordinalPosition < columns.Size(); ordinalPosition++){
+            auto* vector = CoreEngine::DataVector::FlatVector(context.GetAllocator(), columns[ordinalPosition]->Type(),  size);
+            this->_functions[ordinalPosition](table, context, result.selectionVector, vector, this->_slotIndex, ordinalPosition);
+            result.vectorBatch.SetColumn(vector, ordinalPosition);
+        }
+
+        result.selectionVector = nullptr;
+        return result;
+    }
+
     PhysicalCreateUser::PhysicalCreateUser(DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
         : username(std::move(username)), password(std::move(password)), roleName(std::move(role)) {}
 
     ExecutionResult PhysicalCreateUser::Execute(CoreEngine::ExecutionContext& context) {
         auto result = ExecutionResult(context);
 
-        if (!this->server->CreateUser(context, this->username, this->password, this->roleName))
-        result.status = Errors::RuntimeStatus(
-          Errors::RuntimeError::Error,
-          Messages::FAILED_TO_CREATE_USER,
-          context.GetAllocator()
-        );
+        if (!Network::Server::Get().CreateUser(context, this->username, this->password, this->roleName))
+            result.status = Errors::RuntimeStatus(
+              Errors::RuntimeError::Error,
+              Messages::FAILED_TO_CREATE_USER,
+              context.GetAllocator()
+            );
 
         return result;
   }
@@ -162,7 +184,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalGrantRole::Execute(CoreEngine::ExecutionContext& context) {
       auto result = ExecutionResult(context);
 
-      const auto* role = this->server->GetRole(this->roleName);
+      const auto* role = Network::Server::Get().GetRole(this->roleName);
       if (role == nullptr) {
           result.status = Errors::RuntimeStatus(
               Errors::RuntimeError::Error,
@@ -171,7 +193,7 @@ namespace QueryPipeline::PhysicalPlan {
           return result;
       }
 
-      result.status = this->server->GrantRole(context, this->sessionId, this->username, role);
+      result.status = Network::Server::Get().GrantRole(context, this->sessionId, this->username, role);
       return result;
   }
 
@@ -183,7 +205,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
 
-      const auto result = this->catalog->InsertDbToMasterDb(
+      const auto result = CoreEngine::SystemCatalog::Get().InsertDbToMasterDb(
           context,
           this->dbName.ToView(),
           path.ToView(),
@@ -193,7 +215,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto databaseId = result.primaryKey.AsInt<Int>();
 
-      const auto _ = this->catalog->InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
+      const auto _ = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
       CoreEngine::CreateDatabase(databaseId, this->dbName);
 
@@ -206,7 +228,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
       auto result = ExecutionResult(context);
 
-      if (this->server->UpdateSession(this->sessionId, this->databaseId)) {
+      if (Network::Server::Get().UpdateSession(this->sessionId, this->databaseId)) {
           result.status = Errors::RuntimeStatus(
               Errors::RuntimeError::Ok,
               Messages::USE_DATABASE_SUCCESS,
@@ -234,7 +256,7 @@ namespace QueryPipeline::PhysicalPlan {
               context.GetAllocator()
           );
 
-      const auto insertResult = this->catalog->InsertSchemaToMasterDb(
+      const auto insertResult = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(
           context,
           this->databaseId,
           this->schemaName.ToView(),
@@ -262,13 +284,13 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* allocator = context.GetAllocator();
 
-        auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        const auto& tables = this->catalog->SelectTables(allocator, this->table->_databaseId);
+        const auto& tables = CoreEngine::SystemCatalog::Get().SelectTables(allocator, this->table->_databaseId);
 
         const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
 
-        const auto tableResult = this->catalog->InsertTableToMasterDb(
+        const auto tableResult = CoreEngine::SystemCatalog::Get().InsertTableToMasterDb(
             context,
             this->table->_databaseId,
             this->table->_schemaId,
@@ -282,7 +304,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         auto* tablePtr = db->CreateTable(tableId, index);
 
-        const auto tableStatsResult = this->catalog->InsertTableStatisticsToMasterDb(
+        const auto tableStatsResult = CoreEngine::SystemCatalog::Get().InsertTableStatisticsToMasterDb(
             context,
             tableId
         );
@@ -300,7 +322,7 @@ namespace QueryPipeline::PhysicalPlan {
                     );
 
             const auto columnResult =
-                this->catalog->InsertColumnToMasterDb(
+                CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
                       context,
                       tableId,
                       column->name.name.ToView(),
@@ -317,11 +339,11 @@ namespace QueryPipeline::PhysicalPlan {
             const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
             columnPtr->SetColumnId(columnId);
 
-            const auto columnStatsResult = this->catalog->InsertColumnStatisticsToMasterDb(context, columnId);
+            const auto columnStatsResult = CoreEngine::SystemCatalog::Get().InsertColumnStatisticsToMasterDb(context, columnId);
             columnIdsDict.Add(column->index, columnId);
 
             if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
-                const auto _ = this->catalog->InsertDefaultValuesToMasterDb(
+                const auto _ = CoreEngine::SystemCatalog::Get().InsertDefaultValuesToMasterDb(
                   context,
                   columnId,
                   column->defaultValue
@@ -331,7 +353,7 @@ namespace QueryPipeline::PhysicalPlan {
             //insert identity columns
             if (column->identity == nullptr) continue;
 
-            const auto _ = this->catalog->InsertIdentityColumnToMasterDb(
+            const auto _ = CoreEngine::SystemCatalog::Get().InsertIdentityColumnToMasterDb(
                 context,
                 tableId,
                 columnId,
@@ -362,7 +384,7 @@ namespace QueryPipeline::PhysicalPlan {
             return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
         }
 
-        const auto indexResult = this->catalog->InsertIndexToMasterDb(
+        const auto indexResult = CoreEngine::SystemCatalog::Get().InsertIndexToMasterDb(
             context,
             tableId,
             this->constraintName.ToView(),
@@ -373,7 +395,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
 
-        const auto constraintResult = this->catalog->InsertConstraintToMasterDb(
+        const auto constraintResult = CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
             context,
             tableResult.primaryKey.AsInt<Int>(),
             this->constraintName.ToView(),
@@ -386,7 +408,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
 
         for(Int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
-            auto _ = this->catalog->InsertIndexColumnToMasterDb(
+            auto _ = CoreEngine::SystemCatalog::Get().InsertIndexColumnToMasterDb(
                 context,
                 indexResult.primaryKey.AsInt<Int>(),
                 primaryKeyColumnIdsArray[i],
@@ -395,7 +417,7 @@ namespace QueryPipeline::PhysicalPlan {
             );
 
 
-            _ = this->catalog->InsertConstraintColumnToMasterDb(
+            _ = CoreEngine::SystemCatalog::Get().InsertConstraintColumnToMasterDb(
                 context,
                 constraintId,
                 primaryKeyColumnIdsArray[i],
@@ -403,7 +425,7 @@ namespace QueryPipeline::PhysicalPlan {
             );
         }
 
-        const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+        const auto indexStatsResult = CoreEngine::SystemCatalog::Get().InsertIndexStatisticsToMasterDb(
             context,
             tableId,
             indexId
@@ -427,13 +449,13 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalIndexCreate::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
-      const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
       auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
-      const auto columnsHeaders =this->catalog->SelectColumns(context.GetAllocator(), this->table->_tableId);
+      const auto columnsHeaders =CoreEngine::SystemCatalog::Get().SelectColumns(context.GetAllocator(), this->table->_tableId);
 
-      const auto indexResult =this->catalog->InsertIndexToMasterDb(
+      const auto indexResult =CoreEngine::SystemCatalog::Get().InsertIndexToMasterDb(
           context,
           this->table->_tableId,
           this->constraintName.ToView(),
@@ -444,7 +466,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
 
-      const auto constraintResult =this->catalog->InsertConstraintToMasterDb(
+      const auto constraintResult =CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
           context,
           this->table->_tableId,
           this->constraintName.ToView(),
@@ -460,7 +482,7 @@ namespace QueryPipeline::PhysicalPlan {
           const auto& header = columnsHeaders[columnPos];
 
           const auto indexColumnResult =
-              this->catalog->InsertIndexColumnToMasterDb(
+              CoreEngine::SystemCatalog::Get().InsertIndexColumnToMasterDb(
                   context,
                   indexId,
                   header.id,
@@ -469,7 +491,7 @@ namespace QueryPipeline::PhysicalPlan {
               );
 
           const auto constraintColumnResult =
-              this->catalog->InsertConstraintColumnToMasterDb(
+              CoreEngine::SystemCatalog::Get().InsertConstraintColumnToMasterDb(
                   context,
                   constraintId,
                   header.id,
@@ -477,7 +499,7 @@ namespace QueryPipeline::PhysicalPlan {
               );
       }
 
-      const auto indexStatsResult = this->catalog->InsertIndexStatisticsToMasterDb(
+      const auto indexStatsResult = CoreEngine::SystemCatalog::Get().InsertIndexStatisticsToMasterDb(
           context,
           this->table->_tableId,
           indexId
@@ -500,7 +522,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
         const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -539,7 +561,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->GetConstantColumns(&result.columns);
@@ -803,7 +825,7 @@ namespace QueryPipeline::PhysicalPlan {
     ) const{
         auto* selectionVector = result.selectionVector;
 
-        const bool isIdentity = selectionVector->isIdentity;
+        const auto isIdentity = selectionVector->isIdentity;
         const Int rowCount = isIdentity
             ? static_cast<Int>(context.GetScanHandleSize(0))
             : selectionVector->selectedRidsCount;
@@ -1098,7 +1120,7 @@ namespace QueryPipeline::PhysicalPlan {
     ): insertPlan(std::move(insertPlan)), fields(std::move(fields)), table(table), child(child) {}
 
     ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
-        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         return (this->child != nullptr)
@@ -1115,7 +1137,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalHeapUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         result.status = tablePtr->HeapUpdate(context, this->expression, this->updates);
@@ -1131,7 +1153,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexScanUpdate::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         result.status = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
@@ -1145,7 +1167,7 @@ namespace QueryPipeline::PhysicalPlan {
     ): table(table), updates(std::move(updates)), expression(expression) {}
 
   ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
-      const auto* db = this->server->UseDatabase(context, this->table->_databaseId);
+      const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
       auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -1179,7 +1201,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalIndexScanDelete::Execute(CoreEngine::ExecutionContext& context){
       auto result = ExecutionResult(context);
 
-      const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+      const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
       auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -1194,7 +1216,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalIndexSeekDelete::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
 
-        const auto* db =  this->server->UseDatabase(context, this->table->_databaseId);
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
@@ -1217,7 +1239,7 @@ namespace QueryPipeline::PhysicalPlan {
         auto value = Expressions::EvaluateExpression(this->expression, evaluationContext);
         this->variable.SetValue(value);
 
-        if (!this->server->AddOrSetVariable(this->sessionId, this->variable)){
+        if (!Network::Server::Get().AddOrSetVariable(this->sessionId, this->variable)){
             result.status = Errors::RuntimeStatus(
                 Errors::RuntimeError::Error,
                 Messages::FAILED_TO_ADD_VARIABLE,

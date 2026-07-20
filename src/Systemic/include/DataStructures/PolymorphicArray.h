@@ -276,6 +276,11 @@ namespace DataStructures{
 
         void SetAllocator(const Memory::IAllocator* allocator) { this->_allocator = allocator; }
 
+        void SetData(T* data, const Int size){
+            this->_data = data;
+            this->_size = size;
+        }
+
         [[nodiscard]] const Memory::IAllocator* GetAllocator() const { return this->_allocator; }
 
         [[nodiscard]] bool HasAllocator() const { return this->_allocator != nullptr; }

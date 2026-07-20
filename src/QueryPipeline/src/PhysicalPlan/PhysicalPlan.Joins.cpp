@@ -6,35 +6,6 @@
 #include "Vectorization/Vectorization.h"
 
 namespace QueryPipeline::PhysicalPlan {
-    void PerformNullJoin(
-        const ::Memory::IAllocator* allocator,
-        ExecutionResult& result,
-        CoreEngine::StorageTypes::RID* outerRow,
-        const Int numberOfColumns
-    ){
-        // outerRow->Join(
-        // Pages::RowView::NullReference(
-        //         allocator,
-        //         numberOfColumns
-        //     )
-        // );
-        // result.rows.Push(outerRow);
-    }
-
-    void PerformJoin(
-        const ::Memory::IAllocator* allocator,
-        ExecutionResult& result,
-        const CoreEngine::StorageTypes::RID* outerRow,
-        const CoreEngine::StorageTypes::RID* innerRow
-    ){
-        // const auto outerCopy = Pages::RowView::Copy(
-        //     outerRow,
-        //     allocator
-        // );
-        // outerCopy->Join(innerRow);
-        // result.rows.Push(outerCopy);
-    }
-
     void VectorBatch::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){
         this->_columns = static_cast<CoreEngine::DataVector**>(
             allocator->AllocateRaw(sizeof(CoreEngine::DataVector*)*numberOfColumns)
@@ -47,7 +18,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(
         CoreEngine::ExecutionContext& context,
-        ExecutionResult& leftResult
+        const ExecutionResult& leftResult
     ) const {
         const auto* allocator = context.GetAllocator();
 
@@ -66,13 +37,11 @@ namespace QueryPipeline::PhysicalPlan {
             auto rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
 
-            if (
-                leftResult.selectionVector->isIdentity
-                && rightResult.selectionVector->isIdentity
-            ){
-                 for (Int i = 0;i < leftResult.selectionVector->selectedRidsCount; i++){
-
-                 }
+            for (Int i = 0;i < leftResult.selectionVector->selectedRidsCount; i++){
+                // auto idx = PlanNode::SelectedIndex(
+                //     leftResult.selectionVector,
+                //
+                // )
             }
 
         }

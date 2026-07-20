@@ -2,6 +2,7 @@
 #include "DataTypes/DataTypes.h"
 
 namespace DataTypes{
+    class StringValue;
     class JsonBinary;
     class StringView;
     class DateTime;
@@ -19,14 +20,12 @@ namespace Comparators{
         Greater = 1
     };
 
-    [[nodiscard]] static constexpr Comparator BranchlessCompare(const bool lhs, const bool rhs){
-        return static_cast<Comparator>(
-            (rhs > lhs) - (rhs < lhs)
-        );
+    [[nodiscard]] inline constexpr Comparator BranchlessCompare(const bool isLess, const bool isGreater){
+        return static_cast<Comparator>(isGreater - isLess);
     }
 
     template<DataTypes::IsInteger T>
-    [[nodiscard]] static constexpr Comparator Compare(T lhs, T rhs){
+    [[nodiscard]] inline constexpr Comparator Compare(T lhs, T rhs){
         return BranchlessCompare(lhs < rhs, lhs > rhs);
     }
 
@@ -34,6 +33,10 @@ namespace Comparators{
     [[nodiscard]] Comparator Compare(const DataTypes::Guid& lhs, const DataTypes::Guid& rhs);
     [[nodiscard]] Comparator Compare(const DataTypes::DateTime& lhs, const DataTypes::DateTime& rhs);
     [[nodiscard]] Comparator Compare(const DataTypes::String& lhs, const DataTypes::String& rhs);
+
+    [[nodiscard]] bool Equals(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs);
+    [[nodiscard]] Comparator Compare(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs);
+    [[nodiscard]] Comparator CompareIgnoreCase(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs);
 
     [[nodiscard]] Comparator Compare(const DataTypes::String& lhs, const char* rhs, Int size);
 

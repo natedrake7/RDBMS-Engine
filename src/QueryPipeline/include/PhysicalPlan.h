@@ -7,8 +7,7 @@
 #include "../../Systemic/include/DataStructures/PriorityQueue.h"
 #include "../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
-
-struct MergeElement;
+#include "../../CoreEngine/include/DataStorage/Table.h"
 
 namespace CoreEngine {
     struct SelectionVector;
@@ -26,19 +25,6 @@ namespace QueryPipeline {
 
 namespace QueryPipeline::PhysicalPlan {
     struct ExecutionResult;
-
-    static void PerformNullJoin(
-        const ::Memory::IAllocator* allocator,
-        ExecutionResult& result,
-        CoreEngine::StorageTypes::RID* outerRow,
-        Int numberOfColumns
-    );
-    static void PerformJoin(
-        const ::Memory::IAllocator* allocator,
-        ExecutionResult& result,
-        const CoreEngine::StorageTypes::RID* outerRow,
-        const CoreEngine::StorageTypes::RID* innerRow
-    );
 
     struct VectorBatch{
         CoreEngine::DataVector** _columns;
@@ -81,9 +67,6 @@ namespace QueryPipeline::PhysicalPlan {
     protected:
         DataTypes::Guid sessionId;
 
-        CoreEngine::SystemCatalog* catalog;
-        Network::Server* server;
-
         const Network::Session* session;
 
         Int temporaryTableId;
@@ -106,13 +89,35 @@ namespace QueryPipeline::PhysicalPlan {
         virtual void UpdateScanState(const CoreEngine::StorageTypes::RID* rid);
 
         [[nodiscard]] bool UsesExternalStorage() const;
-        static void LazyCachePage(
+        static inline void LazyCachePage(
             const CoreEngine::ExecutionContext& context,
             CoreEngine::StorageTypes::RID rid,
             UnsignedSmallInt slotIndex,
             Pages::PageView* pagePtr
         );
     };
+
+
+
+    /**
+     * @name System Nodes
+     * Nodes that are inserted in between nodes automatically by the engine
+     * @{
+     */
+    class PhysicalMaterialize: public PlanNode{
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction> _functions;
+        PlanNode* child;
+        UnsignedSmallInt _slotIndex;
+
+        public:
+            explicit PhysicalMaterialize(
+                DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction>& functions,
+                PlanNode* child, UnsignedSmallInt slotIndex
+            );
+            ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
+    };
+
+    /** @} End of: System Nodes */
 
     /**
      * @name Catalog Altering Classes
@@ -473,7 +478,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         [[nodiscard]] ExecutionResult ExecuteBatchJoin(
             CoreEngine::ExecutionContext& context,
-            ExecutionResult& leftResult
+            const ExecutionResult& leftResult
         ) const;
     public:
         PhysicalNestedLoopInnerJoin(

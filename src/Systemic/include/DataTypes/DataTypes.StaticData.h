@@ -6,6 +6,7 @@
 #include "JsonBinary.h"
 #include "DateTime.h"
 #include "Guid.h"
+#include "StringValue.h"
 
 static constexpr auto TRUE_STRING = DataTypes::StringView("TRUE");
 static constexpr auto FALSE_STRING = DataTypes::StringView("FALSE");
@@ -34,8 +35,8 @@ static constexpr ConstexprDictionary COLUMN_SIZES_BY_TYPENAME{
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
-static block_size_t COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT]{
-    sizeof(DataTypes::String),
+static block_size_t VECTOR_COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT]{
+    sizeof(DataTypes::StringValue),
     sizeof(bool),
     sizeof(TinyInt),
     sizeof(SmallInt),

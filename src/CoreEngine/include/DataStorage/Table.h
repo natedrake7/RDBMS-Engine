@@ -33,6 +33,8 @@ namespace Indexing{
 }
 
 namespace CoreEngine{
+    struct DataVector;
+    struct ScanHandle;
     struct ScanState;
     struct SelectionVector;
     class Database;
@@ -63,6 +65,15 @@ namespace CoreEngine::StorageTypes{
 
 
     };
+
+    using TableMaterializationFunction = void(*)(
+        const Table*,
+        const ExecutionContext&,
+        const SelectionVector*,
+        DataVector*,
+        UnsignedSmallInt slotIndex,
+        column_index_t ordinalPosition
+    );
 
     class Table final{
         HashSet<column_id_t> clusteredIndexColumnsCache;
@@ -396,28 +407,27 @@ namespace CoreEngine::StorageTypes{
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
             template<typename T>
-            void MaterializeColumnFromPage(
+            static void MaterializeColumn(
+                const Table* table,
                 const ExecutionContext& context,
                 const SelectionVector* sv,
-                object_t* __restrict__ _data,
-                column_index_t columnIndex
+                DataVector* __restrict__ _vector,
+                UnsignedSmallInt slotIndex,
+                column_index_t ordinalPosition
+            );
+
+            template<typename T>
+            void MaterializeColumn(
+                const ExecutionContext& context,
+                const SelectionVector* sv,
+                DataVector* __restrict__ _vector,
+                UnsignedSmallInt slotIndex,
+                column_index_t ordinalPosition
             )const;
             template<typename T>
-            void MaterializeColumnFromPage(
+            void MaterializeColumn(
                 const ExecutionContext& context,
                 Int rangeEnd,
-                object_t* __restrict__ _data,
-                column_index_t columnIndex
-            )const;
-            void MaterializeStringFromPage(
-                const ExecutionContext& context,
-                const SelectionVector* sv,
-                object_t* __restrict__ _data,
-                column_index_t columnIndex
-            )const;
-            void MaterializeJsonFromPage(
-                const ExecutionContext& context,
-                const SelectionVector* sv,
                 object_t* __restrict__ _data,
                 column_index_t columnIndex
             )const;

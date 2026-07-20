@@ -5,6 +5,7 @@
 #include "../include/DataTypes/String.h"
 #include "../include/DataTypes/StringView.h"
 #include "../include/DataTypes/Value.h"
+#include "DataTypes/StringValue.h"
 
 namespace Comparators{
     //Branchless Comparison
@@ -25,6 +26,36 @@ namespace Comparators{
 
     Comparator Compare(const DataTypes::String& lhs, const DataTypes::String& rhs){
         return Compare(lhs, rhs.Data(), rhs.Size());
+    }
+
+    bool Equals(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs){
+        const auto lhsLength = lhs.Size();
+
+        if (lhsLength != rhs.Size())
+            return false;
+
+        if (lhs.IsInline())
+            return std::memcmp(&lhs, &rhs, sizeof(DataTypes::StringValue)) == 0;
+
+        return
+            std::memcmp(&lhs, &rhs, sizeof(Int) + DataTypes::StringValue::PrefixSize()) == 0
+            && std::memcmp(lhs.Data(), rhs.Data(), lhsLength) == 0;
+    }
+
+    Comparator Compare(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs){
+        const auto prefixCmp = std::memcmp(lhs.Prefix(), rhs.Prefix(), DataTypes::StringValue::PrefixSize());
+        if (prefixCmp != 0)
+            return BranchlessCompare(prefixCmp < 0, prefixCmp > 0);
+
+        const auto lhsSize = lhs.Size();
+        const auto rhsSize = rhs.Size();
+
+        const auto minLength = Math::Min(lhsSize, rhsSize);
+        const auto cmp = std::memcmp(lhs.Data(), rhs.Data(), minLength);
+        if (cmp == 0)
+            return Compare(lhsSize,rhsSize);
+
+        return BranchlessCompare(cmp < 0, cmp > 0);
     }
 
     Comparator Compare(const DataTypes::String& lhs, const char* rhs, const Int size){

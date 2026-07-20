@@ -178,8 +178,9 @@ namespace Pages{
             Int columnIndex
         ) const;
 
-        template<DataTypes::Primitive T>
+        template<typename T>
         [[nodiscard]] T GetColumnAt(
+            const ::Memory::IAllocator* allocator,
             Int index,
             Int columnIndex,
             bool* outNull

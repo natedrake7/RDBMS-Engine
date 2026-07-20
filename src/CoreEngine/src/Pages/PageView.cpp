@@ -7,6 +7,7 @@
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
 #include "DataStorage/Row.h"
+#include "DataTypes/StringValue.h"
 #include "SystemDatabases/VersionDatabase.h"
 
 namespace Pages{
@@ -526,8 +527,9 @@ namespace Pages{
         );
     }
 
-    template <DataTypes::Primitive T>
+    template <typename T>
     T PageView::GetColumnAt(
+        const ::Memory::IAllocator* allocator,
         const Int index,
         const Int columnIndex,
         bool* outNull
@@ -540,11 +542,29 @@ namespace Pages{
         );
 
         *outNull = rowEntry.IsNull();
-        auto out = T();
-        if (*outNull) return out;
+        if (*outNull)
+            return T();
 
-        std::memcpy(&out, rowDataPtr + rowEntry._offset, sizeof(T));
-        return out;
+        //TODO follow overflowVal and LOB
+        if constexpr (DataTypes::Primitive<T>){
+            T out;
+            std::memcpy(&out, rowDataPtr + rowEntry._offset, sizeof(T));
+            return out;
+        }
+        else if constexpr (DataTypes::IsStringValue<T>)
+            return DataTypes::StringValue::Create(
+                allocator,
+                reinterpret_cast<const char*>(rowDataPtr + rowEntry._offset),
+                rowEntry.Size()
+            );
+        else if constexpr (DataTypes::IsDecimal<T>)
+            return DataTypes::Decimal(rowDataPtr + rowEntry._offset, rowEntry.Size());
+        else if constexpr (DataTypes::IsJson<T>)
+            return DataTypes::JsonBinary(allocator, rowDataPtr + rowEntry._offset, rowEntry.Size());
+        else
+            static_assert(DataTypes::AlwaysFalse<T>, "Unsupported type");
+
+        return T();
     }
 
     DataTypes::String PageView::GetStringColumnAt(
@@ -641,11 +661,14 @@ namespace Pages{
         return CoreEngine::VersionDatabase::Get().RetrieveVersionedRID(snapshot, rowHeader, outRID);
     }
 
-    template bool PageView::GetColumnAt<bool>(Int index, Int columnIndex, bool* outNull) const;
-    template TinyInt PageView::GetColumnAt<TinyInt>(Int index, Int columnIndex, bool* outNull) const;
-    template SmallInt PageView::GetColumnAt<SmallInt>(Int index, Int columnIndex, bool* outNull) const;
-    template BigInt PageView::GetColumnAt<BigInt>(Int index, Int columnIndex, bool* outNull) const;
-    template Int PageView::GetColumnAt<Int>(Int index, Int columnIndex, bool* outNull) const;
-    template DataTypes::DateTime PageView::GetColumnAt<DataTypes::DateTime>(Int index, Int columnIndex, bool* outNull) const;
-    template DataTypes::Guid PageView::GetColumnAt<DataTypes::Guid>(Int index, Int columnIndex, bool* outNull) const;
+    template bool PageView::GetColumnAt<bool>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template TinyInt PageView::GetColumnAt<TinyInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template SmallInt PageView::GetColumnAt<SmallInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template BigInt PageView::GetColumnAt<BigInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template Int PageView::GetColumnAt<Int>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template DataTypes::DateTime PageView::GetColumnAt<DataTypes::DateTime>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template DataTypes::Guid PageView::GetColumnAt<DataTypes::Guid>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template DataTypes::StringValue PageView::GetColumnAt<DataTypes::StringValue>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template DataTypes::Decimal PageView::GetColumnAt<DataTypes::Decimal>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template DataTypes::JsonBinary PageView::GetColumnAt<DataTypes::JsonBinary>(const ::Memory::IAllocator*, Int, Int, bool*) const;
 }
