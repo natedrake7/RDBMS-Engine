@@ -7,8 +7,10 @@
 #include <utility>
 
 #include "DatabaseConstants.h"
+#include "../../CoreEngine/include/Contexts/OutputSchema.h"
 #include "Parser.h"
 #include "../../Systemic/include/DataTypes/StringValue.h"
+#include "DataStorage/ColumnMaterializationInfo.h"
 
 
 namespace QueryPipeline {
@@ -31,52 +33,37 @@ namespace QueryPipeline {
     PhysicalPlan::PlanNode* LogicalMaterialize::ToPhysical(QueryContext& context){
         const auto headers = CoreEngine::SystemCatalog::Get().SelectColumns(context._compileContext.GetAllocator(), this->tableId);
 
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction> functions(
-            context._compileContext.GetAllocator(),
+        auto* allocator = context._compileContext.GetAllocator();
+
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> materializationInfo(
+            allocator,
             headers.Size()
         );
+
+        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, headers.Size());
 
         auto* childPhysical = this->child->ToPhysical(context);
 
         for (const auto& header : headers){
-            switch (static_cast<DataType>(header.dataType)) {
-            case DataType::String:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::StringValue>);
-                break;
-            case DataType::Bool:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<bool>);
-                break;
-            case DataType::TinyInt:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<TinyInt>);
-                break;
-            case DataType::SmallInt:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<SmallInt>);
-                break;
-            case DataType::Int:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<Int>);
-                break;
-            case DataType::BigInt:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<BigInt>);
-                break;
-            case DataType::Decimal:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::Decimal>);
-                break;
-            case DataType::DateTime:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::DateTime>);
-                break;
-            case DataType::Guid:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::Guid>);
-                break;
-            case DataType::Json:
-                functions.Push(&CoreEngine::StorageTypes::Table::MaterializeColumn<DataTypes::JsonBinary>);
-                break;
-            case DataType::Null:
-            case DataType::RowIdentifier:
-                break;
-            }
+            const auto dataType = static_cast<DataType>(header.dataType);
+            outputSchema->_columns.Push(
+                CoreEngine::SchemaColumn::Base(this->_slotIndex, header.ordinalPosition, dataType)
+            );
+
+            materializationInfo.Push(
+            CoreEngine::StorageTypes::ColumnMaterializationInfo(
+                     CoreEngine::StorageTypes::COLUMN_MATERIALIZERS[header.dataType],
+                     header.ordinalPosition,
+                     dataType
+                )
+            );
         }
 
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(functions, childPhysical, this->_slotIndex);
+
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(
+            materializationInfo, childPhysical,
+            outputSchema, this->_slotIndex
+        );
     }
 
     LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
@@ -117,20 +104,42 @@ namespace QueryPipeline {
 
     LogicalProject::LogicalProject(
         LogicalPlan *child,
-        DataStructures::PolymorphicArray<Expressions::Expression*> &resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
         const UnsignedSmallInt slotCount
-    ):   child(child), resultExpressions(std::move(resultExpressions)),
-            columnsHeaders(std::move(columnsHeaders)), _slotCount(slotCount) {}
+    ):   child(child), _projections(std::move(projections)),
+        _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
-        for (auto* expression : this->resultExpressions)
-            Expressions::BindExpressionKernel(expression, context._executionMode);
+        auto* outputSchema = context._compileContext.GetAllocator()->Allocate<CoreEngine::OutputSchema>(
+            context._compileContext.GetAllocator(),
+            this->_projections.Size()
+        );
+
+        for (const auto* expression : this->_projections){
+            const auto* expr = expression->AsColumn();
+            auto schemaColumn = CoreEngine::SchemaColumn::Base(
+                    expr->_slotIndex,
+                    expr->ordinalPosition,
+                    expr->returnType
+            );
+            outputSchema->_columns.Push(schemaColumn);
+        }
+
+        auto* childPhysical = this->child != nullptr
+            ? this->child->ToPhysical(context)
+            : nullptr;
+
+        auto* childSchema = childPhysical != nullptr
+            ? childPhysical->GetSchema()
+            : nullptr;
+
+        for (auto* expression : this->_projections)
+            Expressions::BindAndResolveExpressionKernel(expression, childSchema);
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
-            (this->child != nullptr) ? this->child->ToPhysical(context) : nullptr,
-            this->resultExpressions,
-            this->columnsHeaders,
+            childPhysical,
+            this->_projections,
+            outputSchema,
             this->_slotCount
         );
     }

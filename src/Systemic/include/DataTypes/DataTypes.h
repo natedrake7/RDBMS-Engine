@@ -170,6 +170,9 @@ namespace DataTypes{
             return DataType::Decimal;
         else if constexpr (std::is_same_v<T, String>)
             return DataType::String;
+        // The in-vector representation of a String column: both map to DataType::String.
+        else if constexpr (std::is_same_v<T, StringValue>)
+            return DataType::String;
         else if constexpr (std::is_same_v<T, DateTime>)
             return DataType::DateTime;
         else if constexpr (std::is_same_v<T, Guid>)

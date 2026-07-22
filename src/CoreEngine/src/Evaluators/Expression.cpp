@@ -15,6 +15,7 @@
 #include "DataTypes/DataTypes.StaticData.h"
 #include "../../include/Evaluators/Kernels/Row/RowKernels.h"
 #include "../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
+#include "Contexts/OutputSchema.h"
 #include "Evaluators/Kernels/Row/RowKernels.Binary.h"
 #include "Evaluators/Kernels/Row/RowKernels.Cast.h"
 #include "Vectorization/Vectorization.h"
@@ -177,38 +178,7 @@ namespace Expressions{
     // }
 
     void ColumnExpression::BindVectorizedKernel(){
-        // switch (this->returnType){
-        // case DataType::String:
-        //     break;
-        // case DataType::Bool:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<bool>;
-        //     break;
-        // case DataType::TinyInt:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<TinyInt>;
-        //     break;
-        // case DataType::SmallInt:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<SmallInt>;
-        //     break;
-        // case DataType::Int:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<Int>;
-        //     break;
-        // case DataType::BigInt:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<BigInt>;
-        //     break;
-        // case DataType::Decimal:
-        //     break;
-        // case DataType::DateTime:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::DateTime>;
-        //     break;
-        // case DataType::Guid:
-        //     this->vectorizedKernel = &CoreEngine::VectorizedKernels::PrimitiveColumnScanKernel<DataTypes::Guid>;
-        //     break;
-        // case DataType::Json:
-        //     break;
-        // case DataType::Null:
-        // case DataType::RowIdentifier:
-        //     break;
-        // }
+        this->vectorizedKernel = &CoreEngine::VectorizedKernels::ColumnScanKernel;
     }
 
     void ColumnExpression::BindRowKernel(){
@@ -293,6 +263,12 @@ namespace Expressions{
             expression->BindVectorizedKernel();
             break;
         }
+    }
+
+    void ColumnExpression::ResolveReference(ColumnExpression* expression, const CoreEngine::OutputSchema* schema){
+        const auto identity = CoreEngine::ColumnIdentity::Base(expression->_slotIndex, expression->ordinalPosition);
+        expression->_boundReference._childIndex = 0;
+        expression->_boundReference._position = schema->IndexOf(identity);
     }
 
     DataType ColumnExpression::GetReturnType() const{ return this->returnType; }
@@ -1091,9 +1067,9 @@ namespace Expressions{
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
-        const CoreEngine::SelectionVector* selectionVector
+        const CoreEngine::DataChunk* chunk
     ){
-        return expression->vectorizedKernel(expression, executionContext, selectionVector);
+        return expression->vectorizedKernel(expression, chunk);
     }
 
     void EvaluateExpression(
@@ -1219,5 +1195,45 @@ namespace Expressions{
         default:
             break;
         }
+    }
+
+    void BindAndResolveExpressionKernel(Expression* expression, const CoreEngine::OutputSchema* schema){
+        if (expression == nullptr)
+            return;
+
+        static auto constexpr EXECUTION_MODE = Constants::ExecutionMode::Vectorized;
+
+        switch (expression->expressionType){
+        case ExpressionType::Column:{
+            auto* columnExpr = expression->AsColumn();
+            ColumnExpression::BindExpressionKernel(columnExpr, EXECUTION_MODE);
+            ColumnExpression::ResolveReference(columnExpr, schema);
+            break;
+        }
+        case ExpressionType::Constant:
+            ConstantExpression::BindExpressionKernel(expression->AsConstant(), EXECUTION_MODE);
+            break;
+        case ExpressionType::Binary:
+            BinaryExpression::BindExpressionKernel(expression->AsBinary(), EXECUTION_MODE);
+            break;
+        case ExpressionType::Logical:
+            LogicalExpression::BindExpressionKernel(expression->AsLogical(), EXECUTION_MODE);
+            break;
+        case ExpressionType::Variable:
+            VariableExpression::BindExpressionKernel(expression->AsVariable(), EXECUTION_MODE);
+            break;
+        case ExpressionType::Branch:
+            break;
+        case ExpressionType::Function:
+            break;
+        case ExpressionType::Json:
+            break;
+        case ExpressionType::Cast:
+            CastExpression::BindExpressionKernel(expression->AsCast(), EXECUTION_MODE);
+            break;
+        default:
+            break;
+        }
+
     }
 }

@@ -1,10 +1,9 @@
 #pragma once
+#include "BoundReference.h"
 #include "Expression.h"
 #include "Expressions.Additional.h"
-#include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
-#include "../../../Systemic/include/DataStructures/Dictionary.h"
 #include "../Pages/PageView.h"
 
 namespace DataTypes{
@@ -14,6 +13,8 @@ namespace DataTypes{
 class Variable;
 
 namespace CoreEngine{
+    struct DataChunk;
+    struct OutputSchema;
     struct DataVector;
     struct SelectionVector;
 
@@ -79,8 +80,7 @@ namespace Expressions{
 
     using VectorizedKernelFunction = CoreEngine::DataVector* (*)(
         const Expression* self,
-        const CoreEngine::ExecutionContext& context,
-        const CoreEngine::SelectionVector* selectionVector
+        const CoreEngine::DataChunk* chunk
     );
 
     using RowKernelFunction = void(*)(
@@ -147,6 +147,8 @@ namespace Expressions{
         DataTypes::String alias;
         DataTypes::String tableAlias;
 
+        BoundReference _boundReference;
+
         Int tableId;
         Int columnId;
 
@@ -160,6 +162,7 @@ namespace Expressions{
         explicit ColumnExpression(column_index_t index, DataType dataType);
 
         static void BindExpressionKernel(ColumnExpression* expression, Constants::ExecutionMode mode);
+        static void ResolveReference(ColumnExpression* expression, const CoreEngine::OutputSchema* schema);
 
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
@@ -357,7 +360,7 @@ namespace Expressions{
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
         const CoreEngine::ExecutionContext& executionContext,
-        const CoreEngine::SelectionVector* selectionVector
+        const CoreEngine::DataChunk* chunk
     );
     void EvaluateExpression(
         const Expression* expression,
@@ -385,4 +388,6 @@ namespace Expressions{
     DataType GetExpressionReturnType(const Expression* expression);
 
     void BindExpressionKernel(Expression* expression, Constants::ExecutionMode mode);
+
+    void BindAndResolveExpressionKernel(Expression* expression, const CoreEngine::OutputSchema* schema);
 }

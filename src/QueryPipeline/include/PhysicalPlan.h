@@ -8,8 +8,14 @@
 #include "../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "../../CoreEngine/include/DataStorage/Table.h"
+#include "../../CoreEngine/include/Vectorization/Vectorization.h"
 
 namespace CoreEngine {
+    namespace StorageTypes
+    {
+        struct ColumnMaterializationInfo;
+    }
+
     struct SelectionVector;
     class ExecutionContext;
     class SystemCatalog;
@@ -26,18 +32,6 @@ namespace QueryPipeline {
 namespace QueryPipeline::PhysicalPlan {
     struct ExecutionResult;
 
-    struct VectorBatch{
-        CoreEngine::DataVector** _columns;
-        Int _numberOfColumns;
-        Int _numberOfRows;
-
-        VectorBatch()
-            : _columns(nullptr), _numberOfColumns(0), _numberOfRows(0) {}
-
-        void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
-        void SetColumn(CoreEngine::DataVector* columnData, Int columnIndex) const;
-    };
-
     struct ExecutionResult {
         //metadata structures of the query
         Errors::RuntimeStatus status;
@@ -45,7 +39,7 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
         DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
 
-        VectorBatch vectorBatch;
+        CoreEngine::DataChunk dataChunk;
         CoreEngine::SelectionVector* selectionVector;
         bool canFetchMore;
 
@@ -67,6 +61,9 @@ namespace QueryPipeline::PhysicalPlan {
     protected:
         DataTypes::Guid sessionId;
 
+        // Owned by the compile arena and shared: a pass-through node points at its child's
+        // schema, so a schema must never be mutated once built.
+        const CoreEngine::OutputSchema* _schema;
         const Network::Session* session;
 
         Int temporaryTableId;
@@ -74,6 +71,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PlanNode();
         explicit PlanNode(const DataTypes::Guid& currentSessionId);
+        explicit PlanNode(const CoreEngine::OutputSchema* schema);
         virtual ~PlanNode() = default;
         void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows);
         void InsertPostProjectionResultsToTemporaryDatabase(
@@ -88,6 +86,8 @@ namespace QueryPipeline::PhysicalPlan {
         virtual ExecutionResult Execute(CoreEngine::ExecutionContext& context) = 0;
         virtual void UpdateScanState(const CoreEngine::StorageTypes::RID* rid);
 
+        [[nodiscard]] const CoreEngine::OutputSchema* GetSchema() const;
+
         [[nodiscard]] bool UsesExternalStorage() const;
         static inline void LazyCachePage(
             const CoreEngine::ExecutionContext& context,
@@ -98,21 +98,22 @@ namespace QueryPipeline::PhysicalPlan {
     };
 
 
-
     /**
      * @name System Nodes
      * Nodes that are inserted in between nodes automatically by the engine
      * @{
      */
     class PhysicalMaterialize: public PlanNode{
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction> _functions;
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> _materializationInfo;
         PlanNode* child;
         UnsignedSmallInt _slotIndex;
 
         public:
             explicit PhysicalMaterialize(
-                DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction>& functions,
-                PlanNode* child, UnsignedSmallInt slotIndex
+                DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo>& materializationInfo,
+                PlanNode* child,
+                const CoreEngine::OutputSchema* schema,
+                UnsignedSmallInt slotIndex
             );
             ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
@@ -302,12 +303,14 @@ namespace QueryPipeline::PhysicalPlan {
      */
 
     class PhysicalProject final : public PlanNode {
-        DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
-        DataStructures::PolymorphicArray<Headers::ColumnHeader> columnHeaders;
+        DataStructures::PolymorphicArray<Expressions::Expression*> _projections;
         PlanNode* child;
         UnsignedSmallInt _slotCount;
 
-        inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
+        inline void ExecuteVectorizedMode(
+            const ExecutionResult& result,
+            const CoreEngine::ExecutionContext& context
+        )const;
         inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
 
         [[nodiscard]] inline ExecutionResult ExecuteStatement(CoreEngine::ExecutionContext& context) const;
@@ -316,8 +319,8 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalProject(
             PlanNode* child,
-            DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-            DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
+            const CoreEngine::OutputSchema* schema,
             UnsignedSmallInt slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;

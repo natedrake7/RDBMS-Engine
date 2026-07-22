@@ -3,10 +3,11 @@
 #include "PhysicalPlan.h"
 #include "Vectorization/Vectorization.h"
 #include "../../Systemic/include/DataTypes/String.h"
+#include "../../Systemic/include/DataTypes/StringValue.h"
 #include "../../Systemic/include/DataTypes/JsonBinary.h"
 
 namespace QueryPipeline{
-    RowCursor::RowCursor(const PhysicalPlan::VectorBatch* batch)
+    RowCursor::RowCursor(const CoreEngine::DataChunk* batch)
         : _batch(batch) {}
 
     void RowCursor::PrintRows(std::ostream& os) const{
@@ -28,7 +29,9 @@ namespace QueryPipeline{
 
         switch (columnData->_type){
         case DataType::String:{
-            auto* str = reinterpret_cast<const DataTypes::String*>(columnData->_data + rowIndex * sizeof(DataTypes::String));
+            // SlotAt strides by the vector's own entry size: a String column stores
+            // 16-byte StringValue entries, not 24-byte String ones.
+            const auto* str = reinterpret_cast<const DataTypes::StringValue*>(columnData->SlotAt(rowIndex));
             os << *str;
             break;
         }

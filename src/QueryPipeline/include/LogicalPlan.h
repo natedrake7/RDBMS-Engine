@@ -83,14 +83,12 @@ namespace QueryPipeline {
     class LogicalProject final: public LogicalPlan {
     public:
         LogicalPlan* child;
-        DataStructures::PolymorphicArray<Expressions::Expression*> resultExpressions;
-        DataStructures::PolymorphicArray<Headers::ColumnHeader> columnsHeaders;
+        DataStructures::PolymorphicArray<Expressions::Expression*> _projections;
         UnsignedSmallInt _slotCount;
 
         LogicalProject(
             LogicalPlan* child,
-            DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-            DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnsHeaders,
+            DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
             UnsignedSmallInt slotCount
         );
         PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;

@@ -1,6 +1,4 @@
 ﻿#include "../../include/Vectorization/Vectorization.h"
-#include <cmath>
-#include <cstring>
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
 namespace CoreEngine{
@@ -45,5 +43,41 @@ namespace CoreEngine{
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(validityWords * sizeof(UnsignedBigInt)));
         std::memset(dataVector->_validity, 0, validityWords * sizeof(UnsignedBigInt));   // 0 = not-null default
         return dataVector;
+    }
+
+    DataChunk::DataChunk()
+        :   _columns(nullptr), _selection(nullptr),
+            _numberOfColumns(0), _numberOfRows(0) {}
+
+    DataChunk::DataChunk(DataChunk&& other) noexcept
+        : _columns(other._columns), _selection(other._selection),
+            _numberOfColumns(other._numberOfColumns), _numberOfRows(other._numberOfRows){
+    }
+
+    DataChunk& DataChunk::operator=(DataChunk&& other) noexcept{
+        if (this == &other)
+            return *this;
+
+        this->_columns = other._columns;
+        this->_selection = other._selection;
+        this->_numberOfColumns = other._numberOfColumns;
+        this->_numberOfRows = other._numberOfRows;
+        return *this;
+    }
+
+    void DataChunk::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){
+        this->_columns = static_cast<DataVector**>(
+            allocator->AllocateRaw(sizeof(DataVector*)*numberOfColumns)
+        );
+    }
+
+    void DataChunk::SetColumn(DataVector* columnData, const Int columnIndex) const{
+        this->_columns[columnIndex] = columnData;
+    }
+
+    Int DataChunk::RowPhysicalIndex(const Int rowLogicalIndex) const{
+        return this->_selection == nullptr
+            ? rowLogicalIndex
+            : this->_selection[rowLogicalIndex];
     }
 }

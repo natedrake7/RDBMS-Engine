@@ -227,13 +227,13 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
                 break;
             }
 
-            count += batch.vectorBatch._numberOfRows;
+            count += batch.dataChunk._numberOfRows;
             for (const auto& column : batch.displayColumnNames)
                 std::cout << column << " || ";
 
             std::cout << std::endl;
 
-            QueryPipeline::RowCursor rowCursor(&batch.vectorBatch);
+            QueryPipeline::RowCursor rowCursor(&batch.dataChunk);
             std::cout << rowCursor << std::endl;
         }
 

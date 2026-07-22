@@ -3,16 +3,16 @@
 
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 
+namespace CoreEngine{
+    struct DataChunk;
+}
+
 namespace QueryPipeline{
-    namespace PhysicalPlan
-    {
-        struct VectorBatch;
-    }
 
     struct RowCursor{
-        const PhysicalPlan::VectorBatch* _batch;
+        const CoreEngine::DataChunk* _batch;
 
-        explicit RowCursor(const PhysicalPlan::VectorBatch* batch);
+        explicit RowCursor(const CoreEngine::DataChunk* batch);
 
         friend std::ostream& operator<<(std::ostream& os, const RowCursor& cursor);
 

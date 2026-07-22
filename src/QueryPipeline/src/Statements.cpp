@@ -841,9 +841,9 @@ namespace QueryPipeline::Statements {
         return Constants::DB_READER_PERMISSIONS;
     }
 
-    LogicalPlan * SelectStatement::ToLogical(QueryContext& context){
+    LogicalPlan* SelectStatement::ToLogical(QueryContext& context){
         if (this->IsConstant())
-            return context._compileContext.Allocate<LogicalProject>(nullptr, this->_projections, this->columnHeaders, this->_slotCount);
+            return context._compileContext.Allocate<LogicalProject>(nullptr, this->_projections, this->_slotCount);
 
         const Optimizer optimizer(context);
         const auto joinReorderResult = optimizer.DetermineJoinOrder(this);
@@ -854,7 +854,6 @@ namespace QueryPipeline::Statements {
             joinReorderResult.orderedJoins
         );
 
-        // this->AssignColumnsToIndices(context, joinReorderResult.order);
         auto* current = this->BuildJoinsPlan(context, joinReorderResult, predicatesResult);
 
         if (predicatesResult.remainingPredicate != nullptr)
@@ -862,7 +861,7 @@ namespace QueryPipeline::Statements {
 
         const auto postProjectionIndicesDictionary = this->CreatePostProjectionIndicesDictionary();
 
-        current = context._compileContext.Allocate<LogicalProject>(current, this->_projections, this->columnHeaders, this->_slotCount);
+        current = context._compileContext.Allocate<LogicalProject>(current, this->_projections, this->_slotCount);
 
         this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
 

@@ -85,5 +85,10 @@ namespace DataTypes{
 
             [[nodiscard]] static inline constexpr Int PrefixSize() { return PREFIX_SIZE; }
             [[nodiscard]] static inline constexpr Int InlineSize() { return INLINE_SIZE; }
+
+            friend std::ostream& operator<<(std::ostream& os, const StringValue& value){
+                os.write(value.Data(), value.Size());
+                return os;
+            }
     };
 }

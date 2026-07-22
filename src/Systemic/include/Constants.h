@@ -16,6 +16,7 @@ static constexpr Int INVALID_SCHEMA_ID = -1;
 static constexpr SmallInt INVALID_ORDINAL_POS = -1;
 static constexpr Int INVALID_CONSTRAINT_ID = -1;
 static constexpr Int INVALID_INDEX_ID = -1;
+static constexpr column_index_t INVALID_COLUMN_INDEX = std::numeric_limits<column_index_t>::max();
 
 static constexpr transaction_id_t INVALID_LOG_SEQUENCE_NUMBER = std::numeric_limits<log_sequence_number_t>::max();
 static constexpr table_id_t INVALID_TABLE_ORDINAL_POS = std::numeric_limits<table_id_t>::max();

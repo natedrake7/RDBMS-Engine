@@ -1,12 +1,12 @@
 #include "../../include/PhysicalPlan.h"
 
+#include <cassert>
 #include <utility>
 
 #include "ValidationMessages.h"
 #include "../../../CoreEngine/include/Database.h"
 #include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 #include "../../../Server/include/Server.h"
-#include "../../../Systemic/include/Functions/StringFunctions.h"
 #include "../../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"
 #include "../../../CoreEngine/include/ScanState.h"
 #include "../../../CoreEngine/include/DataStorage/Table.h"
@@ -15,6 +15,8 @@
 #include "SystemDatabases/TemporaryDatabase.h"
 #include "../../../CoreEngine/include/Vectorization/Vectorization.h"
 #include "BufferPool/StorageManager.h"
+#include "Contexts/OutputSchema.h"
+#include "DataStorage/ColumnMaterializationInfo.h"
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
@@ -36,7 +38,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
-        this->vectorBatch = std::move(other.vectorBatch);
+        this->dataChunk = std::move(other.dataChunk);
         this->columns = std::move(other.columns);
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
@@ -46,7 +48,7 @@ namespace QueryPipeline::PhysicalPlan {
         if (this == &other) return *this;
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
-        this->vectorBatch = std::move(other.vectorBatch);
+        this->dataChunk = std::move(other.dataChunk);
         this->columns = std::move(other.columns);
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
@@ -57,16 +59,17 @@ namespace QueryPipeline::PhysicalPlan {
         return this->status.code == Errors::RuntimeError::Ok;
     }
 
-    PlanNode::PlanNode() {
-        this->session = nullptr;
-        this->temporaryTableId = INVALID_TABLE_ID;
-    }
+    PlanNode::PlanNode()
+        :   sessionId(DataTypes::Guid::Empty()), _schema(nullptr),
+            session(nullptr), temporaryTableId(INVALID_TABLE_ID){}
 
-    PlanNode::PlanNode(const DataTypes::Guid &currentSessionId){
-        this->sessionId = currentSessionId;
-        this->session = Network::Server::Get().GetSession(this->sessionId);
-        this->temporaryTableId = INVALID_TABLE_ID;
-    }
+    PlanNode::PlanNode(const DataTypes::Guid &currentSessionId)
+        :   sessionId(currentSessionId), _schema(nullptr),
+            session(Network::Server::Get().GetSession(this->sessionId)), temporaryTableId(INVALID_TABLE_ID){}
+
+    PlanNode::PlanNode(const CoreEngine::OutputSchema* schema)
+        :   sessionId(DataTypes::Guid::Empty()), _schema(schema),
+            session(nullptr), temporaryTableId(INVALID_TABLE_ID){}
 
     void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows){
 
@@ -79,7 +82,7 @@ namespace QueryPipeline::PhysicalPlan {
   ){
       static auto& tempDb = CoreEngine::TemporaryDatabase::Get();
 
-      auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
+      const auto* table = (this->temporaryTableId == INVALID_TABLE_ID)
                         ? tempDb.CreateTable()
                         : tempDb.OpenTable(this->temporaryTableId);
 
@@ -118,6 +121,10 @@ namespace QueryPipeline::PhysicalPlan {
 
     void PlanNode::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){ }
 
+    const CoreEngine::OutputSchema* PlanNode::GetSchema() const{
+        return this->_schema;
+    }
+
     bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
     void PlanNode::LazyCachePage(
@@ -137,26 +144,36 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PhysicalMaterialize::PhysicalMaterialize(
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::TableMaterializationFunction>& functions,
-        PlanNode* child, const UnsignedSmallInt slotIndex
-    ):  _functions(std::move(functions)), child(child), _slotIndex(slotIndex){}
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo>& materializationInfo,
+        PlanNode* child,
+        const CoreEngine::OutputSchema* schema,
+        const UnsignedSmallInt slotIndex
+    ):  PlanNode(schema), _materializationInfo(std::move(materializationInfo)),
+        child(child), _slotIndex(slotIndex){
+        assert(this->_materializationInfo.Size() == this->_schema->_columns.Size());
+    }
 
     ExecutionResult PhysicalMaterialize::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        const auto size = result.selectionVector->selectedRidsCount;
-
         const auto* table = context.GetTable(this->_slotIndex);
 
-        const auto& columns = table->GetColumns();
+        const auto columnsSize = this->_materializationInfo.Size();
+        const auto rowCount = result.selectionVector->selectedRidsCount;
 
-        result.vectorBatch.AllocateColumns(context.GetAllocator(), columns.Size());
+        result.dataChunk.AllocateColumns(context.GetAllocator(), columnsSize);
 
-        for (Int ordinalPosition = 0; ordinalPosition < columns.Size(); ordinalPosition++){
-            auto* vector = CoreEngine::DataVector::FlatVector(context.GetAllocator(), columns[ordinalPosition]->Type(),  size);
-            this->_functions[ordinalPosition](table, context, result.selectionVector, vector, this->_slotIndex, ordinalPosition);
-            result.vectorBatch.SetColumn(vector, ordinalPosition);
+        for (Int index = 0; index < columnsSize; index++){
+            const auto& info = this->_materializationInfo[index];
+
+            auto* vector = CoreEngine::DataVector::FlatVector(context.GetAllocator(), info._type,  rowCount);
+            // Read from the table ordinal, write to the output position: with pruning these differ.
+            info._function(table, context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
+            result.dataChunk.SetColumn(vector, index);
         }
+
+        result.dataChunk._numberOfRows = rowCount;
+        result.dataChunk._numberOfColumns = columnsSize;
 
         result.selectionVector = nullptr;
         return result;
@@ -652,26 +669,26 @@ namespace QueryPipeline::PhysicalPlan {
         const ExecutionResult& result,
         const CoreEngine::ExecutionContext& context
     ) const{
-        for (Int i = 0;i < this->resultExpressions.Size(); i++){
-            result.vectorBatch.SetColumn(
+        for (Int index = 0;index < this->_projections.Size(); index++){
+            result.dataChunk.SetColumn(
                 Expressions::EvaluateExpression(
-                    this->resultExpressions[i],
+                    this->_projections[index],
                     context,
-                    result.selectionVector
+                    &result.dataChunk
                 ),
-                i
+                index
             );
         }
     }
 
     void PhysicalProject::ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context) const{
         const auto rowCount = result.selectionVector->selectedRidsCount;
-        const auto projectCount = this->resultExpressions.Size();
+        const auto projectCount = this->_projections.Size();
 
         for (Int i = 0;i < projectCount; i++){
-            const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
+            const auto type = Expressions::GetExpressionReturnType(this->_projections[i]);
             auto* column = CoreEngine::DataVector::FlatVector(context.GetAllocator(), type, rowCount);
-            result.vectorBatch.SetColumn(column, i);
+            result.dataChunk.SetColumn(column, i);
         }
 
         // 2. Transpose: evaluate each row scalar-wise, scatter every Value into its column slot.
@@ -697,12 +714,12 @@ namespace QueryPipeline::PhysicalPlan {
 
                 for (Int j = 0; j < projectCount; j++){
                     Expressions::EvaluateExpression(
-                        this->resultExpressions[j],
+                        this->_projections[j],
                         evaluationContext,
-                        result.vectorBatch._columns[j]->SlotAt(i),
+                        result.dataChunk._columns[j]->SlotAt(i),
                         &outNull
                     );
-                    result.vectorBatch._columns[j]->SetNullValue(i, outNull);
+                    result.dataChunk._columns[j]->SetNullValue(i, outNull);
                 }
             }
 
@@ -717,13 +734,13 @@ namespace QueryPipeline::PhysicalPlan {
 
             for (Int j = 0; j < projectCount; j++){
                 Expressions::EvaluateExpression(
-                    this->resultExpressions[j],
+                    this->_projections[j],
                     evaluationContext,
-                    result.vectorBatch._columns[j]->SlotAt(i),
+                    result.dataChunk._columns[j]->SlotAt(i),
                     &outNull
                 );
 
-                result.vectorBatch._columns[j]->SetNullValue(i, outNull);
+                result.dataChunk._columns[j]->SetNullValue(i, outNull);
             }
         }
     }
@@ -731,25 +748,33 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalProject::ExecuteStatement(CoreEngine::ExecutionContext& context) const{
         auto result = this->child->Execute(context);
 
-        for (const auto& expression : this->resultExpressions)
+        for (const auto* expression : this->_projections)
             result.displayColumnNames.Push(expression->name);
 
-        if (result.selectionVector->selectedRidsCount == 0)
+        if (result.dataChunk._numberOfRows == 0)
             return result;
 
-        result.vectorBatch._numberOfRows = result.selectionVector->selectedRidsCount;
-        result.vectorBatch._numberOfColumns = this->resultExpressions.Size();
-
-        result.vectorBatch.AllocateColumns(
+        CoreEngine::DataChunk newChunk;
+        newChunk._numberOfRows = result.dataChunk._numberOfRows;
+        newChunk._numberOfColumns = this->_projections.Size();
+        newChunk.AllocateColumns(
             context.GetAllocator(),
-            result.vectorBatch._numberOfColumns
+            newChunk._numberOfColumns
         );
 
-        if (context.GetMode() == Constants::ExecutionMode::Vectorized)
-            this->ExecuteVectorizedMode(result, context);
-        else
-            this->ExecuteRowMode(result, context);
+        // this->ExecuteVectorizedMode(result, context);
+        for (Int index = 0;index < this->_projections.Size(); index++){
+            newChunk.SetColumn(
+                Expressions::EvaluateExpression(
+                    this->_projections[index],
+                    context,
+                    &result.dataChunk
+                ),
+                index
+            );
+        }
 
+        result.dataChunk = std::move(newChunk);
         return result;
     }
 
@@ -757,20 +782,20 @@ namespace QueryPipeline::PhysicalPlan {
         auto result = ExecutionResult(context);
 
         static constexpr Int ROW_COUNT = 1;
-        const auto projectCount = this->resultExpressions.Size();
+        const auto projectCount = this->_projections.Size();
 
-        result.vectorBatch._numberOfRows = ROW_COUNT;
-        result.vectorBatch._numberOfColumns = projectCount;
+        result.dataChunk._numberOfRows = ROW_COUNT;
+        result.dataChunk._numberOfColumns = projectCount;
 
-        result.vectorBatch.AllocateColumns(
+        result.dataChunk.AllocateColumns(
             context.GetAllocator(),
             projectCount
         );
 
         for (Int i = 0;i < projectCount; i++){
-            const auto type = Expressions::GetExpressionReturnType(this->resultExpressions[i]);
+            const auto type = Expressions::GetExpressionReturnType(this->_projections[i]);
             auto* column = CoreEngine::DataVector::FlatVector(context.GetAllocator(), type, ROW_COUNT);
-            result.vectorBatch.SetColumn(column, i);
+            result.dataChunk.SetColumn(column, i);
         }
 
         const Expressions::EvaluationContext evaluationContext(
@@ -781,13 +806,13 @@ namespace QueryPipeline::PhysicalPlan {
         auto outNull = false;
         for (Int j = 0; j < projectCount; j++){
             Expressions::EvaluateExpression(
-                this->resultExpressions[j],
+                this->_projections[j],
                 evaluationContext,
-          result.vectorBatch._columns[j]->SlotAt(0),
+          result.dataChunk._columns[j]->SlotAt(0),
                 &outNull
             );
 
-            result.vectorBatch._columns[j]->SetNullValue(0, outNull);
+            result.dataChunk._columns[j]->SetNullValue(0, outNull);
         }
 
         result.canFetchMore = false;
@@ -796,16 +821,16 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalProject:: PhysicalProject(
         PlanNode *child,
-        DataStructures::PolymorphicArray<Expressions::Expression*>& resultExpressions,
-        DataStructures::PolymorphicArray<Headers::ColumnHeader>& columnHeaders,
+        DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
+        const CoreEngine::OutputSchema* schema,
         const UnsignedSmallInt slotCount
-    ):  resultExpressions(std::move(resultExpressions)), columnHeaders(std::move(columnHeaders)),
+    ):  PlanNode(schema), _projections(std::move(projections)),
         child(child), _slotCount(slotCount) {}
 
     ExecutionResult PhysicalProject::Execute(CoreEngine::ExecutionContext& context){
         return (this->child == nullptr)
-                   ? this->ExecuteConstantStatement(context)
-                   : this->ExecuteStatement(context);
+            ? this->ExecuteConstantStatement(context)
+            : this->ExecuteStatement(context);
     }
 
     void PhysicalProject::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
@@ -914,15 +939,15 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
-        : top(top), child(child){}
+        : PlanNode(child->GetSchema()), top(top), child(child){}
 
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        if (this->top > result.vectorBatch._numberOfRows)
+        if (this->top > result.dataChunk._numberOfRows)
             return result;
 
-        result.vectorBatch._numberOfRows = this->top;
+        result.dataChunk._numberOfRows = this->top;
         // result.results.RemoveFrom(this->top);
         result.canFetchMore = false;
         return result;
@@ -933,7 +958,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PhysicalDistinct::PhysicalDistinct(PlanNode *child)
-        : child(child){}
+        : PlanNode(child->GetSchema()), child(child){}
 
     ExecutionResult PhysicalDistinct::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
@@ -980,7 +1005,8 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalOrderBy::PhysicalOrderBy(
         PlanNode *child,
         DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
-    )   : child(child)
+    )   : PlanNode(child->GetSchema())
+          , child(child)
           , expressions(std::move(expressions))
           , comparator(&this->expressions, nullptr)
           , priorityQueue(this->comparator){}
@@ -1083,7 +1109,7 @@ namespace QueryPipeline::PhysicalPlan {
             if (!result.canFetchMore)
                 break;
 
-            rowCount += result.vectorBatch._numberOfRows;
+            rowCount += result.dataChunk._numberOfRows;
             context.ResetAllocator();
         }
 

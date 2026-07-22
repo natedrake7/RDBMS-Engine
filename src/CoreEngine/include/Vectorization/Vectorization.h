@@ -46,4 +46,24 @@ namespace CoreEngine{
             Int count
         );
     };
+
+    struct DataChunk{
+        DataVector** _columns;
+
+        const UnsignedInt* _selection;
+
+        Int _numberOfColumns;
+        Int _numberOfRows;
+
+        DataChunk();
+        DataChunk(const DataChunk& other) = delete;
+        DataChunk& operator=(const DataChunk& other) = delete;
+
+        DataChunk(DataChunk&& other) noexcept;
+        DataChunk& operator=(DataChunk&& other) noexcept;
+
+        void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
+        void SetColumn(DataVector* columnData, Int columnIndex) const;
+        [[nodiscard]] Int RowPhysicalIndex(Int rowLogicalIndex) const;
+    };
 }

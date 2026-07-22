@@ -62,18 +62,7 @@ namespace CoreEngine::StorageTypes{
 
             page_id_t GetClusteredIndexPageId() const;
             void SetClusteredIndexPageId(page_id_t indexPageId) const;
-
-
     };
-
-    using TableMaterializationFunction = void(*)(
-        const Table*,
-        const ExecutionContext&,
-        const SelectionVector*,
-        DataVector*,
-        UnsignedSmallInt slotIndex,
-        column_index_t ordinalPosition
-    );
 
     class Table final{
         HashSet<column_id_t> clusteredIndexColumnsCache;
