@@ -191,6 +191,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.Cast.cpp
         src/CoreEngine/src/DataStorage/ExtentReservation.cpp
         src/CoreEngine/src/Database.Templates.cpp
+        src/CoreEngine/src/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

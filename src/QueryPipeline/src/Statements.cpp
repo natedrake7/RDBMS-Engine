@@ -2611,7 +2611,7 @@ namespace QueryPipeline::Statements {
     }
 
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
-        Expressions::BindExpressionKernel(expression, Constants::ExecutionMode::Row);
+        Expressions::BindExpressionRowKernel(expression);
         auto value = Expressions::EvaluateExpression(expression, Expressions::EvaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::Constant,
             context.GetAllocator())

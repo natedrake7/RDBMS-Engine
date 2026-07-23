@@ -1430,7 +1430,7 @@ namespace CoreEngine {
         auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name), DataType::String);
         auto constantExpr = Expressions::ConstantExpression(Value(dbName, allocator, static_cast<column_index_t>(SysDatabases::Name)));
         Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
-        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
+        Expressions::BindExpressionRowKernel(&binaryExpr);
 
         sysDatabases->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
 
@@ -1446,7 +1446,7 @@ namespace CoreEngine {
             &constantExpr,
             Expressions::BinaryOperator::EqualIgnoreOrdinalCase
         );
-        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
+        Expressions::BindExpressionRowKernel(&binaryExpr);
 
         auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysDatabases);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
@@ -1512,7 +1512,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         Expressions::ColumnExpression columnExpr(static_cast<column_index_t>(SysSchemas::Name), DataType::String);
         Expressions::ConstantExpression constantExpr(Value(schema, allocator, static_cast<column_index_t>(SysSchemas::Name)));
         Expressions::BinaryExpression binaryExpr(&columnExpr, &constantExpr, Expressions::BinaryOperator::EqualIgnoreOrdinalCase);
-        Expressions::BindExpressionKernel(&binaryExpr, Constants::ExecutionMode::Row);
+        Expressions::BindExpressionRowKernel(&binaryExpr);
 
         const DataTypes::Indexing::Key key(allocator, databaseId);
 
@@ -1595,7 +1595,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
         auto logicalExpr = Expressions::LogicalExpression(&leftBinaryExpr, &rightBinaryExpr, Expressions::LogicalType::And);
 
-        Expressions::BindExpressionKernel(&logicalExpr, Constants::ExecutionMode::Row);
+        Expressions::BindExpressionRowKernel(&logicalExpr);
 
         const DataTypes::Indexing::Key key(allocator, databaseId);
         sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, &logicalExpr);

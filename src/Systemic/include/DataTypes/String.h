@@ -434,8 +434,11 @@ namespace DataTypes{
         // Calculate total size first
         Int totalSize = 0;
         ([&]<typename Type>(const Type& arg) {
-            if constexpr (std::is_same_v<std::decay_t<Type>, String>)
-                totalSize += arg.Size();
+            if constexpr (
+                std::is_same_v<std::decay_t<Type>, String>
+                || std::is_same_v<std::decay_t<Type>, StringView>
+                || std::is_same_v<std::decay_t<Type>, DataTypes::StringValue>
+            ) totalSize += arg.Size();
             else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
                 totalSize += arg.Size();
             else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>)
@@ -443,18 +446,18 @@ namespace DataTypes{
             else if constexpr (std::is_same_v<std::decay_t<Type>, std::string_view>)
                 totalSize += static_cast<Int>(arg.size());
             else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
-                               std::is_same_v<std::decay_t<Type>, const char*>)
-                totalSize += static_cast<Int>(std::strlen(arg));
+                               std::is_same_v<std::decay_t<Type>, const char*>
+            ) totalSize += static_cast<Int>(std::strlen(arg));
         }(args), ...);
 
         // Allocate and copy
         auto* buf = static_cast<char*>(allocator->AllocateRaw(totalSize));
         Int offset = 0;
         ([&]<typename Type>(const Type& arg) {
-            if constexpr (std::is_same_v<std::decay_t<Type>, String>) {
-                std::memcpy(buf + offset, arg.Data(), arg.Size());
-                offset += arg.Size();
-            } else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>) {
+            if constexpr (std::is_same_v<std::decay_t<Type>, String>
+                || std::is_same_v<std::decay_t<Type>, StringView>
+                || std::is_same_v<std::decay_t<Type>, StringValue>
+            ) {
                 std::memcpy(buf + offset, arg.Data(), arg.Size());
                 offset += arg.Size();
             } else if constexpr (std::is_same_v<std::decay_t<Type>, std::string>) {

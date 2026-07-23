@@ -11,6 +11,8 @@
 #include "Parser.h"
 #include "../../Systemic/include/DataTypes/StringValue.h"
 #include "DataStorage/ColumnMaterializationInfo.h"
+#include "Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
+#include "Evaluators/Kernels/Vectorized/VectorizedKernels.h"
 
 
 namespace QueryPipeline {
@@ -52,9 +54,9 @@ namespace QueryPipeline {
 
             materializationInfo.Push(
             CoreEngine::StorageTypes::ColumnMaterializationInfo(
-                     CoreEngine::StorageTypes::COLUMN_MATERIALIZERS[header.dataType],
-                     header.ordinalPosition,
-                     dataType
+                    CoreEngine::VectorizedKernels::JumpTables::GetMaterializationFunction(dataType),
+                    header.ordinalPosition,
+                    dataType
                 )
             );
         }
@@ -70,7 +72,7 @@ namespace QueryPipeline {
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalDeclareVariable::ToPhysical(QueryContext& context) {
-        Expressions::BindExpressionKernel(this->expression, context._executionMode);
+        Expressions::BindExpressionRowKernel(this->expression);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
     }
 
@@ -172,7 +174,7 @@ namespace QueryPipeline {
 
         // No table stats yet, or small table
         if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
-            Expressions::BindExpressionKernel(this->expression, context._executionMode);
+            Expressions::BindExpressionRowKernel(this->expression);
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, firstIndex.isClustered);
         }
 
@@ -180,7 +182,7 @@ namespace QueryPipeline {
         // else use optimizer to choose index seek/scan
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
         
-        Expressions::BindExpressionKernel(result.remainingPredicate, context._executionMode);
+        Expressions::BindExpressionRowKernel(result.remainingPredicate);
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);
@@ -320,7 +322,7 @@ namespace QueryPipeline {
             this->condition
         );
 
-        Expressions::BindExpressionKernel(this->condition, context._executionMode);
+        Expressions::BindExpressionRowKernel(this->condition);
 
         switch (this->type) {
             case JoinType::Inner:
@@ -343,7 +345,7 @@ namespace QueryPipeline {
     ): child(child), filter(filter), _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
-        Expressions::BindExpressionKernel(this->filter, context._executionMode);
+        Expressions::BindExpressionRowKernel(this->filter);
         return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter, this->_slotCount);
     }
 
@@ -382,7 +384,7 @@ namespace QueryPipeline {
 
         for (auto& [values] : this->fields){
             for (const auto& expression : values)
-                Expressions::BindExpressionKernel(expression, context._executionMode);
+                Expressions::BindExpressionRowKernel(expression);
         }
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->insertPlan);

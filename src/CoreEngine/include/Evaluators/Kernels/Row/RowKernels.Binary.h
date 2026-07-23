@@ -115,7 +115,7 @@ namespace CoreEngine::RowKernels{
         *outNull = false;
     }
 
-    static constexpr Int BINARY_OPERATIONS_COUNT = 12;   // Expressions::BinaryOperator enumerator count
+    static constexpr Int BINARY_OPERATIONS_COUNT = 12;
 
     struct BinaryKernelTable{
         Expressions::RowKernelFunction cells[BINARY_OPERATIONS_COUNT][DATATYPE_COUNT];

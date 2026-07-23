@@ -25,6 +25,19 @@ namespace DataTypes{
             StringValue()
                 : _value{} {}
 
+            StringValue(const StringValue&) = delete;
+            StringValue operator=(const StringValue&) = delete;
+
+            StringValue(StringValue&& other) noexcept
+                : _value{other._value} {}
+
+            StringValue& operator=(StringValue&& other) noexcept {
+                if (this == &other)
+                    return *this;
+                _value = other._value;
+                return *this;
+            }
+
             StringValue(const ::Memory::IAllocator* allocator, const char* data, const Int size){
                 this->_value._inlineVal._size = size;
 

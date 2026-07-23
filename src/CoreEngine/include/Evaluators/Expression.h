@@ -80,6 +80,7 @@ namespace Expressions{
 
     using VectorizedKernelFunction = CoreEngine::DataVector* (*)(
         const Expression* self,
+        const CoreEngine::ExecutionContext* context,
         const CoreEngine::DataChunk* chunk
     );
 
@@ -140,8 +141,8 @@ namespace Expressions{
     };
 
     class ColumnExpression final : public Expression {
-        void BindVectorizedKernel();
-        void BindRowKernel();
+        static void BindVectorizedKernel(ColumnExpression* self);
+        static void ResolveReference(ColumnExpression* self, const CoreEngine::OutputSchema* schema);
 
     public:
         DataTypes::String alias;
@@ -161,16 +162,18 @@ namespace Expressions{
         ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias);
         explicit ColumnExpression(column_index_t index, DataType dataType);
 
-        static void BindExpressionKernel(ColumnExpression* expression, Constants::ExecutionMode mode);
-        static void ResolveReference(ColumnExpression* expression, const CoreEngine::OutputSchema* schema);
+        static void BindAndResolveExpressionKernel(
+            Expression* expression,
+            const CoreEngine::OutputSchema* schema
+        );
+
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]] DataType GetReturnType() const;
         [[nodiscard]] bool HasTableAlias() const;
     };
 
     class ConstantExpression final : public Expression {
-        void BindVectorizedKernel();
-        void BindRowKernel();
     public:
         Value value;
 
@@ -178,7 +181,8 @@ namespace Expressions{
         explicit ConstantExpression(Value& value);
         explicit ConstantExpression(Value&& value);
 
-        static void BindExpressionKernel(ConstantExpression* expression, Constants::ExecutionMode mode);
+        static void BindVectorizedKernel(Expression* self);
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]] DataType GetReturnType() const;
     };
@@ -191,7 +195,6 @@ namespace Expressions{
         [[nodiscard]] bool ValidateModulo()const;
 
         void BindVectorizedKernel();
-        void BindRowKernel();
 
     public:
         Expression* left;
@@ -203,7 +206,7 @@ namespace Expressions{
 
         [[nodiscard]] bool ValidateOperation()const;
 
-        static void BindExpressionKernel(BinaryExpression* expression, Constants::ExecutionMode mode);
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]] DataType GetReturnType() const;
     };
@@ -266,7 +269,6 @@ namespace Expressions{
     };
 
     class LogicalExpression final : public Expression{
-        void BindRowKernel();
         void BindVectorizedKernel();
 
     public:
@@ -286,7 +288,7 @@ namespace Expressions{
         [[nodiscard]] bool IsAnd()const;
         [[nodiscard]] bool HasAtLeastOneConstant()const;
 
-        static void BindExpressionKernel(LogicalExpression* expression, Constants::ExecutionMode mode);
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]] static constexpr DataType GetReturnType();
     };
@@ -312,7 +314,6 @@ namespace Expressions{
 
     class VariableExpression final : public Expression {
         void BindVectorizedKernel();
-        void BindRowKernel();
     public:
         DataTypes::String name;
         DataTypes::String normalizedName;
@@ -320,7 +321,7 @@ namespace Expressions{
 
         explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
 
-        static void BindExpressionKernel(VariableExpression* expression, Constants::ExecutionMode mode);
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
         [[nodiscard]]DataType GetReturnType() const;
@@ -342,7 +343,6 @@ namespace Expressions{
 
     class CastExpression final: public Expression{
         void BindVectorizedKernel();
-        void BindRowKernel();
     public:
         Expression* childExpr;
         DataType targetType;
@@ -350,7 +350,7 @@ namespace Expressions{
 
         CastExpression(Expression* expression, DataType targetType, bool isTryCast);
 
-        static void BindExpressionKernel(CastExpression* expression, Constants::ExecutionMode mode);
+        static void BindRowKernel(Expression* self);
 
         [[nodiscard]] DataType GetReturnType() const;
     };
@@ -359,7 +359,7 @@ namespace Expressions{
 
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,
-        const CoreEngine::ExecutionContext& executionContext,
+        const CoreEngine::ExecutionContext* context,
         const CoreEngine::DataChunk* chunk
     );
     void EvaluateExpression(
@@ -374,12 +374,6 @@ namespace Expressions{
         const EvaluationContext& context
     );
 
-    CoreEngine::SelectionVector* EvaluateFilterExpression(
-        const Expression* expression,
-        const CoreEngine::ExecutionContext& executionContext,
-        const CoreEngine::SelectionVector* selectionVector
-    );
-
     [[nodiscard]] bool RowModeFilter(
         const Expression* expression,
         const EvaluationContext& context
@@ -387,7 +381,7 @@ namespace Expressions{
 
     DataType GetExpressionReturnType(const Expression* expression);
 
-    void BindExpressionKernel(Expression* expression, Constants::ExecutionMode mode);
+    void BindExpressionRowKernel(Expression* expression);
 
     void BindAndResolveExpressionKernel(Expression* expression, const CoreEngine::OutputSchema* schema);
 }

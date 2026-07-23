@@ -673,7 +673,7 @@ namespace QueryPipeline::PhysicalPlan {
             result.dataChunk.SetColumn(
                 Expressions::EvaluateExpression(
                     this->_projections[index],
-                    context,
+                    &context,
                     &result.dataChunk
                 ),
                 index
@@ -767,7 +767,7 @@ namespace QueryPipeline::PhysicalPlan {
             newChunk.SetColumn(
                 Expressions::EvaluateExpression(
                     this->_projections[index],
-                    context,
+                    &context,
                     &result.dataChunk
                 ),
                 index

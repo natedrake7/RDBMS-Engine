@@ -38,12 +38,30 @@ namespace CoreEngine{
 
         [[nodiscard]] object_t* SlotAt(Int index) const;
         void SetNullValue(Int index, bool value) const;
-       [[nodiscard]] bool GetNullValue(Int index) const;
+
+        [[nodiscard]] Int PhysicalIndex(Int logicalIndex) const;
+        [[nodiscard]] bool GetNullValue(Int index) const;
+
+        template<typename T>
+        T* SlotAt(const Int physicalIndex){
+            return reinterpret_cast<T*>(this->SlotAt(physicalIndex));
+        }
+
+        template<typename T>
+        const T* Slot(const Int physicalIndex){
+            return reinterpret_cast<const T*>(this->SlotAt(physicalIndex));
+        }
 
         static DataVector* FlatVector(
             const ::Memory::IAllocator* allocator,
             DataType type,
             Int count
+        );
+
+        static DataVector* ConstantVector(
+            const ::Memory::IAllocator* allocator,
+            bool isNull,
+            DataType type
         );
     };
 

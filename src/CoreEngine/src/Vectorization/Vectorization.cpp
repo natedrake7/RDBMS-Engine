@@ -23,6 +23,12 @@ namespace CoreEngine{
         this->_validity[w] = ( this->_validity[w] & ~m) | (static_cast<uint64_t>(value) << (index & 63));
     }
 
+    Int DataVector::PhysicalIndex(const Int logicalIndex) const{
+        return this->_kind == DataVectorKind::Constant
+            ? 0
+            : logicalIndex;
+    }
+
     bool DataVector::GetNullValue(const Int index) const{
         return this->_validity[index >> 6] >> (index & 63) & 1;
     }
@@ -42,6 +48,22 @@ namespace CoreEngine{
         const Int validityWords = (count + 63) / 64;
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(validityWords * sizeof(UnsignedBigInt)));
         std::memset(dataVector->_validity, 0, validityWords * sizeof(UnsignedBigInt));   // 0 = not-null default
+        return dataVector;
+    }
+
+    DataVector* DataVector::ConstantVector(
+        const Memory::IAllocator* allocator,
+        const bool isNull,
+        DataType type
+    ){
+        auto* dataVector = allocator->Allocate<DataVector>(type);
+        dataVector->_count = 1;
+        dataVector->_kind  = DataVectorKind::Constant;
+        dataVector->_type = type;
+        dataVector->_dataEntrySize = VECTOR_COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
+        dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize));
+        dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(sizeof(UnsignedBigInt)));
+        dataVector->_validity[0] = isNull ? ~0ull : 0ull;
         return dataVector;
     }
 
