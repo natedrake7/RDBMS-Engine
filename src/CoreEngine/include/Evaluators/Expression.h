@@ -194,8 +194,6 @@ namespace Expressions{
         [[nodiscard]] bool ValidateDivision()const;
         [[nodiscard]] bool ValidateModulo()const;
 
-        void BindVectorizedKernel();
-
     public:
         Expression* left;
         Expression* right;
@@ -207,6 +205,7 @@ namespace Expressions{
         [[nodiscard]] bool ValidateOperation()const;
 
         static void BindRowKernel(Expression* self);
+        static void BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema);
 
         [[nodiscard]] DataType GetReturnType() const;
     };

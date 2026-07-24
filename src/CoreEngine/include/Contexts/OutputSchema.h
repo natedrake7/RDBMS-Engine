@@ -76,7 +76,7 @@ namespace CoreEngine{
 
         static SchemaColumn Computed(
             const UnsignedSmallInt virtualId,
-            const DataType& type
+            const DataType type
         ){
             return SchemaColumn(ColumnIdentity::Computed(virtualId), type);
         }

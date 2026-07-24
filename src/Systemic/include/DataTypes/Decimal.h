@@ -211,6 +211,7 @@ namespace DataTypes {
         constexpr friend Decimal operator-(const Decimal& left, const Decimal& right);
         constexpr friend Decimal operator*(const Decimal& left, const Decimal& right);
         constexpr friend Decimal operator/(const Decimal& left, const Decimal& right);
+        constexpr friend Decimal operator%(const Decimal& left, const Decimal& right);
 
         constexpr friend bool operator==(const Decimal& left, const Decimal& right);
         constexpr friend bool operator>=(const Decimal& left, const Decimal& right);
@@ -558,6 +559,15 @@ constexpr Decimal operator*(const Decimal &left, const Decimal &right){
 }
 
 constexpr Decimal operator/(const Decimal& left, const Decimal& right){
+    return Decimal::Divide<DecimalRoundingMode::HalfUp>(
+        left.Data(),
+        right.Data(),
+        left.IsPositive() == right.IsPositive()
+    );
+}
+
+//TODO use modulo
+constexpr Decimal operator%(const Decimal& left, const Decimal& right){
     return Decimal::Divide<DecimalRoundingMode::HalfUp>(
         left.Data(),
         right.Data(),

@@ -35,13 +35,12 @@ namespace CoreEngine{
 
     DataVector* DataVector::FlatVector(
         const Memory::IAllocator* allocator,
-        DataType type,
+        const DataType type,
         const Int count
     ){
         auto* dataVector = allocator->Allocate<DataVector>(type);
         dataVector->_count = count;
         dataVector->_kind  = DataVectorKind::Flat;
-        dataVector->_type = type;
         dataVector->_dataEntrySize = VECTOR_COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
         dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize * count));
 

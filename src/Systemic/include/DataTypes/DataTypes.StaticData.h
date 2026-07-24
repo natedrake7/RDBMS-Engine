@@ -35,7 +35,7 @@ static constexpr ConstexprDictionary COLUMN_SIZES_BY_TYPENAME{
     Pair(DataTypes::StringView("guid"), static_cast<block_size_t>(16))
 };
 
-static block_size_t VECTOR_COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT]{
+static constexpr block_size_t VECTOR_COLUMN_SIZES_BY_DATATYPE[DATATYPE_COUNT]{
     sizeof(DataTypes::StringValue),
     sizeof(bool),
     sizeof(TinyInt),

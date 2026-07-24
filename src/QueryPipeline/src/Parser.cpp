@@ -94,8 +94,8 @@ namespace QueryPipeline{
     };
 
     QueryContext::QueryContext()
-        :   status(this->_compileContext.GetAllocator()), hasMore(false),
-            _executionMode(Constants::ExecutionMode::Row){
+        :   status(this->_compileContext.GetAllocator()), _virtualId(0),
+            hasMore(false), _executionMode(Constants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
@@ -108,20 +108,25 @@ namespace QueryPipeline{
         return this->_compileContext.GetAllocator();
      }
 
+     UnsignedSmallInt QueryContext::NextVirtualId(){
+        return this->_virtualId++;
+     }
+
      void QueryContext::Release() const{
         this->_compileContext.GetAllocator()->Release();
      }
 
      QueryContext::QueryContext(Errors::Error& error)
          :      status(std::move(error)),
-                hasMore(false), _executionMode(Constants::ExecutionMode::Row){
+                _virtualId(0), hasMore(false),
+                _executionMode(Constants::ExecutionMode::Row){
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
     QueryContext::QueryContext(QueryContext&& other) noexcept
         :   _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
             cursors(std::move(other.cursors)), status(std::move(other.status)),
-            hasMore(other.hasMore), _executionMode(other._executionMode){}
+            _virtualId(other._virtualId), hasMore(other.hasMore), _executionMode(other._executionMode){}
 
     QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
         if (this == &other)
@@ -132,6 +137,8 @@ namespace QueryPipeline{
         this->_scope = std::move(other._scope);
         this->_executionMode = other._executionMode;
         this->cursors = std::move(other.cursors);
+        this->_virtualId = other._virtualId;
+
         return *this;
     }
 

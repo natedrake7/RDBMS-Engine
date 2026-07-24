@@ -31,6 +31,7 @@ namespace QueryPipeline{
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
+        UnsignedSmallInt _virtualId;
         bool hasMore;
 
         Constants::ExecutionMode _executionMode;
@@ -46,6 +47,8 @@ namespace QueryPipeline{
 
         void CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables);
         const ::Memory::IAllocator* GetAllocator()const;
+
+        [[nodiscard]] UnsignedSmallInt NextVirtualId();
 
         void Release()const;
     };

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../DatabaseConstants.h"
+#include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 
 namespace CoreEngine{
     struct SelectionVector{
@@ -48,7 +49,7 @@ namespace CoreEngine{
         }
 
         template<typename T>
-        const T* Slot(const Int physicalIndex){
+        const T* SlotAt(const Int physicalIndex) const{
             return reinterpret_cast<const T*>(this->SlotAt(physicalIndex));
         }
 

@@ -442,9 +442,6 @@ namespace Expressions{
         }
     }
 
-    void BinaryExpression::BindVectorizedKernel(){
-    }
-
     BinaryExpression::BinaryExpression(Expression *left, Expression *right, const BinaryOperator operation){
         this->left = left;
         this->right = right;
@@ -485,6 +482,21 @@ namespace Expressions{
 
         const auto operandType = GetExpressionReturnType(binaryExpression->left);
         binaryExpression->rowKernel = CoreEngine::RowKernels::LookupBinaryKernel(
+            binaryExpression->operation, operandType
+        );
+    }
+
+    void BinaryExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* binaryExpression = self->AsBinary();
+        Expressions::BindAndResolveExpressionKernel(binaryExpression->left, schema);
+        Expressions::BindAndResolveExpressionKernel(binaryExpression->right, schema);
+
+        const auto operandType = PromoteType(
+            GetExpressionReturnType(binaryExpression->left),
+            GetExpressionReturnType(binaryExpression->right)
+        );
+
+        binaryExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetBinaryKernel(
             binaryExpression->operation, operandType
         );
     }
@@ -1124,7 +1136,7 @@ namespace Expressions{
             ConstantExpression::BindVectorizedKernel(expression);
             break;
         case ExpressionType::Binary:
-            // BinaryExpression::BindExpressionKernel(expression->AsBinary(), EXECUTION_MODE);
+            BinaryExpression::BindVectorizedKernel(expression, schema);
             break;
         case ExpressionType::Logical:
             // LogicalExpression::BindExpressionKernel(expression->AsLogical(), EXECUTION_MODE);

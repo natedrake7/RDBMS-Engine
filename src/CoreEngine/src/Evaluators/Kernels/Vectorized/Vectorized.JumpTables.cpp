@@ -23,7 +23,7 @@ namespace CoreEngine::VectorizedKernels{
             table[static_cast<size_t>(Op::LessEqual)][TYPE] = &BinaryComparisonKernel<T, std::less_equal<T>>;
         }
 
-        template<DataTypes::Primitive T>
+        template<typename T>
         constexpr void RegisterArithmetic(KernelTable& table){
             constexpr auto TYPE = static_cast<size_t>(DataTypes::DataTypeOf<T>());
             using Op = Expressions::BinaryOperator;
@@ -35,8 +35,10 @@ namespace CoreEngine::VectorizedKernels{
             table[static_cast<size_t>(Op::Modulo)][TYPE] = &BinaryModuloKernel<T>;
         }
 
-        constexpr void RegisterStringOps(KernelTable& table){
-
+        constexpr void RegisterStringOperations(KernelTable& table){
+            constexpr auto TYPE = static_cast<size_t>(DataTypes::DataTypeOf<DataTypes::StringValue>());
+            using Op = Expressions::BinaryOperator;
+            table[static_cast<size_t>(Op::Add)][TYPE] = &BinaryArithmeticKernel<DataTypes::StringValue, std::plus<DataTypes::StringValue>>;
         }
 
         template<typename... Ts> constexpr void RegisterComparisonsFor(KernelTable& table){ (RegisterComparisons<Ts>(table), ...); }
@@ -51,7 +53,7 @@ namespace CoreEngine::VectorizedKernels{
                 DataTypes::Decimal, DataTypes::DateTime, DataTypes::Guid, DataTypes::StringValue
             >(table);
             RegisterArithmeticFor<TinyInt, SmallInt, Int, BigInt, DataTypes::Decimal>(table);
-            RegisterStringOps(table);   // Add(concat) + IgnoreCase — genuinely string-specific
+            RegisterStringOperations(table);   // Add(concat) + IgnoreCase — genuinely string-specific
 
             return table;
         }
@@ -92,21 +94,21 @@ namespace CoreEngine::VectorizedKernels{
             bool, TinyInt, SmallInt, Int, BigInt,
             DataTypes::Decimal, DataTypes::StringValue, DataTypes::DateTime,
             DataTypes::Guid, DataTypes::JsonBinary
-        >;
+        >();
     }
 
     StorageTypes::TableMaterializationFunction JumpTables::GetMaterializationFunction(DataType type){
-        return COLUMN_MATERIALIZERS[static_cast<size_t>(type)];
+        return COLUMN_MATERIALIZERS[static_cast<Int>(type)];
     }
 
     Expressions::VectorizedKernelFunction JumpTables::GetConstantKernel(DataType type){
-        return CONSTANT_KERNELS[static_cast<size_t>(type)];
+        return CONSTANT_KERNELS[static_cast<Int>(type)];
     }
 
     Expressions::VectorizedKernelFunction JumpTables::GetBinaryKernel(
         Expressions::BinaryOperator _operator,
         DataType type
     ){
-        return BINARY_KERNELS[static_cast<size_t>(_operator)][static_cast<size_t>(type)];
+        return BINARY_KERNELS[static_cast<Int>(_operator)][static_cast<Int>(type)];
     }
 }

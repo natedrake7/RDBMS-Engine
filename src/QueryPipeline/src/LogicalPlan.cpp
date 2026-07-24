@@ -112,31 +112,42 @@ namespace QueryPipeline {
         _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
+        auto* childPhysical = this->child != nullptr
+            ? this->child->ToPhysical(context)
+            : nullptr;
+
+        auto* childSchema = this->child != nullptr
+            ? childPhysical->GetSchema()
+            : nullptr;
+
         auto* outputSchema = context._compileContext.GetAllocator()->Allocate<CoreEngine::OutputSchema>(
             context._compileContext.GetAllocator(),
             this->_projections.Size()
         );
 
-        for (const auto* expression : this->_projections){
-            const auto* expr = expression->AsColumn();
-            auto schemaColumn = CoreEngine::SchemaColumn::Base(
-                    expr->_slotIndex,
-                    expr->ordinalPosition,
-                    expr->returnType
-            );
-            outputSchema->_columns.Push(schemaColumn);
-        }
-
-        auto* childPhysical = this->child != nullptr
-            ? this->child->ToPhysical(context)
-            : nullptr;
-
-        auto* childSchema = childPhysical != nullptr
-            ? childPhysical->GetSchema()
-            : nullptr;
-
-        for (auto* expression : this->_projections)
+        for (auto* expression : this->_projections){
             Expressions::BindAndResolveExpressionKernel(expression, childSchema);
+
+            if (expression->IsColumn()){
+                const auto* columnExpression = expression->AsColumn();
+                outputSchema->_columns.Push(
+                CoreEngine::SchemaColumn::Base(
+                        columnExpression->_slotIndex,
+                        columnExpression->ordinalPosition,
+                        columnExpression->returnType
+                    )
+                );
+
+                continue;
+            }
+
+            outputSchema->_columns.Push(
+            CoreEngine::SchemaColumn::Computed(
+                    context.NextVirtualId(),
+                    Expressions::GetExpressionReturnType(expression)
+                )
+            );
+        }
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
             childPhysical,

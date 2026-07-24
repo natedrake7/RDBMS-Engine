@@ -86,7 +86,7 @@ namespace CoreEngine::VectorizedKernels{
         return out;
     }
 
-    template<DataTypes::Primitive T>
+    template<typename T>
     DataVector* BinaryModuloKernel(
         const Expressions::Expression* self,
         const ExecutionContext* context,
@@ -134,7 +134,8 @@ namespace CoreEngine::VectorizedKernels{
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
 
         const auto chunkSize = chunk->_numberOfRows;
-        auto* out = DataVector::FlatVector(context->GetAllocator(), DataTypes::DataTypeOf<T>(), chunkSize);
+        // A comparison always yields Bool; T is the operand type, not the result type.
+        auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunkSize);
 
         for (Int i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -145,7 +146,7 @@ namespace CoreEngine::VectorizedKernels{
             if (isNull)
                 continue;
 
-            *out->template SlotAt<T>(i) = Comparison{}(*left->template SlotAt<T>(leftIndex), *right-> template SlotAt<T>(rightIndex));
+            *out->template SlotAt<bool>(i) = Comparison{}(*left->template SlotAt<T>(leftIndex), *right->template SlotAt<T>(rightIndex));
         }
 
         return out;
