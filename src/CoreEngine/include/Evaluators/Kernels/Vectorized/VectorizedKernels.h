@@ -55,13 +55,13 @@ namespace CoreEngine::VectorizedKernels{
         return outVector;
     }
 
-    void LogicalAndKernel(
+    DataVector* LogicalAndKernel(
         const Expressions::Expression* self,
         const ExecutionContext* context,
         const DataChunk* chunk
     );
 
-    void LogicalOrKernel(
+    DataVector* LogicalOrKernel(
         const Expressions::Expression* self,
         const ExecutionContext* context,
         const DataChunk* chunk

@@ -649,10 +649,11 @@ namespace QueryPipeline::Statements {
 
     static void PropagateExpression(Expressions::Expression*& expression, Expressions::Expression*& childExpr);
 
-    static void TryPropagateChildExpression(
+    static bool TryPropagateChildExpression(
         Expressions::Expression*& expression,
         Expressions::Expression*& leftExpr,
-        Expressions::Expression*& rightExpr
+        Expressions::Expression*& rightExpr,
+        bool dominantValue
     );
 
     /** @} End of Propagation-Optimization Functions */

@@ -331,6 +331,67 @@ namespace Expressions{
 
     DataType ConstantExpression::GetReturnType() const{ return this->value.GetType(); }
 
+    LogicalExpression::LogicalExpression(
+        Expression *leftExpression,
+        Expression *RightExpression,
+        const LogicalType logicalType
+    ){
+        this->logicalType = logicalType;
+        this->left = leftExpression;
+        this->right = RightExpression;
+        this->expressionType = ExpressionType::Logical;
+    }
+
+    LogicalExpression::LogicalExpression(){
+        this->logicalType = LogicalType::Invalid;
+        this->left = nullptr;
+        this->right = nullptr;
+        this->expressionType = ExpressionType::Logical;
+    }
+
+    bool LogicalExpression::IsOr() const{ return this->logicalType == LogicalType::Or; }
+
+
+    bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
+
+    bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
+
+    void LogicalExpression::BindRowKernel(Expression* self){
+        auto* logicalExpression = self->AsLogical();
+        Expressions::BindExpressionRowKernel(logicalExpression->left);
+        Expressions::BindExpressionRowKernel(logicalExpression->right);
+
+        switch (logicalExpression->logicalType) {
+        case LogicalType::And:
+            logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalAndKernel;
+            break;
+        case LogicalType::Or:
+            logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalOrKernel;
+            break;
+        case LogicalType::Invalid:
+            break;
+        }
+    }
+
+    void LogicalExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* logicalExpression = self->AsLogical();
+        Expressions::BindAndResolveExpressionKernel(logicalExpression->left, schema);
+        Expressions::BindAndResolveExpressionKernel(logicalExpression->right, schema);
+
+        switch (logicalExpression->logicalType) {
+        case LogicalType::And:
+            logicalExpression->vectorizedKernel = &CoreEngine::VectorizedKernels::LogicalAndKernel;
+            break;
+        case LogicalType::Or:
+            logicalExpression->vectorizedKernel = &CoreEngine::VectorizedKernels::LogicalOrKernel;
+            break;
+        case LogicalType::Invalid:
+            break;
+        }
+    }
+
+    constexpr DataType LogicalExpression::GetReturnType() { return DataType::Bool; }
+
     bool BinaryExpression::ValidateAddition()const{
         const auto leftType = GetExpressionReturnType(this->left);
         const auto rightType = GetExpressionReturnType(this->right);
@@ -396,7 +457,6 @@ namespace Expressions{
             return false;
         }
     }
-
 
     bool BinaryExpression::ValidateDivision() const{
         const auto leftType = GetExpressionReturnType(this->left);
@@ -835,52 +895,6 @@ namespace Expressions{
         return this->functionType == Constants::FunctionType::Plugin;
     }
 
-    void LogicalExpression::BindVectorizedKernel(){
-    }
-
-    LogicalExpression::LogicalExpression(
-        Expression *leftExpression,
-        Expression *RightExpression,
-        const LogicalType logicalType
-    ){
-        this->logicalType = logicalType;
-        this->left = leftExpression;
-        this->right = RightExpression;
-        this->expressionType = ExpressionType::Logical;
-    }
-
-    LogicalExpression::LogicalExpression(){
-        this->logicalType = LogicalType::Invalid;
-        this->left = nullptr;
-        this->right = nullptr;
-        this->expressionType = ExpressionType::Logical;
-    }
-
-    bool LogicalExpression::IsOr() const{ return this->logicalType == LogicalType::Or; }
-
-    bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
-
-    bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
-
-    void LogicalExpression::BindRowKernel(Expression* self){
-        auto* logicalExpression = self->AsLogical();
-        Expressions::BindExpressionRowKernel(logicalExpression->left);
-        Expressions::BindExpressionRowKernel(logicalExpression->right);
-
-        switch (logicalExpression->logicalType) {
-        case LogicalType::And:
-            logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalAndKernel;
-            break;
-        case LogicalType::Or:
-            logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalOrKernel;
-            break;
-        case LogicalType::Invalid:
-            break;
-        }
-    }
-
-    constexpr DataType LogicalExpression::GetReturnType() { return DataType::Bool; }
-
     BranchExpression::BranchExpression(const BranchType type, const ::Memory::IAllocator* allocator)
         :   branchType(type), branches(allocator),
             results(allocator), arguments(allocator),
@@ -1139,7 +1153,7 @@ namespace Expressions{
             BinaryExpression::BindVectorizedKernel(expression, schema);
             break;
         case ExpressionType::Logical:
-            // LogicalExpression::BindExpressionKernel(expression->AsLogical(), EXECUTION_MODE);
+            LogicalExpression::BindVectorizedKernel(expression, schema);
             break;
         case ExpressionType::Variable:
             // VariableExpression::BindExpressionKernel(expression->AsVariable(), EXECUTION_MODE);

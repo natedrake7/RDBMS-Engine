@@ -187,6 +187,30 @@ namespace Expressions{
         [[nodiscard]] DataType GetReturnType() const;
     };
 
+    class LogicalExpression final : public Expression{
+    public:
+        LogicalType logicalType;
+
+        Expression* left;
+        Expression* right;
+
+        LogicalExpression(
+          Expression *leftExpression,
+          Expression *RightExpression,
+          LogicalType logicalType
+        );
+        LogicalExpression();
+
+        [[nodiscard]] bool IsOr()const;
+        [[nodiscard]] bool IsAnd()const;
+        [[nodiscard]] bool HasAtLeastOneConstant()const;
+
+        static void BindRowKernel(Expression* self);
+        static void BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema);
+
+        [[nodiscard]] static constexpr DataType GetReturnType();
+    };
+
     class BinaryExpression final : public Expression {
         [[nodiscard]] bool ValidateAddition()const;
         [[nodiscard]] bool ValidateSubtraction()const;
@@ -267,30 +291,6 @@ namespace Expressions{
         [[nodiscard]] bool IsPlugin()const;
     };
 
-    class LogicalExpression final : public Expression{
-        void BindVectorizedKernel();
-
-    public:
-        LogicalType logicalType;
-
-        Expression* left;
-        Expression* right;
-
-        LogicalExpression(
-          Expression *leftExpression,
-          Expression *RightExpression,
-          LogicalType logicalType
-        );
-        LogicalExpression();
-
-        [[nodiscard]] bool IsOr()const;
-        [[nodiscard]] bool IsAnd()const;
-        [[nodiscard]] bool HasAtLeastOneConstant()const;
-
-        static void BindRowKernel(Expression* self);
-
-        [[nodiscard]] static constexpr DataType GetReturnType();
-    };
 
     class BranchExpression final : public Expression {
         [[nodiscard]] Value EvaluateSwitch(const EvaluationContext &context)const;

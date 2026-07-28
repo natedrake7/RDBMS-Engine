@@ -1847,7 +1847,7 @@ namespace QueryPipeline::Statements {
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
-        if (ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
         FoldLogicalExpression(context, expression);
@@ -2540,28 +2540,14 @@ namespace QueryPipeline::Statements {
         FoldExpression(context, logicalExpr->left);
         FoldExpression(context, logicalExpr->right);
 
-        //If expression is of type OR and either right or left is a constant, it will always be true
-        if (logicalExpr->IsOr()) {
-            if (logicalExpr->left->IsConstant()) {
-                PropagateExpression(expression, logicalExpr->left);
-                return;
-            }
+        const auto dominantValue = logicalExpr->IsOr();
 
-            if (logicalExpr->right->IsConstant())
-                PropagateExpression(expression, logicalExpr->right);
-
-            return;
-        }
-
-        //if expression is and and it has one constant propagate child
-        //keep the right
-        if (logicalExpr->left->IsConstant()) {
-            TryPropagateChildExpression(expression, logicalExpr->left, logicalExpr->right);
-            return;
-        }
+        if (logicalExpr->left->IsConstant()
+            && TryPropagateChildExpression(expression, logicalExpr->left, logicalExpr->right, dominantValue)
+        ) return;
 
         if (logicalExpr->right->IsConstant())
-            TryPropagateChildExpression(expression, logicalExpr->right, logicalExpr->left);
+            TryPropagateChildExpression(expression, logicalExpr->right, logicalExpr->left, dominantValue);
     }
 
     void FoldFunctionExpression(
@@ -2949,22 +2935,24 @@ namespace QueryPipeline::Statements {
         expression = context._compileContext.Allocate<Expressions::CastExpression>(expression, type, false);
     }
 
-    void TryPropagateChildExpression(
+    bool TryPropagateChildExpression(
         Expressions::Expression*& expression,
         Expressions::Expression*& leftExpr,
-        Expressions::Expression*& rightExpr
+        Expressions::Expression*& rightExpr,
+        const bool dominantValue
     ){
         const auto* left = leftExpr->AsConstant();
-        if (left->value.IsNull()) return;
+        if (left->value.IsNull())
+            return false;
 
-        if(
-            DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value)
-            && left->value.AsBool() == false
-        ) {
+        if (!DataTypes::Coercions::CanBeParsedToType(DataType::Bool, left->value))
+            return false;
+
+        if( left->value.AsBool() == dominantValue)
             PropagateExpression(expression, leftExpr);
-            return;
-        }
+        else
+            PropagateExpression(expression, rightExpr);
 
-        PropagateExpression(expression, rightExpr);
+        return true;
     }
 }
