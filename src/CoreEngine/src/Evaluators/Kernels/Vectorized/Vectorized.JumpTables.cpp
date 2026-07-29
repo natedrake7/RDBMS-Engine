@@ -76,6 +76,14 @@ namespace CoreEngine::VectorizedKernels{
             return table;
         }
 
+        constexpr auto MakeLogicalKernelTable(){
+            DataStructures::StaticArray<Expressions::VectorizedKernelFunction, Expressions::LOGICAL_TYPE_COUNT> table{};
+            table[static_cast<size_t>(Expressions::LogicalType::And)] = &LogicalAndKernel;
+            table[static_cast<size_t>(Expressions::LogicalType::Or)] = &LogicalOrKernel;
+            table[static_cast<size_t>(Expressions::LogicalType::Not)] = &LogicalNotKernel;
+            return table;
+        }
+
         // Types here are the *in-vector* representations, not the storage ones:
         // a String column materializes into StringValue entries.
         inline constexpr auto COLUMN_MATERIALIZERS = MakeMaterializerTable<
@@ -95,6 +103,8 @@ namespace CoreEngine::VectorizedKernels{
             DataTypes::Decimal, DataTypes::StringValue, DataTypes::DateTime,
             DataTypes::Guid, DataTypes::JsonBinary
         >();
+
+        inline constexpr auto LOGICAL_KERNELS = MakeLogicalKernelTable();
     }
 
     StorageTypes::TableMaterializationFunction JumpTables::GetMaterializationFunction(DataType type){
@@ -110,5 +120,9 @@ namespace CoreEngine::VectorizedKernels{
         DataType type
     ){
         return BINARY_KERNELS[static_cast<Int>(_operator)][static_cast<Int>(type)];
+    }
+
+    Expressions::VectorizedKernelFunction JumpTables::GetLogicalKernel(Expressions::LogicalType type){
+        return LOGICAL_KERNELS[static_cast<Int>(type)];
     }
 }

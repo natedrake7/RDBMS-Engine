@@ -81,4 +81,23 @@ namespace CoreEngine::VectorizedKernels{
 
         return out;
     }
+
+    DataVector* LogicalNotKernel(
+        const Expressions::Expression* self,
+        const ExecutionContext* context,
+        const DataChunk* chunk
+    ){
+        const auto* logicalExpr = self->AsLogical();
+        const auto* input = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
+        auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
+
+        for (Int i = 0; i < chunk->_numberOfRows; i++){
+            const auto index = input->PhysicalIndex(i);
+            const auto isNull = input->GetNullValue(index);
+            out->SetNullValue(i, isNull);
+            *out->template SlotAt<bool>(i) = !isNull && !*input->template SlotAt<bool>(index);
+        }
+
+        return out;
+    }
 }

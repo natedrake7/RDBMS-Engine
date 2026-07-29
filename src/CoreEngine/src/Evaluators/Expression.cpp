@@ -368,6 +368,8 @@ namespace Expressions{
         case LogicalType::Or:
             logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalOrKernel;
             break;
+        case LogicalType::Not:
+            logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalNotKernel;
         case LogicalType::Invalid:
             break;
         }
@@ -377,17 +379,7 @@ namespace Expressions{
         auto* logicalExpression = self->AsLogical();
         Expressions::BindAndResolveExpressionKernel(logicalExpression->left, schema);
         Expressions::BindAndResolveExpressionKernel(logicalExpression->right, schema);
-
-        switch (logicalExpression->logicalType) {
-        case LogicalType::And:
-            logicalExpression->vectorizedKernel = &CoreEngine::VectorizedKernels::LogicalAndKernel;
-            break;
-        case LogicalType::Or:
-            logicalExpression->vectorizedKernel = &CoreEngine::VectorizedKernels::LogicalOrKernel;
-            break;
-        case LogicalType::Invalid:
-            break;
-        }
+        logicalExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetLogicalKernel(logicalExpression->logicalType);
     }
 
     constexpr DataType LogicalExpression::GetReturnType() { return DataType::Bool; }

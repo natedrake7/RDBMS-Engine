@@ -195,9 +195,9 @@ namespace Expressions{
         Expression* right;
 
         LogicalExpression(
-          Expression *leftExpression,
-          Expression *RightExpression,
-          LogicalType logicalType
+            Expression *leftExpression,
+            Expression *RightExpression,
+            LogicalType logicalType
         );
         LogicalExpression();
 

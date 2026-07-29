@@ -66,4 +66,10 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     );
+
+    DataVector* LogicalNotKernel(
+        const Expressions::Expression* self,
+        const ExecutionContext* context,
+        const DataChunk* chunk
+    );
 }

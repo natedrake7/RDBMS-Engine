@@ -168,7 +168,7 @@ target_include_directories(Server PUBLIC src/Server/include)
 
 target_link_libraries(Server PRIVATE QueryPipeline PRIVATE $<$<PLATFORM_ID:Windows>:ws2_32> PRIVATE unofficial::argon2::libargon2)
 
- add_executable(Client
+add_executable(Client
          src/Client/src/client.cpp
          src/Client/src/ClientManager.cpp
 )

@@ -438,7 +438,6 @@ namespace QueryPipeline::Parsing{
 
     Expressions::Expression* SqlParser::ParseVariable(){
         auto name = this->MakeString(this->Advance());
-
         return this->_allocator->Allocate<Expressions::VariableExpression>(name, this->_allocator);
     }
 
@@ -609,11 +608,12 @@ namespace QueryPipeline::Parsing{
     }
 
     bool SqlParser::ParseJsonKey(DataTypes::String& key){
-        const TokenType type = this->Current().type;
+        const auto type = this->Current().type;
 
         if (!CanBeIdentifier(type)
             && type != TokenType::StringLiteral
-            && type != TokenType::IntegerLiteral){
+            && type != TokenType::IntegerLiteral
+        ){
             this->Fail("expected a json key: a name, a string, or an integer");
             return false;
         }
@@ -624,15 +624,30 @@ namespace QueryPipeline::Parsing{
 
     bool SqlParser::ParseDataType(ParsedDataType& result){
         switch (this->Current().type){
-            case TokenType::Bool:     result.type = DataType::Bool;     break;
-            case TokenType::TinyInt:  result.type = DataType::TinyInt;  break;
-            case TokenType::SmallInt: result.type = DataType::SmallInt; break;
-            case TokenType::Int:      result.type = DataType::Int;      break;
-            case TokenType::BigInt:   result.type = DataType::BigInt;   break;
-            case TokenType::DateTime: result.type = DataType::DateTime; break;
-            case TokenType::Guid:     result.type = DataType::Guid;     break;
-            case TokenType::Json:     result.type = DataType::Json;     break;
-
+            case TokenType::Bool:
+                result.type = DataType::Bool;
+                break;
+            case TokenType::TinyInt:
+                result.type = DataType::TinyInt;
+                break;
+            case TokenType::SmallInt:
+                result.type = DataType::SmallInt;
+                break;
+            case TokenType::Int:
+                result.type = DataType::Int;
+                break;
+            case TokenType::BigInt:
+                result.type = DataType::BigInt;
+                break;
+            case TokenType::DateTime:
+                result.type = DataType::DateTime;
+                break;
+            case TokenType::Guid:
+                result.type = DataType::Guid;
+                break;
+            case TokenType::Json:
+                result.type = DataType::Json;
+                break;
             case TokenType::String: {
                 this->Advance();
                 result.type = DataType::String;
@@ -648,7 +663,7 @@ namespace QueryPipeline::Parsing{
                         return false;
                     }
 
-                    const Token& width = this->Advance();
+                    const auto& width = this->Advance();
                     if (!Converter::TryStrToInt<Int>(width.View())){
                         this->Fail("string width is out of range");
                         return false;
@@ -672,7 +687,7 @@ namespace QueryPipeline::Parsing{
                     return false;
                 }
 
-                const Token& precision = this->Advance();
+                const auto& precision = this->Advance();
                 result.precision = static_cast<TinyInt>(Converter::StrToInt<Int>(precision.View()));
 
                 if (!this->Expect(TokenType::Comma))
@@ -683,7 +698,7 @@ namespace QueryPipeline::Parsing{
                     return false;
                 }
 
-                const Token& scale = this->Advance();
+                const auto& scale = this->Advance();
                 result.scale = static_cast<TinyInt>(Converter::StrToInt<Int>(scale.View()));
 
                 return this->Expect(TokenType::RightParen);

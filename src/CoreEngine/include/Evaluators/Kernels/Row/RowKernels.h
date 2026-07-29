@@ -108,6 +108,13 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     );
 
+    void LogicalNotKernel(
+        const Expressions::Expression* self,
+        const Expressions::EvaluationContext& context,
+        void* outVal,
+        bool* outNull
+    );
+
     template<typename T>
     Value KernelToValue(
         const Expressions::Expression* self,

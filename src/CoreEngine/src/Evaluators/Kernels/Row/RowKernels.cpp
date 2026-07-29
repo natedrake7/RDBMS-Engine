@@ -78,4 +78,17 @@ namespace CoreEngine::RowKernels{
 
         *static_cast<bool*>(outVal) = false; *outNull = false;
     }
+
+    void LogicalNotKernel(
+        const Expressions::Expression* self,
+        const Expressions::EvaluationContext& context,
+        void* outVal,
+        bool* outNull
+    ){
+
+        const auto* logicalExpr = self->AsLogical();
+        auto value = false;
+        logicalExpr->left->rowKernel(logicalExpr->left, context, &value, outNull);
+        *static_cast<bool*>(outVal) = !outNull && !value;
+    }
 }

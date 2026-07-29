@@ -9,5 +9,6 @@ namespace CoreEngine::VectorizedKernels{
         static StorageTypes::TableMaterializationFunction GetMaterializationFunction(DataType type);
         static Expressions::VectorizedKernelFunction GetConstantKernel(DataType type);
         static Expressions::VectorizedKernelFunction GetBinaryKernel(Expressions::BinaryOperator _operator, DataType type);
+        static Expressions::VectorizedKernelFunction GetLogicalKernel(Expressions::LogicalType type);
     };
 }

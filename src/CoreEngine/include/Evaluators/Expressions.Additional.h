@@ -10,6 +10,7 @@
 namespace Expressions {
     class Expression;
 
+    static constexpr Int LOGICAL_TYPE_COUNT = 3;
     enum class LogicalType {
         And = 0,
         Or = 1,
