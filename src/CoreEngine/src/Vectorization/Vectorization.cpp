@@ -8,7 +8,8 @@ namespace CoreEngine{
     }
 
     DataVector::DataVector(const DataType type)
-        :   _data{nullptr}, _validity{nullptr},
+        :   _data(nullptr), _validity(nullptr),
+            _selection(nullptr),
             _count(0), _type(type),
             _kind(DataVectorKind::Flat),
             _dataEntrySize(0){}
@@ -23,10 +24,21 @@ namespace CoreEngine{
         this->_validity[w] = ( this->_validity[w] & ~m) | (static_cast<uint64_t>(value) << (index & 63));
     }
 
-    Int DataVector::PhysicalIndex(const Int logicalIndex) const{
-        return this->_kind == DataVectorKind::Constant
-            ? 0
-            : logicalIndex;
+    UnsignedInt DataVector::PhysicalIndex(const Int logicalIndex) const{
+        switch (this->_kind){
+        case DataVectorKind::Flat:
+            return logicalIndex;
+        case DataVectorKind::Constant:
+            return 0;
+        case DataVectorKind::Dictionary:
+            return this->_selection[logicalIndex];
+        }
+
+        throw std::runtime_error("Invalid DataVector kind");
+    }
+
+    Int DataVector::DictionaryIndex(const Int logicalIndex) const{
+        return this->_selection[logicalIndex];
     }
 
     bool DataVector::GetNullValue(const Int index) const{
@@ -43,6 +55,7 @@ namespace CoreEngine{
         dataVector->_kind  = DataVectorKind::Flat;
         dataVector->_dataEntrySize = VECTOR_COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
         dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize * count));
+        std::memset(dataVector->_data, 0, dataVector->_dataEntrySize * count);
 
         const Int validityWords = (count + 63) / 64;
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(validityWords * sizeof(UnsignedBigInt)));
@@ -61,10 +74,40 @@ namespace CoreEngine{
         dataVector->_type = type;
         dataVector->_dataEntrySize = VECTOR_COLUMN_SIZES_BY_DATATYPE[static_cast<Int>(type)];
         dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize));
+        std::memset(dataVector->_data, 0, dataVector->_dataEntrySize);
+
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(sizeof(UnsignedBigInt)));
         dataVector->_validity[0] = isNull ? ~0ull : 0ull;
         return dataVector;
     }
+
+    Int DataVector::ValidityWords() const{
+        return (this->_count + 63) / 64;
+    }
+
+    void DataVector::SetAllNull() const{
+        std::memset(this->_validity, 0xFF, this->ValidityWords() * sizeof(UnsignedBigInt));
+    }
+
+    void DataVector::CopyValidity(const DataVector* other) const{
+        std::memcpy(this->_validity, other->_validity, this->ValidityWords() * sizeof(UnsignedBigInt));
+    }
+
+    void DataVector::OrValidity(const DataVector* lhs, const DataVector* rhs) const{
+        for (Int i = 0; i < lhs->ValidityWords(); ++i)
+            this->_validity[i] |= lhs->_validity[i] | rhs->_validity[i];
+    }
+
+    void DataVector::ConvertToDictionary(const UnsignedInt* selection){
+        this->_kind = DataVectorKind::Dictionary;
+        this->_selection = selection;
+    }
+
+    bool DataVector::IsConstant() const{ return this->_kind == DataVectorKind::Constant; }
+
+    bool DataVector::IsFlat() const{ return this->_kind == DataVectorKind::Flat; }
+
+    bool DataVector::IsDictionary() const{ return this->_kind == DataVectorKind::Dictionary; }
 
     DataChunk::DataChunk()
         :   _columns(nullptr), _selection(nullptr),
@@ -86,10 +129,18 @@ namespace CoreEngine{
         return *this;
     }
 
-    void DataChunk::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfColumns){
+    void DataChunk::AllocateColumns(const Memory::IAllocator* allocator, const Int numberOfRows, const Int numberOfColumns){
         this->_columns = static_cast<DataVector**>(
             allocator->AllocateRaw(sizeof(DataVector*)*numberOfColumns)
         );
+
+        this->_selection = static_cast<UnsignedInt*>(
+            allocator->AllocateRaw(numberOfRows * sizeof(UnsignedInt))
+        );
+
+        std::memset(this->_selection, 0, numberOfRows * sizeof(UnsignedInt));
+        this->_numberOfRows = numberOfRows;
+        this->_numberOfColumns = numberOfColumns;
     }
 
     void DataChunk::SetColumn(DataVector* columnData, const Int columnIndex) const{

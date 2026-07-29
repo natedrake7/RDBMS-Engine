@@ -203,6 +203,7 @@ namespace Expressions{
 
         [[nodiscard]] bool IsOr()const;
         [[nodiscard]] bool IsAnd()const;
+        [[nodiscard]] bool IsNot()const;
         [[nodiscard]] bool HasAtLeastOneConstant()const;
 
         static void BindRowKernel(Expression* self);

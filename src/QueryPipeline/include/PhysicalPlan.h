@@ -323,9 +323,6 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode* child;
         UnsignedSmallInt _slotCount;
 
-        inline void ExecuteVectorizedMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
-        inline void ExecuteRowMode(const ExecutionResult& result, const CoreEngine::ExecutionContext& context)const;
-
     public:
         PhysicalFilter(
             PlanNode* child,

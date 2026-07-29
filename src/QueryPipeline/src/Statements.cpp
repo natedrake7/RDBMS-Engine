@@ -1669,6 +1669,9 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CompileExpression(QueryContext& context, Expressions::Expression*& expression){
+        if (expression == nullptr)
+            return Errors::ValidationStatus::Ok();
+
         switch (expression->expressionType) {
             case Expressions::ExpressionType::Binary:
                 return CompileBinaryExpression(context, expression->AsBinary(), expression);
@@ -1704,6 +1707,9 @@ namespace QueryPipeline::Statements {
         StatementValidationScope& statementValidationScope,
         Expressions::Expression*& expression
     ){
+        if (expression == nullptr)
+            return Errors::ValidationStatus::Ok();
+
         switch (expression->expressionType) {
             case Expressions::ExpressionType::Binary:
                 return CompileBinaryExpression(context, expression->AsBinary(), expression, statementValidationScope);
@@ -1868,7 +1874,7 @@ namespace QueryPipeline::Statements {
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
-        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
+        if (!logicalExpr->IsNot() && !ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
         FoldLogicalExpression(context, expression);
@@ -2490,6 +2496,9 @@ namespace QueryPipeline::Statements {
     }
 
     void FoldExpression(const QueryContext& context, Expressions::Expression *&expression) {
+        if (expression == nullptr)
+            return;
+
         switch (expression->expressionType) {
             case Expressions::ExpressionType::Binary:
                 FoldBinaryExpression(context, expression);
@@ -2542,8 +2551,10 @@ namespace QueryPipeline::Statements {
 
         const auto dominantValue = logicalExpr->IsOr();
 
-        if (logicalExpr->left->IsConstant()
-            && TryPropagateChildExpression(expression, logicalExpr->left, logicalExpr->right, dominantValue)
+        if ((
+                logicalExpr->left->IsConstant()
+                && TryPropagateChildExpression(expression, logicalExpr->left, logicalExpr->right, dominantValue)
+        ) || logicalExpr->IsNot()
         ) return;
 
         if (logicalExpr->right->IsConstant())

@@ -343,7 +343,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String name;
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -351,7 +351,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String name;
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -382,7 +382,7 @@ namespace QueryPipeline::Statements {
         [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context, StatementValidationScope& validationScope);
         [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
 
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -390,7 +390,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String name;
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -415,7 +415,7 @@ namespace QueryPipeline::Statements {
             StatementValidationScope& validationScope
         );
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -426,7 +426,7 @@ namespace QueryPipeline::Statements {
         bool isUnique;
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -457,7 +457,7 @@ namespace QueryPipeline::Statements {
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
         ) const;
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 

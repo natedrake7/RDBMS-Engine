@@ -161,7 +161,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto columnsSize = this->_materializationInfo.Size();
         const auto rowCount = result.selectionVector->selectedRidsCount;
 
-        result.dataChunk.AllocateColumns(context.GetAllocator(), columnsSize);
+        result.dataChunk.AllocateColumns(context.GetAllocator(), rowCount, columnsSize);
 
         for (Int index = 0; index < columnsSize; index++){
             const auto& info = this->_materializationInfo[index];
@@ -690,11 +690,10 @@ namespace QueryPipeline::PhysicalPlan {
             return result;
 
         CoreEngine::DataChunk newChunk;
-        newChunk._numberOfRows = rowCount;
-        newChunk._numberOfColumns = this->_projections.Size();
         newChunk.AllocateColumns(
             context.GetAllocator(),
-            newChunk._numberOfColumns
+            rowCount,
+            this->_projections.Size()
         );
 
         for (Int index = 0;index < this->_projections.Size(); index++){
@@ -716,99 +715,34 @@ namespace QueryPipeline::PhysicalPlan {
         this->child->UpdateScanState(rid);
     }
 
-    void PhysicalFilter::ExecuteVectorizedMode(
-        const ExecutionResult& result,
-        const CoreEngine::ExecutionContext& context
-    ) const{
-
-    }
-
-    void PhysicalFilter::ExecuteRowMode(
-        const ExecutionResult& result,
-        const CoreEngine::ExecutionContext& context
-    ) const{
-        auto* selectionVector = result.selectionVector;
-
-        const auto isIdentity = selectionVector->isIdentity;
-        const Int rowCount = isIdentity
-            ? static_cast<Int>(context.GetScanHandleSize(0))
-            : selectionVector->selectedRidsCount;
-
-        if (isIdentity)
-            for (Int j = 0; j < this->_slotCount; j++)
-                selectionVector->AllocateRids(context.GetAllocator(), j, rowCount);
-
-        Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            &context
-        );
-
-        Pages::PageView pages[Constants::MAX_QUERY_JOINS];
-        CoreEngine::StorageTypes::RID rids[Constants::MAX_QUERY_JOINS];
-
-        evaluationContext._pages = pages;
-        evaluationContext._rids = rids;
-
-        Int outputCount = 0;
-        if (isIdentity){
-            for (Int i = 0; i < rowCount; i++){
-                for (Int j = 0; j < this->_slotCount; j++){
-                    rids[j] = context.GetRID(j, i);
-                    PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
-                }
-
-                if (!Expressions::RowModeFilter(this->filter, evaluationContext))
-                    continue;
-
-                // Record the surviving row's per-slot source index into every slot.
-                for (Int j = 0; j < this->_slotCount; j++)
-                    selectionVector->selectedRids[j][outputCount] = i;
-
-                outputCount++;
-
-            }
-        }
-        else{
-            for (Int i = 0; i < rowCount; i++){
-                for (Int j = 0; j < this->_slotCount; j++){
-                    rids[j] = context.GetRID(j, selectionVector->selectedRids[j][i]);
-                    PlanNode::LazyCachePage(context, rids[j], j, &pages[j]);
-                }
-
-                if (!Expressions::RowModeFilter(this->filter, evaluationContext))
-                    continue;
-
-                // Record the surviving row's per-slot source index into every slot.
-                for (Int j = 0; j < this->_slotCount; j++)
-                    selectionVector->selectedRids[j][outputCount] = selectionVector->selectedRids[j][i];
-
-                outputCount++;
-            }
-        }
-
-        selectionVector->selectedRidsCount = outputCount;
-        selectionVector->isIdentity = false;
-    }
-
     PhysicalFilter::PhysicalFilter(
         PlanNode *child,
         Expressions::Expression* filter,
         const UnsignedSmallInt slotCount
-    ): filter(filter) , child(child), _slotCount(slotCount) {}
+    ): PlanNode(child->GetSchema()), filter(filter) , child(child), _slotCount(slotCount) {}
 
     ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        const auto& firstHandle = context.GetScanHandle(0);
-        if (firstHandle.size == 0)
+        auto* mask = Expressions::EvaluateExpression(this->filter, &context, &result.dataChunk);
+        Int rowCounter = 0;
+
+        for (Int i = 0;i < result.dataChunk._numberOfRows; i++){
+            const auto index = mask->PhysicalIndex(i);
+            if (!mask->GetNullValue(index) && *mask->SlotAt<bool>(index))
+                result.dataChunk._selection[rowCounter++] = result.dataChunk.RowPhysicalIndex(i);
+        }
+
+        if (rowCounter == result.dataChunk._numberOfRows)
             return result;
 
-        // Allocation and count are Model-B concerns owned by the mode implementation:
-        // identity input allocates per-slot arrays; non-identity compacts in place.
-        if (context.GetMode() == Constants::ExecutionMode::Vectorized)
-            this->ExecuteVectorizedMode(result, context);
-        else
-            this->ExecuteRowMode(result, context);
+        result.dataChunk._numberOfRows = rowCounter;
+        for (Int i = 0;i < result.dataChunk._numberOfColumns; i++){
+            auto* vec = result.dataChunk._columns[i];
+            if (vec->IsConstant())
+                continue;
+            vec->ConvertToDictionary(result.dataChunk._selection);
+        }
 
         return result;
     }

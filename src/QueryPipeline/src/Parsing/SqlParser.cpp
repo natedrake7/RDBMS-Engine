@@ -150,7 +150,7 @@ namespace QueryPipeline::Parsing{
         if (!this->Match(TokenType::Not))
             return this->ParseEquality();
 
-        auto* operand = this->ParseNot();
+        auto* operand = this->ParseEquality();
         if (operand == nullptr)
             return nullptr;
 

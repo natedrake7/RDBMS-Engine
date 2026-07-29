@@ -21,7 +21,97 @@ namespace CoreEngine::VectorizedKernels{
         const auto chunkSize = chunk->_numberOfRows;
         const auto* allocator = context->GetAllocator();
 
+        const auto* leftData = left->DataAs<T>();
+        const auto* rightData = right->DataAs<T>();
+
+        const auto lConst = left->IsConstant();
+        const auto lFlat = left->IsFlat();
+
+        const auto rConst = right->IsConstant();
+        const auto rFlat = right->IsFlat();
+
+        if (lConst && rConst){
+            const auto isNull = left->GetNullValue(0) || right->GetNullValue(0);
+            auto* out = DataVector::ConstantVector(allocator, isNull, DataTypes::DataTypeOf<T>());
+            auto* outData = out->template DataAs<T>();
+
+            if (!isNull){
+                if constexpr (
+                    DataTypes::Primitive<T>
+                    || DataTypes::IsDecimal<T>
+                ) DataVector::ConstantAccess(outData) = Op{}(DataVector::ConstantAccess(leftData), DataVector::ConstantAccess(rightData));
+                else if constexpr (DataTypes::IsStringValue<T>){
+                    auto concatStr = DataTypes::String::Concat(allocator, DataVector::ConstantAccess(leftData), DataVector::ConstantAccess(rightData));
+                    DataVector::ConstantAccess(outData) = DataTypes::StringValue::Create(
+                        allocator,
+                        concatStr.Data(),
+                        concatStr.Size()
+                    );
+                }
+            }
+
+            return out;
+        }
+
         auto* out = DataVector::FlatVector(allocator, DataTypes::DataTypeOf<T>(), chunkSize);
+        auto* outData = out->template DataAs<T>();
+
+        const auto ArithmeticOp = [out, outData, allocator](const T& leftValue, const T& rightValue, const Int index) -> void{
+            if constexpr (DataTypes::Primitive<T>)
+                DataVector::FlatAccess(outData, index) = Op{}(leftValue, rightValue);
+            else if constexpr (DataTypes::IsStringValue<T>){
+                if (out->GetNullValue(index))
+                    return;
+
+                auto concatStr = DataTypes::String::Concat(allocator, leftValue, rightValue);
+                DataVector::FlatAccess(outData, index) = DataTypes::StringValue::Create(
+                    allocator,
+                    concatStr.Data(),
+                    concatStr.Size()
+                );
+            }
+            else if constexpr (DataTypes::IsDecimal<T>){
+                if (out->GetNullValue(index))
+                    return;
+
+                DataVector::FlatAccess(outData, index) = Op{}(leftValue, rightValue);
+            }
+            else
+                static_assert(DataTypes::AlwaysFalse<T>, "BinaryArithmeticKernel: unsupported type");
+        };
+
+        if (lFlat && rConst){
+            if (right->GetNullValue(0)){
+                out->SetAllNull();
+                return out;
+            }
+            out->CopyValidity(left);
+            for (Int i = 0;i < chunkSize; i++)
+                ArithmeticOp(DataVector::FlatAccess(leftData, i), DataVector::ConstantAccess(rightData), i);
+
+            return out;
+        }
+
+        if (lConst && rFlat){
+            if (left->GetNullValue(0)){
+                out->SetAllNull();
+                return out;
+            }
+            out->CopyValidity(right);
+
+            for (Int i = 0;i < chunkSize; i++)
+                ArithmeticOp(DataVector::ConstantAccess(leftData), DataVector::FlatAccess(rightData, i), i);
+
+            return out;
+        }
+
+        if (lFlat && rFlat){
+            out->OrValidity(left, right);
+
+            for (Int i = 0;i < chunkSize; i++)
+                ArithmeticOp(DataVector::FlatAccess(leftData, i), DataVector::FlatAccess(rightData, i), i);
+            return out;
+        }
 
         for (Int i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -32,21 +122,7 @@ namespace CoreEngine::VectorizedKernels{
             if (isNull)
                 continue;
 
-            if constexpr (DataTypes::Primitive<T>)
-                *out->template SlotAt<T>(i) = Op{}(*left->template SlotAt<T>(leftIndex), *right->template SlotAt<T>(rightIndex));
-            else if constexpr (DataTypes::IsStringValue<T>){
-                auto concatStr = DataTypes::String::Concat(allocator, *left->template SlotAt<T>(leftIndex), *right->template SlotAt<T>(rightIndex));
-                *out->template SlotAt<T>(i) = std::move(
-                    DataTypes::StringValue::Create(
-                        allocator,
-                        concatStr.Data(),
-                        concatStr.Size()
-                ));
-            }
-            else if constexpr (DataTypes::IsDecimal<T>)
-                *out->template SlotAt<T>(i) = std::move(Op{}(*left->template SlotAt<T>(leftIndex), *right->template SlotAt<T>(rightIndex)));
-            else
-                static_assert(DataTypes::AlwaysFalse<T>, "BinaryArithmeticKernel: unsupported type");
+            ArithmeticOp(DataVector::FlatAccess(leftData, leftIndex), DataVector::FlatAccess(rightData, rightIndex), i);
         }
 
         return out;
@@ -64,7 +140,13 @@ namespace CoreEngine::VectorizedKernels{
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
 
         const auto chunkSize = chunk->_numberOfRows;
+        const auto* allocator = context->GetAllocator();
+
+        const auto* leftData = left->DataAs<T>();
+        const auto* rightData = right->DataAs<T>();
+
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataTypes::DataTypeOf<T>(), chunkSize);
+        auto* outData = out->template DataAs<T>();
 
         for (Int i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -76,9 +158,9 @@ namespace CoreEngine::VectorizedKernels{
                 continue;
 
             if constexpr (DataTypes::Primitive<T>)
-                *out->template SlotAt<T>(i) = *left->template SlotAt<T>(leftIndex) / *right->template SlotAt<T>(rightIndex);
+                DataVector::FlatAccess(outData, i) = leftData[leftIndex] / rightData[rightIndex];
             else if constexpr (DataTypes::IsDecimal<T>)
-                *out->template SlotAt<T>(i) = std::move(*left->template SlotAt<T>(leftIndex) / *right->template SlotAt<T>(rightIndex));
+                DataVector::FlatAccess(outData, i) = leftData[leftIndex] / rightData[rightIndex];
             else
                 static_assert(DataTypes::AlwaysFalse<T>, "BinaryDivideKernel: unsupported type");
         }
@@ -130,12 +212,67 @@ namespace CoreEngine::VectorizedKernels{
     ){
         const auto* binaryExpr = self->AsBinary();
 
-        auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
-        auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
+        const auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
+        const auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
 
         const auto chunkSize = chunk->_numberOfRows;
-        // A comparison always yields Bool; T is the operand type, not the result type.
-        auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunkSize);
+        const auto* allocator = context->GetAllocator();
+
+        const auto* leftData = left->DataAs<T>();
+        const auto* rightData = right->DataAs<T>();
+
+        const auto lConst = left->IsConstant();
+        const auto lFlat = left->IsFlat();
+
+        const auto rConst = right->IsConstant();
+        const auto rFlat = right->IsFlat();
+
+        if (lConst && rConst){
+            const auto isNull = left->GetNullValue(0) || right->GetNullValue(0);
+            auto* out = DataVector::ConstantVector(allocator, isNull, DataType::Bool);
+
+            auto* outData = out->template DataAs<bool>();
+
+            if (!isNull)
+                DataVector::ConstantAccess(outData) = Comparison{}(DataVector::ConstantAccess(leftData), DataVector::ConstantAccess(rightData));
+
+            return out;
+        }
+
+        auto* out = DataVector::FlatVector(allocator, DataType::Bool, chunkSize);
+        auto* outData = out->template DataAs<bool>();
+
+        if (lFlat && rConst){
+            if (right->GetNullValue(0)){
+                out->SetAllNull();
+                return out;
+            }
+            out->CopyValidity(left);
+
+            for (Int i = 0;i < chunkSize; i++)
+                DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::FlatAccess(leftData, i), DataVector::ConstantAccess(rightData));
+
+            return out;
+        }
+
+        if (lConst && rFlat){
+            if (left->GetNullValue(0)){
+                out->SetAllNull();
+                return out;
+            }
+            out->CopyValidity(right);
+            for (Int i = 0;i < chunkSize; i++)
+                DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::ConstantAccess(leftData), DataVector::FlatAccess(rightData, i));
+
+            return out;
+        }
+
+        if (lFlat && rFlat){
+            out->OrValidity(left, right);
+            for (Int i = 0;i < chunkSize; i++)
+                DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::FlatAccess(leftData, i), DataVector::FlatAccess(rightData, i));
+            return out;
+        }
 
         for (Int i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -146,7 +283,7 @@ namespace CoreEngine::VectorizedKernels{
             if (isNull)
                 continue;
 
-            *out->template SlotAt<bool>(i) = Comparison{}(*left->template SlotAt<T>(leftIndex), *right->template SlotAt<T>(rightIndex));
+            DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::FlatAccess(leftData, leftIndex), DataVector::FlatAccess(rightData, rightIndex));
         }
 
         return out;

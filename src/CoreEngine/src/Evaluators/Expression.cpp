@@ -354,6 +354,8 @@ namespace Expressions{
 
     bool LogicalExpression::IsAnd() const{ return this->logicalType == LogicalType::And; }
 
+    bool LogicalExpression::IsNot() const{ return this->logicalType == LogicalType::Not; }
+
     bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
 
     void LogicalExpression::BindRowKernel(Expression* self){

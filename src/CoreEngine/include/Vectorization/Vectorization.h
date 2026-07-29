@@ -27,6 +27,7 @@ namespace CoreEngine{
     struct DataVector{
         object_t* _data;
         UnsignedBigInt* _validity;
+        const UnsignedInt* _selection;
 
         Int _count;
 
@@ -40,7 +41,8 @@ namespace CoreEngine{
         [[nodiscard]] object_t* SlotAt(Int index) const;
         void SetNullValue(Int index, bool value) const;
 
-        [[nodiscard]] Int PhysicalIndex(Int logicalIndex) const;
+        [[nodiscard]] UnsignedInt PhysicalIndex(Int logicalIndex) const;
+        [[nodiscard]] Int DictionaryIndex(Int logicalIndex) const;
         [[nodiscard]] bool GetNullValue(Int index) const;
 
         template<typename T>
@@ -51,6 +53,16 @@ namespace CoreEngine{
         template<typename T>
         const T* SlotAt(const Int physicalIndex) const{
             return reinterpret_cast<const T*>(this->SlotAt(physicalIndex));
+        }
+
+        template<typename T>
+        T* DataAs(){
+            return reinterpret_cast<T*>(this->_data);
+        }
+
+        template<typename T>
+        const T* DataAs()const{
+            return reinterpret_cast<const T*>(this->_data);
         }
 
         static DataVector* FlatVector(
@@ -64,12 +76,38 @@ namespace CoreEngine{
             bool isNull,
             DataType type
         );
+
+        template<typename T>
+        static inline T& FlatAccess(T* data, const Int index){
+            return data[index];
+        }
+
+        template<typename T>
+        static inline T& ConstantAccess(T* data){
+            return data[0];
+        }
+
+        template<typename T>
+        static inline T& DictionaryAccess(DataVector* vector, const Int index){
+            return vector->SlotAt<T>(vector->PhysicalIndex(index));
+        }
+
+        [[nodiscard]] Int ValidityWords()const;
+        void SetAllNull() const;
+        void CopyValidity(const DataVector* other) const;
+        void OrValidity(const DataVector* lhs, const DataVector* rhs) const;
+
+        void ConvertToDictionary(const UnsignedInt* selection);
+
+        [[nodiscard]] bool IsConstant()const;
+        [[nodiscard]] bool IsFlat()const;
+        [[nodiscard]] bool IsDictionary()const;
     };
 
     struct DataChunk{
         DataVector** _columns;
 
-        const UnsignedInt* _selection;
+        UnsignedInt* _selection;
 
         Int _numberOfColumns;
         Int _numberOfRows;
@@ -81,7 +119,7 @@ namespace CoreEngine{
         DataChunk(DataChunk&& other) noexcept;
         DataChunk& operator=(DataChunk&& other) noexcept;
 
-        void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfColumns);
+        void AllocateColumns(const ::Memory::IAllocator* allocator, Int numberOfRows, Int numberOfColumns);
         void SetColumn(DataVector* columnData, Int columnIndex) const;
         [[nodiscard]] Int RowPhysicalIndex(Int rowLogicalIndex) const;
     };

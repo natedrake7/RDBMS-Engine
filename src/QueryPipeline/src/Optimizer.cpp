@@ -104,6 +104,9 @@ namespace QueryPipeline {
     }
 
     void Optimizer::GetInvolvedTables(const Expressions::Expression* expression, HashSet<table_id_t>& involvedTables){
+        if (expression == nullptr)
+            return;
+
         switch (expression->expressionType){
             case Expressions::ExpressionType::Binary:{
                 const auto* binaryExpr = expression->AsBinary();
