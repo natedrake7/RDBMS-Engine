@@ -12,11 +12,11 @@
 #include "Optimizer.h"
 #include "Parser.h"
 #include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "DataStorage/SerializedRow.h"
+#include "../../CoreEngine/include/DataStorage/SerializedRow.h"
 
 namespace QueryPipeline::Statements {
     Statement::Statement()
-        : table(nullptr), databaseId(INVALID_DATABASE_ID), _slotCount(DEFAULT_SLOT_INDEX){}
+        : table(nullptr), databaseId(Constants::SYSTEM_CATALOG_ID), _slotCount(DEFAULT_SLOT_INDEX){}
 
     Errors::ValidationStatus Statement::CompileBase(const QueryContext& context)const{
         const auto* session = Network::Server::Get().GetSession(this->sessionId);

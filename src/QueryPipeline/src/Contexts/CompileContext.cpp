@@ -1,5 +1,4 @@
 ﻿#include "../../../QueryPipeline/include/CompileContext.h"
-#include "Managers/GlobalMemoryManager.h"
 
 namespace QueryPipeline{
     CompileContext::CompileContext(const Int size)

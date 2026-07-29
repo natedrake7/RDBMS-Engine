@@ -1,7 +1,6 @@
 ﻿#include "../include/RowCursor.h"
 
 #include "PhysicalPlan.h"
-#include "Vectorization/Vectorization.h"
 #include "../../Systemic/include/DataTypes/String.h"
 #include "../../Systemic/include/DataTypes/StringValue.h"
 #include "../../Systemic/include/DataTypes/JsonBinary.h"

@@ -6,8 +6,8 @@
 #include "Optimizer.h"
 #include "Parser.h"
 #include "../../Systemic/include/Headers.h"
-#include "Managers/StatisticsManager.h"
-#include "SystemDatabases/SystemCatalog.h"
+#include "../../CoreEngine/include/Managers/StatisticsManager.h"
+#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline{
     CostEstimator::HistogramSelectivityEstimate::HistogramSelectivityEstimate(){

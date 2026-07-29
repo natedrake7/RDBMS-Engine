@@ -19,46 +19,8 @@ add_executable(
         UnitTests/src/UnitTests.cpp
 )
 
-# Set this to the directory containing antlr4-runtimeConfig.cmake or antlr4-runtime-config.cmake
-find_package(antlr4-runtime CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(unofficial-argon2 CONFIG REQUIRED)
-
-
-# === ANTLR Setup ===
-if(WIN32)
-    set(ANTLR_JAR_PATH "${CMAKE_SOURCE_DIR}/external/ANTLR/antlr4_complete.jar")
-else ()
-    set(ANTLR_JAR_PATH "$ENV{HOME}/antlr/antlr-4.13.1-complete.jar")
-endif()
-
-set(GENERATED_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated/antlr)
-file(MAKE_DIRECTORY ${GENERATED_DIR})
-
-add_custom_command(
-        OUTPUT ${GENERATED_DIR}/SQLParser.cpp
-        COMMAND java -Xmx500M -cp ${ANTLR_JAR_PATH} org.antlr.v4.Tool
-            -Dlanguage=Cpp -visitor
-        -o ${GENERATED_DIR}
-        ${CMAKE_SOURCE_DIR}/src/QueryPipeline/src/Grammar/SQL.g4
-        DEPENDS ${CMAKE_SOURCE_DIR}/src/QueryPipeline/src/Grammar/SQL.g4
-        COMMENT "Generating ANTLR C++ parser for SQL.g4"
-)
-
-add_custom_target(
-        GenerateSQLParser
-        DEPENDS ${GENERATED_DIR}/SQLParser.cpp
-)
-
-set(ANTLR_SRC
-    ${GENERATED_DIR}/SQLParser.cpp
-    ${GENERATED_DIR}/SQLLexer.cpp
-    ${GENERATED_DIR}/SQLBaseVisitor.cpp
-    ${GENERATED_DIR}/SQLVisitor.cpp
-)
-
-# Mark generated sources so CMake knows they will be created by the build process
-set_source_files_properties(${ANTLR_SRC} PROPERTIES GENERATED TRUE)
 
 add_library(Systemic SHARED
         src/Systemic/src/MultiThreading/Guards/Mutex.cpp
@@ -94,9 +56,6 @@ target_include_directories(Systemic PUBLIC src/Systemic/include)
 add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Optimizer.cpp
         src/QueryPipeline/src/Parser.cpp
-        src/QueryPipeline/src/Visitor/Visitor.cpp
-        src/QueryPipeline/src/Visitor/Visitor.CreateTable.cpp
-        src/QueryPipeline/src/Visitor/Visitor.Joins.cpp
         src/QueryPipeline/src/Cursor.cpp
         src/QueryPipeline/src/LogicalPlan.cpp
         src/QueryPipeline/src/PhysicalPlan/PhysicalPlan.cpp
@@ -106,23 +65,17 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/ErrorListener.cpp
         src/QueryPipeline/src/CostEstimator.cpp
         src/QueryPipeline/src/Contexts/CompileContext.cpp
-        ${ANTLR_SRC}
-        src/QueryPipeline/src/Visitor/Visitor.Json.cpp
         src/QueryPipeline/src/RowCursor.cpp
+        src/QueryPipeline/src/Parsing/Token.cpp
+        src/QueryPipeline/src/Parsing/Lexer.cpp
+        src/QueryPipeline/src/Parsing/SqlParser.cpp
+        src/QueryPipeline/src/Parsing/SqlParser.Statements.cpp
 )
 
 target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
 
-add_dependencies(QueryPipeline GenerateSQLParser)
 
-if(WIN32)
-    target_link_libraries(QueryPipeline PRIVATE CoreEngine PRIVATE antlr4_shared)
-else()
-    target_link_libraries(QueryPipeline PRIVATE CoreEngine PRIVATE antlr4_static)
-endif()
-
-# Include the generated parser and lexer files
-target_include_directories(QueryPipeline PRIVATE ${GENERATED_DIR})
+target_link_libraries(QueryPipeline PRIVATE CoreEngine)
 
 add_library(PluginApi SHARED
         src/Plugins/src/Plugin.cpp

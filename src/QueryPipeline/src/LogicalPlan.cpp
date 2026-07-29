@@ -1,5 +1,5 @@
 #include "../include/LogicalPlan.h"
-#include "Managers/StatisticsManager.h"
+#include "../../CoreEngine/include/Managers/StatisticsManager.h"
 #include "../include/Optimizer.h"
 #include "../include/Statements.h"
 #include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
@@ -9,10 +9,9 @@
 #include "DatabaseConstants.h"
 #include "../../CoreEngine/include/Contexts/OutputSchema.h"
 #include "Parser.h"
-#include "../../Systemic/include/DataTypes/StringValue.h"
-#include "DataStorage/ColumnMaterializationInfo.h"
-#include "Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
-#include "Evaluators/Kernels/Vectorized/VectorizedKernels.h"
+#include "../../CoreEngine/include/DataStorage/ColumnMaterializationInfo.h"
+#include "../../CoreEngine/include/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
+#include "../../CoreEngine/include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
 
 
 namespace QueryPipeline {

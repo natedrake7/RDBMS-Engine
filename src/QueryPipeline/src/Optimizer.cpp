@@ -5,8 +5,8 @@
 #include "CostEstimator.h"
 #include "DatabaseConstants.h"
 #include "Parser.h"
-#include "Managers/StatisticsManager.h"
-#include "SystemDatabases/SystemCatalog.h"
+#include "../../CoreEngine/include/Managers/StatisticsManager.h"
+#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
 
 namespace QueryPipeline {
     JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult()

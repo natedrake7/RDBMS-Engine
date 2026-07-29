@@ -13,7 +13,8 @@ namespace Expressions {
     enum class LogicalType {
         And = 0,
         Or = 1,
-        Invalid = 2
+        Not = 2,
+        Invalid = 3
       };
 
     enum class BinaryOperator {

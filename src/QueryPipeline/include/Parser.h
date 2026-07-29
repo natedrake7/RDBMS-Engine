@@ -10,7 +10,6 @@
 #include "CompileContext.h"
 
 namespace QueryPipeline{
-
     namespace Statements {
         struct Statement;
     }
@@ -54,11 +53,6 @@ namespace QueryPipeline{
     };
 
     class Parser{
-        static void CreateStatements(
-            CompileContext& context,
-            const std::any &queries,
-            const DataTypes::Guid& sessionId
-        );
         static void Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query);
         static LogicalPlan* BuildLogicalPlan(QueryContext& result, Statements::Statement* statement);
         static PhysicalPlan::PlanNode* BuildExecutionPlan(QueryContext& result, LogicalPlan* logicalPlan);

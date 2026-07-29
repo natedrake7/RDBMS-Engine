@@ -190,7 +190,7 @@ void CommandLineInterface(Network::Server& server) {
     std::cout << "Please enter a query: "<< endl;
 #endif
 
-    const std::string exit = "exit";
+    constexpr std::string exit = "exit";
 
     while (true) {
         std::string input;

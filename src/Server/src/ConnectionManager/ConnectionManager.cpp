@@ -9,7 +9,6 @@
 #include "../../include/Constants.h"
 
 #include <atomic>
-#include <cstring>
 #include <iostream>
 #include <ostream>
 #include <stdexcept>

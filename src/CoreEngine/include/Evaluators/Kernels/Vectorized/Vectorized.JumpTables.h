@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "VectorizedKernels.h"
-#include "DataStorage/ColumnMaterializationInfo.h"
+#include "../../../DataStorage/ColumnMaterializationInfo.h"
 #include "../../../../../Systemic/include/DataTypes/DataTypes.h"
 
 namespace CoreEngine::VectorizedKernels{

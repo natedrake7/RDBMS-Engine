@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "../../../Vectorization/Vectorization.h"
-#include "Contexts/ExecutionContext.h"
+#include "../../../Contexts/ExecutionContext.h"
 #include "../../Systemic/include/DataTypes/StringValue.h"
-#include "Evaluators/Expression.h"
+#include "../../Expression.h"
 
 namespace Expressions{
     class Expression;

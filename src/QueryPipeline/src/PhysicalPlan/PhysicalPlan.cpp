@@ -11,12 +11,12 @@
 #include "../../../CoreEngine/include/ScanState.h"
 #include "../../../CoreEngine/include/DataStorage/Table.h"
 #include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "Contexts/ExecutionContext.h"
-#include "SystemDatabases/TemporaryDatabase.h"
+#include "../../../CoreEngine/include/Contexts/ExecutionContext.h"
+#include "../../../CoreEngine/include/SystemDatabases/TemporaryDatabase.h"
 #include "../../../CoreEngine/include/Vectorization/Vectorization.h"
-#include "BufferPool/StorageManager.h"
-#include "Contexts/OutputSchema.h"
-#include "DataStorage/ColumnMaterializationInfo.h"
+#include "../../../CoreEngine/include/BufferPool/StorageManager.h"
+#include "../../../CoreEngine/include/Contexts/OutputSchema.h"
+#include "../../../CoreEngine/include/DataStorage/ColumnMaterializationInfo.h"
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
