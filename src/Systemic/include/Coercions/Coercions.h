@@ -184,13 +184,16 @@ namespace DataTypes{
             return input;
 
         // --- bool needs special-casing BEFORE the generic numeric/string arms ---
-        else if constexpr (std::is_same_v<TFrom, bool> && std::is_same_v<TTo, String>)   // Bool -> String
-            return input ? String(TRUE_STRING, allocator) : String(FALSE_STRING, allocator);
+        else if constexpr (std::is_same_v<TFrom, bool> && std::is_same_v<TTo, StringValue>)   // Bool -> String
+            return StringValue::Create(allocator, input ? TRUE_STRING : FALSE_STRING);
 
-        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, bool>) {            // String -> Bool
-            const auto view = input.ToView();
-            if (TrueStrings.Contains(view))  return true;
-            if (FalseStrings.Contains(view)) return false;
+        else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, bool>) {            // String -> Bool
+            const auto view = StringView::ViewOf(input);
+            if (TrueStrings.Contains(view))
+                return true;
+            if (FalseStrings.Contains(view))
+                return false;
+
             return false;
         }
 
@@ -199,11 +202,13 @@ namespace DataTypes{
             return static_cast<TTo>(input);
 
         // --- string <-> numeric ---
-        else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, String>)    // num -> String
-            return Converter::IntToStr<TFrom>(input, allocator);
+        else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, StringValue>)    // num -> String
+            return Converter::IntToStringValue<TFrom>(input, allocator);
 
-        else if constexpr (IsString<TFrom> && std::is_arithmetic_v<TTo>)              // String -> num
-            return Converter::StrToInt<TTo>(input);
+        else if constexpr (
+            IsString<TFrom> && std::is_arithmetic_v<TTo>
+            || IsStringValue<TFrom> && std::is_arithmetic_v<TTo>
+        ) return Converter::StrToInt<TTo>(input);
 
         // --- Decimal ---
         else if constexpr (std::is_same_v<TFrom, Decimal> && DataTypes::IsInteger<TTo>)
@@ -211,36 +216,38 @@ namespace DataTypes{
         else if constexpr (DataTypes::IsInteger<TFrom> && std::is_same_v<TTo, Decimal>)   // num -> Decimal
             return Decimal(input);
 
-        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, Decimal>)           // String -> Decimal
-            return Decimal(input.ToView());
+        else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, Decimal>)           // String -> Decimal
+            return Decimal(StringView::ViewOf(input));
 
-        else if constexpr (std::is_same_v<TFrom, Decimal> && std::is_same_v<TTo, String>) // Decimal -> String
-            return input.ToString(allocator);
+        else if constexpr (std::is_same_v<TFrom, Decimal> && std::is_same_v<TTo, StringValue>) // Decimal -> String
+            return input.ToStringValue(allocator);
 
         // --- DateTime ---
-        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, DateTime>) {        // String -> DateTime
+        else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, DateTime>) {        // String -> DateTime
             DateTime out;
-            DateTime::FromString(out, input.ToView());
+            DateTime::FromStringView(out, StringView::ViewOf(input));
             return out;
         }
-        else if constexpr (std::is_same_v<TFrom, DateTime> && std::is_same_v<TTo, String>)// DateTime -> String
-            return input.ToString(allocator);
+        else if constexpr (std::is_same_v<TFrom, DateTime> && std::is_same_v<TTo, StringValue>)// DateTime -> String
+            return input.ToStringValue(allocator);
 
         // --- Guid ---
-        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, Guid>)              // String -> Guid
-            return Guid::Parse(input);                                                    // has String & StringView overloads
-        else if constexpr (std::is_same_v<TFrom, Guid> && std::is_same_v<TTo, String>)    // Guid -> String
-            return input.ToString(allocator);
+        else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, Guid>)              // String -> Guid
+            return Guid::Parse(StringView::ViewOf(input));                                                    // has String & StringView overloads
+        else if constexpr (std::is_same_v<TFrom, Guid> && std::is_same_v<TTo, StringValue>)
+            return input.ToStringValue(allocator);
 
         // --- JSON ---
-        else if constexpr (IsString<TFrom> && std::is_same_v<TTo, JsonBinary>) {      // String -> Json
-            Serialization::JsonParser parser(allocator, input.ToView());
+        else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, JsonBinary> ) {      // String -> Json
+            Serialization::JsonParser parser(allocator, StringView::ViewOf(input));
             return parser.Parse();
         }
-        else if constexpr (std::is_same_v<TFrom, JsonBinary> && std::is_same_v<TTo, String>) // Json -> String
-            return input.ToString();
+        else if constexpr (std::is_same_v<TFrom, JsonBinary> && std::is_same_v<TTo, StringValue>) // Json -> String
+            return input.ToStringValue();
 
         else
             static_assert(AlwaysFalse<TFrom>, "Coercions::To<TFrom,TTo>: unsupported pair");
+
+        return TTo();
     }
 }

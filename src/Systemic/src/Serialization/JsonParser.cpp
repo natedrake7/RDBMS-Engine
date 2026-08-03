@@ -329,7 +329,7 @@ namespace Serialization {
             if (this->Peek() != JSON_QUOTE)
                 throw std::runtime_error("JsonParser::ParseObject: Expected string key. Error at position: " + std::to_string(this->_pos));
 
-            auto strView = this->ParseString().ToView();
+            auto strView = DataTypes::StringView::ViewOf(this->ParseString());
             builder.Key(strView);
             this->SkipWhitespace();
             if (this->Consume() != JSON_COLON)

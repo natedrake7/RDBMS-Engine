@@ -4,6 +4,7 @@
 #include <ostream>
 
 #include "Comparators.h"
+#include "DataTypes/StringValue.h"
 
 namespace DataTypes{
     void String::CalculateCapacity(const Int size){
@@ -525,11 +526,11 @@ namespace DataTypes{
     }
 
     bool operator==(const String& lhs, const String& rhs){
-        return String::Equals(lhs.ToView(), rhs.ToView());
+        return String::Equals(StringView::ViewOf(lhs), StringView::ViewOf(rhs));
     }
 
     bool operator!=(const String& lhs, const String& rhs){
-        return !String::Equals(lhs.ToView(), rhs.ToView());
+        return !String::Equals(StringView::ViewOf(lhs), StringView::ViewOf(rhs));
     }
 
     bool operator<=(const String& lhs, const String& rhs){
@@ -574,10 +575,6 @@ namespace DataTypes{
 
     const char* String::Data() const{
         return this->_data;
-    }
-
-    StringView String::ToView() const{
-        return StringView(this->_data, this->_size);
     }
 
     String String::FromView(const StringView& str, const Memory::IAllocator* allocator){
@@ -1171,7 +1168,7 @@ namespace DataTypes{
         this->_size--;
     }
 
-    bool StringEqualsIgnoreCase::operator()(const String& lhs, const String& rhs) const {
+    bool StringEqualsIgnoreCase::operator()(const StringValue& lhs, const StringValue& rhs) const {
         return String::Compare<StringComparisonType::EqualsIgnoreCase>(lhs, rhs);
     }
 }

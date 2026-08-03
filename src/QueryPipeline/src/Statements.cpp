@@ -402,14 +402,14 @@ namespace QueryPipeline::Statements {
         const auto tableHeader = (!this->database.Empty())
             ? CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
-                this->database.ToView(),
-                this->name.ToView()
+                DataTypes::StringView::ViewOf(this->database),
+                DataTypes::StringView::ViewOf(this->name)
             )
             : CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
                 databaseId,
-                this->name.ToView(),
-                this->schema.ToView()
+                DataTypes::StringView::ViewOf(this->name),
+                DataTypes::StringView::ViewOf(this->schema)
             );
 
         if (tableHeader.id == INVALID_TABLE_ID){
@@ -430,14 +430,14 @@ namespace QueryPipeline::Statements {
         const auto tableHeader = (!this->database.Empty())
             ? CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
-                this->database.ToView(),
-                this->name.ToView()
+                DataTypes::StringView::ViewOf(this->database),
+                DataTypes::StringView::ViewOf(this->name)
             )
             : CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
                 selectedDatabaseId,
-                this->name.ToView(),
-                this->schema.ToView()
+                DataTypes::StringView::ViewOf(this->name),
+                DataTypes::StringView::ViewOf(this->schema)
             );
 
         if (tableHeader.id != INVALID_TABLE_ID)
@@ -479,7 +479,7 @@ namespace QueryPipeline::Statements {
         std::ostringstream os;
 
         column->type.name.ToLowerInPlace();
-        if (!COLUMN_SIZES_BY_TYPENAME.TryGetValue(column->type.name.ToView(), columnSize)) {
+        if (!COLUMN_SIZES_BY_TYPENAME.TryGetValue(DataTypes::StringView::ViewOf(column->type.name), columnSize)) {
             return Errors::ValidationStatus::Error(
                 Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type.name)
             );
@@ -488,7 +488,7 @@ namespace QueryPipeline::Statements {
         if (columnSize != 0)
             column->type.size = columnSize;
 
-        const auto dataType = COLUMN_TYPENAMES_TO_ENUMS.Get(column->type.name.ToView());
+        const auto dataType = COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(column->type.name));
 
         if (dataType == DataType::Decimal) {
             if (!column->type.decimal.Validate()) {
@@ -875,7 +875,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
-        if (CoreEngine::SystemCatalog::Get().DatabaseExists(context.GetAllocator(), this->name.ToView())) {
+        if (CoreEngine::SystemCatalog::Get().DatabaseExists(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name))) {
             return Errors::ValidationStatus::Error(
                 Messages::DATABASE_ALREADY_EXISTS(context.GetAllocator(), this->name)
             );
@@ -893,13 +893,13 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
-        const auto database = CoreEngine::SystemCatalog::Get().SelectDatabase(context.GetAllocator(), this->name.ToView());
+        const auto database = CoreEngine::SystemCatalog::Get().SelectDatabase(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name));
 
         if (database.name.Empty()) {
             return Errors::ValidationStatus::Error(
                 Messages::DATABASE_DOES_NOT_EXIST_ON_DROP(
                     context.GetAllocator(),
-                    this->name.ToView()
+                    DataTypes::StringView::ViewOf(this->name)
                 )
             );
         }
@@ -908,7 +908,7 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::CANNOT_DROP_SYSTEM_DATABASE(
                     context.GetAllocator(),
-                    this->name.ToView()
+                    DataTypes::StringView::ViewOf(this->name)
                 )
             );
         }
@@ -927,12 +927,12 @@ namespace QueryPipeline::Statements {
     Errors::ValidationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
         const auto dbHeader = CoreEngine::SystemCatalog::Get().SelectDatabase(
             context.GetAllocator(),
-            this->name.ToView()
+            DataTypes::StringView::ViewOf(this->name)
         );
 
         if (dbHeader.id == INVALID_DATABASE_ID) {
             return Errors::ValidationStatus::Error(
-                Messages::DATABASE_DOES_NOT_EXIST_ON_USE(context.GetAllocator(), this->name.ToView())
+                Messages::DATABASE_DOES_NOT_EXIST_ON_USE(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name))
             );
         }
 
@@ -1202,7 +1202,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
-        if (CoreEngine::SystemCatalog::Get().SchemaExists(context.GetAllocator(), this->databaseId, this->name.ToView())) {
+        if (CoreEngine::SystemCatalog::Get().SchemaExists(context.GetAllocator(), this->databaseId, DataTypes::StringView::ViewOf(this->name))) {
             return Errors::ValidationStatus::Error(
                 Messages::SCHEMA_ALREADY_EXISTS(context.GetAllocator(), this->name)
             );
@@ -1428,7 +1428,7 @@ namespace QueryPipeline::Statements {
 
         DataType columnType;
         const auto columnTypeToLower = newColumn->type.name.ToLower();
-        const auto columnTypeView = columnTypeToLower.ToView();
+        const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         if (!COLUMN_TYPENAMES_TO_ENUMS.TryGetValue(columnTypeView, columnType)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
@@ -1482,7 +1482,7 @@ namespace QueryPipeline::Statements {
         }
 
         const auto columnTypeToLower = alterColumn->type.name.ToLower();
-        const auto columnTypeView = columnTypeToLower.ToView();
+        const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         DataType columnType;
         if (!COLUMN_TYPENAMES_TO_ENUMS.TryGetValue(columnTypeView, columnType)) {
             return Errors::ValidationStatus::Error(
@@ -1509,7 +1509,7 @@ namespace QueryPipeline::Statements {
                         context.GetAllocator(),
                         alterColumn->name.name,
                         SQL_TYPES_NAMES[header.dataType],
-                        alterColumn->type.name.ToView()
+                        DataTypes::StringView::ViewOf(alterColumn->type.name)
                 )
             );
         }
@@ -1538,7 +1538,7 @@ namespace QueryPipeline::Statements {
 
         auto* dropColumn = this->column.dropColumn;
         const auto columnNameToLower = dropColumn->name.name.ToLower();
-        const auto columnNameView = columnNameToLower.ToView();
+        const auto columnNameView = DataTypes::StringView::ViewOf(columnNameToLower);
 
         if (!headers.TryGetValue(columnNameToLower, header)) {
             return Errors::ValidationStatus::Error(
@@ -2047,7 +2047,7 @@ namespace QueryPipeline::Statements {
         const StatementValidationScope& statementValidationScope
     ){
         //if wildcard ensure statement is of select statement type
-        if (column->alias.ToView() == WILDCARD) {
+        if (DataTypes::StringView::ViewOf(column->alias) == WILDCARD) {
 
             auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope._statement);
 
@@ -2166,7 +2166,7 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_JSON_PATH(
                     context.GetAllocator(),
-                    lastPathSegment->_key.ToView()
+                    DataTypes::StringView::ViewOf(lastPathSegment->_key)
                 )
             );
 
@@ -2203,7 +2203,7 @@ namespace QueryPipeline::Statements {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_JSON_PATH(
                     context.GetAllocator(),
-                    lastPathSegment->_key.ToView()
+                    DataTypes::StringView::ViewOf(lastPathSegment->_key)
                 )
             );
 
@@ -2411,7 +2411,7 @@ namespace QueryPipeline::Statements {
         const StatementValidationScope& validationScope,
         SelectStatement* statement
     ){
-        if (column->alias.ToView() != WILDCARD)
+        if (DataTypes::StringView::ViewOf(column->alias) != WILDCARD)
             return Errors::ValidationStatus::Ok();
 
         if (validationScope._indexPos == nullptr)

@@ -10,7 +10,7 @@ namespace CoreEngine::RowKernels{
         SmallInt, Int,
         BigInt,
         DataTypes::Decimal,
-        DataTypes::String,
+        DataTypes::StringValue,
         DataTypes::Guid,
         DataTypes::DateTime,
         DataTypes::JsonBinary

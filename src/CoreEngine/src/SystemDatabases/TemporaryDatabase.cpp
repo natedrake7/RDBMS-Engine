@@ -51,7 +51,7 @@ namespace CoreEngine {
         const DataTypes::String& dbName
     ){
         const auto dirPath = DataTypes::String::Concat(allocator, dbName, "/");
-        Storage::FileManager::RemoveFile(dirPath.ToView());
+        Storage::FileManager::RemoveFile(DataTypes::StringView::ViewOf(dirPath));
     }
 
     Int TemporaryDatabase::GetNextOrdinalPosition(){
@@ -69,7 +69,7 @@ namespace CoreEngine {
     ){
         const auto [dbName, dbPath] = this->ReadConfiguration(allocator, configPath);
 
-        if (this->Exists(dbName.ToView()))
+        if (this->Exists(DataTypes::StringView::ViewOf(dbName)))
             this->ClearTemporaryFiles(allocator, dbName);
 
         CreateDatabase(Constants::TEMPORARY_DATABASE_ID, dbName);

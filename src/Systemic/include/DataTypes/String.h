@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include <span>
 
-#include "StringView.h"
 #include "DataTypes.h"
+#include "StringView.h"
 
 #include "../Memory/IAllocator.h"
 
@@ -24,9 +24,6 @@ namespace DataTypes{
         [[nodiscard]] inline static bool EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs);
         [[nodiscard]] inline static bool Contains(const StringView& lhs, const StringView& rhs);
         [[nodiscard]] inline static bool ContainsIgnoreCase(const StringView& lhs, const StringView& rhs);
-
-        template<IsStringLike T>
-        [[nodiscard]] static constexpr StringView ToView(const T& str);
 
         [[nodiscard]] static inline String Normalize(
             const char* str,
@@ -168,7 +165,6 @@ namespace DataTypes{
             [[nodiscard]] char* Data();
             [[nodiscard]] const char* Data()const;
 
-            [[nodiscard]] StringView ToView()const;
             [[nodiscard]] static String FromView(const StringView& str, const ::Memory::IAllocator* allocator);
 
             //functions
@@ -360,40 +356,8 @@ namespace DataTypes{
 
     };
 
-    template <IsStringLike T>
-    constexpr StringView String::ToView(const T& str){
-        const char* lhsData = nullptr;
-        Int lhsSize = 0;
-
-        if constexpr (
-            std::is_same_v<std::decay_t<T>, String>
-            || std::is_same_v<std::decay_t<T>, StringView>
-        ) {
-            lhsData = str.Data();
-            lhsSize = str.Size();
-        }
-        else if constexpr (
-            std::is_same_v<std::decay_t<T>, std::string>
-            || std::is_same_v<std::decay_t<T>, std::string_view>
-        ){
-            lhsData = str.data();
-            lhsSize = static_cast<Int>(str.size());
-        }
-        else if constexpr(
-            std::is_same_v<std::decay_t<T>, char*> ||
-            std::is_same_v<std::decay_t<T>, const char*>
-        ) {
-            lhsData = str;
-            lhsSize = static_cast<Int>(std::strlen(str));
-        }
-        else
-            static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for String::ToView");
-
-        return StringView(lhsData, lhsSize);
-    }
-
     struct StringEqualsIgnoreCase {
-        bool operator()(const String& lhs, const String& rhs) const;
+        bool operator()(const StringValue& lhs, const StringValue& rhs) const;
     };
 
     constexpr char String::ToLower(const char c) noexcept{
@@ -581,8 +545,8 @@ String String::Join(const Memory::IAllocator* allocator, const char delimiter, c
 
 template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
 constexpr bool String::Compare(const TLeft& lhs, const TRight& rhs) {
-    const auto leftView  = String::ToView(lhs);
-    const auto rightView = String::ToView(rhs);
+    const auto leftView  = StringView::ViewOf(lhs);
+    const auto rightView = StringView::ViewOf(rhs);
 
     if constexpr (Type == StringComparisonType::Equals)
         return String::Equals(leftView, rightView);
@@ -602,6 +566,8 @@ constexpr bool String::Compare(const TLeft& lhs, const TRight& rhs) {
         return String::ContainsIgnoreCase(leftView, rightView);
     else
         static_assert(AlwaysFalse<TLeft>, "Compare: unsupported StringComparisonType");
+
+    return false;
 }
 }
 

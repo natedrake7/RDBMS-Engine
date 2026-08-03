@@ -161,7 +161,7 @@ namespace DataTypes {
             case DataType::DateTime:
                 return true;
             case DataType::String:
-                return DateTime::FromString(value.AsStringView());
+                return DateTime::FromStringView(value.AsStringView());
             default:
                 return false;
         }
@@ -382,9 +382,9 @@ namespace DataTypes {
         case DataType::String:
             return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
         case DataType::Json:{
-            return JsonBinary(value.GetAllocator(), value.Data(), value.Size())
+            return StringView::ViewOf(JsonBinary(value.GetAllocator(), value.Data(), value.Size())
                     .ToString()
-                    .ToView();
+            );
         }
         case DataType::TinyInt:
         case DataType::SmallInt:
@@ -420,7 +420,7 @@ namespace DataTypes {
         switch (valueType) {
         case DataType::String: {
             DateTime date;
-            DateTime::FromString(date, value.AsStringView());
+            DateTime::FromStringView(date, value.AsStringView());
             return date;
         }
         case DataType::DateTime:

@@ -22,7 +22,7 @@ namespace Network {
     const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
     for (const auto* role : roles)
-      const auto _ = this->roleManager.AddRole(role->name.ToView(), role);
+      const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role->name), role);
   }
 
   void Server::CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext) {
@@ -67,7 +67,7 @@ namespace Network {
 
     const CoreEngine::Memory::Allocator allocator;
     for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
-        const auto _ = this->roleManager.AddRole(role.name.ToView(), &role);
+        const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role.name), &role);
 
     for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
         const auto* role = this->roleManager.GetRole(user.roleId);
@@ -83,7 +83,7 @@ namespace Network {
   )const{
     Int userId = -1;
 
-    if (!this->userManager.GrantRole(username.ToView(), role, userId))
+    if (!this->userManager.GrantRole(DataTypes::StringView::ViewOf(username), role, userId))
       return {
         Errors::RuntimeError::Error,
         "Failed to grant role: " + role->name + " to user: " + username,
@@ -109,14 +109,14 @@ namespace Network {
 
         return this->systemCatalog->UpdateUserById(
             context,
-            currentSession->user->name.ToView(),
+            DataTypes::StringView::ViewOf(currentSession->user->name),
             userId,
             roleId
         );
     }
 
   bool Server::UserExists(const DataTypes::String& userName) const{
-    return this->userManager.GetUser(userName.ToView()) != nullptr;
+    return this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr;
   }
 
   bool Server::CreateUser(
@@ -125,16 +125,16 @@ namespace Network {
       const DataTypes::String& password,
       const DataTypes::String& roleName
     ){
-    if (this->userManager.GetUser(userName.ToView()) != nullptr)
+    if (this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr)
       return false;
 
-    const auto* role = this->roleManager.GetRole(roleName.ToView());
+    const auto* role = this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
 
     if (role == nullptr)
       return false;
 
     DataTypes::String hashedPassword(context.GetAllocator());
-    if (Security::UserManager::HashPassword(password.ToView(), hashedPassword) == false) {
+    if (Security::UserManager::HashPassword(DataTypes::StringView::ViewOf(password), hashedPassword) == false) {
       std::cerr << "Failed to hash password for user" << userName << std::endl;
       return false;
     }
@@ -142,8 +142,8 @@ namespace Network {
     const auto result =
       this->systemCatalog->InsertUserToMasterDb(
         context,
-        userName.ToView(),
-        hashedPassword.ToView(),
+        DataTypes::StringView::ViewOf(userName),
+        DataTypes::StringView::ViewOf(hashedPassword),
         role->id,
         true
       );
@@ -161,7 +161,7 @@ namespace Network {
   }
 
   const Security::User* Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{
-    return this->userManager.Authenticate(username.ToView(), password.ToView());
+    return this->userManager.Authenticate(DataTypes::StringView::ViewOf(username), DataTypes::StringView::ViewOf(password));
   }
 
   const Security::User* Server::Authenticate(const DataTypes::StringView& username, const DataTypes::StringView& password) const{
@@ -169,11 +169,11 @@ namespace Network {
   }
 
   bool Server::RoleExists(const DataTypes::String& role) const{
-    return this->roleManager.GetRole(role.ToView()) != nullptr;
+    return this->roleManager.GetRole(DataTypes::StringView::ViewOf(role)) != nullptr;
   }
 
   const Security::Role * Server::GetRole(const DataTypes::String& roleName)const {
-    return this->roleManager.GetRole(roleName.ToView());
+    return this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
   }
 
   const Session * Server::CreateSession(const Security::User* user){

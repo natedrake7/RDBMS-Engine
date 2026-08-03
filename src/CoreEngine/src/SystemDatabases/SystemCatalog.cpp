@@ -196,7 +196,7 @@ namespace CoreEngine {
                 counter++;
 
                 const auto normalizedColumnType = DataTypes::String::Normalize(column.type, baseContext.GetAllocator());
-                const auto strView = normalizedColumnType.ToView();
+                const auto strView = DataTypes::StringView::ViewOf(normalizedColumnType);
 
                 auto columnSize = COLUMN_SIZES_BY_TYPENAME.Get(&strView);
 
@@ -261,7 +261,7 @@ namespace CoreEngine {
                 this->InsertIndexToMasterDb(
                     baseContext,
                     tableId,
-                    _columns.ToView(),
+                    DataTypes::StringView::ViewOf(_columns),
                     true
                 );
 
@@ -271,7 +271,7 @@ namespace CoreEngine {
                 this->InsertConstraintToMasterDb(
                     baseContext,
                     tableId,
-                    _columns.ToView(),
+                    DataTypes::StringView::ViewOf(_columns),
                     Headers::ConstraintType::PrimaryKey,
                     false,
                     &indexId
@@ -687,13 +687,13 @@ namespace CoreEngine {
     ) {
         const auto [sysDbName, sysDbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
 
-        if (SystemCatalog::CatalogExists(sysDbName.ToView())){
+        if (SystemCatalog::CatalogExists(DataTypes::StringView::ViewOf(sysDbName))){
             this->UseCatalogDatabase(baseContext.GetAllocator(), sysDbName);
             return false;
         }
 
         this->CreateCatalogDatabase(baseContext.GetAllocator(), sysDbName);
-        this->StoreSystemTablesToCatalog(baseContext, sysDbName.ToView(), sysDbPath.ToView());
+        this->StoreSystemTablesToCatalog(baseContext, DataTypes::StringView::ViewOf(sysDbName), DataTypes::StringView::ViewOf(sysDbPath));
 
         return true;
     }
@@ -847,7 +847,7 @@ namespace CoreEngine {
             this->InsertUserToMasterDb(
                 baseContext,
                 Constants::ADMIN_NAME,
-                hashedPassword.ToView(),
+                DataTypes::StringView::ViewOf(hashedPassword),
                 defaultRoleId,
                 true
             );

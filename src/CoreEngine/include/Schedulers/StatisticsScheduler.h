@@ -3,11 +3,7 @@
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/DataStructures/SortedDictionary.h"
 #include <atomic>
-#ifdef __WIN32__
-#include <cstdInt>
-#endif
 #include <condition_variable>
-#include <string>
 #include <vector>
 
 

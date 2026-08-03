@@ -14,17 +14,17 @@ namespace CoreEngine{
             _kind(DataVectorKind::Flat),
             _dataEntrySize(0){}
 
-    object_t* DataVector::SlotAt(const Int index) const{
+    object_t* DataVector::SlotAt(const UnsignedInt index) const{
         return this->_data + this->_dataEntrySize * index;
     }
 
-    void DataVector::SetNullValue(const Int index, const bool value) const{
-        const Int w = index >> 6;
-        const UnsignedBigInt m = 1ull << (index & 63);
-        this->_validity[w] = ( this->_validity[w] & ~m) | (static_cast<uint64_t>(value) << (index & 63));
+    void DataVector::SetNullValue(const UnsignedInt index, const bool value) const{
+        const auto w = index >> 6;
+        const auto m = 1ull << (index & 63);
+        this->_validity[w] = ( this->_validity[w] & ~m) | (static_cast<UnsignedBigInt>(value) << (index & 63));
     }
 
-    UnsignedInt DataVector::PhysicalIndex(const Int logicalIndex) const{
+    UnsignedInt DataVector::PhysicalIndex(const UnsignedInt logicalIndex) const{
         switch (this->_kind){
         case DataVectorKind::Flat:
             return logicalIndex;
@@ -37,12 +37,24 @@ namespace CoreEngine{
         throw std::runtime_error("Invalid DataVector kind");
     }
 
-    Int DataVector::DictionaryIndex(const Int logicalIndex) const{
+    UnsignedInt DataVector::DictionaryIndex(const UnsignedInt logicalIndex) const{
         return this->_selection[logicalIndex];
     }
 
-    bool DataVector::GetNullValue(const Int index) const{
+    bool DataVector::GetNullValue(const UnsignedInt index) const{
         return this->_validity[index >> 6] >> (index & 63) & 1;
+    }
+
+    Int DataVector::WordsCount() const{
+        return DataVector::WordsCount(this->_count);
+    }
+
+    Int DataVector::WordsCount(const Int count){
+        return (count + 63) / 64;
+    }
+
+    Int DataVector::BitSizeFromBool(const Int count){
+        return (count * sizeof(bool) + 7) / 8;
     }
 
     DataVector* DataVector::FlatVector(
@@ -57,7 +69,7 @@ namespace CoreEngine{
         dataVector->_data  = static_cast<object_t*>(allocator->AllocateRaw(dataVector->_dataEntrySize * count));
         std::memset(dataVector->_data, 0, dataVector->_dataEntrySize * count);
 
-        const Int validityWords = (count + 63) / 64;
+        const auto validityWords = dataVector->WordsCount();
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(validityWords * sizeof(UnsignedBigInt)));
         std::memset(dataVector->_validity, 0, validityWords * sizeof(UnsignedBigInt));   // 0 = not-null default
         return dataVector;
@@ -81,20 +93,16 @@ namespace CoreEngine{
         return dataVector;
     }
 
-    Int DataVector::ValidityWords() const{
-        return (this->_count + 63) / 64;
-    }
-
     void DataVector::SetAllNull() const{
-        std::memset(this->_validity, 0xFF, this->ValidityWords() * sizeof(UnsignedBigInt));
+        std::memset(this->_validity, 0xFF, this->WordsCount() * sizeof(UnsignedBigInt));
     }
 
     void DataVector::CopyValidity(const DataVector* other) const{
-        std::memcpy(this->_validity, other->_validity, this->ValidityWords() * sizeof(UnsignedBigInt));
+        std::memcpy(this->_validity, other->_validity, this->WordsCount() * sizeof(UnsignedBigInt));
     }
 
     void DataVector::OrValidity(const DataVector* lhs, const DataVector* rhs) const{
-        for (Int i = 0; i < lhs->ValidityWords(); ++i)
+        for (Int i = 0; i < lhs->WordsCount(); ++i)
             this->_validity[i] |= lhs->_validity[i] | rhs->_validity[i];
     }
 

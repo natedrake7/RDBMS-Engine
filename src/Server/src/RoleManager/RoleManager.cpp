@@ -58,7 +58,7 @@ namespace Security {
 
         //the key should be a view to the copied role string to ensure
         //it remains valid as long as the role exists
-        this->rolesNames.Add(newRole->name.ToView(), role->id);
+        this->rolesNames.Add(DataTypes::StringView::ViewOf(newRole->name), role->id);
         this->roles.Add(role->id, newRole);
 
         return true;

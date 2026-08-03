@@ -195,6 +195,7 @@ namespace DataTypes {
         [[nodiscard]] constexpr bool IsPositive() const;
         [[nodiscard]] constexpr fraction_index_t GetFractionIndex() const;
         [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
+        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] constexpr StringBuffer ToBufferString() const;
 
         [[nodiscard]] constexpr const byte_t* RawData() const;

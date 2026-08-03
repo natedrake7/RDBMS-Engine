@@ -9,6 +9,7 @@
 #include "Constants.h"
 #include "DataTypes/Decimal.h"
 #include "DataTypes/String.h"
+#include "DataTypes/StringValue.h"
 #include "DataTypes/StringView.h"
 
 class Converter {
@@ -42,6 +43,7 @@ public:
         if constexpr (
             std::is_same_v<STR_TYPE, DataTypes::StringView>
             || std::is_same_v<STR_TYPE, DataTypes::String>
+            || std::is_same_v<STR_TYPE, DataTypes::StringValue>
         ){
             return StrToInt<INT_TYPE>(input.Data(), input.Size());
         }
@@ -139,6 +141,16 @@ public:
         const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<BigInt>(input));
 
         return DataTypes::String(buffer, len, allocator);
+    }
+
+    template<DataTypes::Primitive T>
+    static DataTypes::StringValue IntToStringValue(const T input, const ::Memory::IAllocator* allocator){
+        static_assert(std::is_integral_v<T>, "T must be integral type");
+
+        char buffer[ITOS_BUFFER_SIZE]{};
+        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<BigInt>(input));
+
+        return DataTypes::StringValue::Create(allocator, buffer, len);
     }
 
     static DataTypes::String DecimalToStr(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){

@@ -71,7 +71,7 @@ namespace Security {
     ){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        if (this->users.Contains(name.ToView())) {
+        if (this->users.Contains(DataTypes::StringView::ViewOf(name))) {
             std::cerr << "Role" << name << " already exists." << std::endl;
             return false;
         }
@@ -88,7 +88,7 @@ namespace Security {
             true
         );
 
-        this->users.Add(user->name.ToView(), user);
+        this->users.Add(DataTypes::StringView::ViewOf(user->name), user);
         return true;
     }
     //

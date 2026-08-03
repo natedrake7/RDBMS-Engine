@@ -165,8 +165,8 @@ namespace CoreEngine{
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
         this->CreateKeys();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, file.ToView());
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, sysFile.ToView());
+        Storage::StorageManager::Get().OpenFile(this->dataFileKey, DataTypes::StringView::ViewOf(file));
+        Storage::StorageManager::Get().OpenFile(this->systemFileKey, DataTypes::StringView::ViewOf(sysFile));
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
@@ -178,7 +178,7 @@ namespace CoreEngine{
         static auto& catalog = SystemCatalog::Get();
 
         //query get from masterDb
-        const auto masterDbData = catalog.SelectTables(allocator, dbName.ToView());
+        const auto masterDbData = catalog.SelectTables(allocator, DataTypes::StringView::ViewOf(dbName));
 
         if (this->header.numberOfTables != masterDbData.Size()) return;
 
@@ -197,8 +197,8 @@ namespace CoreEngine{
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
         this->CreateKeys();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, file.ToView());
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, sysFile.ToView());
+        Storage::StorageManager::Get().OpenFile(this->dataFileKey, DataTypes::StringView::ViewOf(file));
+        Storage::StorageManager::Get().OpenFile(this->systemFileKey, DataTypes::StringView::ViewOf(sysFile));
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
 
@@ -622,12 +622,12 @@ namespace CoreEngine{
         const auto path = dbName.ConcatInPlace("/", dbName);
         const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
 
-        storageManager.CreateFile(dataKey, path.ToView(), Constants::DATA_FILE_EXTENSION);
+        storageManager.CreateFile(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);
 
         const auto sysDbName = path.Concat(Constants::SYS_EXTENSION);
         const auto sysKey = Storage::FileKey::Create(databaseId, Storage::FileType::System);
 
-        storageManager.CreateFile(sysKey, sysDbName.ToView(), Constants::DATA_FILE_EXTENSION);
+        storageManager.CreateFile(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
 
         static constexpr page_id_t FIRST_PFS_PAGE_ID = 1;
         static constexpr page_id_t FIRST_GAM_PAGE_ID = 2;

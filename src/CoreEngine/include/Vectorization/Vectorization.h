@@ -38,26 +38,35 @@ namespace CoreEngine{
 
         explicit DataVector(DataType type);
 
-        [[nodiscard]] object_t* SlotAt(Int index) const;
-        void SetNullValue(Int index, bool value) const;
+        [[nodiscard]] object_t* SlotAt(UnsignedInt index) const;
+        void SetNullValue(UnsignedInt index, bool value) const;
 
-        [[nodiscard]] UnsignedInt PhysicalIndex(Int logicalIndex) const;
-        [[nodiscard]] Int DictionaryIndex(Int logicalIndex) const;
-        [[nodiscard]] bool GetNullValue(Int index) const;
+        [[nodiscard]] UnsignedInt PhysicalIndex(UnsignedInt logicalIndex) const;
+        [[nodiscard]] UnsignedInt DictionaryIndex(UnsignedInt logicalIndex) const;
+        [[nodiscard]] bool GetNullValue(UnsignedInt index) const;
+
+        [[nodiscard]] Int WordsCount()const;
+
+        [[nodiscard]] static Int WordsCount(Int count);
+        [[nodiscard]] static Int BitSizeFromBool(Int count);
 
         template<typename T>
-        T* SlotAt(const Int physicalIndex){
+        T* SlotAt(const UnsignedInt physicalIndex){
             return reinterpret_cast<T*>(this->SlotAt(physicalIndex));
         }
 
         template<typename T>
-        const T* SlotAt(const Int physicalIndex) const{
+        const T* SlotAt(const UnsignedInt physicalIndex) const{
             return reinterpret_cast<const T*>(this->SlotAt(physicalIndex));
         }
 
         template<typename T>
         T* DataAs(){
             return reinterpret_cast<T*>(this->_data);
+        }
+
+        [[nodiscard]] UnsignedBigInt* DataAsWords() const{
+            return reinterpret_cast<UnsignedBigInt*>(this->_data);
         }
 
         template<typename T>
@@ -92,7 +101,6 @@ namespace CoreEngine{
             return vector->SlotAt<T>(vector->PhysicalIndex(index));
         }
 
-        [[nodiscard]] Int ValidityWords()const;
         void SetAllNull() const;
         void CopyValidity(const DataVector* other) const;
         void OrValidity(const DataVector* lhs, const DataVector* rhs) const;

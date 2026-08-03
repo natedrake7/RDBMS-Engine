@@ -64,6 +64,7 @@ namespace DataTypes{
         [[nodiscard]] Serialization::JsonValue Navigate(const DataStructures::PolymorphicArray<JsonPathStep>& pathSegments) const;
 
         [[nodiscard]] String ToString() const;
+        [[nodiscard]] StringValue ToStringValue() const;
         [[nodiscard]] static String JsonObjectToString(
             const Serialization::JsonValue& value,
             const ::Memory::IAllocator* allocator

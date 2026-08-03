@@ -140,7 +140,6 @@ namespace CoreEngine::VectorizedKernels{
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
 
         const auto chunkSize = chunk->_numberOfRows;
-        const auto* allocator = context->GetAllocator();
 
         const auto* leftData = left->DataAs<T>();
         const auto* rightData = right->DataAs<T>();
@@ -157,10 +156,10 @@ namespace CoreEngine::VectorizedKernels{
             if (isNull)
                 continue;
 
-            if constexpr (DataTypes::Primitive<T>)
-                DataVector::FlatAccess(outData, i) = leftData[leftIndex] / rightData[rightIndex];
-            else if constexpr (DataTypes::IsDecimal<T>)
-                DataVector::FlatAccess(outData, i) = leftData[leftIndex] / rightData[rightIndex];
+            if constexpr (
+                DataTypes::Primitive<T>
+                || DataTypes::IsDecimal<T>
+            ) DataVector::FlatAccess(outData, i) = leftData[leftIndex] / rightData[rightIndex];
             else
                 static_assert(DataTypes::AlwaysFalse<T>, "BinaryDivideKernel: unsupported type");
         }
@@ -180,7 +179,12 @@ namespace CoreEngine::VectorizedKernels{
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
 
         const auto chunkSize = chunk->_numberOfRows;
+
+        const auto* leftData = left->DataAs<T>();
+        const auto* rightData = right->DataAs<T>();
+
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataTypes::DataTypeOf<T>(), chunkSize);
+        auto* outData = out->template DataAs<T>();
 
         for (Int i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -191,10 +195,10 @@ namespace CoreEngine::VectorizedKernels{
             if (isNull)
                 continue;
 
-            if constexpr (DataTypes::Primitive<T>)
-                *out->template SlotAt<T>(i) = *left->template SlotAt<T>(leftIndex) % *right->template SlotAt<T>(rightIndex);
-            else if constexpr (DataTypes::IsDecimal<T>)
-                *out->template SlotAt<T>(i) = std::move(*left->template SlotAt<T>(leftIndex) % *right->template SlotAt<T>(rightIndex));
+            if constexpr (
+                DataTypes::Primitive<T>
+                || DataTypes::IsDecimal<T>
+            ) DataVector::FlatAccess(outData, i) = leftData[leftIndex] % rightData[rightIndex];
             else
                 static_assert(DataTypes::AlwaysFalse<T>, "BinaryDivideKernel: unsupported type");
         }
@@ -234,7 +238,7 @@ namespace CoreEngine::VectorizedKernels{
             auto* outData = out->template DataAs<bool>();
 
             if (!isNull)
-                DataVector::ConstantAccess(outData) = Comparison{}(DataVector::ConstantAccess(leftData), DataVector::ConstantAccess(rightData));
+                outData[0] = Comparison{}(DataVector::ConstantAccess(leftData), DataVector::ConstantAccess(rightData));
 
             return out;
         }

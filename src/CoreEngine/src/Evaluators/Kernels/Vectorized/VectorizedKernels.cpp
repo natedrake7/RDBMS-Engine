@@ -21,7 +21,11 @@ namespace CoreEngine::VectorizedKernels{
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* right = logicalExpr->right->vectorizedKernel(logicalExpr->right, context, chunk);
 
+        const auto* leftData = left->template DataAs<bool>();
+        const auto* rightData = right->template DataAs<bool>();
+
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
+        auto* outData = out->template DataAs<bool>();
 
         for (Int i = 0; i < chunk->_numberOfRows; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -30,10 +34,9 @@ namespace CoreEngine::VectorizedKernels{
             const auto leftNull = left->GetNullValue(leftIndex);
             const auto rightNull = right->GetNullValue(rightIndex);
 
-            const auto leftVal = !leftNull && *left->template SlotAt<bool>(leftIndex);
-            const auto rightVal = !rightNull && *right->template SlotAt<bool>(rightIndex);
+            const auto leftVal = !leftNull && leftData[leftIndex];
+            const auto rightVal = !rightNull && rightData[rightIndex];
 
-            const auto value  = leftVal && rightVal;
             const auto isNull = static_cast<bool>(
                 (leftNull && rightNull)
                 | (leftNull && rightVal)
@@ -41,7 +44,7 @@ namespace CoreEngine::VectorizedKernels{
             );
 
             out->SetNullValue(i, isNull);
-            *out->template SlotAt<bool>(i) = value;
+            outData[i] = leftVal && rightVal;
         }
 
         return out;
@@ -56,7 +59,11 @@ namespace CoreEngine::VectorizedKernels{
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* right = logicalExpr->right->vectorizedKernel(logicalExpr->right, context, chunk);
 
+        const auto* leftData = left->DataAs<bool>();
+        const auto* rightData = right->DataAs<bool>();
+
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
+        auto* outData = out->template DataAs<bool>();
 
         for (Int i = 0; i < chunk->_numberOfRows; i++){
             const auto leftIndex = left->PhysicalIndex(i);
@@ -65,10 +72,9 @@ namespace CoreEngine::VectorizedKernels{
             const auto leftNull = left->GetNullValue(leftIndex);
             const auto rightNull = right->GetNullValue(rightIndex);
 
-            const auto leftVal = !leftNull && *left->template SlotAt<bool>(leftIndex);
-            const auto rightVal = !rightNull && *right->template SlotAt<bool>(rightIndex);
+            const auto leftVal = !leftNull && leftData[leftIndex];
+            const auto rightVal = !rightNull && rightData[rightIndex];
 
-            const auto value  = leftVal || rightVal;
             const auto isNull = static_cast<bool>(
                 (leftNull && rightNull)
                 | (leftNull && !rightVal)
@@ -76,7 +82,7 @@ namespace CoreEngine::VectorizedKernels{
             );
 
             out->SetNullValue(i, isNull);
-            *out->template SlotAt<bool>(i) = value;
+            outData[i] = leftVal || rightVal;
         }
 
         return out;
@@ -88,14 +94,18 @@ namespace CoreEngine::VectorizedKernels{
         const DataChunk* chunk
     ){
         const auto* logicalExpr = self->AsLogical();
-        const auto* input = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
+
+        const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
+        const auto* leftData = left->DataAs<bool>();
+
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
+        auto* outData = out->template DataAs<bool>();
 
         for (Int i = 0; i < chunk->_numberOfRows; i++){
-            const auto index = input->PhysicalIndex(i);
-            const auto isNull = input->GetNullValue(index);
+            const auto index = left->PhysicalIndex(i);
+            const auto isNull = left->GetNullValue(index);
             out->SetNullValue(i, isNull);
-            *out->template SlotAt<bool>(i) = !isNull && !*input->template SlotAt<bool>(index);
+            outData[i] = !isNull && !leftData[index];
         }
 
         return out;

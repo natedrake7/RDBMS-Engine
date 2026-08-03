@@ -83,15 +83,16 @@ namespace DataTypes {
 		void AddYears(Int years);
 
 		static DateTime Now();
-		static bool FromString(DateTime& outVal, const StringView& date, const StringView& format = "");
-		static bool FromString(const StringView& str);
+		static bool FromStringView(DateTime& outVal, const StringView& date, const StringView& format = "");
+		static bool FromStringView(const StringView& str);
 
 	    [[nodiscard]] StringBuffer ToStringBuffer(const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 		[[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
+	    [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 		[[nodiscard]] BigInt UnixTimeStamp()const;
 
 
-		bool ValidateDate() const;
+		[[nodiscard]] bool ValidateDate() const;
 
 		// friend std::ostream& operator<<(std::ostream& os, const DateTime& datetime);
 	    void Print(std::ostream& os, const StringView& format = DEFAULT_DATETIME_FORMAT) const;

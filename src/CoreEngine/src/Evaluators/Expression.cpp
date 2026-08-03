@@ -229,7 +229,7 @@ namespace Expressions{
         auto* columnExpression = self->AsColumn();
         switch (columnExpression->returnType){
         case DataType::String:
-            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::String>;
+            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::StringValue>;
             break;
         case DataType::Bool:
             columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<bool>;
@@ -316,7 +316,7 @@ namespace Expressions{
             constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::Decimal>;
             break;
         case DataType::String:
-            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::String>;
+            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::StringValue>;
             break;
         case DataType::Json:
             constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::JsonBinary>;
@@ -936,7 +936,7 @@ namespace Expressions{
         auto* variableExpression = self->AsVariable();
         switch (variableExpression->dataType){
         case DataType::String:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::String>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::StringValue>;
             break;
         case DataType::Bool:
             variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<bool>;

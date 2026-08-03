@@ -31,6 +31,7 @@ namespace DataTypes {
         [[nodiscard]] const UnsignedTinyInt* GetData() const;
 
         [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
+        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] StringBuffer ToStringBuffer() const;
         static Guid Parse(const String& str);
         static Guid Parse(const StringView& str);

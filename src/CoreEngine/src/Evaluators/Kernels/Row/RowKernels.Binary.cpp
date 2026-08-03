@@ -18,14 +18,14 @@ namespace CoreEngine::RowKernels{
 
     constexpr void RegisterString(BinaryKernelTable& table){
         constexpr auto CAST_STR_TYPE = static_cast<Int>(DataType::String);
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::Add)][CAST_STR_TYPE] = &BinaryArithmeticKernel<DataTypes::String, std::plus<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::equal_to<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::not_equal_to<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::greater_equal<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, std::less_equal<DataTypes::String>>;
-        table.cells[static_cast<Int>(Expressions::BinaryOperator::EqualIgnoreOrdinalCase)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::String, DataTypes::StringEqualsIgnoreCase>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Add)][CAST_STR_TYPE] = &BinaryArithmeticKernel<DataTypes::StringValue, std::plus<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Equal)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::equal_to<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::NotEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::not_equal_to<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Greater)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::greater<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::GreaterEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::greater_equal<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::Less)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::less<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::LessEqual)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, std::less_equal<DataTypes::StringValue>>;
+        table.cells[static_cast<Int>(Expressions::BinaryOperator::EqualIgnoreOrdinalCase)][CAST_STR_TYPE] = &BinaryComparisonKernel<DataTypes::StringValue, DataTypes::StringEqualsIgnoreCase>;
 
         //TODO add starts with / ends with / contains kernels
     }

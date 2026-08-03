@@ -26,7 +26,7 @@ namespace CoreEngine {
         this->PopulateFilenames(baseContext.GetAllocator(), dbName);
         this->CreateKeys();
 
-        if (!this->VersionDatabaseExists(dbName.ToView()))
+        if (!this->VersionDatabaseExists(DataTypes::StringView::ViewOf(dbName)))
             CoreEngine::CreateDatabase(Constants::VERSION_DATABASE_ID, dbName);
 
         Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
@@ -89,8 +89,8 @@ namespace CoreEngine {
         this->filename = DataTypes::String::Concat(&this->_allocator, path, Constants::DATA_FILE_EXTENSION);
         this->systemFilename = DataTypes::String::Concat(&this->_allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
 
-        this->filenameView = this->filename.ToView();
-        this->systemFilenameView = this->systemFilename.ToView();
+        this->filenameView = DataTypes::StringView::ViewOf(this->filename);
+        this->systemFilenameView = DataTypes::StringView::ViewOf(this->systemFilename);
     }
 
     void VersionDatabase::WriteHeaderToFile() const{

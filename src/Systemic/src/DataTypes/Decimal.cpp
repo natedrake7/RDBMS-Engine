@@ -1,5 +1,7 @@
 ﻿#include "../../include/DataTypes/Decimal.h"
 
+#include "DataTypes/StringValue.h"
+
 namespace DataTypes {
     String Decimal::ToString(const ::Memory::IAllocator* allocator) const{
         const auto isPositive = this->IsPositive();
@@ -29,6 +31,11 @@ namespace DataTypes {
             result.Pop();
 
         return result;
+    }
+
+    StringValue Decimal::ToStringValue(const Memory::IAllocator* allocator) const{
+        const auto bufferStr = this->ToBufferString();
+        return StringValue::Create(allocator, bufferStr.Data(), bufferStr.Size());
     }
 
     double Decimal::ToDouble() const{

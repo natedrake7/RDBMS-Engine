@@ -13,7 +13,7 @@ namespace QueryPipeline::PhysicalPlan{
 
   ExecutionResult PhysicalAddColumn::Execute(CoreEngine::ExecutionContext& context){
     this->column->type.name.ToLowerInPlace();
-    const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(this->column->type.name.ToView());
+    const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(this->column->type.name));
 
     auto result = ExecutionResult(context);
 
@@ -31,7 +31,7 @@ namespace QueryPipeline::PhysicalPlan{
         CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
           context,
           this->table->_tableId,
-          this->column->name.name.ToView(),
+          DataTypes::StringView::ViewOf(this->column->name.name),
           columnType,
           this->column->type.size,
           this->column->type.decimal.precision,
@@ -39,7 +39,7 @@ namespace QueryPipeline::PhysicalPlan{
           this->column->isNullable,
           this->column->index,
           false,
-          this->session->user->name.ToView()
+          DataTypes::StringView::ViewOf(this->session->user->name)
           );
 
       if (!result.status.IsOk())
@@ -63,7 +63,7 @@ namespace QueryPipeline::PhysicalPlan{
     auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
     auto* columnPtr = tablePtr->AddColumn(
-        this->column->name.name.ToView(),
+        DataTypes::StringView::ViewOf(this->column->name.name),
         columnType,
         this->column->type.size,
         this->column->index,

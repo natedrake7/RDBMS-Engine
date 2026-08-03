@@ -27,7 +27,7 @@ namespace CoreEngine::StorageTypes {
         const Table* table
     ){
         const auto normalizedType = DataTypes::String::Normalize(header.type, &this->_allocator);
-        const auto strView = normalizedType.ToView();
+        const auto strView = DataTypes::StringView::ViewOf(normalizedType);
 
         this->SetColumnName(DataTypes::StringView(header.name));
         this->allowNulls = false;
@@ -43,7 +43,7 @@ namespace CoreEngine::StorageTypes {
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table){
         this->header.id = masterDbHeader.id;
-        this->SetColumnName(masterDbHeader.name.ToView());
+        this->SetColumnName(DataTypes::StringView::ViewOf(masterDbHeader.name));
         this->allowNulls = masterDbHeader.isNullable;
         this->header.columnType = static_cast<DataType>(masterDbHeader.dataType);
         this->header.recordSize = masterDbHeader.recordSize;

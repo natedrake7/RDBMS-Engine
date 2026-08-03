@@ -3,6 +3,7 @@
 #include <charconv>
 #include <chrono>
 #include "DataTypes/String.h"
+#include "DataTypes/StringValue.h"
 
 namespace DataTypes{
 
@@ -270,7 +271,7 @@ namespace DataTypes{
 
 	DateTime DateTime::Now() { return DateTime(); }
 
-    bool DateTime::FromString(DateTime& outVal, const StringView& date, const StringView& format){
+    bool DateTime::FromStringView(DateTime& outVal, const StringView& date, const StringView& format){
         ParsedFields fields;
 
         if (!format.Empty()) {
@@ -316,14 +317,14 @@ namespace DataTypes{
         return true;
     }
 
-    bool DateTime::FromString(const StringView& str){
+    bool DateTime::FromStringView(const StringView& str){
         DateTime discard;
-        return FromString(discard, str, StringView());
+        return FromStringView(discard, str, StringView());
     }
 
 	DateTime::StringBuffer DateTime::ToStringBuffer(const StringView& format) const{
         const auto timePoint = std::chrono::system_clock::time_point(std::chrono::milliseconds(this->timeStamp));
-        const std::time_t t = std::chrono::system_clock::to_time_t(timePoint);
+        const auto t = std::chrono::system_clock::to_time_t(timePoint);
         const auto* localTime = std::localtime(&t);
 
         // Format date/time using strftime into a char buffer
@@ -349,6 +350,11 @@ namespace DataTypes{
 	String DateTime::ToString(const ::Memory::IAllocator* allocator, const StringView& format) const{
         auto buffer = this->ToStringBuffer(format);
         return String(buffer.Data(), buffer.Size(), allocator);
+    }
+
+    StringValue DateTime::ToStringValue(const ::Memory::IAllocator* allocator, const StringView& format) const{
+        const auto buffer = this->ToStringBuffer(format);
+        return StringValue::Create(allocator, buffer.Data(), buffer.Size());
     }
 
     BigInt DateTime::UnixTimeStamp() const { return this->timeStamp; }

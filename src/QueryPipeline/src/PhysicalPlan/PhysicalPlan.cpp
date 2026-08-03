@@ -206,7 +206,7 @@ namespace QueryPipeline::PhysicalPlan {
       if (role == nullptr) {
           result.status = Errors::RuntimeStatus(
               Errors::RuntimeError::Error,
-              Messages::FAILED_TO_GET_ROLE(this->roleName.ToView(), context.GetAllocator())
+              Messages::FAILED_TO_GET_ROLE(DataTypes::StringView::ViewOf(this->roleName), context.GetAllocator())
           );
           return result;
       }
@@ -225,10 +225,10 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto result = CoreEngine::SystemCatalog::Get().InsertDbToMasterDb(
           context,
-          this->dbName.ToView(),
-          path.ToView(),
+          DataTypes::StringView::ViewOf(this->dbName),
+          DataTypes::StringView::ViewOf(path),
           false,
-          this->session->user->name.ToView()
+          DataTypes::StringView::ViewOf(this->session->user->name)
       );
 
       const auto databaseId = result.primaryKey.AsInt<Int>();
@@ -277,8 +277,8 @@ namespace QueryPipeline::PhysicalPlan {
       const auto insertResult = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(
           context,
           this->databaseId,
-          this->schemaName.ToView(),
-          this->session->user->name.ToView()
+          DataTypes::StringView::ViewOf(this->schemaName),
+          DataTypes::StringView::ViewOf(this->session->user->name)
       );
       return ExecutionResult(insertResult.code, insertResult.message);
   }
@@ -312,10 +312,10 @@ namespace QueryPipeline::PhysicalPlan {
             context,
             this->table->_databaseId,
             this->table->_schemaId,
-            this->table->name.ToView(),
+            DataTypes::StringView::ViewOf(this->table->name),
             index,
             false,
-            this->session->user->name.ToView()
+            DataTypes::StringView::ViewOf(this->session->user->name)
         );
 
         const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
@@ -332,8 +332,8 @@ namespace QueryPipeline::PhysicalPlan {
             const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
                 auto* columnPtr =
                     tablePtr->AddColumn(
-                          column->name.name.ToView(),
-                          COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
+                          DataTypes::StringView::ViewOf(column->name.name),
+                          COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(normalizedTableName)),
                           column->type.size,
                           column->index,
                           column->isNullable
@@ -343,15 +343,15 @@ namespace QueryPipeline::PhysicalPlan {
                 CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
                       context,
                       tableId,
-                      column->name.name.ToView(),
-                      COLUMN_TYPENAMES_TO_ENUMS.Get(normalizedTableName.ToView()),
+                      DataTypes::StringView::ViewOf(column->name.name),
+                      COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(normalizedTableName)),
                       column->type.size,
                       column->type.decimal.precision,
                       column->type.decimal.scale,
                       column->isNullable,
                       column->index,
                       false,
-                      this->session->user->name.ToView()
+                      DataTypes::StringView::ViewOf(this->session->user->name)
                 );
 
             const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
@@ -405,10 +405,10 @@ namespace QueryPipeline::PhysicalPlan {
         const auto indexResult = CoreEngine::SystemCatalog::Get().InsertIndexToMasterDb(
             context,
             tableId,
-            this->constraintName.ToView(),
+            DataTypes::StringView::ViewOf(this->constraintName),
             true,
             false,
-            this->session->user->name.ToView()
+            DataTypes::StringView::ViewOf(this->session->user->name)
         );
 
         const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
@@ -416,11 +416,11 @@ namespace QueryPipeline::PhysicalPlan {
         const auto constraintResult = CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
             context,
             tableResult.primaryKey.AsInt<Int>(),
-            this->constraintName.ToView(),
+            DataTypes::StringView::ViewOf(this->constraintName),
             Headers::ConstraintType::PrimaryKey,
             false,
             &indexId,
-            this->session->user->name.ToView()
+            DataTypes::StringView::ViewOf(this->session->user->name)
         );
 
         const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
@@ -476,10 +476,10 @@ namespace QueryPipeline::PhysicalPlan {
       const auto indexResult =CoreEngine::SystemCatalog::Get().InsertIndexToMasterDb(
           context,
           this->table->_tableId,
-          this->constraintName.ToView(),
+          DataTypes::StringView::ViewOf(this->constraintName),
           false,
           false,
-          this->session->user->name.ToView()
+          DataTypes::StringView::ViewOf(this->session->user->name)
       );
 
       const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
@@ -487,11 +487,11 @@ namespace QueryPipeline::PhysicalPlan {
       const auto constraintResult =CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
           context,
           this->table->_tableId,
-          this->constraintName.ToView(),
+          DataTypes::StringView::ViewOf(this->constraintName),
           Headers::ConstraintType::IndexKey,
           false,
           &indexId,
-          this->session->user->name.ToView()
+          DataTypes::StringView::ViewOf(this->session->user->name)
       );
 
       const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
@@ -1089,7 +1089,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         result.status = Errors::RuntimeStatus(
             Errors::RuntimeError::Ok,
-            Messages::ADDED_VARIABLE(this->variable.GetName().ToView(), context.GetAllocator())
+            Messages::ADDED_VARIABLE(DataTypes::StringView::ViewOf(this->variable.GetName()), context.GetAllocator())
         );
         return result;
     }

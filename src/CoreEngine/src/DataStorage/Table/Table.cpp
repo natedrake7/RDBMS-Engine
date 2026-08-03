@@ -1330,7 +1330,7 @@ namespace CoreEngine::StorageTypes {
 
     void Table::UpdateColumnName(const column_index_t index, const DataTypes::String& name)const{
         auto* column = this->_columns[index];
-        column->SetColumnName(name.ToView());
+        column->SetColumnName(DataTypes::StringView::ViewOf(name));
     }
 
     void Table::RemoveColumn(

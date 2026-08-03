@@ -380,7 +380,7 @@ void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket,
         Network::QueryResponseProtocol response(
             compileResult.status.hasError,
             false,
-            compileResult.status.message.ToView(),
+            DataTypes::StringView::ViewOf(compileResult.status.message),
             {},
             results
         );

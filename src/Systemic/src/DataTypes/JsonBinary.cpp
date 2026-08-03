@@ -1,6 +1,7 @@
 ﻿#include "../../include/DataTypes/JsonBinary.h"
 
 #include "Comparators.h"
+#include "DataTypes/StringValue.h"
 #include "Serialization/JsonBuilder.h"
 
 namespace DataTypes{
@@ -278,7 +279,7 @@ namespace DataTypes{
 
         const auto segmentsSize = pathSegments.Size();
         for (int i = 0; i < segmentsSize; i++){
-            entry = this->FindEntry(pathSegments[i]._key.ToView(), headerOffSet);
+            entry = this->FindEntry(StringView::ViewOf(pathSegments[i]._key), headerOffSet);
 
             if (entry == nullptr)
                 return Serialization::JsonValue();
@@ -308,6 +309,15 @@ namespace DataTypes{
         String result(this->_allocator);
         this->SerializeNode(result, 0);
         return result;
+    }
+
+    StringValue JsonBinary::ToStringValue() const{
+        if (this->_data == nullptr || this->_size == 0)
+            return StringValue::Empty();
+
+        String result(this->_allocator, this->_size);
+        this->SerializeNode(result, 0);
+        return StringValue::MoveFromString(result);
     }
 
     String JsonBinary::JsonObjectToString(

@@ -7,6 +7,7 @@
 #include <random>
 #include <regex>
 
+#include "DataTypes/StringValue.h"
 #include "DataTypes/StringView.h"
 
 namespace DataTypes {
@@ -64,6 +65,11 @@ namespace DataTypes {
     String Guid::ToString(const ::Memory::IAllocator* allocator) const {
         auto buffer = this->ToStringBuffer();
         return String(buffer.Data(), GUID_STRING_SIZE, allocator);
+    }
+
+    StringValue Guid::ToStringValue(const Memory::IAllocator* allocator) const{
+        auto buffer = this->ToStringBuffer();
+        return StringValue::Create(allocator, buffer.Data(), GUID_STRING_SIZE);
     }
 
     Guid::StringBuffer Guid::ToStringBuffer() const{

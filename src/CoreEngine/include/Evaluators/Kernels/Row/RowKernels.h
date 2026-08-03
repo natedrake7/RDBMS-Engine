@@ -3,6 +3,7 @@
 #include "../../../Pages/PageView.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../../Contexts/ExecutionContext.h"
+#include "../../Systemic/include/DataTypes/StringValue.h"
 
 namespace CoreEngine::RowKernels{
     template<typename T>
@@ -21,12 +22,12 @@ namespace CoreEngine::RowKernels{
             );
             if (*outNull) return;
 
-            if constexpr (DataTypes::IsString<T>)
-                new (outVal) DataTypes::String(data, size, context._allocator);
+            if constexpr (DataTypes::IsStringValue<T>)
+                *static_cast<T*>(outVal) = std::move(DataTypes::StringValue::Create(context._allocator, reinterpret_cast<const char*>(data), size));
             else if constexpr (DataTypes::IsJson<T>)
-                new (outVal) DataTypes::JsonBinary(context._allocator, data, size);
+                *static_cast<T*>(outVal) = std::move(DataTypes::JsonBinary(context._allocator, data, size));
             else if constexpr (DataTypes::IsDecimal<T>)
-                new (outVal) DataTypes::Decimal(data, size);
+                *static_cast<T*>(outVal) = std::move(DataTypes::Decimal(data, size));
         }
         else if constexpr (DataTypes::Primitive<T>) {
             *static_cast<T*>(outVal) =
@@ -53,12 +54,12 @@ namespace CoreEngine::RowKernels{
 
         if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
-        else if constexpr (DataTypes::IsString<T>)
-            new (outVal) DataTypes::String(value.Data(), value.Size(), context._allocator);
+        else if constexpr (DataTypes::IsStringValue<T>)
+            *static_cast<T*>(outVal) = std::move(DataTypes::StringValue::Create(context._allocator, reinterpret_cast<const char*>(value.Data()), value.Size()));
         else if constexpr (DataTypes::IsJson<T>)
-            new (outVal) DataTypes::JsonBinary(context._allocator, value.Data(), value.Size());
+            *static_cast<T*>(outVal) = std::move(DataTypes::JsonBinary(context._allocator, value.Data(), value.Size()));
         else if constexpr (DataTypes::IsDecimal<T>)
-            new (outVal) DataTypes::Decimal(value.Data(), value.Size());
+            *static_cast<T*>(outVal) = std::move(DataTypes::Decimal(value.Data(), value.Size()));
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }
@@ -84,12 +85,12 @@ namespace CoreEngine::RowKernels{
 
         if constexpr (DataTypes::Primitive<T>)
             *static_cast<T*>(outVal) = value.Get<T>();
-        else if constexpr (DataTypes::IsString<T>)
-            new (outVal) DataTypes::String(value.Data(), value.Size(), context._allocator);
+        else if constexpr (DataTypes::IsStringValue<T>)
+            *static_cast<T*>(outVal) = std::move(DataTypes::StringValue::Create(context._allocator, reinterpret_cast<const char*>(value.Data()), value.Size()));
         else if constexpr (DataTypes::IsJson<T>)
-            new (outVal) DataTypes::JsonBinary(context._allocator, value.Data(), value.Size());
+            *static_cast<T*>(outVal) = std::move(DataTypes::JsonBinary(context._allocator, value.Data(), value.Size()));
         else if constexpr (DataTypes::IsDecimal<T>)
-            new (outVal) DataTypes::Decimal(value.Data(), value.Size());
+            *static_cast<T*>(outVal) = std::move(DataTypes::Decimal(value.Data(), value.Size()));
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }

@@ -227,6 +227,34 @@ namespace DataTypes{
             while (str[size] != '\0') size++;
             return size;
         }
+
+        template <IsStringLike T>
+        static StringView ViewOf(const T& str){
+            if constexpr (std::is_same_v<std::decay_t<T>, StringView>)
+                return StringView(str.Data(), str.Size());
+            else if constexpr (
+                std::is_same_v<std::decay_t<T>, String>
+                || std::is_same_v<std::decay_t<T>, StringValue>
+            ){
+                return StringView(str.Data(), str.Size());
+            }
+
+            else if constexpr (
+                std::is_same_v<std::decay_t<T>, std::string>
+                || std::is_same_v<std::decay_t<T>, std::string_view>
+            ){
+                return StringView(str.data(), static_cast<Int>(str.size()));
+            }
+            else if constexpr (std::is_same_v<std::decay_t<T>, char*> ||
+                               std::is_same_v<std::decay_t<T>, const char*>
+            ){
+                return StringView(str, static_cast<Int>(std::strlen(str)));
+            }
+            else
+                static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for StringView constructor");
+
+            return StringView();
+        }
     };
 
     class StringViewStreamBuf final : public std::streambuf {
