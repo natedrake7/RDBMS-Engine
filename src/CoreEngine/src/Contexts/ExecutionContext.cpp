@@ -1,28 +1,27 @@
 ﻿#include "../../include/Contexts/ExecutionContext.h"
 #include "../../../Systemic/include/Coercions/Coercions.h"
 #include "../../include/DataStorage/Row.h"
+#include "../../../Systemic/include/DataTypes/Variable.h"
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
         Snapshot& snapshot,
         const Int batchSize,
-        const Dictionary<DataTypes::String, Variable>& variables,
-        const Constants::ExecutionMode mode,
+        const Dictionary<DataTypes::String, Variable>* variables,
         const Int initialAllocatorSize
     )   :   snapshot(std::move(snapshot)),
             allocator(initialAllocatorSize),
-            variables(&variables),
-            batchSize(batchSize), mode(mode){}
+            variables(variables),
+            batchSize(batchSize){}
 
     ExecutionContext::ExecutionContext()
-    : variables(nullptr), batchSize(0), mode(Constants::ExecutionMode::Row){}
+    : variables(nullptr), batchSize(0){}
 
     ExecutionContext::ExecutionContext(ExecutionContext&& other) noexcept
         :   snapshot(std::move(other.snapshot)),
             allocator(std::move(other.allocator)),
             variables(other.variables),
-            batchSize(other.batchSize),
-            mode(other.mode){
+            batchSize(other.batchSize){
         other.variables = nullptr;
     }
 
@@ -35,7 +34,6 @@ namespace CoreEngine{
         this->batchSize = other.batchSize;
         this->variables = other.variables;
         this->allocator = std::move(other.allocator);
-        this->mode = other.mode;
 
         other.variables = nullptr;
 
@@ -54,6 +52,10 @@ namespace CoreEngine{
 
     const Dictionary<DataTypes::String, Variable>* ExecutionContext::GetVariables() const{
         return this->variables;
+    }
+
+    const Variable* ExecutionContext::GetVariable(const DataTypes::String& name) const{
+        return &this->variables->Get(name);
     }
 
     Int ExecutionContext::GetBatchSize() const{
@@ -113,10 +115,6 @@ namespace CoreEngine{
 
     StorageTypes::RID ExecutionContext::GetRID(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
         return this->scanHandles[slotIndex].rids[ridIndex];
-    }
-
-    Constants::ExecutionMode ExecutionContext::GetMode() const{
-        return this->mode;
     }
 
     void ExecutionContext::ResetAllocator() const{

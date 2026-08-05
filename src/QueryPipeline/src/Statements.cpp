@@ -19,11 +19,9 @@ namespace QueryPipeline::Statements {
         : table(nullptr), databaseId(Constants::SYSTEM_CATALOG_ID), _slotCount(DEFAULT_SLOT_INDEX){}
 
     Errors::ValidationStatus Statement::CompileBase(const QueryContext& context)const{
-        const auto* session = Network::Server::Get().GetSession(this->sessionId);
-
         Errors::ValidationStatus validationStatus(context.GetAllocator());
 
-        if (!session || !session->user || !session->user->role){
+        if (!context._session || !context._session->user || !context._session->user->role){
             validationStatus.code = Errors::ValidationError::Error;
             validationStatus.message = DataTypes::String::FromView(
                 Messages::FAILED_TO_FETCH_USER_SESSION,
@@ -31,9 +29,9 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        if (!session->user->role->HasPermission(this->RequiredPermissions())) {
+        if (!context._session->user->role->HasPermission(this->RequiredPermissions())) {
             validationStatus.code = Errors::ValidationError::Error;
-            validationStatus.message = DataTypes::String::Concat(context.GetAllocator(), "User", session->user->name, " is not authorized to perform this action.");
+            validationStatus.message = DataTypes::String::Concat(context.GetAllocator(), "User", context._session->user->name, " is not authorized to perform this action.");
         }
 
         return validationStatus;
@@ -83,7 +81,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * DeclareVariableStatement::ToLogical(QueryContext& context) {
-        return context._compileContext.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
+        return context._compileContext.Allocate<LogicalDeclareVariable>(context._session->sessionId, this->variable, this->expression);
     }
 
     SetVariableStatement::SetVariableStatement() {
@@ -123,7 +121,7 @@ namespace QueryPipeline::Statements {
   }
 
   LogicalPlan * SetVariableStatement::ToLogical(QueryContext& context) {
-    return context._compileContext.Allocate<LogicalDeclareVariable>(this->sessionId, this->variable, this->expression);
+    return context._compileContext.Allocate<LogicalDeclareVariable>(context._session->sessionId, this->variable, this->expression);
   }
 
   Errors::ValidationStatus CreateUserStatement::CompileDerived(QueryContext& context){
@@ -146,7 +144,7 @@ namespace QueryPipeline::Statements {
   }
 
     LogicalPlan* CreateUserStatement::ToLogical(QueryContext& context){
-        return context._compileContext.Allocate<LogicalCreateUser>(this->sessionId, this->username, this->password, this->role);
+        return context._compileContext.Allocate<LogicalCreateUser>(context._session->sessionId, this->username, this->password, this->role);
     }
 
     Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
@@ -162,7 +160,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * GrantRoleStatement::ToLogical(QueryContext& context){
-        return context._compileContext.Allocate<LogicalGrantRole>(this->sessionId, this->username, this->role);
+        return context._compileContext.Allocate<LogicalGrantRole>(context._session->sessionId, this->username, this->role);
     }
 
     Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
@@ -570,7 +568,7 @@ namespace QueryPipeline::Statements {
             : this->constraint->name;
 
         return context._compileContext.Allocate<LogicalTableCreate>(
-            this->sessionId,
+            context._session->sessionId,
             this->table,
             this->columns,
             this->primaryKey,
@@ -889,7 +887,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan* CreateDbStatement::ToLogical(QueryContext& context){
-        return context._compileContext.Allocate<LogicalCreateDatabase>(this->sessionId, this->name);
+        return context._compileContext.Allocate<LogicalCreateDatabase>(context._session->sessionId, this->name);
     }
 
     Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
@@ -945,7 +943,7 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan * UseDatabaseStatement::ToLogical(QueryContext& context){
-        return context._compileContext.Allocate<LogicalUseDatabase>(this->sessionId, this->databaseId);
+        return context._compileContext.Allocate<LogicalUseDatabase>(context._session->sessionId, this->databaseId);
     }
 
     Int InsertStatement::InsertDefaultValue(
@@ -1217,7 +1215,7 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan * CreateSchemaStatement::ToLogical(QueryContext& context){
         return context._compileContext.Allocate<LogicalSchemaCreate>(
-            this->sessionId,
+            context._session->sessionId,
             this->databaseId,
             this->name
         );
@@ -1392,7 +1390,7 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan* CreateIndexStatement::ToLogical(QueryContext& context){
         return context._compileContext.Allocate<LogicalIndexCreate>(
-            this->sessionId,
+            context._session->sessionId,
             this->table,
             this->name,
             this->columnIndices
@@ -1637,28 +1635,28 @@ namespace QueryPipeline::Statements {
         switch (this->type) {
         case Constants::AlterTableType::AddColumn:
             return context._compileContext.Allocate<LogicalAlterTable>(
-                this->sessionId,
+                context._session->sessionId,
                 this->table,
                 this->type,
                 this->column.newColumn
             );
         case Constants::AlterTableType::AlterColumn:
             return context._compileContext.Allocate<LogicalAlterTable>(
-                this->sessionId,
+                context._session->sessionId,
                 this->table,
                 this->type,
                 this->column.alterColumn
             );
         case Constants::AlterTableType::RenameColumn:
             return context._compileContext.Allocate<LogicalAlterTable>(
-                this->sessionId,
+                context._session->sessionId,
                 this->table,
                 this->type,
                 this->column.renameColumn
             );
         case Constants::AlterTableType::DropColumn:
             return context._compileContext.Allocate<LogicalAlterTable>(
-                this->sessionId,
+                context._session->sessionId,
                 this->table,
                 this->type,
                 this->column.dropColumn
@@ -2069,8 +2067,8 @@ namespace QueryPipeline::Statements {
         const QueryContext &context,
         Expressions::VariableExpression* variableExpr
     ){
-        DataType type;
-        if (!context._scope.variables.TryGetValue(variableExpr->normalizedName, type)) {
+        DataType outType;
+        if (!context._scope.variables.TryGetValue(variableExpr->normalizedName, outType)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_VARIABLE(
                     context.GetAllocator(),
@@ -2079,7 +2077,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        variableExpr->dataType = type;
+        variableExpr->dataType = outType;
         return Errors::ValidationStatus::Ok();
     }
 

@@ -194,7 +194,6 @@ namespace QueryPipeline::Statements {
     };
 
     struct Statement {
-        DataTypes::Guid sessionId;
         DataSource* table;
         Int databaseId;
         UnsignedSmallInt _slotCount;
@@ -217,7 +216,7 @@ namespace QueryPipeline::Statements {
         DeclareVariableStatement();
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 

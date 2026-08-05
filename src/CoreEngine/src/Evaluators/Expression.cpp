@@ -922,9 +922,6 @@ namespace Expressions{
         }
     }
 
-    void VariableExpression::BindVectorizedKernel(){
-    }
-
     VariableExpression::VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator) {
         this->name = name;
         this->normalizedName = this->name.ToLower();
@@ -970,6 +967,11 @@ namespace Expressions{
         }
     }
 
+    void VariableExpression::BindVectorizedKernel(Expression* self){
+        auto* variableExpression = self->AsVariable();
+        variableExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetVariableKernel(variableExpression->dataType);
+    }
+
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
         return context._executionContext->GetVariables()->Get(this->normalizedName).GetValue();
     }
@@ -1000,9 +1002,6 @@ namespace Expressions{
         return this->type;
     }
 
-    void CastExpression::BindVectorizedKernel(){
-    }
-
     CastExpression::CastExpression(
         Expression* expression,
         const DataType targetType,
@@ -1016,6 +1015,13 @@ namespace Expressions{
         Expressions::BindExpressionRowKernel(castExpression->childExpr);
         const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
         castExpression->rowKernel = CoreEngine::RowKernels::LookupCastKernel(childExprType, castExpression->targetType);
+    }
+
+    void CastExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* castExpression = self->AsCast();
+        Expressions::BindAndResolveExpressionKernel(castExpression->childExpr, schema);
+        const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
+        castExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetCastKernel(childExprType, castExpression->targetType);
     }
 
     DataType CastExpression::GetReturnType() const{ return this->targetType; }
@@ -1040,7 +1046,7 @@ namespace Expressions{
     Value EvaluateExpression(const Expression* expression, const EvaluationContext& context){
         switch (GetExpressionReturnType(expression)) {
         case DataType::String:
-            return CoreEngine::RowKernels::KernelToValue<DataTypes::String>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<DataTypes::StringValue>(expression, context);
         case DataType::Bool:
             return CoreEngine::RowKernels::KernelToValue<bool>(expression, context);
         case DataType::TinyInt:
@@ -1150,7 +1156,7 @@ namespace Expressions{
             LogicalExpression::BindVectorizedKernel(expression, schema);
             break;
         case ExpressionType::Variable:
-            // VariableExpression::BindExpressionKernel(expression->AsVariable(), EXECUTION_MODE);
+            VariableExpression::BindVectorizedKernel(expression);
             break;
         case ExpressionType::Branch:
             break;
@@ -1159,7 +1165,7 @@ namespace Expressions{
         case ExpressionType::Json:
             break;
         case ExpressionType::Cast:
-            // CastExpression::BindExpressionKernel(expression->AsCast(), EXECUTION_MODE);
+            CastExpression::BindVectorizedKernel(expression, schema);
             break;
         default:
             break;

@@ -313,7 +313,6 @@ namespace Expressions{
     };
 
     class VariableExpression final : public Expression {
-        void BindVectorizedKernel();
     public:
         DataTypes::String name;
         DataTypes::String normalizedName;
@@ -322,6 +321,7 @@ namespace Expressions{
         explicit VariableExpression(const DataTypes::String& name, const ::Memory::IAllocator* allocator);
 
         static void BindRowKernel(Expression* self);
+        static void BindVectorizedKernel(Expression* self);
 
         [[nodiscard]]Value Evaluate(const EvaluationContext &context) const;
         [[nodiscard]]DataType GetReturnType() const;
@@ -342,7 +342,6 @@ namespace Expressions{
     };
 
     class CastExpression final: public Expression{
-        void BindVectorizedKernel();
     public:
         Expression* childExpr;
         DataType targetType;
@@ -351,6 +350,7 @@ namespace Expressions{
         CastExpression(Expression* expression, DataType targetType, bool isTryCast);
 
         static void BindRowKernel(Expression* self);
+        static void BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema);
 
         [[nodiscard]] DataType GetReturnType() const;
     };

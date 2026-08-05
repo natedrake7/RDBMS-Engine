@@ -100,16 +100,13 @@ namespace CoreEngine {
 
         Int batchSize;
 
-        Constants::ExecutionMode mode;
-
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 
         public:
             ExecutionContext(
                 Snapshot& snapshot,
                 Int batchSize,
-                const Dictionary<DataTypes::String, Variable>& variables,
-                Constants::ExecutionMode mode,
+                const Dictionary<DataTypes::String, Variable>* variables,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -122,6 +119,8 @@ namespace CoreEngine {
 
             [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
             const Dictionary<DataTypes::String, Variable>* GetVariables()const;
+            const Variable* GetVariable(const DataTypes::String& name) const;
+
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
@@ -143,8 +142,6 @@ namespace CoreEngine {
 
             [[nodiscard]] const StorageTypes::RID* GetRIDPtr(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
             [[nodiscard]] StorageTypes::RID GetRID(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
-
-            Constants::ExecutionMode GetMode()const;
 
             void ResetAllocator()const;
             void ReleaseAllocator()const;

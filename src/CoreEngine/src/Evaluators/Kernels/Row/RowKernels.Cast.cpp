@@ -2,8 +2,6 @@
 #include "Evaluators/Kernels/Row/RowKernels.Cast.h"
 
 namespace CoreEngine::RowKernels{
-    Expressions::RowKernelFunction RowCastKernelTable[DATATYPE_COUNT][DATATYPE_COUNT] = {};
-
     template<typename...> struct TypeList {};
     using CastTypes = TypeList<
         bool, TinyInt,

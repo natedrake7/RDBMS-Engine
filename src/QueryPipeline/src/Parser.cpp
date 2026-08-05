@@ -17,14 +17,17 @@
 
 namespace QueryPipeline{
     QueryContext::QueryContext()
-        :   status(this->_compileContext.GetAllocator()), _virtualId(0),
-            hasMore(false), _executionMode(Constants::ExecutionMode::Row){
+        : status(this->_compileContext.GetAllocator()), _session(nullptr), _virtualId(0),
+          hasMore(false)
+    {
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
-     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables){
-        for (const auto& [key, variable] : sessionVariables)
-            this->_scope.variables.ForceAdd(key, variable.GetType());
+
+     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable>* sessionVariables){
+        for (const auto& [key, value] : *sessionVariables){
+            this->_scope.variables.ForceAdd(key, value.GetType());
+        }
     }
 
      const ::Memory::IAllocator* QueryContext::GetAllocator() const{
@@ -40,16 +43,17 @@ namespace QueryPipeline{
      }
 
      QueryContext::QueryContext(Errors::Error& error)
-         :      status(std::move(error)),
-                _virtualId(0), hasMore(false),
-                _executionMode(Constants::ExecutionMode::Row){
-        this->cursors.SetAllocator(this->_compileContext.GetAllocator());
-    }
+         : status(std::move(error)), _session(nullptr),
+           _virtualId(0), hasMore(false)
+     {
+         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
+     }
 
     QueryContext::QueryContext(QueryContext&& other) noexcept
-        :   _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
-            cursors(std::move(other.cursors)), status(std::move(other.status)),
-            _virtualId(other._virtualId), hasMore(other.hasMore), _executionMode(other._executionMode){}
+        : _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
+          cursors(std::move(other.cursors)), status(std::move(other.status)), _session(nullptr),
+          _virtualId(other._virtualId), hasMore(other.hasMore)
+    {}
 
     QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
         if (this == &other)
@@ -58,8 +62,8 @@ namespace QueryPipeline{
         this->status = other.status;
         this->hasMore = other.hasMore;
         this->_scope = std::move(other._scope);
-        this->_executionMode = other._executionMode;
         this->cursors = std::move(other.cursors);
+        this->_session = other._session;
         this->_virtualId = other._virtualId;
 
         return *this;
@@ -123,9 +127,9 @@ namespace QueryPipeline{
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
 
         QueryContext queryContext;
-        const auto* session = server.GetSession(sessionId);
+        queryContext._session = server.GetSession(sessionId);
 
-        queryContext.CreateValidationScope(session->variables);
+        queryContext.CreateValidationScope(&queryContext._session->variables);
         Parser::Parse(queryContext, sessionId, query);
 
         if (queryContext.status.hasError)
@@ -154,7 +158,7 @@ namespace QueryPipeline{
             //TODO set batch size correctly
             CoreEngine::ExecutionContext executionContext(
                 snapshot, Constants::DEFAULT_BATCH_SIZE,
-                session->variables, queryContext._executionMode
+                &queryContext._session->variables
             );
 
             queryContext.cursors.Push(server.CreateCursor(

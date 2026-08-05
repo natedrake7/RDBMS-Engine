@@ -1,6 +1,6 @@
 #pragma once
-#include "Coercions/Coercions.h"
 #include "RowKernels.h"
+#include "../../Systemic/include/Coercions/Coercions.h"
 
 namespace CoreEngine::RowKernels{
     template<typename TFrom, typename TTo>

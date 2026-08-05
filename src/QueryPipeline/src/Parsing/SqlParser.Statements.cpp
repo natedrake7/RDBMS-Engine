@@ -140,10 +140,8 @@ namespace QueryPipeline::Parsing{
                 break;
         }
 
-        if (statement != nullptr){
-            statement->sessionId = *sessionId;
+        if (statement != nullptr)
             statement->databaseId = databaseId;
-        }
 
         return statement;
     }

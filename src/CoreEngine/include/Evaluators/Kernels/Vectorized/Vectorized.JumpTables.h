@@ -10,5 +10,7 @@ namespace CoreEngine::VectorizedKernels{
         static Expressions::VectorizedKernelFunction GetConstantKernel(DataType type);
         static Expressions::VectorizedKernelFunction GetBinaryKernel(Expressions::BinaryOperator _operator, DataType type);
         static Expressions::VectorizedKernelFunction GetLogicalKernel(Expressions::LogicalType type);
+        static Expressions::VectorizedKernelFunction GetCastKernel(DataType fromType, DataType toType);
+        static Expressions::VectorizedKernelFunction GetVariableKernel(DataType type);
     };
 }

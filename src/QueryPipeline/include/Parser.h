@@ -8,6 +8,7 @@
 #include "DatabaseConstants.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "CompileContext.h"
+#include "../../Server/include/SessionManager.h"
 
 namespace QueryPipeline{
     namespace Statements {
@@ -30,10 +31,10 @@ namespace QueryPipeline{
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
         Errors::Error status;
+        const Network::Session* _session;
+
         UnsignedSmallInt _virtualId;
         bool hasMore;
-
-        Constants::ExecutionMode _executionMode;
 
         QueryContext();
         explicit QueryContext(Errors::Error&  error);
@@ -44,7 +45,7 @@ namespace QueryPipeline{
         QueryContext(QueryContext&& other) noexcept;
         QueryContext& operator=(QueryContext&& other) noexcept;
 
-        void CreateValidationScope(const Dictionary<DataTypes::String, Variable>& sessionVariables);
+        void CreateValidationScope(const Dictionary<DataTypes::String, Variable>* sessionVariables);
         const ::Memory::IAllocator* GetAllocator()const;
 
         [[nodiscard]] UnsignedSmallInt NextVirtualId();

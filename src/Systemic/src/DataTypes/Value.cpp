@@ -47,53 +47,45 @@ Value::Value(
     const DataType type,
     const Memory::IAllocator* allocator,
     const column_index_t index
-){
-    this->data = data;
-    this->size = size;
-    this->type = type;
-    this->_allocator = allocator;
-    this->columnIndex = index;
-}
+):  _data(data), _allocator(allocator), _size(size),
+    _columnIndex(index), _type(type){}
 
-Value::Value(const column_index_t index){
-    this->data = nullptr;
-    this->_allocator = nullptr;
-    this->size = 0;
-    this->type = DataType::Null;
-    this->columnIndex = index;
-}
+Value::Value(const column_index_t index)
+    :   _data(nullptr), _allocator(nullptr),
+        _size(0), _columnIndex(index),
+        _type(DataType::Null) {}
 
 Value::Value(const Value &other){
-    this->size = other.size;
-    this->type = other.type;
-    this->columnIndex = other.columnIndex;
+    this->_size = other._size;
+    this->_type = other._type;
+    this->_columnIndex = other._columnIndex;
     this->_allocator = other._allocator;
 
-    if (other.data == nullptr) {
-        this->data = nullptr;
+    if (other._data == nullptr) {
+        this->_data = nullptr;
         return;
     }
 
-    auto* buffer = static_cast<object_t*>(this->_allocator->AllocateRaw(this->size));
-    std::memcpy(buffer, other.data, this->size);
-    this->data = buffer;
+    auto* buffer = static_cast<object_t*>(this->_allocator->AllocateRaw(this->_size));
+    std::memcpy(buffer, other._data, this->_size);
+    this->_data = buffer;
 }
 
 Value& Value::operator=(const Value& other){
     if (this == &other)
         return *this;
 
-    this->size = other.size;
-    this->type = other.type;
-    this->columnIndex = other.columnIndex;
+    this->_size = other._size;
+    this->_type = other._type;
+    this->_columnIndex = other._columnIndex;
     this->_allocator = other._allocator;
-    if (other.data == nullptr) {
-        this->data = nullptr;
+    if (other._data == nullptr) {
+        this->_data = nullptr;
         return *this;
     }
-    auto* buffer = static_cast<object_t*>(this->_allocator->AllocateRaw(this->size));
-    std::memcpy(buffer, other.data, this->size);
-    this->data = buffer;
+    auto* buffer = static_cast<object_t*>(this->_allocator->AllocateRaw(this->_size));
+    std::memcpy(buffer, other._data, this->_size);
+    this->_data = buffer;
     return *this;
 }
 
@@ -101,30 +93,30 @@ Value::Value(Value &&other)noexcept {
     if (this == &other)
         return;
 
-    this->size = other.size;
-    this->type = other.type;
-    this->data = other.data;
-    this->columnIndex = other.columnIndex;
+    this->_size = other._size;
+    this->_type = other._type;
+    this->_data = other._data;
+    this->_columnIndex = other._columnIndex;
     this->_allocator = other._allocator;
 
-    other.data = nullptr;
+    other._data = nullptr;
     other._allocator = nullptr;
-    other.size = 0;
-    other.columnIndex = 0;
+    other._size = 0;
+    other._columnIndex = 0;
 }
-Value & Value::operator=(Value &&other) noexcept{
+Value& Value::operator=(Value &&other) noexcept{
     if (this == &other)
         return *this;
 
-    this->size = other.size;
-    this->type = other.type;
-    this->data = other.data;
-    this->columnIndex = other.columnIndex;
+    this->_size = other._size;
+    this->_type = other._type;
+    this->_data = other._data;
+    this->_columnIndex = other._columnIndex;
     this->_allocator = other._allocator;
 
-    other.data = nullptr;
-    other.size = 0;
-    other.columnIndex = 0;
+    other._data = nullptr;
+    other._size = 0;
+    other._columnIndex = 0;
     other._allocator = nullptr;
 
     return *this;
@@ -133,13 +125,9 @@ Value & Value::operator=(Value &&other) noexcept{
 Value::Value(
     const ::Memory::IAllocator* allocator,
     const column_index_t index
-){
-    this->data = nullptr;
-    this->columnIndex = index;
-    this->size = 0;
-    this->type = DataType::Null;
-    this->_allocator = allocator;
-}
+):  _data(nullptr), _allocator(allocator),
+    _size(0), _columnIndex(index),
+    _type(DataType::Null) {}
 
 Value::Value(
     const object_t* data,
@@ -148,15 +136,14 @@ Value::Value(
     const Memory::IAllocator* allocator,
     const column_index_t index
 ){
-    this->data = nullptr;
-    this->size = size;
-    this->type = type;
-    this->columnIndex = index;
+    this->_size = size;
+    this->_type = type;
+    this->_columnIndex = index;
     this->_allocator = allocator;
 
     auto* buffer = static_cast<object_t*>(this->_allocator->AllocateRaw(size));
     std::memcpy(buffer, data, size);
-    this->data = buffer;
+    this->_data = buffer;
 }
 
 Value::Value(
@@ -166,13 +153,13 @@ Value::Value(
 ){
     auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(data.size()));
     std::memcpy(buffer, data.data(), data.size());
-    this->data = buffer;
+    this->_data = buffer;
 
-    this->size = data.size();
+    this->_size = data.size();
 
     this->_allocator = allocator;
-    this->columnIndex = index;
-    this->type = DataType::String;
+    this->_columnIndex = index;
+    this->_type = DataType::String;
 }
 
 Value::Value(
@@ -182,13 +169,13 @@ Value::Value(
 ){
     auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
     std::memcpy(buffer, data.Data(), data.Size());
-    this->data = buffer;
+    this->_data = buffer;
 
-    this->size = data.Size();
+    this->_size = data.Size();
 
     this->_allocator = allocator;
-    this->columnIndex = index;
-    this->type = DataType::String;
+    this->_columnIndex = index;
+    this->_type = DataType::String;
 }
 
 Value::Value(
@@ -198,11 +185,11 @@ Value::Value(
 ){
     auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(data.Size()));
     std::memcpy(buffer, data.Data(), data.Size());
-    this->data = buffer;
-    this->size = data.Size();
+    this->_data = buffer;
+    this->_size = data.Size();
     this->_allocator = allocator;
-    this->columnIndex = index;
-    this->type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
+    this->_columnIndex = index;
+    this->_type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
 }
 
 Value Value::FromMove(
@@ -233,23 +220,23 @@ Value Value::Null(const Memory::IAllocator* allocator, const column_index_t colu
     return Value(allocator, columnIndex);
 }
 
-void Value::SetColumnIndex(const column_index_t otherIndex) { this->columnIndex = otherIndex; }
+void Value::SetColumnIndex(const column_index_t otherIndex) { this->_columnIndex = otherIndex; }
 
-void Value::SetType(const DataType otherType){ this->type = otherType; }
+void Value::SetType(const DataType otherType){ this->_type = otherType; }
 void Value::SetNull(){
-    this->data = nullptr;
-    this->size = 0;
+    this->_data = nullptr;
+    this->_size = 0;
 }
 
-block_size_t Value::Size() const{ return this->size; }
+block_size_t Value::Size() const{ return this->_size; }
 
-const object_t* Value::Data() const{ return this->data; }
+const object_t* Value::Data() const{ return this->_data; }
 
-bool Value::IsNull() const { return this->data == nullptr; }
+bool Value::IsNull() const { return this->_data == nullptr; }
 
-column_index_t Value::GetColumnIndex() const { return this->columnIndex;}
+column_index_t Value::GetColumnIndex() const { return this->_columnIndex;}
 
-DataType Value::GetType() const{ return this->type; }
+DataType Value::GetType() const{ return this->_type; }
 
 bool Value::AsBool() const {
     return DataTypes::Coercions::ToBool(*this);
@@ -276,7 +263,7 @@ DataTypes::String Value::AsString() const {
 }
 
 std::string Value::AsStdString() const{
-    return std::string(reinterpret_cast<const char*>(this->data), this->size);
+    return std::string(reinterpret_cast<const char*>(this->_data), this->_size);
 }
 
 DataTypes::StringView Value::AsStringView() const{
@@ -291,7 +278,7 @@ DataTypes::DateTime Value::AsDateTime() const {
     return DataTypes::Coercions::ToDateTime(*this);
 }
 
-time_t Value::AsUnixTimeStamp() const{ return *reinterpret_cast<const time_t*>(this->data); }
+time_t Value::AsUnixTimeStamp() const{ return *reinterpret_cast<const time_t*>(this->_data); }
 
 DataTypes::Guid Value::AsGuid() const {
     return DataTypes::Coercions::ToGuid(*this);
@@ -302,7 +289,7 @@ DataTypes::JsonBinary Value::AsJson() const{
 }
 
 page_id_t Value::AsLargeObjectPointer() const{
-    return *reinterpret_cast<const page_id_t*>(this->data);
+    return *reinterpret_cast<const page_id_t*>(this->_data);
 }
 
 std::ostream & operator<<(std::ostream& os, const Value &field){
@@ -311,7 +298,7 @@ std::ostream & operator<<(std::ostream& os, const Value &field){
         return os;
     }
 
-    switch (field.type){
+    switch (field._type){
     case DataType::TinyInt:
         os << field.AsTinyInt();
         break;
@@ -364,7 +351,7 @@ bool Value::ParseAsBoolFromString() const{
 
 
 long double Value::Interpolate() const{
-    switch (this->type){
+    switch (this->_type){
     case DataType::TinyInt:
         return this->AsTinyInt();
     case DataType::SmallInt:
