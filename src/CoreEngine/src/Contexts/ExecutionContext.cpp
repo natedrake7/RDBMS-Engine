@@ -7,7 +7,7 @@ namespace CoreEngine{
     ExecutionContext::ExecutionContext(
         Snapshot& snapshot,
         const Int batchSize,
-        const Dictionary<DataTypes::String, Variable>* variables,
+        const Dictionary<DataTypes::String, Variable*>* variables,
         const Int initialAllocatorSize
     )   :   snapshot(std::move(snapshot)),
             allocator(initialAllocatorSize),
@@ -50,12 +50,8 @@ namespace CoreEngine{
         return &this->allocator;
     }
 
-    const Dictionary<DataTypes::String, Variable>* ExecutionContext::GetVariables() const{
-        return this->variables;
-    }
-
     const Variable* ExecutionContext::GetVariable(const DataTypes::String& name) const{
-        return &this->variables->Get(name);
+        return this->variables->Get(name);
     }
 
     Int ExecutionContext::GetBatchSize() const{

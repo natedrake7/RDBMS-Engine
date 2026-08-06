@@ -1,7 +1,7 @@
 #pragma once
 #include "../../CoreEngine/include/Errors.h"
 #include "../../CoreEngine/include/SystemDatabases/VersionDatabase.h"
-#include "../../Systemic/include/Security/Security.h"
+#include "Security/Security.h"
 #include "RoleManager.h"
 #include "SessionManager.h"
 #include "UserManager.h"

@@ -37,7 +37,7 @@ namespace CoreEngine::VectorizedKernels{
 
         auto* outData = outVector->template DataAs<T>();
         if constexpr (DataTypes::Primitive<T>)
-            *outData = value.Get<T>();
+            *outData = value.Get<T>(allocator);
         else if constexpr (DataTypes::IsStringValue<T>)
             *outData = DataTypes::StringValue::Create(allocator, reinterpret_cast<const char*>(value.Data()), value.Size());
         else if constexpr (DataTypes::IsJson<T>)
@@ -66,7 +66,7 @@ namespace CoreEngine::VectorizedKernels{
 
         auto* outData = outVector->template DataAs<T>();
         if constexpr (DataTypes::Primitive<T>)
-            *outData = value.Get<T>();
+            *outData = value.Get<T>(allocator);
         else if constexpr (DataTypes::IsStringValue<T>)
             *outData = DataTypes::StringValue::Create(allocator, reinterpret_cast<const char*>(value.Data()), value.Size());
         else if constexpr (DataTypes::IsJson<T>)

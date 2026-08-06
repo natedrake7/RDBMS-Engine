@@ -1,10 +1,8 @@
 #include "../../include/BufferPool/StorageManager.h"
 #include "../../include/Database.h"
-#include "../../../Systemic/include/Guards/ReaderGuard.h"
 #include "../../../Systemic/include/Guards/WriterGuard.h"
 #include "Pages/GlobalAllocationPageView.h"
 #include "Pages/HeaderPageView.h"
-#include "Pages/IndexPageView.h"
 #include "Pages/Additional/Frame.h"
 #include <iostream>
 

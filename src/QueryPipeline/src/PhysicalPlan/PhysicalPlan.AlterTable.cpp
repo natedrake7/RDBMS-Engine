@@ -48,7 +48,7 @@ namespace QueryPipeline::PhysicalPlan{
       const auto columnId = result.status.primaryKey.AsInt<Int>(1);
 
       if (!this->column->defaultValue.IsNull()) {
-        const auto value = this->column->defaultValue.AsString();
+        const auto value = this->column->defaultValue.AsString(context.GetAllocator());
 
         const auto defaultValueResult =
             CoreEngine::SystemCatalog::Get().InsertDefaultValuesToMasterDb(
@@ -125,7 +125,7 @@ namespace QueryPipeline::PhysicalPlan{
     const auto updates = DataStructures::PolymorphicArray<Value>::From(
         context.GetAllocator(),
         Value(this->column->newName.name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::Name)),
-        Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
+        Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
         Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
     );
 
@@ -151,8 +151,8 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto updates = DataStructures::PolymorphicArray<Value>::From(
       context.GetAllocator(),
-      Value(this->column->type.size, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::RecordSize)),
-      Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
+      Value(this->column->type.size, static_cast<column_index_t>(CoreEngine::SysColumns::RecordSize)),
+      Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedAt)),
       Value(this->session->user->name, context.GetAllocator(), static_cast<column_index_t>(CoreEngine::SysColumns::LastModifiedBy))
     );
 

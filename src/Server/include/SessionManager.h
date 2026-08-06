@@ -2,7 +2,7 @@
 #include "../../QueryPipeline/include/Cursor.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/Guards/Mutex.h"
-#include "../../Systemic/include/Security/Session.h"
+#include "Security/Session.h"
 
 namespace QueryPipeline{
     class CompileContext;

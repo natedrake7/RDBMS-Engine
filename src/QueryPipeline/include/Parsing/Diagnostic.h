@@ -14,7 +14,7 @@ namespace QueryPipeline::Parsing{
      */
     struct Diagnostic {
         DataTypes::StringView message;
-        DataTypes::StringView near;
+        DataTypes::StringView nearView;
 
         //Set when the parser wanted one specific token, so the message can read
         //"expected ')'" without formatting anything on the error path.
@@ -26,7 +26,7 @@ namespace QueryPipeline::Parsing{
         bool hasError;
 
         Diagnostic()
-            : message(), near(), expected(), line(0), column(0), hasError(false){}
+            : line(0), column(0), hasError(false){}
 
         void Raise(
             const DataTypes::StringView& errorMessage,
@@ -39,7 +39,7 @@ namespace QueryPipeline::Parsing{
                 return;
 
             this->message = errorMessage;
-            this->near = offendingText;
+            this->nearView = offendingText;
             this->expected = expectedToken;
             this->line = errorLine;
             this->column = errorColumn;

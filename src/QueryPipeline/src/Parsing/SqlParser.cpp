@@ -278,7 +278,7 @@ namespace QueryPipeline::Parsing{
             return nullptr;
 
         //The engine has no unary expression node, so negation becomes (0 - operand).
-        auto zero = Value(static_cast<BigInt>(0), this->_allocator, 0);
+        auto zero = Value(static_cast<BigInt>(0), 0);
         auto* left = this->_allocator->Allocate<Expressions::ConstantExpression>(std::move(zero));
 
         return this->_allocator->Allocate<Expressions::BinaryExpression>(
@@ -374,17 +374,17 @@ namespace QueryPipeline::Parsing{
 
             case TokenType::True:
                 return this->_allocator->Allocate<Expressions::ConstantExpression>(
-                    Value(true, this->_allocator, 0)
+                    Value(true, 0)
                 );
 
             case TokenType::False:
                 return this->_allocator->Allocate<Expressions::ConstantExpression>(
-                    Value(false, this->_allocator, 0)
+                    Value(false, 0)
                 );
 
             case TokenType::Null:
                 return this->_allocator->Allocate<Expressions::ConstantExpression>(
-                    Value::Null(this->_allocator)
+                    Value::Null()
                 );
 
             default:
@@ -400,7 +400,7 @@ namespace QueryPipeline::Parsing{
             }
 
             const auto number = Converter::StrToInt<BigInt>(token.View());
-            value = Value(negated ? -number : number, this->_allocator, 0);
+            value = Value(negated ? -number : number, 0);
 
             return true;
         }
@@ -420,8 +420,8 @@ namespace QueryPipeline::Parsing{
         std::memcpy(buffer + length, token.text, token.length);
         length += token.length;
 
-        auto decimal = DataTypes::Decimal(DataTypes::StringView(buffer, length));
-        value = Value(decimal, this->_allocator, 0);
+        const auto decimal = DataTypes::Decimal(DataTypes::StringView(buffer, length));
+        value = Value(decimal, 0);
 
         return true;
     }

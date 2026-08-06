@@ -24,9 +24,9 @@ namespace QueryPipeline{
     }
 
 
-     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable>* sessionVariables){
+     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable*>* sessionVariables){
         for (const auto& [key, value] : *sessionVariables){
-            this->_scope.variables.ForceAdd(key, value.GetType());
+            this->_scope.variables.ForceAdd(key, value->GetType());
         }
     }
 

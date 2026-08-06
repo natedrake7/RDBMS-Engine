@@ -442,12 +442,12 @@ namespace Pages{
         for (int i = 0;i < columnsSize; i++){
             const auto type = entries[i].Type();
             if (CoreEngine::StorageTypes::RowEntry::IsNull(type)){
-                auto value = Value::Null(allocator);
+                auto value = Value::Null();
                 result.AddColumn(value);
                 continue;
             }
 
-            auto value = Value(
+            auto value = Value::FromExternalStorage(
                 rowDataPtr + entries[i].Offset(),
                 entries[i].Size(),
                 columns[i]->Type(),

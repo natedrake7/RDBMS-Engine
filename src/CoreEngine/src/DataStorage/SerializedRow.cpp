@@ -86,7 +86,7 @@ namespace CoreEngine::StorageTypes{
         const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
 
         if (columnDataEntry->Type() == RowEntry::NULLVAL)
-            return Value::Null(context.GetAllocator());
+            return Value::Null();
 
         // Create and populate the value
         return Value::FromExternalStorage(

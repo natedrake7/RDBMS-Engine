@@ -951,9 +951,8 @@ namespace QueryPipeline::Statements {
         const Headers::ColumnHeader &header,
         Headers::DefaultValuesHeader& defaultValue
     ){
-        auto* data = reinterpret_cast<object_t*>(defaultValue.value.Data());
-        auto value = Value::FromMove(
-            data,
+        auto value = Value::FromExternalStorage(
+            reinterpret_cast<object_t*>(defaultValue.value.Data()),
             defaultValue.value.Size(),
             static_cast<DataType>(header.dataType),
             allocator,
@@ -1752,7 +1751,7 @@ namespace QueryPipeline::Statements {
         const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
         const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
         if (leftType == DataType::Null || rightType == DataType::Null){
-            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null(nullptr));
+            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
             return Errors::ValidationStatus::Ok();
         }
 
@@ -1802,7 +1801,7 @@ namespace QueryPipeline::Statements {
         const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
         const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
         if (leftType == DataType::Null || rightType == DataType::Null){
-            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null(nullptr));
+            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
             return Errors::ValidationStatus::Ok();
         }
 
@@ -2614,7 +2613,7 @@ namespace QueryPipeline::Statements {
     }
 
     void AssignConstantToExpression(const QueryContext& context, Expressions::Expression *&expression) {
-        auto value = Value(true, context._compileContext.GetAllocator(), 0);
+        auto value = Value(true, 0);
         expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 

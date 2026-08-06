@@ -45,7 +45,7 @@ namespace QueryPipeline{
         QueryContext(QueryContext&& other) noexcept;
         QueryContext& operator=(QueryContext&& other) noexcept;
 
-        void CreateValidationScope(const Dictionary<DataTypes::String, Variable>* sessionVariables);
+        void CreateValidationScope(const Dictionary<DataTypes::String, Variable*>* sessionVariables);
         const ::Memory::IAllocator* GetAllocator()const;
 
         [[nodiscard]] UnsignedSmallInt NextVirtualId();

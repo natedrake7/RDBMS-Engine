@@ -96,7 +96,7 @@ namespace CoreEngine {
         Snapshot snapshot;
         Memory::Allocator allocator;
 
-        const Dictionary<DataTypes::String, Variable>* variables;
+        const Dictionary<DataTypes::String, Variable*>* variables;
 
         Int batchSize;
 
@@ -106,7 +106,7 @@ namespace CoreEngine {
             ExecutionContext(
                 Snapshot& snapshot,
                 Int batchSize,
-                const Dictionary<DataTypes::String, Variable>* variables,
+                const Dictionary<DataTypes::String, Variable*>* variables,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -118,7 +118,6 @@ namespace CoreEngine {
             void SetBatchSize(Int size);
 
             [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
-            const Dictionary<DataTypes::String, Variable>* GetVariables()const;
             const Variable* GetVariable(const DataTypes::String& name) const;
 
             [[nodiscard]] Int GetBatchSize()const;

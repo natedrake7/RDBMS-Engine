@@ -75,7 +75,10 @@ namespace Network::Sessions {
         if (session == nullptr)
             return false;
 
-        session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
+
+        // auto* variablePtr = new Variable(variable);
+        //
+        // session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
         return true;
     }
 

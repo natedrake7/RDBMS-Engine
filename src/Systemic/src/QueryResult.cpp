@@ -63,7 +63,7 @@ void QueryResult::Print() const {
                 std::cout << column.AsDecimal();
                 break;
             case DataType::String:
-                std::cout << column.AsString();
+                std::cout << column.AsStringView();
                 break;
             case DataType::Bool:
                 std::cout << (column.AsBool() ? "TRUE" : "FALSE");

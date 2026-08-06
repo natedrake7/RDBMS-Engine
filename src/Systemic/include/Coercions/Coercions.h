@@ -69,12 +69,12 @@ namespace DataTypes{
         [[nodiscard]] static SmallInt ToSmallInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Int ToInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static String ToString(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static String ToString(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast = false);
         [[nodiscard]] static StringView ToStringView(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
         [[nodiscard]] static DateTime ToDateTime(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Decimal ToDecimal(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static JsonBinary ToJsonBinary(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static JsonBinary ToJsonBinary(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast = false);
 
         template<typename TFrom, typename TTo>
         [[nodiscard]] static TTo To(const TFrom& input, const Memory::IAllocator* allocator);

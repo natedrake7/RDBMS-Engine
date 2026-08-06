@@ -10,8 +10,7 @@ class Variable {
 
     public:
         Variable()
-            :   value(nullptr),
-                name(DataTypes::String::Null()),
+            :   name(DataTypes::String::Null()),
                 normalizedName(DataTypes::String::Null()){}
 
         Variable(Value& value, DataTypes::String& name)
@@ -24,7 +23,7 @@ class Variable {
             name(std::move(other.name)),
             normalizedName(std::move(other.normalizedName)){
 
-            other.value = Value::Null(nullptr);
+            other.value = Value::Null();
             other.name = DataTypes::String::Null();
             other.normalizedName = DataTypes::String::Null();
         }
@@ -39,7 +38,7 @@ class Variable {
             this->name = std::move(other.name);
             this->normalizedName = std::move(other.normalizedName);
 
-            other.value = Value::Null(nullptr);
+            other.value = Value::Null();
             other.name = DataTypes::String::Null();
             other.normalizedName = DataTypes::String::Null();
 

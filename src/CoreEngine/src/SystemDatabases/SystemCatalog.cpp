@@ -309,8 +309,8 @@ namespace CoreEngine {
 
         return Headers::DatabaseHeader{
             .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
-            .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(),
-            .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(),
+            .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(allocator),
+            .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(allocator),
             .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)].AsBool(),
             .additionalInfo = Headers::AuditInformation()
         };
@@ -328,13 +328,13 @@ namespace CoreEngine {
 
         return Headers::DatabaseHeader{
             .id = data[static_cast<column_index_t>(SysDatabases::DatabaseId)].AsInt(),
-            .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(),
-            .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(),
+            .name = data[static_cast<column_index_t>(SysDatabases::Name)].AsString(allocator),
+            .filepath = data[static_cast<column_index_t>(SysDatabases::FilePath)].AsString(allocator),
             .isSystem = data[static_cast<column_index_t>(SysDatabases::IsSystem)].AsBool(),
             .additionalInfo = Headers::AuditInformation(
                 data[static_cast<column_index_t>(SysDatabases::CreatedAt)].AsDateTime(),
                 data[static_cast<column_index_t>(SysDatabases::LastModifiedAt)].AsDateTime(),
-                data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)].AsString(),
+                data[static_cast<column_index_t>(SysDatabases::LastModifiedBy)].AsString(allocator),
                 data[static_cast<column_index_t>(SysDatabases::Version)].AsInt(),
                 data[static_cast<column_index_t>(SysDatabases::IsDeleted)].AsBool(),
                 data[static_cast<column_index_t>(SysDatabases::DeletedAt)].IsNull()
@@ -357,12 +357,12 @@ namespace CoreEngine {
         auto header = Headers::SchemaHeader(
             data[static_cast<column_index_t>(SysSchemas::SchemaId)].AsInt(),
             data[static_cast<column_index_t>(SysSchemas::DatabaseId)].AsInt(),
-            data[static_cast<column_index_t>(SysSchemas::Name)].AsString()
+            data[static_cast<column_index_t>(SysSchemas::Name)].AsString(allocator)
         );
 
         header.additionalInfo.createdAt = data[static_cast<column_index_t>(SysSchemas::CreatedAt)].AsDateTime();
         header.additionalInfo.lastModified = data[static_cast<column_index_t>(SysSchemas::LastModifiedAt)].AsDateTime();
-        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysSchemas::LastModifiedBy)].AsString();
+        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysSchemas::LastModifiedBy)].AsString(allocator);
 
         return header;
     }
@@ -381,12 +381,12 @@ namespace CoreEngine {
         header.databaseId = data[static_cast<column_index_t>(SysTables::DatabaseId)].AsInt();
         header.id = data[static_cast<column_index_t>(SysTables::TableId)].AsInt();
         header.schemaId = data[static_cast<column_index_t>(SysTables::SchemaId)].AsInt();
-        header.name = data[static_cast<column_index_t>(SysTables::Name)].AsString();
+        header.name = data[static_cast<column_index_t>(SysTables::Name)].AsString(allocator);
         header.ordinalPosition = data[static_cast<column_index_t>(SysTables::OrdinalPosition)].AsSmallInt();
         header.isSystem = data[static_cast<column_index_t>(SysTables::IsSystemTable)].AsBool();
         header.additionalInfo.createdAt = data[static_cast<column_index_t>(SysTables::CreatedAt)].AsDateTime();
         header.additionalInfo.lastModified = data[static_cast<column_index_t>(SysTables::LastModifiedAt)].AsDateTime();
-        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysTables::LastModifiedBy)].AsString();
+        header.additionalInfo.lastModifiedBy = data[static_cast<column_index_t>(SysTables::LastModifiedBy)].AsString(allocator);
 
         return header;
     }
@@ -402,7 +402,7 @@ namespace CoreEngine {
         return Headers::ColumnHeader{
             .tableId = data[static_cast<column_index_t>(SysColumns::TableId)].AsInt(),
             .id = data[static_cast<column_index_t>(SysColumns::ColumnId)].AsInt(),
-            .name = data[static_cast<column_index_t>(SysColumns::Name)].AsString(),
+            .name = data[static_cast<column_index_t>(SysColumns::Name)].AsString(allocator),
             .dataType = static_cast<UnsignedTinyInt>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
             .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)].AsInt(),
             .precision = data[static_cast<column_index_t>(SysColumns::Precision)].IsNull()
@@ -417,7 +417,7 @@ namespace CoreEngine {
             .additionalInfo = Headers::AuditInformation(
             data[static_cast<column_index_t>(SysColumns::CreatedAt)].AsDateTime(),
             data[static_cast<column_index_t>(SysColumns::LastModifiedAt)].AsDateTime(),
-            data[static_cast<column_index_t>(SysColumns::LastModifiedBy)].AsString(),
+            data[static_cast<column_index_t>(SysColumns::LastModifiedBy)].AsString(allocator),
             data[static_cast<column_index_t>(SysColumns::Version)].AsInt(),
             data[static_cast<column_index_t>(SysColumns::IsDeleted)].AsBool(),
             data[static_cast<column_index_t>(SysColumns::DeletedAt)].IsNull()
@@ -437,13 +437,13 @@ namespace CoreEngine {
         return Headers::IndexHeader{
             .tableId = data[static_cast<column_index_t>(SysIndexes::TableId)].AsInt(),
             .id = data[static_cast<column_index_t>(SysIndexes::IndexId)].AsInt(),
-            .name = data[static_cast<column_index_t>(SysIndexes::Name)].AsString(),
+            .name = data[static_cast<column_index_t>(SysIndexes::Name)].AsString(allocator),
             .isClustered = data[static_cast<column_index_t>(SysIndexes::IsClustered)].AsBool(),
             .isDisabled = data[static_cast<column_index_t>(SysIndexes::IsDisabled)].AsBool(),
             .additionalInfo = Headers::AuditInformation(
                 data[static_cast<column_index_t>(SysIndexes::CreatedAt)].AsDateTime(),
                 data[static_cast<column_index_t>(SysIndexes::LastModifiedAt)].AsDateTime(),
-                data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(),
+                data[static_cast<column_index_t>(SysIndexes::LastModifiedBy)].AsString(allocator),
                 data[static_cast<column_index_t>(SysIndexes::Version)].AsInt(),
                 data[static_cast<column_index_t>(SysIndexes::IsDeleted)].AsBool(),
                 data[static_cast<column_index_t>(SysIndexes::DeletedAt)].IsNull()
@@ -517,7 +517,7 @@ namespace CoreEngine {
     return Headers::ConstraintsHeader{
         .tableId = data[static_cast<column_index_t>(SysConstraints::TableId)].AsInt(),
         .constraintId = data[static_cast<column_index_t>(SysConstraints::ConstraintId)].AsInt(),
-        .name = data[static_cast<column_index_t>(SysConstraints::Name)].AsString(),
+        .name = data[static_cast<column_index_t>(SysConstraints::Name)].AsString(allocator),
         .type = static_cast<Headers::ConstraintType>(data[static_cast<column_index_t>(SysConstraints::Type)].AsTinyInt()),
         .isDisabled = data[static_cast<column_index_t>(SysConstraints::IsDisabled)].AsBool(),
         .indexId = indexHeader.id,
@@ -526,7 +526,7 @@ namespace CoreEngine {
         .additionalInfo = Headers::AuditInformation(
         data[static_cast<column_index_t>(SysConstraints::CreatedAt)].AsDateTime(),
         data[static_cast<column_index_t>(SysConstraints::LastModifiedAt)].AsDateTime(),
-        data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)].AsString(),
+        data[static_cast<column_index_t>(SysConstraints::LastModifiedBy)].AsString(allocator),
         data[static_cast<column_index_t>(SysConstraints::Version)].AsInt(),
         data[static_cast<column_index_t>(SysConstraints::IsDeleted)].AsBool(),
         data[static_cast<column_index_t>(SysConstraints::DeletedAt)].IsNull()
@@ -569,7 +569,7 @@ namespace CoreEngine {
 
         return Headers::DefaultValuesHeader{
             .columnId = data[static_cast<column_index_t>(SysDefaultValues::ColumnId)].AsInt(),
-            .value = data[static_cast<column_index_t>(SysDefaultValues::Value)].AsString(),
+            .value = data[static_cast<column_index_t>(SysDefaultValues::Value)].AsString(allocator),
             .additionalInfo = Headers::AuditInformation(
             data[static_cast<column_index_t>(SysDefaultValues::Version)].AsInt(),
             data[static_cast<column_index_t>(SysDefaultValues::IsDeleted)].AsBool(),
@@ -611,13 +611,13 @@ namespace CoreEngine {
         return Headers::ColumnStatistics{
             .columnId = data[static_cast<column_index_t>(SysColumnStats::ColumnId)].AsInt(),
             .distinctCount = data[static_cast<column_index_t>(SysColumnStats::DistinctCount)].AsBigInt(),
-            .min = Value(
+            .min = Value::FromExternalStorage(
                 data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Data(),
                 data[static_cast<column_index_t>(SysColumnStats::MinimumValue)].Size(),
                 columnType,
                 allocator
             ),
-            .max = Value(
+            .max = Value::FromExternalStorage(
                 data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Data(),
                 data[static_cast<column_index_t>(SysColumnStats::MaximumValue)].Size(),
                 columnType,
@@ -639,13 +639,13 @@ namespace CoreEngine {
         return Headers::ColumnHistograms{
                 data[static_cast<column_index_t>(SysColumnHistograms::ColumnId)].AsInt(),
                 data[static_cast<column_index_t>(SysColumnHistograms::HistogramId)].AsInt(),
-                Value(
+                Value::FromExternalStorage(
                     data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Data(),
                     data[static_cast<column_index_t>(SysColumnHistograms::RangeStart)].Size(),
                     columnType,
                     allocator
                 ),
-                Value(
+                Value::FromExternalStorage(
                     data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Data(),
                     data[static_cast<column_index_t>(SysColumnHistograms::RangeEnd)].Size(),
                     columnType,
@@ -879,12 +879,12 @@ namespace CoreEngine {
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(dbName, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Name)),
             Value(dbPath, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::FilePath)),
-            Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsSystem)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::LastModifiedAt)),
+            Value(isSystem, static_cast<column_index_t>(SysDatabases::IsSystem)),
+            Value(currentDate, static_cast<column_index_t>(SysDatabases::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysDatabases::LastModifiedAt)),
             Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDatabases::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysDatabases::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysDatabases::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
         );
 
@@ -906,13 +906,13 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::DatabaseId)),
+            Value(databaseId, static_cast<column_index_t>(SysSchemas::DatabaseId)),
             Value(schemaName, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Name)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::LastModifiedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysSchemas::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysSchemas::LastModifiedAt)),
             Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysSchemas::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysSchemas::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysSchemas::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt))
         );
 
@@ -939,16 +939,16 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(databaseId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::DatabaseId)),
-            Value(schemaId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::SchemaId)),
+            Value(databaseId, static_cast<column_index_t>(SysTables::DatabaseId)),
+            Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)),
             Value(tableName, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Name)),
-            Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::OrdinalPosition)),
-            Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::IsSystemTable)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::LastModifiedAt)),
+            Value(ordinalPosition, static_cast<column_index_t>(SysTables::OrdinalPosition)),
+            Value(isSystem, static_cast<column_index_t>(SysTables::IsSystemTable)),
+            Value(currentDate, static_cast<column_index_t>(SysTables::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysTables::LastModifiedAt)),
             Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysTables::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysTables::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysTables::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysTables::DeletedAt))
         );
 
@@ -979,28 +979,28 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         auto precisionField = precision != INVALID_DECIMAL_PRECISION
-            ? Value(precision, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Precision))
+            ? Value(precision, static_cast<column_index_t>(SysColumns::Precision))
             : Value::Null(static_cast<column_index_t>(SysColumns::Precision));
 
         auto scaleField = scale != INVALID_DECIMAL_SCALE
-            ? Value(scale, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Scale))
+            ? Value(scale, static_cast<column_index_t>(SysColumns::Scale))
             : Value::Null(static_cast<column_index_t>(SysColumns::Scale));
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::TableId)),
+            Value(tableId, static_cast<column_index_t>(SysColumns::TableId)),
             Value(columnName, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Name)),
-            Value(static_cast<TinyInt>(columnType), executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::DataType)),
-            Value(columnSize, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::RecordSize)),
+            Value(static_cast<TinyInt>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
+            Value(columnSize, static_cast<column_index_t>(SysColumns::RecordSize)),
             std::move(precisionField),
             std::move(scaleField),
-            Value(isNullable, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsNullable)),
-            Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::OrdinalPosition)),
-            Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsSystemColumn)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
+            Value(isNullable, static_cast<column_index_t>(SysColumns::IsNullable)),
+            Value(ordinalPosition, static_cast<column_index_t>(SysColumns::OrdinalPosition)),
+            Value(isSystem, static_cast<column_index_t>(SysColumns::IsSystemColumn)),
+            Value(currentDate, static_cast<column_index_t>(SysColumns::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysColumns::LastModifiedAt)),
             Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysColumns::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysColumns::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt))
         );
 
@@ -1024,15 +1024,15 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::TableId)),
+            Value(tableId, static_cast<column_index_t>(SysIndexes::TableId)),
             Value(indexName, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Name)),
-            Value(isClustered, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsClustered)),
-            Value(isDisabled, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsDisabled)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::LastModifiedAt)),
+            Value(isClustered, static_cast<column_index_t>(SysIndexes::IsClustered)),
+            Value(isDisabled, static_cast<column_index_t>(SysIndexes::IsDisabled)),
+            Value(currentDate, static_cast<column_index_t>(SysIndexes::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysIndexes::LastModifiedAt)),
             Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexes::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysIndexes::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysIndexes::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt))
         );
 
@@ -1055,12 +1055,12 @@ namespace CoreEngine {
     const auto currentDate = DataTypes::DateTime::Now();
 
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-        Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IndexId)),
-        Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::ColumnId)),
-        Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
-        Value(isIncluded, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
-        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::Version)),
-        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
+        Value(indexId, static_cast<column_index_t>(SysIndexColumns::IndexId)),
+        Value(columnId, static_cast<column_index_t>(SysIndexColumns::ColumnId)),
+        Value(ordinalPosition, static_cast<column_index_t>(SysIndexColumns::OrdinalPosition)),
+        Value(isIncluded, static_cast<column_index_t>(SysIndexColumns::IsIncluded)),
+        Value(version, static_cast<column_index_t>(SysIndexColumns::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysIndexColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt))
     );
 
@@ -1088,20 +1088,20 @@ namespace CoreEngine {
     const auto currentDate = DataTypes::DateTime::Now();
 
     auto constraintField = constraintIndexId != nullptr
-        ? Value(*constraintIndexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IndexId))
+        ? Value(*constraintIndexId, static_cast<column_index_t>(SysConstraints::IndexId))
         : Value::Null(static_cast<column_index_t>(SysConstraints::IndexId));
 
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-        Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::TableId)),
+        Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
         Value(constraintName, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Name)),
-        Value(static_cast<TinyInt>(constraintType), executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Type)),
-        Value(isDisabled, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IsDisabled)),
+        Value(static_cast<TinyInt>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
+        Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
         std::move(constraintField),
-        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::CreatedAt)),
-        Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
+        Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
+        Value(currentDate, static_cast<column_index_t>(SysConstraints::LastModifiedAt)),
         Value(user, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::LastModifiedBy)),
-        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Version)),
-        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::IsDeleted)),
+        Value(version, static_cast<column_index_t>(SysConstraints::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysConstraints::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt))
     );
 
@@ -1125,11 +1125,11 @@ namespace CoreEngine {
     const auto currentDate = DataTypes::DateTime::Now();
 
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-        Value(constraintId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
-        Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
-        Value(ordinalPosition, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
-        Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::Version)),
-        Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
+        Value(constraintId, static_cast<column_index_t>(SysConstraintColumns::ConstraintId)),
+        Value(columnId, static_cast<column_index_t>(SysConstraintColumns::ColumnId)),
+        Value(ordinalPosition, static_cast<column_index_t>(SysConstraintColumns::OrdinalPosition)),
+        Value(version, static_cast<column_index_t>(SysConstraintColumns::Version)),
+        Value(isDeleted, static_cast<column_index_t>(SysConstraintColumns::IsDeleted)),
         Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt))
     );
 
@@ -1157,15 +1157,15 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::TableId)),
-            Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
-            Value(seedValue, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
-            Value(increment, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IncrementValue)),
-            Value(lastValue, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::LastValue)),
-            Value(isCached, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IsCached)),
-            Value(cacheBlock, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
+            Value(tableId, static_cast<column_index_t>(SysIdentityColumns::TableId)),
+            Value(columnId, static_cast<column_index_t>(SysIdentityColumns::ColumnId)),
+            Value(seedValue, static_cast<column_index_t>(SysIdentityColumns::SeedValue)),
+            Value(increment, static_cast<column_index_t>(SysIdentityColumns::IncrementValue)),
+            Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue)),
+            Value(isCached, static_cast<column_index_t>(SysIdentityColumns::IsCached)),
+            Value(cacheBlock, static_cast<column_index_t>(SysIdentityColumns::CacheBlock)),
+            Value(version, static_cast<column_index_t>(SysIdentityColumns::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysIdentityColumns::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt))
         );
 
@@ -1187,20 +1187,20 @@ namespace CoreEngine {
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::ColumnId)),
+            Value(columnId, static_cast<column_index_t>(SysDefaultValues::ColumnId)),
             Value(
                 std::string(reinterpret_cast<const char*>(value.Data()), value.Size()),
                 executionContext.GetAllocator(),
                 static_cast<column_index_t>(SysDefaultValues::Value)
             ),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysDefaultValues::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysDefaultValues::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt))
         );
 
         auto result = table->InsertRow(executionContext, fields);
 
-        std::cout << "Inserted default value " << value << " to master db" << std::endl;
+        std::cout << "Inserted default value " << value.AsString(executionContext.GetAllocator()) << " to master db" << std::endl;
         return result;
     }
 
@@ -1214,11 +1214,11 @@ namespace CoreEngine {
         auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::TableId)),
-            Value(rowCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::RowCount)),
-            Value(rowSize, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::AvgRowSize)),
-            Value(pageCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::PageCount)),
-            Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
+            Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
+            Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
+            Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+            Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
+            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
         );
 
         auto result = table->InsertRow(executionContext, fields);
@@ -1236,11 +1236,11 @@ namespace CoreEngine {
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(columnId, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::ColumnId)),
-            Value(distinctCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+            Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
+            Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
             Value::Null(static_cast<column_index_t>(SysColumnStats::MinimumValue)),
             Value::Null(static_cast<column_index_t>(SysColumnStats::MaximumValue)),
-            Value(nullCount, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumnStats::NullCount))
+            Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
         );
 
         auto result = table->InsertRow(executionContext, fields);
@@ -1261,15 +1261,15 @@ namespace CoreEngine {
 
         const auto* allocator = executionContext.GetAllocator();
 
-        auto minStr = DataTypes::String(min.Data(), min.Size(), allocator);
-        auto maxStr = DataTypes::String(max.Data(), max.Size(), allocator);
+        const auto minStr = DataTypes::String(min.Data(), min.Size(), allocator);
+        const auto maxStr = DataTypes::String(max.Data(), max.Size(), allocator);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(allocator,
-            Value(columnId, allocator, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
+            Value(columnId, static_cast<column_index_t>(SysColumnHistograms::ColumnId)),
             Value(minStr, allocator, static_cast<column_index_t>(SysColumnHistograms::RangeStart)),
             Value(maxStr, allocator, static_cast<column_index_t>(SysColumnHistograms::RangeEnd)),
-            Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
+            Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+            Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
         );
 
         auto result = table->InsertRow(executionContext, fields);
@@ -1288,12 +1288,12 @@ namespace CoreEngine {
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
-            Value(tableId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::TableId)),
-            Value(indexId, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::IndexId)),
-            Value(leafPages, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LeafPages)),
-            Value(depth, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::Depth)),
-            Value(averageFragmentation, executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-            Value(DataTypes::DateTime::Now(), executionContext.GetAllocator(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
+            Value(tableId, static_cast<column_index_t>(SysIndexStats::TableId)),
+            Value(indexId, static_cast<column_index_t>(SysIndexStats::IndexId)),
+            Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+            Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
+            Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
         );
 
         auto result = table->InsertRow(executionContext, fields);
@@ -1317,13 +1317,13 @@ namespace CoreEngine {
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(roleName, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::RoleName)),
-            Value(static_cast<Int>(permissions), executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Permissions)),
-            Value(isSystem, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsSystemRole)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::LastModifiedAt)),
+            Value(static_cast<Int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
+            Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
+            Value(currentDate, static_cast<column_index_t>(SysRoles::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysRoles::LastModifiedAt)),
             Value(LAST_MODIFIED_BY, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysRoles::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysRoles::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt))
         );
 
@@ -1350,13 +1350,13 @@ namespace CoreEngine {
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(username, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::UserName)),
             Value(passwordHash, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::PasswordHash)),
-            Value(roleId, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
-            Value(isActive, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsActive)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::CreatedAt)),
-            Value(currentDate, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+            Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
+            Value(isActive, static_cast<column_index_t>(SysUsers::IsActive)),
+            Value(currentDate, static_cast<column_index_t>(SysUsers::CreatedAt)),
+            Value(currentDate, static_cast<column_index_t>(SysUsers::LastModifiedAt)),
             Value(LAST_MODIFIED_BY, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy)),
-            Value(version, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::Version)),
-            Value(isDeleted, executionContext.GetAllocator(), static_cast<column_index_t>(SysUsers::IsDeleted)),
+            Value(version, static_cast<column_index_t>(SysUsers::Version)),
+            Value(isDeleted, static_cast<column_index_t>(SysUsers::IsDeleted)),
             Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt))
         );
 
@@ -1584,7 +1584,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
 
         auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId), DataType::Int);
-        auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, allocator, static_cast<column_index_t>(SysTables::SchemaId)));
+        auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)));
 
         auto leftBinaryExpr = Expressions::BinaryExpression(&leftColumnExpr, &leftConstantExpr, Expressions::BinaryOperator::Equal);
 
@@ -1945,7 +1945,7 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
-            Value(lastValue, allocator, static_cast<column_index_t>(SysIdentityColumns::LastValue))
+            Value(lastValue, static_cast<column_index_t>(SysIdentityColumns::LastValue))
         );
 
         const DataTypes::Indexing::Key key(allocator, tableId, columnId);
@@ -1962,10 +1962,10 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
-            Value(rowCount, allocator, static_cast<column_index_t>(SysTableStats::RowCount)),
-            Value(rowSize, allocator, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
-            Value(pageCount, allocator, static_cast<column_index_t>(SysTableStats::PageCount)),
-            Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
+            Value(rowCount, static_cast<column_index_t>(SysTableStats::RowCount)),
+            Value(rowSize, static_cast<column_index_t>(SysTableStats::AvgRowSize)),
+            Value(pageCount, static_cast<column_index_t>(SysTableStats::PageCount)),
+            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
         );
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
@@ -1983,13 +1983,13 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
         const Value& max
     ) const{
 
-        auto minStr = min.AsString();
-        auto maxStr = max.AsString();
+        auto minStr = min.AsString(allocator);
+        auto maxStr = max.AsString(allocator);
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
-            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
-            Value(nullCount, allocator, static_cast<column_index_t>(SysColumnStats::NullCount)),
+            Value(distinctCount, static_cast<column_index_t>(SysColumnStats::DistinctCount)),
+            Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount)),
             Value(
                 minStr,
                 allocator,
@@ -2018,10 +2018,10 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     ) const {
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
-            Value(leafPages, allocator, static_cast<column_index_t>(SysIndexStats::LeafPages)),
-            Value(depth, allocator, static_cast<column_index_t>(SysIndexStats::Depth)),
-            Value(averageFragmentation, allocator, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
-            Value(DataTypes::DateTime::Now(), allocator, static_cast<column_index_t>(SysIndexStats::LastUpdated))
+            Value(leafPages, static_cast<column_index_t>(SysIndexStats::LeafPages)),
+            Value(depth, static_cast<column_index_t>(SysIndexStats::Depth)),
+            Value(averageFragmentation, static_cast<column_index_t>(SysIndexStats::AverageFragmentation)),
+            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
         );
 
         auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
@@ -2041,8 +2041,8 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
     ) const{
         auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
 
-        auto minStr = min.AsString();
-        auto maxStr = max.AsString();
+        const auto minStr = min.AsString(allocator);
+        const auto maxStr = max.AsString(allocator);
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
@@ -2056,8 +2056,8 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
                 allocator,
                 static_cast<column_index_t>(SysColumnHistograms::RangeEnd)
             ),
-            Value(rowCount, allocator, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
-            Value(distinctCount, allocator, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
+            Value(rowCount, static_cast<column_index_t>(SysColumnHistograms::RowCount)),
+            Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
         );
 
         const DataTypes::Indexing::Key key(allocator, columnId, histogramId);
@@ -2088,8 +2088,8 @@ DataStructures::PolymorphicArray<Headers::SchemaHeader> SystemCatalog::SelectSch
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             context.GetAllocator(),
-            Value(roleId, context.GetAllocator(), static_cast<column_index_t>(SysUsers::RoleId)),
-            Value(DataTypes::DateTime::Now(), context.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
+            Value(roleId, static_cast<column_index_t>(SysUsers::RoleId)),
+            Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysUsers::LastModifiedAt)),
             Value(username, context.GetAllocator(), static_cast<column_index_t>(SysUsers::LastModifiedBy))
         );
 

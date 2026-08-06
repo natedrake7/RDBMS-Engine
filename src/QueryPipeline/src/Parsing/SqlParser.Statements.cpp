@@ -964,17 +964,17 @@ namespace QueryPipeline::Parsing{
 
             case TokenType::True:
                 this->Advance();
-                value = Value(true, this->_allocator, 0);
+                value = Value(true, 0);
                 return true;
 
             case TokenType::False:
                 this->Advance();
-                value = Value(false, this->_allocator, 0);
+                value = Value(false, 0);
                 return true;
 
             case TokenType::Null:
                 this->Advance();
-                value = Value::Null(this->_allocator);
+                value = Value::Null();
                 return true;
 
             default:

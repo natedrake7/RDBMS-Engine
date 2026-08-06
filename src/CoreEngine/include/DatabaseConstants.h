@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/PackedWord.h"
-#include "../../Systemic/include/Security/Security.h"
+#include "../../Server/include/Security/Security.h"
 #include "../../Systemic/include/DataTypes/StringView.h"
 
 namespace Constants{

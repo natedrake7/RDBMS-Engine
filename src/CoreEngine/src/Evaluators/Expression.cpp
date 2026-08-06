@@ -686,7 +686,7 @@ namespace Expressions{
 
     Value FunctionExpression::Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(DataTypes::String::Length(field.AsStringView()), context._allocator, 0);
+        return Value(DataTypes::String::Length(field.AsStringView()));
     }
 
     Value FunctionExpression::TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -706,7 +706,7 @@ namespace Expressions{
 
     Value FunctionExpression::AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& field = arguments[0];
-        return Value(DataTypes::String::Ascii(field.AsStringView()), context._allocator, 0);
+        return Value(DataTypes::String::Ascii(field.AsStringView()));
     }
 
     Value FunctionExpression::Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -723,7 +723,7 @@ namespace Expressions{
                             ? arguments[2].AsInt()
                             : 0;
 
-        return Value(DataTypes::String::CharIndex(subStr, str, pos), context._allocator, 0);
+        return Value(DataTypes::String::CharIndex(subStr, str, pos));
     }
 
     Value FunctionExpression::Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
@@ -745,7 +745,7 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString();
+        const auto& field = arguments[0].AsString(context._allocator);
         const auto& startPos = arguments[1].AsInt();
         const auto& endPos = arguments[2].AsInt();
 
@@ -753,21 +753,21 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString();
+        const auto& field = arguments[0].AsString(context._allocator);
         const auto& startPos = arguments[1].AsInt();
 
         return Value(DataTypes::String::Left(field, startPos), context._allocator, 0);
     }
 
     Value FunctionExpression::Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString();
+        const auto& field = arguments[0].AsString(context._allocator);
         const auto& startPos = arguments[1].AsInt();
 
         return Value(DataTypes::String::Right(field, startPos), context._allocator, 0);
     }
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& str = arguments[0].AsString();
+        const auto str = arguments[0].AsString(context._allocator);
         return Value(DataTypes::String::Reverse(str, str.GetAllocator()), context._allocator, 0);
     }
 
@@ -778,11 +778,11 @@ namespace Expressions{
     }
 
     Value FunctionExpression::GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::DateTime::Now(), context._allocator, 0);
+        return Value(DataTypes::DateTime::Now());
     }
 
     Value FunctionExpression::NewGuid(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::Guid::NewGuid(), context._allocator, 0);
+        return Value(DataTypes::Guid::NewGuid());
     }
 
     Value FunctionExpression::NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments) {
@@ -790,7 +790,7 @@ namespace Expressions{
         const auto& secondArg = arguments[1];
 
         return firstArg == secondArg
-                   ? Value::Null(nullptr)
+                   ? Value::Null()
                    : firstArg;
     }
 
@@ -973,13 +973,13 @@ namespace Expressions{
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
-        return context._executionContext->GetVariables()->Get(this->normalizedName).GetValue();
+        return context._executionContext->GetVariable(this->normalizedName)->GetValue();
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }
 
     Value JsonExpression::EvaluateJsonPath(const EvaluationContext &context, const Value& columnValue) const{
-        const auto jsonBinary = columnValue.AsJson();
+        const auto jsonBinary = columnValue.AsJson(context._allocator);
         auto jsonValue = jsonBinary.Navigate(this->pathSegments);
 
         const auto jsonType = jsonValue.Type();
@@ -1066,7 +1066,7 @@ namespace Expressions{
         case DataType::Json:
             return CoreEngine::RowKernels::KernelToValue<DataTypes::JsonBinary>(expression, context);
         default:
-            return Value::Null(context._allocator);
+            return Value::Null();
         }
     }
 

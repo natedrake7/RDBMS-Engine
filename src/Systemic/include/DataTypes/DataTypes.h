@@ -125,6 +125,13 @@ namespace DataTypes{
                        && !std::is_pointer_v<T>
                         && !NonPrimitiveType<T>;
 
+    template<typename T>
+    concept TriviallyCopiable = Primitive<T>
+            || std::is_same_v<T, Decimal>;
+
+    template<typename T>
+    concept NonTriviallyCopiable = !TriviallyCopiable<T>;
+
     template <typename T>
     concept IsString = std::is_same_v<T, String>;
 

@@ -53,7 +53,7 @@ namespace CoreEngine::RowKernels{
         if (*outNull) return;
 
         if constexpr (DataTypes::Primitive<T>)
-            *static_cast<T*>(outVal) = value.Get<T>();
+            *static_cast<T*>(outVal) = value.Get<T>(context._allocator);
         else if constexpr (DataTypes::IsStringValue<T>)
             *static_cast<T*>(outVal) = std::move(DataTypes::StringValue::Create(context._allocator, reinterpret_cast<const char*>(value.Data()), value.Size()));
         else if constexpr (DataTypes::IsJson<T>)
@@ -79,12 +79,12 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     ){
         const auto* variableExpr = self->AsVariable();
-        const auto& value = context._executionContext->GetVariables()->Get(variableExpr->name).GetValue();
+        const auto& value = context._executionContext->GetVariable(variableExpr->name)->GetValue();
         *outNull = value.IsNull();
         if (*outNull) return;
 
         if constexpr (DataTypes::Primitive<T>)
-            *static_cast<T*>(outVal) = value.Get<T>();
+            *static_cast<T*>(outVal) = value.Get<T>(context._allocator);
         else if constexpr (DataTypes::IsStringValue<T>)
             *static_cast<T*>(outVal) = std::move(DataTypes::StringValue::Create(context._allocator, reinterpret_cast<const char*>(value.Data()), value.Size()));
         else if constexpr (DataTypes::IsJson<T>)
@@ -125,8 +125,11 @@ namespace CoreEngine::RowKernels{
         T out;
         self->rowKernel(self, context, &out, &outNull);
         if (outNull)
-            return Value::Null(context._allocator);
+            return Value::Null();
 
-        return Value(out, context._allocator);
+        if constexpr(DataTypes::TriviallyCopiable<T>)
+            return Value(out);
+        else
+            return Value(out, context._allocator);
     }
 }

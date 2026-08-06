@@ -150,7 +150,7 @@ namespace DataTypes {
             case DataType::Guid:
                 return true;
             case DataType::String:
-                return Guid::Validate(value.AsString());
+                return Guid::Validate(value.AsStringView());
             default:
                 return false;
         }
@@ -234,13 +234,13 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Converter::DownCast<bool>(value.AsTinyInt());
+            return Converter::DownCast<bool>(*reinterpret_cast<const TinyInt*>(value.Data()));
         case DataType::SmallInt:
-            return Converter::DownCast<bool>(value.AsSmallInt());
+            return Converter::DownCast<bool>(*reinterpret_cast<const SmallInt*>(value.Data()));
         case DataType::Int:
-            return Converter::DownCast<bool>(value.AsInt());
+            return Converter::DownCast<bool>(*reinterpret_cast<const Int*>(value.Data()));
         case DataType::BigInt:
-            return Converter::DownCast<bool>(value.AsBigInt());
+            return Converter::DownCast<bool>(*reinterpret_cast<const BigInt*>(value.Data()));
         case DataType::Decimal:
             return false;
         case DataType::String:
@@ -259,15 +259,15 @@ namespace DataTypes {
         case DataType::TinyInt:
             return *reinterpret_cast<const TinyInt*>(value.Data());
         case DataType::SmallInt:
-            return Converter::DownCast<TinyInt>(value.AsSmallInt());
+            return Converter::DownCast<TinyInt>(*reinterpret_cast<const SmallInt*>(value.Data()));
         case DataType::Int:
-            return Converter::DownCast<TinyInt>(value.AsInt());
+            return Converter::DownCast<TinyInt>(*reinterpret_cast<const Int*>(value.Data()));
         case DataType::BigInt:
-            return Converter::DownCast<TinyInt>(value.AsBigInt());
+            return Converter::DownCast<TinyInt>(*reinterpret_cast<const BigInt*>(value.Data()));
         case DataType::Decimal:
-            return value.AsDecimal().ToInt<TinyInt>();
+            return value.Data<Decimal>().ToInt<TinyInt>();
         case DataType::String:
-            return Converter::StrToInt<TinyInt>(value.AsString());
+            return Converter::StrToInt<TinyInt>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -280,17 +280,17 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return *reinterpret_cast<const TinyInt*>(value.Data());
+            return value.Data<TinyInt>();
         case DataType::SmallInt:
-            return *reinterpret_cast<const SmallInt*>(value.Data());
+            return value.Data<SmallInt>();
         case DataType::Int:
-            return Converter::DownCast<SmallInt>(value.AsInt());
+            return value.Data<Int>();
         case DataType::BigInt:
-            return Converter::DownCast<SmallInt>(value.AsBigInt());
+            return Converter::DownCast<SmallInt>(value.Data<BigInt>());
         case DataType::Decimal:
-            return value.AsDecimal().ToInt<SmallInt>();
+            return value.Data<Decimal>().ToInt<SmallInt>();
         case DataType::String:
-            return Converter::StrToInt<SmallInt>(value.AsString());
+            return Converter::StrToInt<SmallInt>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -303,15 +303,15 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return *reinterpret_cast<const TinyInt*>(value.Data());
+            return value.Data<TinyInt>();
         case DataType::SmallInt:
-            return *reinterpret_cast<const SmallInt*>(value.Data());
+            return value.Data<SmallInt>();
         case DataType::Int:
-            return *reinterpret_cast<const Int*>(value.Data());
+            return value.Data<Int>();
         case DataType::BigInt:
-            return Converter::DownCast<Int>(value.AsBigInt());
+            return Converter::DownCast<Int>(value.Data<BigInt>());
         case DataType::Decimal:
-            return value.AsDecimal().ToInt<Int>();
+            return value.Data<Decimal>().ToInt<Int>();
         case DataType::String:
             return Converter::StrToInt<Int>(value.AsStringView());
         case DataType::Bool:
@@ -326,15 +326,15 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return *reinterpret_cast<const TinyInt*>(value.Data());
+            return value.Data<TinyInt>();
         case DataType::SmallInt:
-            return *reinterpret_cast<const SmallInt*>(value.Data());
+            return value.Data<SmallInt>();
         case DataType::Int:
-            return *reinterpret_cast<const Int*>(value.Data());
+            return value.Data<Int>();
         case DataType::BigInt:
-            return *reinterpret_cast<const BigInt*>(value.Data());
+            return value.Data<BigInt>();
         case DataType::Decimal:
-            return value.AsDecimal().ToInt<BigInt>();
+            return value.Data<Decimal>().ToInt<BigInt>();
         case DataType::String:
             return Converter::StrToInt<BigInt>(value.AsStringView());
         case DataType::Bool:
@@ -345,29 +345,32 @@ namespace DataTypes {
         return -1;
     }
 
-    String Coercions::ToString(const Value& value, const bool explicitCast) {
+    String Coercions::ToString(const ::Memory::IAllocator* allocator, const Value& value, const bool explicitCast) {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Converter::IntToStr<TinyInt>(value.AsTinyInt(), value.GetAllocator());
+            return Converter::IntToStr<TinyInt>(value.Data<TinyInt>(), allocator);
         case DataType::SmallInt:
-            return Converter::IntToStr<SmallInt>(value.AsSmallInt(), value.GetAllocator());
+            return Converter::IntToStr<SmallInt>(value.Data<SmallInt>(), allocator);
         case DataType::Int:
-            return Converter::IntToStr<Int>(value.AsInt(), value.GetAllocator());
+            return Converter::IntToStr<Int>(value.Data<Int>(), allocator);
         case DataType::BigInt:
-            return Converter::IntToStr<BigInt>(value.AsBigInt(), value.GetAllocator());
+            return Converter::IntToStr<BigInt>(value.Data<BigInt>(), allocator);
         case DataType::Decimal:
-            return value.AsDecimal().ToString(value.GetAllocator());
+            return value.Data<Decimal>().ToString(allocator);
         case DataType::String:
-            return String(value.Data(), value.Size(), value.GetAllocator());
+            return String(value.Data(), value.Size(), allocator);
         case DataType::Bool: {
-            const auto* str = value.AsBool() ? "true" : "false";
-            return String(str, value.GetAllocator());
+            const auto* str = value.Data<bool>()
+                    ? "true"
+                    : "false";
+
+            return String(str, allocator);
         }
         case DataType::DateTime:
-            return value.AsDateTime().ToString(value.GetAllocator());
+            return value.Data<DateTime>().ToString(allocator);
         case DataType::Guid:
-            return value.AsGuid().ToString(value.GetAllocator());
+            return value.Data<Guid>().ToString(allocator);
         case DataType::RowIdentifier:
         case DataType::Null:
         default:
@@ -381,11 +384,10 @@ namespace DataTypes {
         switch (valueType) {
         case DataType::String:
             return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
-        case DataType::Json:{
-            return StringView::ViewOf(JsonBinary(value.GetAllocator(), value.Data(), value.Size())
-                    .ToString()
-            );
-        }
+        case DataType::Json:
+            // return StringView::ViewOf(JsonBinary(allocator, value.Data(), value.Size())
+            //         .ToString()
+            // );
         case DataType::TinyInt:
         case DataType::SmallInt:
         case DataType::Int:
@@ -435,14 +437,15 @@ namespace DataTypes {
         const auto valueType = value.GetType();
         switch (valueType) {
         case DataType::TinyInt:
-            return Decimal(value.AsTinyInt());
+            return Decimal(value.Data<TinyInt>());
         case DataType::SmallInt:
-            return Decimal(value.AsSmallInt());
+            return Decimal(value.Data<SmallInt>());
         case DataType::Int:
-            return Decimal(value.AsInt());
+            return Decimal(value.Data<Int>());
         case DataType::BigInt:
-            return Decimal(value.AsBigInt());
+            return Decimal(value.Data<BigInt>());
         case DataType::Decimal:
+            return value.Data<Decimal>();
             return Decimal(value.Data(), value.Size());
         case DataType::String:
             return Decimal(value.AsStringView());
@@ -458,21 +461,21 @@ namespace DataTypes {
         return Decimal();
     }
 
-    JsonBinary Coercions::ToJsonBinary(const Value& value, bool explicitCast){
+    JsonBinary Coercions::ToJsonBinary(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast){
         const auto valueType = value.GetType();
         switch (valueType){
         case DataType::Json:
-            return JsonBinary(value.GetAllocator(), value.Data(), value.Size());
+            return JsonBinary(allocator, value.Data(), value.Size());
         case DataType::String:{
             auto view = value.AsStringView();
-            Serialization::JsonParser parser(value.GetAllocator(), std::move(view));
+            Serialization::JsonParser parser(allocator, std::move(view));
             return parser.Parse();
         }
         default:
             Coercions::ThrowException(valueType, DataType::Json);
         }
 
-        return JsonBinary(value.GetAllocator());
+        return JsonBinary(allocator);
     }
 
     bool Coercions::CanBeParsedToType(const DataType toType, const Value& value) {
