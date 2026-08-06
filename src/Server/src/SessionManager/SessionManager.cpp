@@ -20,8 +20,6 @@ namespace Network::Sessions {
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = new Session(user);
-        // auto* session = DatabaseEngine::AllocateMiscEntity<Session>(user);
-
         this->sessions.Add(session->sessionId, session);
 
         return session;
@@ -50,7 +48,6 @@ namespace Network::Sessions {
         if (this->sessions.TryGetValue(id, session)) {
             this->sessions.Remove(id);
             delete session;
-            // DatabaseEngine::DeallocateMiscEntity(session);
             return true;
         }
 

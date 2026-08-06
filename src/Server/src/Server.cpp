@@ -84,10 +84,10 @@ namespace Network {
     Int userId = -1;
 
     if (!this->userManager.GrantRole(DataTypes::StringView::ViewOf(username), role, userId))
-      return {
-        Errors::RuntimeError::Error,
-        "Failed to grant role: " + role->name + " to user: " + username,
-      };
+        return Errors::RuntimeStatus(
+            Errors::RuntimeError::Error,
+            DataTypes::String::Concat(context.GetAllocator(), "Failed to grant role: ", role->name, " to user: ", username)
+        );
 
     return this->UpdateUserById(context, currentSessionId, userId, role->id);
   }

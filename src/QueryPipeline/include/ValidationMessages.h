@@ -55,7 +55,7 @@ namespace QueryPipeline::Messages{
 
     static DataTypes::String INSERT_ROWS_FROM_CHILD_QUERY(const Int count, const ::Memory::IAllocator* allocator){
         const auto parsedInt = Converter::IntToStr<Int>(count, allocator);
-        return DataTypes::String::Concat(allocator, "Inserted ", count, " rows from child query");
+        return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from child query");
     }
     static DataTypes::String INSERT_ROWS_FROM_FIELDS(const Int count, const ::Memory::IAllocator* allocator){
         const auto parsedInt = Converter::IntToStr<Int>(count, allocator);

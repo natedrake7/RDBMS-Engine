@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <ostream>
+
 #include "DataTypes.h"
 #include "../Memory/IAllocator.h"
 #include "../Comparators.h"
@@ -26,7 +28,7 @@ namespace DataTypes{
                 : _value{} {}
 
             StringValue(const StringValue&) = delete;
-            StringValue operator=(const StringValue&) = delete;
+            StringValue& operator=(const StringValue&) = delete;
 
             StringValue(StringValue&& other) noexcept
                 : _value{other._value} {}
@@ -54,16 +56,7 @@ namespace DataTypes{
                 std::memset(this->_value._inlineVal._data + size, 0, INLINE_SIZE - size);
             }
 
-            explicit StringValue(String& str){
-                this->_value._inlineVal._size = str.Size();
-
-                if (this->_value._inlineVal._size <= INLINE_SIZE)
-                    std::memcpy(this->_value._inlineVal._data, str.Data(), str.Size());
-                else{
-                    this->_value._external._data = str.Data();
-                    std::memcpy(this->_value._external._prefix, this->_value._external._data, PREFIX_SIZE);
-                }
-            }
+            explicit StringValue(String& str);
 
             static StringValue Create(const ::Memory::IAllocator* allocator, const char* data, const Int size){
                 return (size <= INLINE_SIZE)
@@ -71,21 +64,13 @@ namespace DataTypes{
                     : StringValue(allocator, data, size);
             }
 
-            static StringValue Create(const ::Memory::IAllocator* allocator, const StringView& strView){
-                const char* data = strView.Data();
-                const auto size = strView.Size();
-                return (size <= INLINE_SIZE)
-                    ? StringValue(data, size)
-                    : StringValue(allocator, data, size);
-            }
+            static StringValue Create(const ::Memory::IAllocator* allocator, const StringView& strView);
 
             static StringValue Empty(){
                 return StringValue(nullptr, 0);
             }
 
-            static StringValue MoveFromString(String& str){
-                return StringValue(str);
-            }
+            static StringValue MoveFromString(String& str);
 
             [[nodiscard]] Int Size()const { return  this->_value._inlineVal._size;}
             [[nodiscard]] bool IsInline()const { return this->Size() <= INLINE_SIZE; }

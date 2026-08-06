@@ -3,7 +3,6 @@
 
 #include "DataTypes.h"
 #include "StringView.h"
-
 #include "../Memory/IAllocator.h"
 
 namespace DataTypes{
@@ -15,95 +14,6 @@ namespace DataTypes{
 
         void CalculateCapacity(Int size);
         [[nodiscard]] bool CanFit(Int size) const;
-
-        [[nodiscard]] inline static bool Equals(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool EqualsIgnoreCase(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool StartsWith(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool StartsWithIgnoreCase(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool EndsWith(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool Contains(const StringView& lhs, const StringView& rhs);
-        [[nodiscard]] inline static bool ContainsIgnoreCase(const StringView& lhs, const StringView& rhs);
-
-        [[nodiscard]] static inline String Normalize(
-            const char* str,
-            Int size,
-            const ::Memory::IAllocator* allocator
-        );
-
-        [[nodiscard]] static inline String Lower(
-            const char* str,
-            Int size,
-            const ::Memory::IAllocator* allocator
-        );
-
-        [[nodiscard]] static inline String Upper(
-            const char* str,
-            Int size,
-            const ::Memory::IAllocator* allocator
-        );
-
-        [[nodiscard]] static inline StringView Trim(
-            const char* str,
-            Int size
-        );
-
-        [[nodiscard]] static inline StringView TrimLeft(
-            const char* str,
-            Int size
-        );
-
-        [[nodiscard]] static inline StringView TrimRight(
-            const char* str,
-            Int size
-        );
-
-        [[nodiscard]] static inline String Replace(
-            const char* str,
-            Int size,
-            const StringView& subStr,
-            const StringView& newStr,
-            const ::Memory::IAllocator* allocator
-        );
-
-        [[nodiscard]] static inline StringView SubString(
-            const char* str,
-            Int size,
-            Int start,
-            Int end
-        );
-
-        [[nodiscard]] static inline String Reverse(
-            const char* str,
-            Int size,
-            const ::Memory::IAllocator* allocator
-        );
-
-        static inline StringView Left(
-            const char* str,
-            Int size,
-            Int count
-        );
-
-        static inline StringView Right(
-            const char* str,
-            Int size,
-            Int count
-        );
-
-        static inline String Repeat(
-            const char* str,
-            Int size,
-            Int count,
-            const ::Memory::IAllocator* allocator
-        );
-
-        [[nodiscard]] static StringView Split(
-                const char* str,
-                Int size,
-                Int startIndex,
-                char delimiter
-        );
 
         public:
             String();
@@ -128,6 +38,7 @@ namespace DataTypes{
             static String Null();
 
             void SetAllocator(const ::Memory::IAllocator* allocator);
+            [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
 
             void Reserve(Int size);
             void Resize(Int size);
@@ -146,21 +57,26 @@ namespace DataTypes{
             operator std::string_view() const;
             operator std::span<const char>() const;
 
-            friend String operator+(const String& lhs, const String& rhs);
-            friend String operator+(const String& lhs, const char* other);
-            friend String operator+(const char* lhs, const String& rhs);
-            friend String operator+(const String& lhs, const StringView& rhs);
-            friend String operator+(const StringView& lhs, const String& rhs);
-            friend String operator+(const String& lhs, std::string_view rhs);
-            friend String operator+(std::string_view lhs, const String& rhs);
-            friend String operator+(const String& lhs, const std::string& rhs);
-            friend String operator+(const std::string& lhs, const String& rhs);
+            template<IsStringLike TLeft, IsStringLike TRight>
+            friend String operator+(const TLeft& lhs, const TRight& rhs){
+                if constexpr (std::is_same_v<std::decay_t<TLeft>, String>){
+                    const auto* allocator = lhs.Allocator();
+                    return String::Concat(allocator, lhs, rhs);
+                }
+                else if constexpr (std::is_same_v<std::decay_t<TRight>, String>){
+                    const auto* allocator = rhs.Allocator();
+                    return String::Concat(allocator, rhs, lhs);
+                }
+                else
+                    static_assert(DataTypes::AlwaysFalse<TLeft, TRight>, "Unsupported types");
 
-            String& operator+=(const String& other);
-            String& operator+=(const char* other);
-            String& operator+=(const StringView& other);
-            String& operator+=(std::string_view other);
-            String& operator+=(const std::string& other);
+                return String::Null();
+            }
+
+            template<IsStringLike T>
+            String& operator+=(const T& other){
+                return this->Append(other);
+            }
 
             [[nodiscard]] char* Data();
             [[nodiscard]] const char* Data()const;
@@ -173,11 +89,6 @@ namespace DataTypes{
 
             template<typename... Args>
             [[nodiscard]] String ConcatInPlace(const Args&... args) const;
-            [[nodiscard]] String Concat(const String& other) const;
-            [[nodiscard]] String Concat(const char* other) const;
-            [[nodiscard]] String Concat(const StringView& other) const;
-            [[nodiscard]] String Concat(std::string_view other) const;
-            [[nodiscard]] String Concat(const std::string& other) const;
 
             template<typename... Args>
             [[nodiscard]] static String Join(
@@ -186,22 +97,20 @@ namespace DataTypes{
                 const Args&... args
             );
 
-            String& Append(const String& other);
+            template<IsStringLike T>
+            String& Append(const T& other){
+                return this->Append(StringView::ViewOf(other));
+            }
+            String& Append(const char* other, const Int size){
+                return this->Append(StringView(other, size));
+            }
+
             String& Append(const StringView& other);
-            String& Append(const char* other);
-            inline String& Append(const char* data, Int size);
-            String& Append(std::string_view other);
-            String& Append(const std::string& other);
-            String& Append(char other);
 
             void Insert(Int pos, const char* data, Int size);
 
             [[nodiscard]] Int Size()const;
             [[nodiscard]] Int IndexOf(char c) const;
-
-            template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
-            [[nodiscard]] static constexpr bool Compare(const TLeft& lhs, const TRight& rhs);
-
 
             [[nodiscard]] bool Empty() const;
             [[nodiscard]] String ToLower() const;
@@ -212,128 +121,126 @@ namespace DataTypes{
             /**
              *
              * @param str string to modify
+             * @param allocator local memory arena allocator
              * @return returns a normalized (lower cased) version of the input string. The original string is not modified.
              * Normalization is done by converting all characters to lower case. This is useful for case-insensitive comparisons and operations,
              * ensuring that strings are treated uniformly regardless of their original case.
              */
-            [[nodiscard]] static String Normalize(const String& str);
-            [[nodiscard]] static String Normalize(const char* str, const ::Memory::IAllocator* allocator);
+
             [[nodiscard]] static String Normalize(const StringView& str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Normalize(std::string_view str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Normalize(const std::string& str, const ::Memory::IAllocator* allocator);
+            template<IsStringLike T>
+            [[nodiscard]] static String Normalize(const T& str, const ::Memory::IAllocator* allocator){
+                return String::Normalize(StringView::ViewOf(str), allocator);
+            }
 
-            [[nodiscard]] static String Lower(const String& str);
-            [[nodiscard]] static String Lower(const char* str, const ::Memory::IAllocator* allocator);
             [[nodiscard]] static String Lower(const StringView& str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Lower(std::string_view str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Lower(const std::string& str, const ::Memory::IAllocator* allocator);
+            template<IsStringLike T>
+            [[nodiscard]] static String Lower(const T& str, const ::Memory::IAllocator* allocator){
+                return String::Lower(StringView::ViewOf(str), allocator);
+            }
 
-            [[nodiscard]] static String Upper(const String& str);
-            [[nodiscard]] static String Upper(const char* str, const ::Memory::IAllocator* allocator);
             [[nodiscard]] static String Upper(const StringView& str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Upper(std::string_view str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Upper(const std::string& str, const ::Memory::IAllocator* allocator);
+            template<IsStringLike T>
+            [[nodiscard]] static String Upper(const T& str, const ::Memory::IAllocator* allocator){
+                return String::Upper(StringView::ViewOf(str), allocator);
+            }
 
-            [[nodiscard]] static StringView Trim(const String& str);
-            [[nodiscard]] static StringView Trim(const char* str);
             [[nodiscard]] static StringView Trim(const StringView& str);
-            [[nodiscard]] static StringView Trim(std::string_view str);
-            [[nodiscard]] static StringView Trim(const std::string& str);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView Trim(const T& str){
+                return String::Trim(StringView::ViewOf(str));
+            }
 
-            [[nodiscard]] static Int Ascii(const String& str);
-            [[nodiscard]] static Int Ascii(const char* str);
             [[nodiscard]] static Int Ascii(const StringView& str);
-            [[nodiscard]] static Int Ascii(std::string_view str);
-            [[nodiscard]] static Int Ascii(const std::string& str);
+            template<IsStringLike T>
+            [[nodiscard]] static Int Ascii(const T& str){
+                return String::Ascii(StringView::ViewOf(str));
+            }
 
-            [[nodiscard]] static Int Length(const String& str);
-            [[nodiscard]] static Int Length(const char* str);
-            [[nodiscard]] static Int Length(const StringView& str);
-            [[nodiscard]] static Int Length(std::string_view str);
-            [[nodiscard]] static Int Length(const std::string& str);
+            template<IsStringLike T>
+            [[nodiscard]] static Int Length(const T& str){
+                return StringView::ViewOf(str).Size();
+            }
 
-            [[nodiscard]] static StringView TrimLeft(const String& str);
-            [[nodiscard]] static StringView TrimLeft(const char* str);
             [[nodiscard]] static StringView TrimLeft(const StringView& str);
-            [[nodiscard]] static StringView TrimLeft(std::string_view str);
-            [[nodiscard]] static StringView TrimLeft(const std::string& str);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView TrimLeft(const T& str){
+                return String::TrimLeft(StringView::ViewOf(str));
+            }
 
-            [[nodiscard]] static StringView TrimRight(const String& str);
-            [[nodiscard]] static StringView TrimRight(const char* str);
             [[nodiscard]] static StringView TrimRight(const StringView& str);
-            [[nodiscard]] static StringView TrimRight(std::string_view str);
-            [[nodiscard]] static StringView TrimRight(const std::string& str);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView TrimRight(const T& str){
+                return String::TrimRight(StringView::ViewOf(str));
+            }
 
-            [[nodiscard]] static String Replace(
-                const String& str,
-                const StringView& oldStr,
-                const StringView& newStr
-            );
             [[nodiscard]] static String Replace(
                 const StringView& str,
-                const StringView& oldStr,
+                const StringView& subStr,
                 const StringView& newStr,
                 const ::Memory::IAllocator* allocator
             );
+            template<IsStringLike TStr, IsStringLike TSubStr, IsStringLike TNewStr>
             [[nodiscard]] static String Replace(
-                const char* str,
-                const StringView& oldStr,
-                const StringView& newStr,
+                const TStr& str,
+                const TSubStr& oldStr,
+                const TNewStr& newStr,
                 const ::Memory::IAllocator* allocator
-            );
-            [[nodiscard]] static String Replace(
-                std::string_view str,
-                const StringView& oldStr,
-                const StringView& newStr,
-                const ::Memory::IAllocator* allocator
-            );
-            [[nodiscard]] static String Replace(
-                const std::string& str,
-                const StringView& oldStr,
-                const StringView& newStr,
-                const ::Memory::IAllocator* allocator
-            );
+            ){
+                return String::Replace(
+                    StringView::ViewOf(str),
+                    StringView::ViewOf(oldStr),
+                    StringView::ViewOf(newStr),
+                    allocator
+                );
+            }
 
-            [[nodiscard]] static StringView SubString(const String& str, Int start, Int end);
             [[nodiscard]] static StringView SubString(const StringView& str, Int start, Int end);
-            [[nodiscard]] static StringView SubString(const char* str, Int start, Int end);
-            [[nodiscard]] static StringView SubString(std::string_view str, Int start, Int end);
-            [[nodiscard]] static StringView SubString(const std::string& str, Int start, Int end);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView SubString(const T& str, const Int start, const Int end){
+                return String::SubString(StringView::ViewOf(str), start, end);
+            }
 
-            [[nodiscard]] static String Reverse(const String& str);
             [[nodiscard]] static String Reverse(const StringView& str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Reverse(const char* str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Reverse(std::string_view str, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Reverse(const std::string& str, const ::Memory::IAllocator* allocator);
+            template<IsStringLike T>
+            [[nodiscard]] static String Reverse(const T& str, const ::Memory::IAllocator* allocator){
+                return String::Reverse(StringView::ViewOf(str), allocator);
+            }
 
-            [[nodiscard]] static StringView Left(const String& str, Int count);
             [[nodiscard]] static StringView Left(const StringView& str, Int count);
-            [[nodiscard]] static StringView Left(const char* str, Int count);
-            [[nodiscard]] static StringView Left(std::string_view str, Int count);
-            [[nodiscard]] static StringView Left(const std::string& str, Int count);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView Left(const T& str, const Int count){
+                return String::Left(StringView::ViewOf(str), count);
+            }
 
-            [[nodiscard]] static StringView Right(const String& str, Int count);
             [[nodiscard]] static StringView Right(const StringView& str, Int count);
-            [[nodiscard]] static StringView Right(const char* str, Int count);
-            [[nodiscard]] static StringView Right(std::string_view str, Int count);
-            [[nodiscard]] static StringView Right(const std::string& str, Int count);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView Right(const T& str, const Int count){
+                return String::Right(StringView::ViewOf(str), count);
+            }
 
             [[nodiscard]] static String Char(Int AsciiCode, const ::Memory::IAllocator* allocator);
             [[nodiscard]] static Int CharIndex(const StringView& subStr, const StringView& str, Int start);
 
-            [[nodiscard]] static String Repeat(const String& str, Int count);
             [[nodiscard]] static String Repeat(const StringView& str, Int count, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Repeat(const char* str, Int count, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Repeat(std::string_view str, Int count, const ::Memory::IAllocator* allocator);
-            [[nodiscard]] static String Repeat(const std::string& str, Int count, const ::Memory::IAllocator* allocator);
+            template<IsStringLike T>
+            [[nodiscard]] static String Repeat(
+                const T& str,
+                const Int count,
+                const ::Memory::IAllocator* allocator
+            ){
+                return String::Repeat(StringView::ViewOf(str), count, allocator);
+            }
 
             [[nodiscard]] static String Space(Int count, const ::Memory::IAllocator* allocator);
 
-            [[nodiscard]] static StringView Split(const String& str, Int startIndex, char delimiter);
-            [[nodiscard]] static StringView Split(const StringView& str, Int startIndex, char delimiter);
-            [[nodiscard]] static StringView Split(const char* str, Int startIndex, char delimiter);
-            [[nodiscard]] static StringView Split(std::string_view str, Int startIndex, char delimiter);
-            [[nodiscard]] static StringView Split(const std::string& str, Int startIndex, char delimiter);
+            template<IsStringLike T>
+            [[nodiscard]] static StringView Split(const T& str, Int startIndex, char delimiter){
+                const auto strView = StringView::ViewOf(str);
+                return String::Split(strView, startIndex, delimiter);
+            }
+
+            static StringView Split(const StringView& str, Int startIndex, char delimiter);
 
             // STL compatibility
             using const_iterator = const char*;
@@ -356,41 +263,19 @@ namespace DataTypes{
 
     };
 
-    struct StringEqualsIgnoreCase {
-        bool operator()(const StringValue& lhs, const StringValue& rhs) const;
-    };
-
     constexpr char String::ToLower(const char c) noexcept{
         return (c >= 'A' && c <= 'Z') ? static_cast<char>(c + 32) : c;
     }
 
     template <IsStringLike T>
     String::String(const T& str, const Memory::IAllocator* allocator){
-        if constexpr (
-            std::is_same_v<std::decay_t<T>, String>
-            || std::is_same_v<std::decay_t<T>, StringView>
-        ) {
-            this->_size = str.Size();
-            this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
-            std::memcpy(this->_data, str.Data(), this->_size);
-        } else if constexpr (
-            std::is_same_v<std::decay_t<T>, std::string>
-            || std::is_same_v<std::decay_t<T>, std::string_view>
-        ) {
-            this->_size = static_cast<Int>(str.size());
-            this->_data = static_cast<char*>(allocator->AllocateRaw( this->_size));
-            std::memcpy(this->_data, str.data(),  this->_size);
-        }
-        else if constexpr (std::is_same_v<std::decay_t<T>, const char*>){
-            this->_size = static_cast<Int>(std::strlen(str));
-            this->_data = static_cast<char*>(allocator->AllocateRaw( this->_size));
-            std::memcpy(this->_data, str,  this->_size);
-        }
-        else
-            static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for String constructor");
-
-        this->_capacity = this->_size;
+        const auto view = StringView::ViewOf(str);
         this->_allocator = allocator;
+        this->_size = view.Size();
+        this->_capacity = this->_size;
+
+        this->_data = static_cast<char*>(allocator->AllocateRaw(this->_size));
+        std::memcpy(this->_data, view.Data(), this->_size);
     }
 
     template <typename...Args>
@@ -401,7 +286,7 @@ namespace DataTypes{
             if constexpr (
                 std::is_same_v<std::decay_t<Type>, String>
                 || std::is_same_v<std::decay_t<Type>, StringView>
-                || std::is_same_v<std::decay_t<Type>, DataTypes::StringValue>
+                || std::is_same_v<std::decay_t<Type>, StringValue>
             ) totalSize += arg.Size();
             else if constexpr (std::is_same_v<std::decay_t<Type>, StringView>)
                 totalSize += arg.Size();
@@ -412,6 +297,8 @@ namespace DataTypes{
             else if constexpr (std::is_same_v<std::decay_t<Type>, char*> ||
                                std::is_same_v<std::decay_t<Type>, const char*>
             ) totalSize += static_cast<Int>(std::strlen(arg));
+            else
+                static_assert(DataTypes::AlwaysFalse<Type>, "Unsupported type");
         }(args), ...);
 
         // Allocate and copy
@@ -436,6 +323,8 @@ namespace DataTypes{
                 std::memcpy(buf + offset, arg, len);
                 offset += len;
             }
+            else
+                static_assert(DataTypes::AlwaysFalse<Type>, "Unsupported type");
         }(args), ...);
 
         return String(buf, totalSize, allocator);
@@ -543,32 +432,7 @@ String String::Join(const Memory::IAllocator* allocator, const char delimiter, c
     return String(data, totalSize, allocator);
 }
 
-template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
-constexpr bool String::Compare(const TLeft& lhs, const TRight& rhs) {
-    const auto leftView  = StringView::ViewOf(lhs);
-    const auto rightView = StringView::ViewOf(rhs);
 
-    if constexpr (Type == StringComparisonType::Equals)
-        return String::Equals(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::EqualsIgnoreCase)
-        return String::EqualsIgnoreCase(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::StartsWith)
-        return String::StartsWith(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::StartsWithIgnoreCase)
-        return String::StartsWithIgnoreCase(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::EndsWith)
-        return String::EndsWith(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::EndsWithIgnoreCase)
-        return String::EndsWithIgnoreCase(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::Contains)
-        return String::Contains(leftView, rightView);
-    else if constexpr (Type == StringComparisonType::ContainsCase)
-        return String::ContainsIgnoreCase(leftView, rightView);
-    else
-        static_assert(AlwaysFalse<TLeft>, "Compare: unsupported StringComparisonType");
-
-    return false;
-}
 }
 
 template <>

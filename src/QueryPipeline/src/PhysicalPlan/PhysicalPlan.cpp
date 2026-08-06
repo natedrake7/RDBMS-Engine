@@ -329,7 +329,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         Dictionary<Int, Int> columnIdsDict;
         for (const auto* column: this->columns){
-            const auto normalizedTableName = DataTypes::String::Normalize(column->type.name);
+            const auto normalizedTableName = DataTypes::String::Normalize(column->type.name, context.GetAllocator());
                 auto* columnPtr =
                     tablePtr->AddColumn(
                           DataTypes::StringView::ViewOf(column->name.name),
@@ -1064,8 +1064,11 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    PhysicalDeclareVariable::PhysicalDeclareVariable(const DataTypes::Guid &currentSessionId, Variable& variable, Expressions::Expression* expression)
-        : PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
+    PhysicalDeclareVariable::PhysicalDeclareVariable(
+        const DataTypes::Guid &currentSessionId,
+        Variable& variable,
+        Expressions::Expression* expression
+    ): PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}
 
     ExecutionResult PhysicalDeclareVariable::Execute(CoreEngine::ExecutionContext& context) {
         auto result = ExecutionResult(context);

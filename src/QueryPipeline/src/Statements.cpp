@@ -84,12 +84,11 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalDeclareVariable>(context._session->sessionId, this->variable, this->expression);
     }
 
-    SetVariableStatement::SetVariableStatement() {
-        this->expression = nullptr;
-    }
+    SetVariableStatement::SetVariableStatement()
+        : expression(nullptr), type(DataType::Null){}
 
     Errors::ValidationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
-        const auto& type = this->variable.GetType();
+        const auto datatype = this->variable.GetType();
 
         auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
         if (this->expression) {
@@ -97,22 +96,22 @@ namespace QueryPipeline::Statements {
 
             if (!res.IsOk()) return res;
 
-            if (type != DataType::Null && !ValidateExpressionCoercionTypes(type, this->expression)) {
+            if (datatype != DataType::Null && !ValidateExpressionCoercionTypes(datatype, this->expression)) {
                 validationStatus.code = Errors::ValidationError::Error;
                 validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
                     Expressions::GetExpressionReturnType(this->expression),
-                    type
+                    datatype
                 );
 
                 return validationStatus;
             }
 
-            if (type == DataType::Null)
+            if (datatype == DataType::Null)
                 this->variable.SetType(Expressions::GetExpressionReturnType(this->expression));
         }
 
-        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), type);
+        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), datatype);
         return validationStatus;
     }
 

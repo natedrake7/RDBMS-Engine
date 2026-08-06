@@ -228,7 +228,7 @@ namespace QueryPipeline::Statements {
         SetVariableStatement();
 
         Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 

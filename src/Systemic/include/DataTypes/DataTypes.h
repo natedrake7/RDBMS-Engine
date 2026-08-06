@@ -99,7 +99,7 @@ enum class StringComparisonType: UnsignedTinyInt{
     EndsWith = 4,
     EndsWithIgnoreCase = 5,
     Contains = 6,
-    ContainsCase = 7
+    ContainsIgnoreCase = 7
 };
 
 namespace DataTypes{
@@ -111,7 +111,7 @@ namespace DataTypes{
     class Decimal;
     class JsonBinary;
 
-    template<typename>
+    template<typename...>
     inline constexpr auto AlwaysFalse = false;
 
     template <typename T>
@@ -139,7 +139,9 @@ namespace DataTypes{
         || std::is_same_v<T, std::string>
         || std::is_same_v<T, std::string_view>
         || std::is_same_v<T, char*>
-        || std::is_same_v<T, const char*>;
+        || std::is_same_v<T, const char*>
+        || std::is_same_v<T, char>
+        || std::is_same_v<T, const char>;
 
     template<typename T>
     concept IsArithmetic = std::is_arithmetic_v<T>

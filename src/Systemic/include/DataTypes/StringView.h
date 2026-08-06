@@ -1,8 +1,8 @@
 ﻿#pragma once
-#include <cstring>
 #include <span>
 #include "DataTypes.h"
 #include <ostream>
+#include "StringValue.h"
 
 namespace Memory{
     class IAllocator;
@@ -15,17 +15,44 @@ namespace DataTypes{
         const char* _data;
         Int _size;
 
-        [[nodiscard]] constexpr bool Equals(const char* other, const Int size) const{
-            return this->_size == size
-                && std::memcmp(this->_data, other, size) == 0;
+        template <bool IgnoreCase>
+        [[nodiscard]] static constexpr bool MatchesAt(
+            const char* haystack,
+            const char* needle,
+            const Int count
+        ) noexcept{
+                    if !consteval{
+                        if constexpr (!IgnoreCase)
+                            return std::memcmp(haystack, needle, count) == 0;
+                    }
+
+                    for (Int i = 0; i < count; i++) {
+                        if (IgnoreCase) {
+                            if (Lower(haystack[i]) != Lower(needle[i]))
+                                return false;
+                        }
+                        else {
+                            if (haystack[i] != needle[i])
+                                return false;
+                        }
+                    }
+
+                    return true;
+                }
+
+        template <bool IgnoreCase>
+        [[nodiscard]] static constexpr bool ContainsImplementation(const StringView& lhs, const StringView& rhs) noexcept{
+            if (rhs._size == 0)
+                return true;
+            if (lhs._size < rhs._size)
+                return false;
+
+            for (Int i = 0; i <= lhs._size - rhs._size; i++)
+                if (MatchesAt<IgnoreCase>(lhs._data + i, rhs._data, rhs._size)) return true;
+
+            return false;
         }
-        [[nodiscard]] inline bool EqualsIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool StartsWith(const char* other, Int size) const;
-        [[nodiscard]] inline bool StartsWithIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool EndsWith(const char* other, Int size) const;
-        [[nodiscard]] inline bool EndsWithIgnoreCase(const char* other, Int size) const;
-        [[nodiscard]] inline bool Contains(const char* other, Int size) const;
-        [[nodiscard]] inline bool ContainsIgnoreCase(const char* other, Int size) const;
+
         public:
         /**
              *
@@ -73,11 +100,11 @@ namespace DataTypes{
 
         //Equality Operators
         [[nodiscard]] constexpr bool operator==(const char* other) const{
-            return this->Equals(other, this->_size);
+            return this->Compare<StringComparisonType::Equals, const char*>(other);
         }
 
         [[nodiscard]] constexpr bool operator==(const StringView& other) const{
-            return this->Equals(other._data, other._size);
+            return this->Compare<StringComparisonType::Equals, StringView>(other);
         }
 
         [[nodiscard]] constexpr bool operator!=(const char* other) const{
@@ -202,11 +229,45 @@ namespace DataTypes{
         [[nodiscard]] constexpr Int Size()const{ return this->_size; }
 
         [[nodiscard]] Int IndexOf(char c) const;
-        [[nodiscard]] bool Contains(const StringView& other, StringComparisonType type) const;
-        [[nodiscard]] bool Contains(const String& other, StringComparisonType type) const;
-        [[nodiscard]] bool Contains(const char* other, StringComparisonType type) const;
-        [[nodiscard]] bool Contains(std::string_view other, StringComparisonType type) const;
-        [[nodiscard]] bool Contains(const std::string& other, StringComparisonType type) const;
+
+        [[nodiscard]] bool Compare(const StringView& other, StringComparisonType type) const;
+        template<IsStringLike TOther>
+        [[nodiscard]] bool Compare(const TOther& other, const StringComparisonType type) const{
+            return this->Compare(StringView::ViewOf(other), type);
+        }
+
+        template<StringComparisonType Type, IsStringLike TOther>
+        [[nodiscard]] bool Compare(const TOther& other) const{
+            const auto otherView = StringView::ViewOf(other);
+            if constexpr (Type == StringComparisonType::Equals)
+                return this->Equals(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EqualsIgnoreCase)
+                return this->EqualsIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::StartsWith)
+                return this->StartsWith(*this, otherView);
+            else if constexpr (Type == StringComparisonType::StartsWithIgnoreCase)
+                return this->StartsWithIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EndsWith)
+                return this->EndsWith(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EndsWithIgnoreCase)
+                return this->EndsWithIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::Contains)
+                return this->Contains(*this, otherView);
+            else if constexpr (Type == StringComparisonType::ContainsIgnoreCase)
+                return this->ContainsIgnoreCase(*this, otherView);
+            else
+                static_assert(AlwaysFalse<TOther>, "Compare: unsupported StringComparisonType");
+
+            return false;
+        }
+
+        template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
+        static constexpr bool Compare(const TLeft& lhs, const TRight& rhs) {
+            const auto leftView  = StringView::ViewOf(lhs);
+            const auto rightView = StringView::ViewOf(rhs);
+            return leftView.template Compare<Type>(rightView);
+        }
+
         [[nodiscard]] constexpr bool Empty() const { return this->_size == 0; };
 
         // STL compatibility
@@ -230,10 +291,9 @@ namespace DataTypes{
 
         template <IsStringLike T>
         static StringView ViewOf(const T& str){
-            if constexpr (std::is_same_v<std::decay_t<T>, StringView>)
-                return StringView(str.Data(), str.Size());
-            else if constexpr (
-                std::is_same_v<std::decay_t<T>, String>
+            if constexpr (
+                std::is_same_v<std::decay_t<T>, StringView>
+                || std::is_same_v<std::decay_t<T>, String>
                 || std::is_same_v<std::decay_t<T>, StringValue>
             ){
                 return StringView(str.Data(), str.Size());
@@ -250,10 +310,70 @@ namespace DataTypes{
             ){
                 return StringView(str, static_cast<Int>(std::strlen(str)));
             }
+            else if constexpr (
+                std::is_same_v<std::decay_t<T>, const char>
+                || std::is_same_v<std::decay_t<T>, char>
+            ){
+                return StringView(&str, 1);
+            }
             else
                 static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for StringView constructor");
 
             return StringView();
+        }
+
+        static StringView ViewOf(const char* str, const Int size){
+            return StringView(str, size);
+        }
+
+        [[nodiscard]] static constexpr char Lower(const char c) noexcept{
+            return (c >= 'A' && c <= 'Z')
+                ? (c + 'a' - 'A')
+                : c;
+        }
+
+        [[nodiscard]] inline static constexpr bool Equals(const StringView& lhs, const StringView& rhs){
+            return lhs._size == rhs._size
+                && MatchesAt<false>(lhs._data, rhs._data, lhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EqualsIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size == rhs._size
+                && MatchesAt<true>(lhs._data, rhs._data, lhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool StartsWith(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<false>(lhs._data, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool StartsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<true>(lhs._data, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EndsWith(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<false>(lhs._data + lhs._size - rhs._size, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<true>(lhs._data + lhs._size - rhs._size, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool Contains(const StringView& lhs, const StringView& rhs){
+            return StringView::ContainsImplementation<false>(lhs, rhs);
+        }
+
+        [[nodiscard]] inline static constexpr bool ContainsIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return StringView::ContainsImplementation<true>(lhs, rhs);
+        }
+    };
+
+    struct StringEqualsIgnoreCase {
+        bool operator()(const StringValue& lhs, const StringValue& rhs) const{
+            return StringView::Compare<StringComparisonType::Equals>(lhs, rhs);
         }
     };
 

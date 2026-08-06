@@ -36,7 +36,7 @@ namespace QueryPipeline {
         Expressions::Expression* expression;
 
         LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
-        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
     class LogicalCreateUser final : public LogicalPlan {

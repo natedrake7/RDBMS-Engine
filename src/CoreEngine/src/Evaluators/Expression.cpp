@@ -768,7 +768,7 @@ namespace Expressions{
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
         const auto& str = arguments[0].AsString();
-        return Value(DataTypes::String::Reverse(str), context._allocator, 0);
+        return Value(DataTypes::String::Reverse(str, str.GetAllocator()), context._allocator, 0);
     }
 
     Value FunctionExpression::Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){

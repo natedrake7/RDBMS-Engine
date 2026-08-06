@@ -624,7 +624,8 @@ namespace CoreEngine{
 
         storageManager.CreateFile(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);
 
-        const auto sysDbName = path.Concat(Constants::SYS_EXTENSION);
+
+        const auto sysDbName = DataTypes::String::Concat(path.GetAllocator(), path, Constants::SYS_EXTENSION);
         const auto sysKey = Storage::FileKey::Create(databaseId, Storage::FileType::System);
 
         storageManager.CreateFile(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);

@@ -16,7 +16,7 @@ class Variable {
 
         Variable(Value& value, DataTypes::String& name)
             : value(std::move(value)), name(std::move(name)) {
-            this->normalizedName = DataTypes::String::Normalize(this->name);
+            this->normalizedName = DataTypes::String::Normalize(this->name, this->name.GetAllocator());
         }
 
         Variable(Variable&& other)noexcept
@@ -62,6 +62,6 @@ class Variable {
 
         void SetName(DataTypes::String& other) {
             this->name = std::move(other);
-            this->normalizedName = DataTypes::String::Normalize(this->name);
+            this->normalizedName = DataTypes::String::Normalize(this->name, this->name.GetAllocator());
         }
 };
