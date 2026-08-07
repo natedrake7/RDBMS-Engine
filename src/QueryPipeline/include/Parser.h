@@ -23,7 +23,7 @@ namespace QueryPipeline{
     class Cursor;
 
     struct CompileValidationScope {
-        Dictionary<DataTypes::String, DataType> variables;
+        Dictionary<DataTypes::StringView, DataType> variables;
     };
 
     struct QueryContext {
@@ -45,7 +45,7 @@ namespace QueryPipeline{
         QueryContext(QueryContext&& other) noexcept;
         QueryContext& operator=(QueryContext&& other) noexcept;
 
-        void CreateValidationScope(const Dictionary<DataTypes::String, Variable*>* sessionVariables);
+        void CreateValidationScope(const Network::Session* session);
         const ::Memory::IAllocator* GetAllocator()const;
 
         [[nodiscard]] UnsignedSmallInt NextVirtualId();

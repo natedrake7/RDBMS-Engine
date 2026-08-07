@@ -16,10 +16,6 @@ namespace Memory{
 }
 
 class Value{
-    [[nodiscard]] static constexpr bool IsInline(const DataType type){
-        return type != DataType::String && type != DataType::Json;
-    }
-
     union Storage{
         bool _bool;
         TinyInt _tinyInt;
@@ -54,6 +50,14 @@ class Value{
         column_index_t index = 0
     );
 
+    //creates a session value object
+    explicit Value(
+        const object_t* data,
+        Int size,
+        DataType type,
+        column_index_t index = 0
+    );
+
     template<typename T>
     [[nodiscard]] T ReadInline()const{
         T out;
@@ -70,6 +74,10 @@ class Value{
     }
 
     public:
+        [[nodiscard]] static constexpr bool IsInline(const DataType type){
+            return type != DataType::String && type != DataType::Json;
+        }
+
         Value(column_index_t index = 0);
 
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
@@ -107,6 +115,13 @@ class Value{
             Int size,
             DataType type,
             const Memory::IAllocator* allocator,
+            column_index_t index = 0
+        );
+
+        static Value SessionValue(
+            const object_t* data,
+            Int size,
+            DataType type,
             column_index_t index = 0
         );
 

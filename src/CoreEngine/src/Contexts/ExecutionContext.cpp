@@ -1,13 +1,11 @@
 ﻿#include "../../include/Contexts/ExecutionContext.h"
-#include "../../../Systemic/include/Coercions/Coercions.h"
 #include "../../include/DataStorage/Row.h"
-#include "../../../Systemic/include/DataTypes/Variable.h"
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
         Snapshot& snapshot,
         const Int batchSize,
-        const Dictionary<DataTypes::String, Variable*>* variables,
+        const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables,
         const Int initialAllocatorSize
     )   :   snapshot(std::move(snapshot)),
             allocator(initialAllocatorSize),
@@ -50,8 +48,8 @@ namespace CoreEngine{
         return &this->allocator;
     }
 
-    const Variable* ExecutionContext::GetVariable(const DataTypes::String& name) const{
-        return this->variables->Get(name);
+    const BoundVariable* ExecutionContext::GetVariable(const DataTypes::StringView& name) const{
+        return this->variables->Get(name).get();
     }
 
     Int ExecutionContext::GetBatchSize() const{

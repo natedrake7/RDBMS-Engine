@@ -8,35 +8,34 @@
 #include "../../../CoreEngine/include/Managers/GlobalMemoryManager.h"
 #include "../../../QueryPipeline/include/CompileContext.h"
 
-namespace Network::Sessions {
-    SessionManager::SessionManager() = default;
+#include "../../../Systemic/include/DataTypes/BoundVariable.h"
 
+namespace Network::Sessions {
     SessionManager::~SessionManager(){
-        for (const auto* session : this->sessions | std::views::values)
+        for (const auto* session : this->_sessions | std::views::values)
             delete session;
     }
 
-    const Session * SessionManager::CreateSession(const Security::User* user){
+    const Session* SessionManager::CreateSession(const Security::User* user){
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = new Session(user);
-        this->sessions.Add(session->sessionId, session);
-
+        this->_sessions.Add(session->sessionId, session);
         return session;
     }
 
-    const Session * SessionManager::GetSession(const DataTypes::Guid &id)const{
+    const Session* SessionManager::GetSession(const DataTypes::Guid &id)const{
         Session* session = nullptr;
 
         MultiThreading::ReaderGuard guard(&this->mutex);
-        this->sessions.TryGetValue(id, session);
+        this->_sessions.TryGetValue(id, session);
 
         return session;
     }
 
     Session* SessionManager::TryGetSessionWithoutLock(const DataTypes::Guid &id)const{
         Session* session = nullptr;
-        this->sessions.TryGetValue(id, session);
+        this->_sessions.TryGetValue(id, session);
         return session;
     }
 
@@ -45,8 +44,8 @@ namespace Network::Sessions {
 
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        if (this->sessions.TryGetValue(id, session)) {
-            this->sessions.Remove(id);
+        if (this->_sessions.TryGetValue(id, session)) {
+            this->_sessions.Remove(id);
             delete session;
             return true;
         }
@@ -67,18 +66,31 @@ namespace Network::Sessions {
         return true;
     }
 
-    bool SessionManager::AddOrSetVariable(const DataTypes::Guid &id, const Variable& variable)const {
+    bool SessionManager::AddOrSetVariable(
+        const DataTypes::Guid &id,
+        const Variable& variable
+    )const {
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = this->TryGetSessionWithoutLock(id);
-
         if (session == nullptr)
             return false;
 
+        std::unique_ptr<BoundVariable>* existingVar = nullptr;
+        const auto nameView = DataTypes::StringView::ViewOf(variable.GetNormalizedName());
+        if (session->variables.TryGetValue(nameView, existingVar)){
+            (*existingVar)->SetValue(variable);
+            return true;
+        }
 
-        // auto* variablePtr = new Variable(variable);
-        //
-        // session->variables.AddOrUpdate(variable.GetNormalizedName(), variable);
+        auto boundVariable = std::make_unique<BoundVariable>(variable);
+        const auto* raw = boundVariable.get();
+
+        session->variables.AddOrUpdate(
+            DataTypes::StringView::ViewOf(raw->GetNormalizedName()),
+            std::move(boundVariable)
+        );
+
         return true;
     }
 

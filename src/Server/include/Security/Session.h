@@ -2,7 +2,9 @@
 #include "../../../Systemic/include/DataStructures/SortedDictionary.h"
 #include "../../../Systemic/include/DataTypes/Guid.h"
 #include "../../../Systemic/include/DataTypes/DateTime.h"
+#include "../../../Systemic/include/DataTypes/BoundVariable.h"
 #include "Security.h"
+
 
 namespace QueryPipeline {
     class Cursor;
@@ -20,7 +22,7 @@ namespace Network {
         Int databaseId;
 
         SortedDictionary<UnsignedSmallInt, QueryPipeline::Cursor*> cursors;
-        Dictionary<DataTypes::String, Variable*> variables;
+        Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>> variables;
 
         UnsignedSmallInt nextCursorId;
 
@@ -32,5 +34,12 @@ namespace Network {
                 createdAt(DataTypes::DateTime::Now()), lastActive(DataTypes::DateTime::Now()),
                 databaseId(Constants::SYSTEM_CATALOG_ID), nextCursorId(0),
                 transactionId(0) {}
+
+        Session() = default;
+        Session(const Session&) = delete;
+        Session& operator=(const Session&) = delete;
+
+        Session(Session&&)noexcept = default;
+        Session& operator=(Session&&)noexcept = default;
     };
 }

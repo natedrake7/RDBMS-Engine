@@ -1,7 +1,5 @@
 #include "../../include/DataTypes/Value.h"
 
-#include <cmath>
-
 #include "../../include/Coercions/Coercions.h"
 #include "../../include/Functions/StringFunctions.h"
 
@@ -75,6 +73,52 @@ Value::Value(
         auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(size));
         std::memcpy(buffer, data, size);
         this->_data._external = buffer;
+        break;
+    }
+    default:
+        throw std::runtime_error("Value::Value() called with unknown type");
+    }
+}
+
+Value::Value(
+    const object_t* data,
+    const Int size, const DataType type,
+    const column_index_t index
+):  _size(size),
+    _columnIndex(index), _type(type),
+    _isNull(false)
+{
+    switch (type){
+    case DataType::String:{
+        this->_data._external = data;
+        break;
+    }
+    case DataType::Bool:
+        this->WriteInline(*reinterpret_cast<const bool*>(data));
+        break;
+    case DataType::TinyInt:
+        this->WriteInline(*reinterpret_cast<const TinyInt*>(data));
+        break;
+    case DataType::SmallInt:
+        this->WriteInline(*reinterpret_cast<const SmallInt*>(data));
+        break;
+    case DataType::Int:
+        this->WriteInline(*reinterpret_cast<const Int*>(data));
+        break;
+    case DataType::BigInt:
+        this->WriteInline(*reinterpret_cast<const BigInt*>(data));
+        break;
+    case DataType::Decimal:
+        this->WriteInline(DataTypes::Decimal(data, size));
+        break;
+    case DataType::DateTime:
+        this->WriteInline(DataTypes::DateTime(*reinterpret_cast<const BigInt*>(data)));
+        break;
+    case DataType::Guid:
+        this->WriteInline(DataTypes::Guid(data));
+        break;
+    case DataType::Json:{
+        this->_data._external = data;
         break;
     }
     default:
@@ -156,6 +200,15 @@ Value Value::FromExternalStorage(
     const column_index_t index
 ){
     return Value(data, size, type, allocator, index);
+}
+
+Value Value::SessionValue(
+    const object_t* data,
+    const Int size,
+    const DataType type,
+    const column_index_t index
+){
+    return Value(data, size, type, index);
 }
 
 Value Value::Null(const column_index_t columnIndex){

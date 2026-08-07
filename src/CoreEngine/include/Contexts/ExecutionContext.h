@@ -8,6 +8,8 @@
 #include "../BufferPool/FileKey.h"
 #include "../DataStorage/Row.h"
 
+class BoundVariable;
+
 namespace DataTypes{
     class String;
 }
@@ -96,7 +98,7 @@ namespace CoreEngine {
         Snapshot snapshot;
         Memory::Allocator allocator;
 
-        const Dictionary<DataTypes::String, Variable*>* variables;
+        const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables;
 
         Int batchSize;
 
@@ -106,7 +108,7 @@ namespace CoreEngine {
             ExecutionContext(
                 Snapshot& snapshot,
                 Int batchSize,
-                const Dictionary<DataTypes::String, Variable*>* variables,
+                const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables,
                 Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
@@ -118,7 +120,7 @@ namespace CoreEngine {
             void SetBatchSize(Int size);
 
             [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
-            const Variable* GetVariable(const DataTypes::String& name) const;
+            const BoundVariable* GetVariable(const DataTypes::StringView& name) const;
 
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;

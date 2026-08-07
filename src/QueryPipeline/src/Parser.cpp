@@ -24,9 +24,9 @@ namespace QueryPipeline{
     }
 
 
-     void QueryContext::CreateValidationScope(const Dictionary<DataTypes::String, Variable*>* sessionVariables){
-        for (const auto& [key, value] : *sessionVariables){
-            this->_scope.variables.ForceAdd(key, value->GetType());
+     void QueryContext::CreateValidationScope(const Network::Session* session){
+        for (const auto& [key, variable] : session->variables){
+            this->_scope.variables.ForceAdd(key, variable->GetType());
         }
     }
 
@@ -128,8 +128,7 @@ namespace QueryPipeline{
 
         QueryContext queryContext;
         queryContext._session = server.GetSession(sessionId);
-
-        queryContext.CreateValidationScope(&queryContext._session->variables);
+        queryContext.CreateValidationScope(queryContext._session);
         Parser::Parse(queryContext, sessionId, query);
 
         if (queryContext.status.hasError)

@@ -973,7 +973,7 @@ namespace Expressions{
     }
 
     Value VariableExpression::Evaluate(const EvaluationContext &context) const {
-        return context._executionContext->GetVariable(this->normalizedName)->GetValue();
+        return context._executionContext->GetVariable(DataTypes::StringView::ViewOf(this->normalizedName))->GetValue();
     }
 
     DataType VariableExpression::GetReturnType() const { return this->dataType; }

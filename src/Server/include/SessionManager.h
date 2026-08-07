@@ -10,14 +10,13 @@ namespace QueryPipeline{
 
 namespace Network::Sessions {
   class SessionManager {
-    Dictionary<DataTypes::Guid, Session*> sessions;
+    Dictionary<DataTypes::Guid, Session*> _sessions;
 
     mutable MultiThreading::Mutex mutex;
 
     [[nodiscard]] Session* TryGetSessionWithoutLock(const DataTypes::Guid& id)const;
 
   public:
-    SessionManager();
     ~SessionManager();
 
     const Session* CreateSession(const Security::User* user);

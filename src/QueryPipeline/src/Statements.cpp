@@ -49,7 +49,7 @@ namespace QueryPipeline::Statements {
        : expression(nullptr), type(DataType::Null){}
 
     Errors::ValidationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
-        const auto& variableType = this->variable.GetType();
+        const auto variableType = this->variable.GetType();
 
         auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
         if (this->expression) {
@@ -72,7 +72,8 @@ namespace QueryPipeline::Statements {
                 this->variable.SetType(Expressions::GetExpressionReturnType(this->expression));
         }
 
-        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), variableType);
+        const auto normalizedNameView = DataTypes::StringView::ViewOf(this->variable.GetNormalizedName());
+        context._scope.variables.ForceAdd(normalizedNameView, variableType);
         return validationStatus;
     }
 
@@ -111,7 +112,8 @@ namespace QueryPipeline::Statements {
                 this->variable.SetType(Expressions::GetExpressionReturnType(this->expression));
         }
 
-        context._scope.variables.ForceAdd(this->variable.GetNormalizedName(), datatype);
+        const auto normalizedNameView = DataTypes::StringView::ViewOf(this->variable.GetNormalizedName());
+        context._scope.variables.ForceAdd(normalizedNameView, datatype);
         return validationStatus;
     }
 
@@ -2066,7 +2068,8 @@ namespace QueryPipeline::Statements {
         Expressions::VariableExpression* variableExpr
     ){
         DataType outType;
-        if (!context._scope.variables.TryGetValue(variableExpr->normalizedName, outType)) {
+        const auto normalizedNameView = DataTypes::StringView::ViewOf(variableExpr->normalizedName);
+        if (!context._scope.variables.TryGetValue(normalizedNameView, outType)) {
             return Errors::ValidationStatus::Error(
                 Messages::INVALID_VARIABLE(
                     context.GetAllocator(),

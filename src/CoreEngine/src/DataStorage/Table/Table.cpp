@@ -24,7 +24,7 @@ namespace CoreEngine::StorageTypes {
     TableHeader::TableHeader()
         :   _allocationPageId(INVALID_PAGE_ID), _clusteredIndexPageId(INVALID_PAGE_ID){}
 
-    TableHeader &TableHeader::operator=(const TableHeader& other) {
+    TableHeader& TableHeader::operator=(const TableHeader& other) {
         if (this == &other)
             return *this;
 

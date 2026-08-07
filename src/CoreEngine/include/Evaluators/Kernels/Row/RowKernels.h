@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include "../../Expression.h"
 #include "../../../Pages/PageView.h"
-#include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../../Contexts/ExecutionContext.h"
 #include "../../Systemic/include/DataTypes/StringValue.h"
+#include "../../Systemic/include/DataTypes/BoundVariable.h"
 
 namespace CoreEngine::RowKernels{
     template<typename T>
@@ -79,7 +79,7 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     ){
         const auto* variableExpr = self->AsVariable();
-        const auto& value = context._executionContext->GetVariable(variableExpr->name)->GetValue();
+        const auto& value = context._executionContext->GetVariable(DataTypes::StringView::ViewOf(variableExpr->name))->GetValue();
         *outNull = value.IsNull();
         if (*outNull) return;
 

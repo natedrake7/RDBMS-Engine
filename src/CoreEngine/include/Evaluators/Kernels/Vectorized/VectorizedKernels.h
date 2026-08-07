@@ -4,7 +4,7 @@
 #include "../../Systemic/include/DataTypes/StringValue.h"
 #include "../../Expression.h"
 #include "../../Systemic/include/Coercions/Coercions.h"
-#include "../../Systemic/include/DataTypes/Variable.h"
+#include "../../Systemic/include/DataTypes/BoundVariable.h"
 
 namespace Expressions{
     class Expression;
@@ -59,7 +59,7 @@ namespace CoreEngine::VectorizedKernels{
         const auto* allocator = context->GetAllocator();
 
         const auto* variableExpr = self->AsVariable();
-        const auto& value = context->GetVariable(variableExpr->normalizedName)->GetValue();
+        const auto& value = context->GetVariable(DataTypes::StringView::ViewOf(variableExpr->normalizedName))->GetValue();
 
         const auto isNull = value.IsNull();
         auto* outVector = DataVector::ConstantVector(allocator, isNull, DataTypes::DataTypeOf<T>());
