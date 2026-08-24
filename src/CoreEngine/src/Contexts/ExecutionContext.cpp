@@ -49,6 +49,9 @@ namespace CoreEngine{
     }
 
     const BoundVariable* ExecutionContext::GetVariable(const DataTypes::StringView& name) const{
+        if (this->variables == nullptr)
+            return nullptr;
+
         return this->variables->Get(name).get();
     }
 

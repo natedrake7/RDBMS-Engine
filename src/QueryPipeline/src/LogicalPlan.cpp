@@ -355,8 +355,12 @@ namespace QueryPipeline {
     ): child(child), filter(filter), _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
-        Expressions::BindExpressionRowKernel(this->filter);
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(this->child->ToPhysical(context), this->filter, this->_slotCount);
+        auto* childPhysical = this->child->ToPhysical(context);
+        auto* childSchema = childPhysical->GetSchema();
+
+        Expressions::BindAndResolveExpressionKernel(this->filter, childSchema);
+
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalFilter>(childPhysical, this->filter, this->_slotCount);
     }
 
     LogicalOrder::LogicalOrder(LogicalPlan *child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions)

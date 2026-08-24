@@ -9,7 +9,7 @@ class BoundVariable{
     std::string _normalizedName;
     std::vector<object_t> _externalData;
 
-    DataType _type;
+    DataType _type = DataType::Null;
 
     public:
         explicit BoundVariable(const Variable& variable){

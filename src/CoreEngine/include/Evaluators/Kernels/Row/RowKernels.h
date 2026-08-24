@@ -79,7 +79,7 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     ){
         const auto* variableExpr = self->AsVariable();
-        const auto& value = context._executionContext->GetVariable(DataTypes::StringView::ViewOf(variableExpr->name))->GetValue();
+        const auto& value = context._executionContext->GetVariable(DataTypes::StringView::ViewOf(variableExpr->normalizedName))->GetValue();
         *outNull = value.IsNull();
         if (*outNull) return;
 

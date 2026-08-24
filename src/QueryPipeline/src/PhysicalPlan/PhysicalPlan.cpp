@@ -166,7 +166,6 @@ namespace QueryPipeline::PhysicalPlan {
         for (Int index = 0; index < columnsSize; index++){
             const auto& info = this->_materializationInfo[index];
 
-
             auto* vector = CoreEngine::DataVector::FlatVector(context.GetAllocator(), info._type,  rowCount);
             // Read from the table ordinal, write to the output position: with pruning these differ.
             info._function(table, context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
