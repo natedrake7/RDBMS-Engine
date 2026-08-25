@@ -106,6 +106,10 @@ namespace CoreEngine{
         return this->scanHandles[index].size;
     }
 
+    const StorageTypes::RID* ExecutionContext::GetRIDs(const UnsignedInt slotIndex) const{
+        return this->scanHandles[slotIndex].rids;
+    }
+
     const StorageTypes::RID* ExecutionContext::GetRIDPtr(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
         return &this->scanHandles[slotIndex].rids[ridIndex];
     }

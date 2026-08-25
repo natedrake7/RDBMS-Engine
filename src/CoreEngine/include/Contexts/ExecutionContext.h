@@ -141,6 +141,8 @@ namespace CoreEngine {
             const ScanHandle& GetScanHandle(UnsignedInt index) const;
             [[nodiscard]] UnsignedInt GetScanHandleSize(UnsignedInt index) const;
 
+            [[nodiscard]] const StorageTypes::RID* GetRIDs(UnsignedInt slotIndex)const;
+
             [[nodiscard]] const StorageTypes::RID* GetRIDPtr(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
             [[nodiscard]] StorageTypes::RID GetRID(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
 

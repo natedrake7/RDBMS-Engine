@@ -152,11 +152,12 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
+        SelectionVector* sv,
         DataStructures::PolymorphicArray<RID> *selectedRows,
         IndexState& state,
         const Expressions::Expression* expression
     ){
-        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
+        if (this->IsEmpty())
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();

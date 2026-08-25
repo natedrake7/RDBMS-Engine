@@ -255,6 +255,7 @@ namespace CoreEngine::StorageTypes{
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
+                SelectionVector* sv,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
                 IndexState& state,
                 const Expressions::Expression* expression
@@ -390,9 +391,6 @@ namespace CoreEngine::StorageTypes{
         * @{
         */
             Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* rid, column_index_t columnIndex) const;
-            // Value* MaterializeColumn(const ExecutionContext& context, Int rangeEnd, column_index_t columnIndex) const;
-            // static QueryResult Materialize(const::Memory::IAllocator* allocator, const Pages::PageView* page, const RID* row);
-            // QueryResult MaterializeFromIndexPage(const::Memory::IAllocator* allocator, const RID* row) const;
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
             template<typename T>
@@ -406,19 +404,20 @@ namespace CoreEngine::StorageTypes{
             );
 
             template<typename T>
+            static void MaterializeColumnFromPage(
+                const ::Memory::IAllocator* allocator,
+                const Pages::PageView* page,
+                DataVector* __restrict__ _vector,
+                column_index_t ordinalPosition
+            );
+
+            template<typename T>
             void MaterializeColumn(
                 const ExecutionContext& context,
                 const SelectionVector* sv,
                 DataVector* __restrict__ _vector,
                 UnsignedSmallInt slotIndex,
                 column_index_t ordinalPosition
-            )const;
-            template<typename T>
-            void MaterializeColumn(
-                const ExecutionContext& context,
-                Int rangeEnd,
-                object_t* __restrict__ _data,
-                column_index_t columnIndex
             )const;
         /** @} End of: Materialization Functions*/
 

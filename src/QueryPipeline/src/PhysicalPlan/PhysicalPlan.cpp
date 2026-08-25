@@ -157,16 +157,16 @@ namespace QueryPipeline::PhysicalPlan {
         auto result = this->child->Execute(context);
 
         const auto* table = context.GetTable(this->_slotIndex);
+        const auto* allocator = context.GetAllocator();
 
         const auto columnsSize = this->_materializationInfo.Size();
         const auto rowCount = result.selectionVector->selectedRidsCount;
 
-        result.dataChunk.AllocateColumns(context.GetAllocator(), rowCount, columnsSize);
-
+        result.dataChunk.AllocateColumns(allocator, rowCount, columnsSize);
         for (Int index = 0; index < columnsSize; index++){
             const auto& info = this->_materializationInfo[index];
 
-            auto* vector = CoreEngine::DataVector::FlatVector(context.GetAllocator(), info._type,  rowCount);
+            auto* vector = CoreEngine::DataVector::FlatVector(allocator, info._type,  rowCount);
             // Read from the table ordinal, write to the output position: with pruning these differ.
             info._function(table, context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
             result.dataChunk.SetColumn(vector, index);
@@ -576,7 +576,7 @@ namespace QueryPipeline::PhysicalPlan {
     ): table(table), expression(expression), isClustered(isClustered) {}
 
     ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
-        auto result = ExecutionResult(context);
+        ExecutionResult result(context);
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
@@ -585,7 +585,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
         if (this->isClustered)
-            tablePtr->ClusteredIndexScan(context, &rows, this->state, this->expression);
+            tablePtr->ClusteredIndexScan(context, nullptr, &rows, this->state, this->expression);
         else
             tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
 
