@@ -538,8 +538,14 @@ namespace QueryPipeline::Statements {
         bool primaryKeyFound = false;
         Dictionary<DataTypes::String, column_index_t> columnNamesToIndexes;
 
-        for (auto* column: this->columns)
-            this->CompileColumnExpression(
+        if (this->columns.Size() > Constants::MAX_TABLE_COLUMNS)
+            return Errors::ValidationStatus::Error(
+            Messages::MAX_NUMBER_OF_COLUMNS_EXCEEDED,
+                    context.GetAllocator()
+            );
+
+        for (auto* column: this->columns){
+            auto columnResult = this->CompileColumnExpression(
                 context,
                 column,
                 columnNamesToIndexes,
@@ -547,7 +553,12 @@ namespace QueryPipeline::Statements {
                 indexPosition
             );
 
-        if (this->constraint == nullptr)return Errors::ValidationStatus::Ok();
+            if (!columnResult.IsOk())
+                return columnResult;
+        }
+
+        if (this->constraint == nullptr)
+            return Errors::ValidationStatus::Ok();
 
         if (primaryKeyFound) {
             return Errors::ValidationStatus::Error(
@@ -736,7 +747,6 @@ namespace QueryPipeline::Statements {
         auto* current = context._compileContext.Allocate<LogicalTableScan>(table, predicatesResult.PushDownFilter(table->_tableId));
         return context._compileContext.Allocate<LogicalMaterialize>(
             current,
-            table->_tableId,
             table->_slotIndex
         );
     }
@@ -2040,7 +2050,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CompileColumnExpression(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression* column,
         const StatementValidationScope& statementValidationScope
     ){
@@ -2137,7 +2147,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CompileJsonExpression(
-        const QueryContext& context,
+        QueryContext& context,
         const Expressions::JsonExpression* jsonExpr,
         const StatementValidationScope& statementValidationScope
     ){
@@ -2267,7 +2277,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CompileColumnWhenTableAliasExists(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression *column,
         const StatementValidationScope& statementValidationScope
     ){
@@ -2295,21 +2305,24 @@ namespace QueryPipeline::Statements {
         column->columnId = columnHeader.id;
         column->returnType = static_cast<DataType>(columnHeader.dataType);
         column->ordinalPosition = columnHeader.ordinalPosition;
+
         if (column->name.Empty())
             column->name = columnHeader.name;
+
+        context._referencedColumns.Add(column->_slotIndex, column->ordinalPosition, column->returnType);
 
         return Errors::ValidationStatus::Ok();
     }
 
     Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression *column,
         const StatementValidationScope& statementValidationScope
     ){
         Headers::ColumnHeader columnHeader;
         bool columnExistsOnStatement = false;
 
-        for (Int slotIndex = 0;slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
+        for (Int slotIndex = 0; slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
             const auto& columns = statementValidationScope._tableColumnsArray[slotIndex];
             const auto columnAliasToLower = column->alias.ToLower();
             if (!columns.TryGetValue(columnAliasToLower, columnHeader))
@@ -2344,6 +2357,8 @@ namespace QueryPipeline::Statements {
 
         if (column->name.Empty())
             column->name = columnHeader.name;
+
+        context._referencedColumns.Add(column->_slotIndex, column->ordinalPosition, column->returnType);
 
         return Errors::ValidationStatus::Ok();
     }
@@ -2405,7 +2420,7 @@ namespace QueryPipeline::Statements {
     }
 
     Errors::ValidationStatus CompileWildcard(
-        const QueryContext& context,
+        QueryContext& context,
         const Expressions::ColumnExpression* column,
         const StatementValidationScope& validationScope,
         SelectStatement* statement
@@ -2467,14 +2482,14 @@ namespace QueryPipeline::Statements {
     }
 
     void AssignColumnsFromWildCardExpression(
-        const QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader> &columnsDict,
+        QueryContext& context,
+        const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict,
         const DataTypes::String& tableAlias,
         const StatementValidationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,
         const UnsignedSmallInt slotIndex
     ) {
-        results.Insert(nullptr, *statementValidationScope._indexPos, columnsDict.size());
+        results.Insert(nullptr, *statementValidationScope._indexPos, static_cast<Int>(columnsDict.size()));
         for (const auto &header: columnsDict | std::views::values) {
             auto* columnExpression = context._compileContext.Allocate<Expressions::ColumnExpression>(
                 header.name,
@@ -2486,11 +2501,13 @@ namespace QueryPipeline::Statements {
             columnExpression->columnId = header.id;
             columnExpression->tableId = header.tableId;
             columnExpression->ordinalPosition = header.ordinalPosition;
-            columnExpression->returnType = static_cast<DataType>(header.dataType);
+            const auto dataType = static_cast<DataType>(header.dataType);
+            columnExpression->returnType = dataType;
 
             const auto insertPos = *statementValidationScope._indexPos + header.ordinalPosition;
 
             results[insertPos] = columnExpression;
+            context._referencedColumns.Add(slotIndex, header.ordinalPosition, dataType);
         }
     }
 

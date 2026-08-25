@@ -78,6 +78,12 @@ namespace Constants{
     };
 
     static constexpr size_t MAX_QUERY_JOINS = 10;
+    static constexpr size_t MAX_TABLE_COLUMNS = 128;
+
+    static_assert(
+     MAX_TABLE_COLUMNS <= std::numeric_limits<column_index_t>::max(),
+     "MAX_TABLE_COLUMNS must fit in column_index_t"
+ );
 
     static constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
     static constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);

@@ -8,6 +8,7 @@
 #include "DatabaseConstants.h"
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "CompileContext.h"
+#include "ReferencedColumns.h"
 #include "../../Server/include/SessionManager.h"
 
 namespace QueryPipeline{
@@ -27,6 +28,7 @@ namespace QueryPipeline{
     };
 
     struct QueryContext {
+        ReferencedColumns _referencedColumns;
         CompileValidationScope _scope;
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;

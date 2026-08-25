@@ -119,6 +119,8 @@ namespace QueryPipeline::Messages{
 
     static constexpr DataTypes::StringView PRIMARY_KEY_AND_CONSTRAINT_DECLARED = "Cannot have a primary key and a constraint declared";
 
+    static constexpr DataTypes::StringView MAX_NUMBER_OF_COLUMNS_EXCEEDED = "Column count cannot exceed 128";
+
     static constexpr DataTypes::StringView JOIN_WITH_NO_BASE_TABLE_SELECT = "Cannot join with no base table selected";
 
     static constexpr DataTypes::StringView DUPLICATE_RESULT_COLUMN_NAMES = "Duplicate column names in result set. Consider using aliases to disambiguate";

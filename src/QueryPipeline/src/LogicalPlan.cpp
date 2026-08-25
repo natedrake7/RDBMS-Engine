@@ -26,40 +26,38 @@ namespace QueryPipeline {
 
     LogicalMaterialize::LogicalMaterialize(
         LogicalPlan* child,
-        const table_id_t tableId,
         const UnsignedSmallInt slotIndex
-    ):  child(child), tableId(tableId),
-        _slotIndex(slotIndex){}
+    ):  child(child), _slotIndex(slotIndex){}
 
     PhysicalPlan::PlanNode* LogicalMaterialize::ToPhysical(QueryContext& context){
-        const auto headers = CoreEngine::SystemCatalog::Get().SelectColumns(context._compileContext.GetAllocator(), this->tableId);
-
         auto* allocator = context._compileContext.GetAllocator();
+
+        const auto numOfColumns = context._referencedColumns.GetSlotCount(this->_slotIndex);
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> materializationInfo(
             allocator,
-            headers.Size()
+            numOfColumns
         );
 
-        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, headers.Size());
-
+        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, numOfColumns);
         auto* childPhysical = this->child->ToPhysical(context);
 
-        for (const auto& header : headers){
-            const auto dataType = static_cast<DataType>(header.dataType);
+        context._referencedColumns.ForEachColumn(this->_slotIndex, [&](
+            const column_index_t ordinalPosition,
+            const DataType dataType
+        ){
             outputSchema->_columns.Push(
-                CoreEngine::SchemaColumn::Base(this->_slotIndex, header.ordinalPosition, dataType)
+                CoreEngine::SchemaColumn::Base(this->_slotIndex, ordinalPosition, dataType)
             );
 
             materializationInfo.Push(
             CoreEngine::StorageTypes::ColumnMaterializationInfo(
                     CoreEngine::VectorizedKernels::JumpTables::GetMaterializationFunction(dataType),
-                    header.ordinalPosition,
+                    ordinalPosition,
                     dataType
                 )
             );
-        }
-
+        });
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(
             materializationInfo, childPhysical,

@@ -283,15 +283,15 @@ namespace QueryPipeline::Statements {
         CreateTableStatement();
 
         [[nodiscard]] Errors::ValidationStatus CompileSchema(const QueryContext& context) const;
-        Errors::ValidationStatus CompileColumnExpression(
+        [[nodiscard]] Errors::ValidationStatus CompileColumnExpression(
             const QueryContext& context,
             NewColumn*& column,
             Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
             bool& primaryKeyFound,
             column_index_t& index
         );
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        LogicalPlan* ToLogical(QueryContext& context) override;
+        [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
     };
 
@@ -536,7 +536,7 @@ namespace QueryPipeline::Statements {
     );
 
     static Errors::ValidationStatus CompileColumnExpression(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression* column,
         const StatementValidationScope& statementValidationScope
     );
@@ -557,7 +557,7 @@ namespace QueryPipeline::Statements {
     );
 
     static Errors::ValidationStatus CompileJsonExpression(
-        const QueryContext& context,
+        QueryContext& context,
         const Expressions::JsonExpression* jsonExpr,
         const StatementValidationScope& statementValidationScope
     );
@@ -581,13 +581,13 @@ namespace QueryPipeline::Statements {
     );
 
     static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression* column,
         const StatementValidationScope& statementValidationScope
     );
 
     static Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
-        const QueryContext& context,
+        QueryContext& context,
         Expressions::ColumnExpression* column,
         const StatementValidationScope& statementValidationScope
     );
@@ -603,14 +603,14 @@ namespace QueryPipeline::Statements {
     );
 
     static Errors::ValidationStatus CompileWildcard(
-        const QueryContext& context,
+        QueryContext& context,
         const Expressions::ColumnExpression* column,
         const StatementValidationScope& validationScope,
         SelectStatement* statement
     );
 
     static void AssignColumnsFromWildCardExpression(
-        const QueryContext& context,
+        QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict,
         const DataTypes::String& tableAlias,
         const StatementValidationScope& statementValidationScope,

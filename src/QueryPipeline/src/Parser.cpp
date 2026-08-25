@@ -17,7 +17,7 @@
 
 namespace QueryPipeline{
     QueryContext::QueryContext()
-        : status(this->_compileContext.GetAllocator()), _session(nullptr), _virtualId(0),
+        : _referencedColumns(), status(this->_compileContext.GetAllocator()), _session(nullptr), _virtualId(0),
           hasMore(false)
     {
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
@@ -43,22 +43,24 @@ namespace QueryPipeline{
      }
 
      QueryContext::QueryContext(Errors::Error& error)
-         : status(std::move(error)), _session(nullptr),
+         : _referencedColumns(), status(std::move(error)), _session(nullptr),
            _virtualId(0), hasMore(false)
      {
          this->cursors.SetAllocator(this->_compileContext.GetAllocator());
      }
 
     QueryContext::QueryContext(QueryContext&& other) noexcept
-        : _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
-          cursors(std::move(other.cursors)), status(std::move(other.status)), _session(nullptr),
-          _virtualId(other._virtualId), hasMore(other.hasMore)
+        :   _referencedColumns(other._referencedColumns),
+            _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
+            cursors(std::move(other.cursors)), status(std::move(other.status)), _session(nullptr),
+            _virtualId(other._virtualId), hasMore(other.hasMore)
     {}
 
     QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
         if (this == &other)
             return *this;
 
+        this->_referencedColumns = other._referencedColumns;
         this->status = other.status;
         this->hasMore = other.hasMore;
         this->_scope = std::move(other._scope);

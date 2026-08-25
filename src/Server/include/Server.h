@@ -88,11 +88,6 @@ namespace Network {
     )const;
     [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 
-    //Cursor Functions
-    // QueryPipeline::Cursor* CreateCursor(QueryPipeline::PhysicalPlan::PhysicalOperator* plan);
-    // QueryPipeline::Cursor* GetCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
-    // void DeleteCursor(const QueryPipeline::PipelineConstants::cursor_id_t& cursorId)const;
-
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,
         Int databaseId,

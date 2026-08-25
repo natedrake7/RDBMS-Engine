@@ -18,13 +18,11 @@ namespace QueryPipeline {
 
     class LogicalMaterialize : public LogicalPlan{
         LogicalPlan* child;
-        table_id_t tableId;
         UnsignedSmallInt _slotIndex;
 
     public:
         LogicalMaterialize(
             LogicalPlan* child,
-            table_id_t tableId,
             UnsignedSmallInt slotIndex
         );
         [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
