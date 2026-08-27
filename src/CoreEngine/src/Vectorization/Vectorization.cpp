@@ -158,6 +158,6 @@ namespace CoreEngine{
     Int DataChunk::RowPhysicalIndex(const Int rowLogicalIndex) const{
         return this->_selection == nullptr
             ? rowLogicalIndex
-            : this->_selection[rowLogicalIndex];
+            : static_cast<Int>(this->_selection[rowLogicalIndex]);
     }
 }

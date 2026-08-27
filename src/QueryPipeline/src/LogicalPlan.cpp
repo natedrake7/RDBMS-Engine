@@ -30,8 +30,7 @@ namespace QueryPipeline {
     ):  child(child), _slotIndex(slotIndex){}
 
     PhysicalPlan::PlanNode* LogicalMaterialize::ToPhysical(QueryContext& context){
-        auto* allocator = context._compileContext.GetAllocator();
-
+        const auto* allocator = context._compileContext.GetAllocator();
         const auto numOfColumns = context._referencedColumns.GetSlotCount(this->_slotIndex);
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> materializationInfo(
@@ -39,17 +38,12 @@ namespace QueryPipeline {
             numOfColumns
         );
 
-        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, numOfColumns);
         auto* childPhysical = this->child->ToPhysical(context);
 
         context._referencedColumns.ForEachColumn(this->_slotIndex, [&](
             const column_index_t ordinalPosition,
             const DataType dataType
         ){
-            outputSchema->_columns.Push(
-                CoreEngine::SchemaColumn::Base(this->_slotIndex, ordinalPosition, dataType)
-            );
-
             materializationInfo.Push(
             CoreEngine::StorageTypes::ColumnMaterializationInfo(
                     CoreEngine::VectorizedKernels::JumpTables::GetMaterializationFunction(dataType),
@@ -61,7 +55,7 @@ namespace QueryPipeline {
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(
             materializationInfo, childPhysical,
-            outputSchema, this->_slotIndex
+            childPhysical->GetSchema(), this->_slotIndex
         );
     }
 
@@ -162,17 +156,54 @@ namespace QueryPipeline {
         : table(table), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalTableScan::ToPhysical(QueryContext& context){
-        auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(context._compileContext.GetAllocator(), this->table->_tableId);
+        const auto* allocator = context._compileContext.GetAllocator();
+
+        const auto slotIndex = this->table->_slotIndex;
+        const auto numOfColumns = context._referencedColumns.GetSlotCount(this->table->_slotIndex);
+
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> materializationInfo(
+            allocator,
+            numOfColumns
+        );
+
+        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, numOfColumns);
+
+        context._referencedColumns.ForEachColumn(slotIndex, [&](
+            const column_index_t ordinalPosition,
+            const DataType dataType
+        ){
+            outputSchema->_columns.Push(
+                CoreEngine::SchemaColumn::Base(slotIndex, ordinalPosition, dataType)
+            );
+
+            materializationInfo.Push(
+            CoreEngine::StorageTypes::FilterColumnInfo(
+                    CoreEngine::VectorizedKernels::JumpTables::GetPageMaterializationFunction(dataType),
+                    ordinalPosition,
+                    dataType
+                )
+            );
+        });
+
+        if (this->HasPredicate())
+            Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
+
+        auto indexes = CoreEngine::SystemCatalog::Get().SelectIndexes(allocator, this->table->_tableId);
 
         // If no indexes are available, use heap scan
-        if (indexes.Empty())
+        if (indexes.Empty()){
+            Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
             return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
+        }
 
         // If no filter expression, choose the best index for scanning
         const auto& firstIndex = indexes[0];
         if (!this->HasPredicate()) {
             if (firstIndex.isClustered)
-                return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, true);
+                return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
+                    this->table, outputSchema,
+                    materializationInfo, true
+                );
 
             // Otherwise use heap scan
             return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
@@ -182,22 +213,29 @@ namespace QueryPipeline {
 
         // No table stats yet, or small table
         if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
-            Expressions::BindExpressionRowKernel(this->expression);
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, this->expression, firstIndex.isClustered);
+            Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
+                this->table, outputSchema, materializationInfo,
+                this->expression, firstIndex.isClustered
+            );
         }
 
         Optimizer optimizer(context);
         // else use optimizer to choose index seek/scan
         auto result = optimizer.PerformIndexAnalysis(indexes, this->expression, tableStats);
         
-        Expressions::BindExpressionRowKernel(result.remainingPredicate);
+        Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);
 
         // scan the first index
         if (!result.canSeek)
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(this->table, result.remainingPredicate, indexes[0].isClustered);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
+                this->table, outputSchema,
+                materializationInfo, result.remainingPredicate,
+                indexes[0].isClustered
+            );
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeek>(this->table, result.start, result.remainingPredicate);
     }

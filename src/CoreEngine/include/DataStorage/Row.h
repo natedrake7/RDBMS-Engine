@@ -32,7 +32,7 @@ namespace CoreEngine::StorageTypes{
         RID(const RID& other) = default;
 
         void SetSource(Source source);
-        Source GetSource() const;
+        [[nodiscard]] Source GetSource() const;
     };
 
     struct RowHeader{

@@ -255,15 +255,18 @@ namespace CoreEngine::StorageTypes{
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
-                SelectionVector* sv,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
                 IndexState& state,
-                const Expressions::Expression* expression
+                const Expressions::Expression* expression,
+                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+                UnsignedSmallInt slotIndex
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
-                const Expressions::Expression* expression
+                const Expressions::Expression* expression,
+                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+                const Storage::FileKey* fileKeys
             );
             void SystemClusteredIndexScan(
                 const ::Memory::IAllocator* allocator,
@@ -394,31 +397,22 @@ namespace CoreEngine::StorageTypes{
             QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
             template<typename T>
-            static void MaterializeColumn(
-                const Table* table,
-                const ExecutionContext& context,
-                const SelectionVector* sv,
-                DataVector* __restrict__ _vector,
-                UnsignedSmallInt slotIndex,
-                column_index_t ordinalPosition
-            );
-
-            template<typename T>
             static void MaterializeColumnFromPage(
+                const Storage::FileKey* fileKeys,
                 const ::Memory::IAllocator* allocator,
-                const Pages::PageView* page,
+                const DataStructures::PolymorphicArray<RID>& rids,
                 DataVector* __restrict__ _vector,
                 column_index_t ordinalPosition
             );
 
             template<typename T>
-            void MaterializeColumn(
+            static void MaterializeColumn(
                 const ExecutionContext& context,
                 const SelectionVector* sv,
                 DataVector* __restrict__ _vector,
                 UnsignedSmallInt slotIndex,
                 column_index_t ordinalPosition
-            )const;
+            );
         /** @} End of: Materialization Functions*/
 
         /**

@@ -34,8 +34,11 @@ namespace MultiThreading {
 }
 
 namespace CoreEngine{
+    class VectorizedPushedDownFilter;
+
     namespace StorageTypes
     {
+        struct FilterColumnInfo;
         class ExtentReservation;
     }
 
@@ -273,7 +276,7 @@ namespace Indexing{
             const CoreEngine::ExecutionContext& context,
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
             CoreEngine::IndexState& state,
-            const Expressions::Expression* expression
+            CoreEngine::VectorizedPushedDownFilter& filter
         )const;
 
         void Scan(

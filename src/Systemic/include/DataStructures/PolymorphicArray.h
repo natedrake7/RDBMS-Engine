@@ -111,6 +111,12 @@ namespace DataStructures{
 
         void Clear() { this->_size = 0; }
 
+        void SetNewSize(const Int newSize){
+            if (newSize > this->_capacity)
+                this->Reserve(newSize);
+            this->_size = newSize;
+        }
+
         void Push(T&& value){
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;

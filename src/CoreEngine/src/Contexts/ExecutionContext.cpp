@@ -1,5 +1,6 @@
 ﻿#include "../../include/Contexts/ExecutionContext.h"
 #include "../../include/DataStorage/Row.h"
+#include "SystemDatabases/VersionDatabase.h"
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
@@ -78,20 +79,23 @@ namespace CoreEngine{
         return this->schema.tables[index];
     }
 
-    const Storage::FileKey* ExecutionContext::GetFileKeys(const UnsignedSmallInt index) const{
-        return this->schema.fileKeys[index];
+    DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> ExecutionContext::GetFileKeys(const UnsignedSmallInt index) const{
+        DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> fileKeys;
+        fileKeys[StorageTypes::RID::Table] = this->schema.fileKeys[index];
+        fileKeys[StorageTypes::RID::Version] = VersionDatabase::Get().GetDataFileKey();
+
+        return fileKeys;
     }
 
     Storage::FileKey ExecutionContext::GetFileKey(const UnsignedSmallInt slotIndex, const UnsignedSmallInt index) const{
-        return this->schema.fileKeys[slotIndex][index];
+        return this->schema.fileKeys[slotIndex];
     }
 
     void ExecutionContext::SetFileKey(
         const Storage::FileKey fileKey,
-        const StorageTypes::RID::Source storageType,
         const UnsignedSmallInt slotIndex
     ){
-        this->schema.fileKeys[slotIndex][static_cast<Int>(storageType)] = fileKey;
+        this->schema.fileKeys[slotIndex] = fileKey;
     }
 
     void ExecutionContext::SetScanHandle(const StorageTypes::RID* rids, const UnsignedInt size, const UnsignedSmallInt slotIndex){

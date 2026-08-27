@@ -7,6 +7,7 @@
 #include "../../../include/BufferPool/StorageManager.h"
 #include "Contexts/ExecutionContext.h"
 #include "Evaluators/Expression.h"
+#include "Evaluators/VectorizedPushedDownFilter.h"
 #include "Memory/PersistentAllocator.h"
 
 namespace CoreEngine::StorageTypes {
@@ -152,10 +153,11 @@ namespace CoreEngine::StorageTypes {
 
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
-        SelectionVector* sv,
         DataStructures::PolymorphicArray<RID> *selectedRows,
         IndexState& state,
-        const Expressions::Expression* expression
+        const Expressions::Expression* expression,
+        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+        const UnsignedSmallInt slotIndex
     ){
         if (this->IsEmpty())
             return;
@@ -163,7 +165,8 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            tree->Scan(executionContext, selectedRows, state, expression);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            tree->Scan(executionContext, selectedRows, state, filter);
             return;
         }
 
@@ -173,9 +176,11 @@ namespace CoreEngine::StorageTypes {
     void Table::ClusteredIndexScan(
         const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<RID> *selectedRows,
-        const Expressions::Expression *expression
+        const Expressions::Expression *expression,
+        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+        const Storage::FileKey* fileKeys
     ){
-        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
+        if (this->IsEmpty())
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();

@@ -87,5 +87,7 @@ namespace CoreEngine{
                 extent_id_t startingExtentId = 0
             )const;
             [[nodiscard]] bool HasPendingVersions()const;
+
+            [[nodiscard]] Storage::FileKey GetDataFileKey() const;
     };
 }

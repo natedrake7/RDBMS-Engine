@@ -11,7 +11,6 @@ namespace CoreEngine::StorageTypes{
     class Table;
 
     using TableMaterializationFunction = void(*)(
-        const Table*,
         const ExecutionContext&,
         const SelectionVector*,
         DataVector*,

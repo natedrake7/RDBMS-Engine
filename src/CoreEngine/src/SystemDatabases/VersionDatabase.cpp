@@ -382,4 +382,8 @@ namespace CoreEngine {
     bool VersionDatabase::HasPendingVersions() const{
         return this->numberOfPendingVersions.load(std::memory_order_relaxed) > VersionDatabase::PENDING_VERSIONS_THRESHOLD;
     }
+
+    Storage::FileKey VersionDatabase::GetDataFileKey() const{
+        return this->dataFileKey;
+    }
 }

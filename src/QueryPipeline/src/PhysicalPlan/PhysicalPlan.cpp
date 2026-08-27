@@ -17,6 +17,7 @@
 #include "../../../CoreEngine/include/BufferPool/StorageManager.h"
 #include "../../../CoreEngine/include/Contexts/OutputSchema.h"
 #include "../../../CoreEngine/include/DataStorage/ColumnMaterializationInfo.h"
+#include "Evaluators/VectorizedPushedDownFilter.h"
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
@@ -156,7 +157,6 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalMaterialize::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        const auto* table = context.GetTable(this->_slotIndex);
         const auto* allocator = context.GetAllocator();
 
         const auto columnsSize = this->_materializationInfo.Size();
@@ -168,7 +168,7 @@ namespace QueryPipeline::PhysicalPlan {
 
             auto* vector = CoreEngine::DataVector::FlatVector(allocator, info._type,  rowCount);
             // Read from the table ordinal, write to the output position: with pruning these differ.
-            info._function(table, context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
+            info._function(context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
             result.dataChunk.SetColumn(vector, index);
         }
 
@@ -555,7 +555,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -566,38 +566,51 @@ namespace QueryPipeline::PhysicalPlan {
         this->state._lastRID = *rid;
     }
 
-    PhysicalIndexScan::PhysicalIndexScan(Statements::DataSource* table, const bool isClustered)
-        : table(table), expression(nullptr), isClustered(isClustered) {}
+    PhysicalIndexScan::PhysicalIndexScan(
+        Statements::DataSource* table,
+        const CoreEngine::OutputSchema* schema,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
+        const bool isClustered
+    ):  PlanNode(schema), filterColumns(std::move(filterColumns)),
+        table(table), expression(nullptr), isClustered(isClustered) {}
 
     PhysicalIndexScan::PhysicalIndexScan(
         Statements::DataSource *table,
+        const CoreEngine::OutputSchema* schema,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
         Expressions::Expression *expression,
         const bool isClustered
-    ): table(table), expression(expression), isClustered(isClustered) {}
+    ):  PlanNode(schema), filterColumns(std::move(filterColumns)),
+        table(table), expression(expression), isClustered(isClustered) {}
 
     ExecutionResult PhysicalIndexScan::Execute(CoreEngine::ExecutionContext& context){
         ExecutionResult result(context);
+
+        const auto slotIndex = this->table->_slotIndex;
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
         tablePtr->GetConstantColumns(&result.columns);
+        context.SetFileKey(tablePtr->GetDataFileKey(), slotIndex);
 
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-        if (this->isClustered)
-            tablePtr->ClusteredIndexScan(context, nullptr, &rows, this->state, this->expression);
-        else
-            tablePtr->NonClusteredIndexScan(context, &rows, 0, this->state, this->expression);
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rids(context.GetAllocator(), context.GetBatchSize());
+
+        if (this->isClustered){
+            tablePtr->ClusteredIndexScan(context, &rids, this->state, this->expression, this->filterColumns, slotIndex);
+        }
+        else{
+            tablePtr->NonClusteredIndexScan(context, &rids, 0, this->state, this->expression);
+        }
 
         result.canFetchMore = this->state.canFetchMore;
         if (result.canFetchMore == false)
             this->state.Reset();
 
-        context.SetTable(tablePtr, this->table->_slotIndex);
-        context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
+        context.SetTable(tablePtr, slotIndex);
+        context.SetScanHandle(rids.Data(), rids.Size(), slotIndex);
 
-        result.selectionVector->selectedRidsCount = rows.Size();
+        result.selectionVector->selectedRidsCount = rids.Size();
         result.selectionVector->isIdentity = true;
         return result;
     }
@@ -628,7 +641,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -658,7 +671,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), CoreEngine::StorageTypes::RID::Table, this->table->_slotIndex);
+        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;

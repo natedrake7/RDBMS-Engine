@@ -1,5 +1,6 @@
 ﻿#include "../../../../include/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
 #include "../../../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
+#include "DataStorage/FilterColumnInfo.h"
 #include "DataStorage/Table.h"
 #include "Evaluators/Kernels/Vectorized/Vectorized.Binary.h"
 
@@ -103,6 +104,15 @@ namespace CoreEngine::VectorizedKernels{
         }
 
         template <typename... Ts>
+        constexpr auto MakePageMaterializerTable(){
+            DataStructures::StaticArray<StorageTypes::PageMaterializationFunction, DATATYPE_COUNT> table{};
+            ((table[static_cast<size_t>(DataTypes::DataTypeOf<Ts>())] =
+                  &StorageTypes::Table::MaterializeColumnFromPage<Ts>
+            ), ...);
+            return table;
+        }
+
+        template <typename... Ts>
         constexpr auto MakeConstantKernelTable(){
             DataStructures::StaticArray<Expressions::VectorizedKernelFunction, DATATYPE_COUNT> table{};  // all nullptr
             ((table[static_cast<size_t>(DataTypes::DataTypeOf<Ts>())] =
@@ -142,6 +152,12 @@ namespace CoreEngine::VectorizedKernels{
             DataTypes::Guid, DataTypes::JsonBinary
         >();
 
+        inline constexpr auto PAGE_MATERIALIZERS = MakePageMaterializerTable<
+            bool, TinyInt, SmallInt, Int, BigInt,
+            DataTypes::Decimal, DataTypes::StringValue, DataTypes::DateTime,
+            DataTypes::Guid, DataTypes::JsonBinary
+        >();
+
         inline constexpr auto CONSTANT_KERNELS = MakeConstantKernelTable<
             bool, TinyInt, SmallInt, Int, BigInt,
             DataTypes::Decimal, DataTypes::StringValue, DataTypes::DateTime,
@@ -159,6 +175,10 @@ namespace CoreEngine::VectorizedKernels{
         inline constexpr auto LOGICAL_KERNELS = MakeLogicalKernelTable();
 
         inline constexpr auto CAST_KERNELS = MakeCastKernelTable();
+    }
+
+    StorageTypes::PageMaterializationFunction JumpTables::GetPageMaterializationFunction(DataType type){
+        return PAGE_MATERIALIZERS[static_cast<Int>(type)];
     }
 
     StorageTypes::TableMaterializationFunction JumpTables::GetMaterializationFunction(DataType type){

@@ -74,7 +74,7 @@ namespace CoreEngine {
 
     struct ExecutionSchema{
         const StorageTypes::Table* tables[Constants::MAX_QUERY_JOINS];
-        Storage::FileKey fileKeys[Constants::MAX_QUERY_JOINS][StorageTypes::RID::Source::Count];
+        Storage::FileKey fileKeys[Constants::MAX_QUERY_JOINS];
         UnsignedInt tableCount;
 
         ExecutionSchema()
@@ -128,12 +128,11 @@ namespace CoreEngine {
 
             void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
             const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;
-            const Storage::FileKey* GetFileKeys(UnsignedSmallInt index) const;
+            DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> GetFileKeys(UnsignedSmallInt index) const;
             Storage::FileKey GetFileKey(UnsignedSmallInt slotIndex, UnsignedSmallInt index) const;
 
             void SetFileKey(
                 Storage::FileKey fileKey,
-                StorageTypes::RID::Source storageType,
                 UnsignedSmallInt slotIndex
             );
 

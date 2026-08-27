@@ -255,13 +255,25 @@ namespace QueryPipeline::PhysicalPlan {
     };
 
     class PhysicalIndexScan final : public PlanNode {
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns;
         Statements::DataSource* table;
         Expressions::Expression* expression;
         CoreEngine::IndexState state;
         bool isClustered;
     public:
-        explicit PhysicalIndexScan(Statements::DataSource* table, bool isClustered = false);
-        explicit PhysicalIndexScan(Statements::DataSource* table, Expressions::Expression* expression, bool isClustered = false);
+        explicit PhysicalIndexScan(
+            Statements::DataSource* table,
+            const CoreEngine::OutputSchema* schema,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
+            bool isClustered = false
+        );
+        explicit PhysicalIndexScan(
+            Statements::DataSource* table,
+            const CoreEngine::OutputSchema* schema,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
+            Expressions::Expression* expression,
+            bool isClustered = false
+        );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
