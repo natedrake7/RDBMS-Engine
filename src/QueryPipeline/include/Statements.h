@@ -265,7 +265,7 @@ namespace QueryPipeline::Statements {
 
         JoinStatement();
         [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        [[nodiscard]] Errors::ValidationStatus Compile(QueryContext& context, Int databaseId);
+        [[nodiscard]] Errors::ValidationStatus Compile(const QueryContext& context, Int databaseId, UnsignedSmallInt& slotCount);
 
         [[nodiscard]] bool IsRightJoin() const;
         [[nodiscard]] bool IsInnerJoin() const;

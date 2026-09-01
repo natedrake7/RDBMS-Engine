@@ -193,7 +193,7 @@ namespace QueryPipeline {
         // If no indexes are available, use heap scan
         if (indexes.Empty()){
             Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, outputSchema, this->expression);
         }
 
         // If no filter expression, choose the best index for scanning
@@ -206,7 +206,7 @@ namespace QueryPipeline {
                 );
 
             // Otherwise use heap scan
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, this->expression);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalTableScan>(this->table, outputSchema, this->expression);
         }
 
         const auto tableStats = CoreEngine::StatisticsManager::Get().GetTableStatistics(this->table->_tableId);
@@ -228,7 +228,7 @@ namespace QueryPipeline {
 
         if (result.hasRange)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(
-                this->table, result.start, result.end,
+                this->table, outputSchema, result.start, result.end,
                 filterColumnsInfo, result.remainingPredicate
             );
 
@@ -241,113 +241,133 @@ namespace QueryPipeline {
             );
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeek>(
-            this->table, result.start,
+            this->table, outputSchema, result.start,
             filterColumnsInfo, result.remainingPredicate
         );
     }
 
-    PhysicalPlan::PlanNode* LogicalJoin::CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
+    PhysicalPlan::PlanNode* LogicalJoin::CreateInnerJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    ){
         switch (analysis.algorithm) {
             case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
             case PipelineConstants::JoinAlgorithm::HashJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalNestedLoopInnerJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate
                 );
             case PipelineConstants::JoinAlgorithm::MergeJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalMergeInnerJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
             case PipelineConstants::JoinAlgorithm::CrossJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossInnerJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context)
+                    leftPlan,
+                    rightPlan
                 );
         }
 
         throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
     }
 
-    PhysicalPlan::PlanNode* LogicalJoin::CreateLeftJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
+    PhysicalPlan::PlanNode* LogicalJoin::CreateLeftJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    ){
         switch (analysis.algorithm) {
             case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
             case PipelineConstants::JoinAlgorithm::HashJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalNestedLoopLeftJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate
                 );
             case PipelineConstants::JoinAlgorithm::MergeJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalMergeLeftJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
             case PipelineConstants::JoinAlgorithm::CrossJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossLeftJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context)
+                    leftPlan,
+                    rightPlan
                 );
         }
 
         throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
     }
 
-    PhysicalPlan::PlanNode* LogicalJoin::CreateRightJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
+    PhysicalPlan::PlanNode* LogicalJoin::CreateRightJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    ){
         switch (analysis.algorithm) {
             case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
             case PipelineConstants::JoinAlgorithm::HashJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalNestedLoopLeftJoin>(
-                    right->ToPhysical(context),
-                    left->ToPhysical(context),
+                    rightPlan,
+                    leftPlan,
                     analysis.remainingPredicate
                 );
             case PipelineConstants::JoinAlgorithm::MergeJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalMergeLeftJoin>(
-                    right->ToPhysical(context),
-                    left->ToPhysical(context),
+                    rightPlan,
+                    leftPlan,
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
             case PipelineConstants::JoinAlgorithm::CrossJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossLeftJoin>(
-                    right->ToPhysical(context),
-                    left->ToPhysical(context)
+                    rightPlan,
+                    leftPlan
                 );
         }
 
         throw std::runtime_error("LogicalJoin::ToPhysical(CompileResult& context): Unknown Join Algorithm");
     }
 
-    PhysicalPlan::PlanNode* LogicalJoin::CreateFullJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{
+    PhysicalPlan::PlanNode* LogicalJoin::CreateFullJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    ){
         switch (analysis.algorithm) {
             case PipelineConstants::JoinAlgorithm::NestedLoopJoin:
             case PipelineConstants::JoinAlgorithm::HashJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalNestedLoopFullJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate
                 );
             case PipelineConstants::JoinAlgorithm::MergeJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalMergeFullJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context),
+                    leftPlan,
+                    rightPlan,
                     analysis.remainingPredicate,
                     analysis.leftKeyColumns,
                     analysis.rightKeyColumns
                 );
             case PipelineConstants::JoinAlgorithm::CrossJoin:
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalCrossFullJoin>(
-                    left->ToPhysical(context),
-                    right->ToPhysical(context)
+                    leftPlan,
+                    rightPlan
                 );
         }
 
@@ -374,17 +394,33 @@ namespace QueryPipeline {
             this->condition
         );
 
-        Expressions::BindExpressionRowKernel(this->condition);
+        auto* leftPhysical = this->left->ToPhysical(context);
+        auto* rightPhysical = this->right->ToPhysical(context);
+
+        const auto* leftSchema = leftPhysical->GetSchema();
+        const auto* rightSchema = rightPhysical->GetSchema();
+
+        const auto schemaSize = leftSchema->_columns.Size() + rightSchema->_columns.Size();
+
+        auto* schema = context._compileContext.GetAllocator()->Allocate<CoreEngine::OutputSchema>(context.GetAllocator(), schemaSize);
+
+        for (const auto& column : leftSchema->_columns)
+            schema->_columns.Push(column);
+
+        for (const auto& column : rightSchema->_columns)
+            schema->_columns.Push(column);
+
+        Expressions::BindAndResolveExpressionKernel(this->condition, schema);
 
         switch (this->type) {
             case JoinType::Inner:
-                return this->CreateInnerJoinPhysicalPlan(context, analysisResult);
+                return this->CreateInnerJoinPhysicalPlan(context, analysisResult, leftPhysical, rightPhysical);
             case JoinType::Left:
-                return this->CreateLeftJoinPhysicalPlan(context, analysisResult);
+                return this->CreateLeftJoinPhysicalPlan(context, analysisResult, leftPhysical, rightPhysical);
             case JoinType::Right:
-                return this->CreateRightJoinPhysicalPlan(context, analysisResult);
+                return this->CreateRightJoinPhysicalPlan(context, analysisResult, leftPhysical, rightPhysical);
             case JoinType::Full:
-                return this->CreateFullJoinPhysicalPlan(context, analysisResult);
+                return this->CreateFullJoinPhysicalPlan(context, analysisResult, leftPhysical, rightPhysical);
             default:
                 throw std::runtime_error("Unknown JoinType");
         }

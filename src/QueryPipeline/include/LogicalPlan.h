@@ -106,10 +106,30 @@ namespace QueryPipeline {
   };
 
   class LogicalJoin final : public LogicalPlan {
-    PhysicalPlan::PlanNode* CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::PlanNode* CreateLeftJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::PlanNode* CreateRightJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
-    PhysicalPlan::PlanNode* CreateFullJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const;
+    static PhysicalPlan::PlanNode* CreateInnerJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    );
+    static PhysicalPlan::PlanNode* CreateLeftJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    );
+    static PhysicalPlan::PlanNode* CreateRightJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    );
+    static PhysicalPlan::PlanNode* CreateFullJoinPhysicalPlan(
+        const QueryContext& context,
+        JoinAlgorithmAnalysisResult& analysis,
+        PhysicalPlan::PlanNode* leftPlan,
+        PhysicalPlan::PlanNode* rightPlan
+    );
 
     public:
       Int leftTableId;

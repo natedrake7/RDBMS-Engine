@@ -115,6 +115,7 @@
 //TODO make identity maybe templated
 //Potential improvement add timestamp to rowHeader and on MVCC use timestamp instead of active transactions
 
+//TODO make aggressive predicate pushdown on scans materialize only needed columns and not all referenced.
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();

@@ -533,8 +533,11 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-    PhysicalTableScan::PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
-        : table(table), expression(expression) {}
+    PhysicalTableScan::PhysicalTableScan(
+        Statements::DataSource* table,
+        const CoreEngine::OutputSchema* schema,
+        Expressions::Expression* expression
+    ): PlanNode(schema), table(table), expression(expression) {}
 
     ExecutionResult PhysicalTableScan::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
@@ -622,10 +625,12 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalIndexSeek::PhysicalIndexSeek(
         Statements::DataSource* table,
+        const CoreEngine::OutputSchema* schema,
         DataTypes::Indexing::Key& key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
         Expressions::Expression* expression
-    ) : filterColumns(std::move(filterColumns)), table(table), expression(expression), key(std::move(key)){}
+    ):  PlanNode(schema), filterColumns(std::move(filterColumns)),
+        table(table), expression(expression), key(std::move(key)){}
 
     ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
@@ -651,11 +656,13 @@ namespace QueryPipeline::PhysicalPlan {
 
     PhysicalIndexSeekRange::PhysicalIndexSeekRange(
         Statements::DataSource* table,
+        const CoreEngine::OutputSchema* schema,
         DataTypes::Indexing::Key& minKey,
         DataTypes::Indexing::Key& maxKey,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns,
         Expressions::Expression* expression
-    ):  filterColumns(std::move(filterColumns)), table(table), expression(expression),
+    ):  PlanNode(schema), filterColumns(std::move(filterColumns)),
+        table(table), expression(expression),
         minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
 
     ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){

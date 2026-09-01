@@ -249,7 +249,11 @@ namespace QueryPipeline::PhysicalPlan {
         Expressions::Expression* expression;
         CoreEngine::ScanState state;
     public:
-        explicit PhysicalTableScan(Statements::DataSource* table, Expressions::Expression* expression);
+        explicit PhysicalTableScan(
+            Statements::DataSource* table,
+            const CoreEngine::OutputSchema* schema,
+            Expressions::Expression* expression
+        );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
         void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
@@ -286,6 +290,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalIndexSeek(
             Statements::DataSource* table,
+            const CoreEngine::OutputSchema* schema,
             DataTypes::Indexing::Key& key,
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
             Expressions::Expression* expression
@@ -302,6 +307,7 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalIndexSeekRange(
             Statements::DataSource* table,
+            const CoreEngine::OutputSchema* schema,
             DataTypes::Indexing::Key& minKey,
             DataTypes::Indexing::Key& maxKey,
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns,

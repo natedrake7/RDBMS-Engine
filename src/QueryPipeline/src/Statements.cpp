@@ -198,7 +198,7 @@ namespace QueryPipeline::Statements {
         return Errors::ValidationStatus(context.GetAllocator());
     }
 
-    Errors::ValidationStatus JoinStatement::Compile(QueryContext& context, const Int databaseId){
+    Errors::ValidationStatus JoinStatement::Compile(const QueryContext& context, const Int databaseId, UnsignedSmallInt& slotCount){
         this->databaseId = databaseId;
         if (this->table == nullptr)
             return Errors::ValidationStatus::Error(
@@ -206,7 +206,7 @@ namespace QueryPipeline::Statements {
                 context.GetAllocator()
             );
 
-        return this->table->Compile(context, this->databaseId, this->_slotCount);
+        return this->table->Compile(context, this->databaseId, slotCount);
     }
 
     bool JoinStatement::IsRightJoin() const {
@@ -830,14 +830,15 @@ namespace QueryPipeline::Statements {
         }
 
         //resolve expressions here since no column is to be used
-        if (this->table == nullptr) return this->CompileNoTableStatement(context);
+        if (this->table == nullptr)
+            return this->CompileNoTableStatement(context);
 
         auto tableResult = this->table->Compile(context, this->databaseId, this->_slotCount);
         if (!tableResult.IsOk())
             return tableResult;
 
         for (auto* join: this->_joins) {
-            auto joinResult = join->Compile(context, this->databaseId);
+            auto joinResult = join->Compile(context, this->databaseId, this->_slotCount);
             if (!joinResult.IsOk())
                 return joinResult;
         }
@@ -2305,6 +2306,7 @@ namespace QueryPipeline::Statements {
         column->columnId = columnHeader.id;
         column->returnType = static_cast<DataType>(columnHeader.dataType);
         column->ordinalPosition = columnHeader.ordinalPosition;
+        column->tableId = columnHeader.tableId;
 
         if (column->name.Empty())
             column->name = columnHeader.name;

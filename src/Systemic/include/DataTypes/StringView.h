@@ -373,7 +373,7 @@ namespace DataTypes{
 
     struct StringEqualsIgnoreCase {
         bool operator()(const StringValue& lhs, const StringValue& rhs) const{
-            return StringView::Compare<StringComparisonType::Equals>(lhs, rhs);
+            return StringView::Compare<StringComparisonType::EqualsIgnoreCase>(lhs, rhs);
         }
     };
 
