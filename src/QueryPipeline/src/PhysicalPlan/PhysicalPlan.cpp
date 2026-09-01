@@ -623,8 +623,9 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalIndexSeek::PhysicalIndexSeek(
         Statements::DataSource* table,
         DataTypes::Indexing::Key& key,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
         Expressions::Expression* expression
-    ) : table(table), expression(expression), key(std::move(key)) {}
+    ) : filterColumns(std::move(filterColumns)), table(table), expression(expression), key(std::move(key)){}
 
     ExecutionResult PhysicalIndexSeek::Execute(CoreEngine::ExecutionContext& context){
         auto result = ExecutionResult(context);
@@ -637,7 +638,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-        tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression);
+        tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression, this->filterColumns, this->table->_slotIndex);
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
@@ -652,8 +653,9 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DataSource* table,
         DataTypes::Indexing::Key& minKey,
         DataTypes::Indexing::Key& maxKey,
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns,
         Expressions::Expression* expression
-    ):  table(table), expression(expression),
+    ):  filterColumns(std::move(filterColumns)), table(table), expression(expression),
         minKey(std::move(minKey)), maxKey(std::move(maxKey)) {}
 
     ExecutionResult PhysicalIndexSeekRange::Execute(CoreEngine::ExecutionContext& context){
@@ -667,7 +669,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-        tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression);
+        tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression, this->filterColumns, this->table->_slotIndex);
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);

@@ -1026,7 +1026,7 @@ namespace Indexing{
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        const Expressions::Expression* expression
+        CoreEngine::VectorizedPushedDownFilter& filter
     ) const{
         if (this->IsEmpty())
             return;
@@ -1034,25 +1034,22 @@ namespace Indexing{
         auto currentNode = this->SearchKey(minKey);
         const auto& snapshot = context.GetSnapshot();
 
-        Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            &context
-        );
-
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
         CoreEngine::StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, maxKey, startingIndex);
+
+            filter.Start(endingIndex - startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
 
-                evaluationContext._rids = &rid;
-                if (Expressions::RowModeFilter(expression, evaluationContext))
-                    result->Push(rid);
+                filter.AddCandidate(rid);
             }
+
+            filter.Filter(result);
 
             if(!currentNode.HasRightSibling())
                 return;
@@ -1099,7 +1096,7 @@ namespace Indexing{
         const CoreEngine::ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        const Expressions::Expression *expression
+        CoreEngine::VectorizedPushedDownFilter& filter
     ) const {
         if (this->IsEmpty())
             return;
@@ -1120,14 +1117,14 @@ namespace Indexing{
 
             evaluationContext._pages = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
+            filter.Start(endingIndex - startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;
-
-                evaluationContext._rids = &rid;
-                if (Expressions::RowModeFilter(expression, evaluationContext))
-                    result->Push(rid);
+                result->Push(rid);
             }
+
+            filter.Filter(result);
 
             const auto rightSibling = currentNode.RightSibling();
             if(rightSibling == INVALID_PAGE_ID)

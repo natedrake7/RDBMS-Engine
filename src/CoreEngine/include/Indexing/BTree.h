@@ -240,7 +240,7 @@ namespace Indexing{
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            const Expressions::Expression* expression
+            CoreEngine::VectorizedPushedDownFilter& filter
         )const;
 
         void Seek(
@@ -253,7 +253,7 @@ namespace Indexing{
             const CoreEngine::ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            const Expressions::Expression* expression
+            CoreEngine::VectorizedPushedDownFilter& filter
         )const;
         void SystemSeek(
             const DataTypes::Indexing::Key& key,

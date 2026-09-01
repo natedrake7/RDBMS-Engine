@@ -239,13 +239,17 @@ namespace CoreEngine::StorageTypes{
                 DataStructures::PolymorphicArray<RID>* selectedRows,
                 const DataTypes::Indexing::Key& minKey,
                 const DataTypes::Indexing::Key& maxKey,
-                const Expressions::Expression* expression
+                const Expressions::Expression* expression,
+                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+                UnsignedSmallInt slotIndex
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
                 const DataTypes::Indexing::Key& key,
-                const Expressions::Expression* expression
+                const Expressions::Expression* expression,
+                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+                UnsignedSmallInt slotIndex
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,

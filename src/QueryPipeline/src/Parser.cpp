@@ -100,8 +100,8 @@ namespace QueryPipeline{
         auto* logicalPlan = statement->ToLogical(result);
 
         if (logicalPlan == nullptr) {
-            static constexpr DataTypes::StringView errorMsg = "Unexpected error occurred during plan build";
-            result.status = Errors::Error(true, errorMsg, result.GetAllocator());
+            static constexpr DataTypes::StringView ERROR_MESSAGE = "Unexpected error occurred during plan build";
+            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
             return nullptr;
         }
 
@@ -111,8 +111,8 @@ namespace QueryPipeline{
     PhysicalPlan::PlanNode* Parser::BuildExecutionPlan(QueryContext &result, LogicalPlan *logicalPlan) {
         auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
-            static constexpr DataTypes::StringView errorMsg = "Unexpected error occurred during physical plan build";
-            result.status = Errors::Error(true, errorMsg, result.GetAllocator());
+            static constexpr DataTypes::StringView ERROR_MESSAGE = "Unexpected error occurred during physical plan build";
+            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
             return nullptr;
         }
 

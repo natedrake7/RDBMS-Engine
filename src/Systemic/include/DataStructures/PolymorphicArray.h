@@ -126,9 +126,11 @@ namespace DataStructures{
             this->_data[this->_size++] = std::move(value);
         }
 
-        void Push(const T& value){
+        inline void Push(const T& value){
             if (this->_size >= this->_capacity){
-                auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
+                auto newCapacity = (this->_capacity == 0)
+                    ? 1
+                    : this->_capacity * 2;
                 this->Reserve(newCapacity);
             }
 

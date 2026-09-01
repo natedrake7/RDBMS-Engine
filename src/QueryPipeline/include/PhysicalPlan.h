@@ -279,6 +279,7 @@ namespace QueryPipeline::PhysicalPlan {
     };
 
     class PhysicalIndexSeek final : public PlanNode {
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns;
         Statements::DataSource* table;
         Expressions::Expression* expression;
         DataTypes::Indexing::Key key;
@@ -286,12 +287,14 @@ namespace QueryPipeline::PhysicalPlan {
         explicit PhysicalIndexSeek(
             Statements::DataSource* table,
             DataTypes::Indexing::Key& key,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo>& filterColumns,
             Expressions::Expression* expression
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
     class PhysicalIndexSeekRange final : public PlanNode {
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns;
         Statements::DataSource* table;
         Expressions::Expression* expression;
         DataTypes::Indexing::Key minKey;
@@ -301,6 +304,7 @@ namespace QueryPipeline::PhysicalPlan {
             Statements::DataSource* table,
             DataTypes::Indexing::Key& minKey,
             DataTypes::Indexing::Key& maxKey,
+            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumns,
             Expressions::Expression* expression
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;

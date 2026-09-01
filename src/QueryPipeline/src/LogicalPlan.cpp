@@ -161,7 +161,7 @@ namespace QueryPipeline {
         const auto slotIndex = this->table->_slotIndex;
         const auto numOfColumns = context._referencedColumns.GetSlotCount(this->table->_slotIndex);
 
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> materializationInfo(
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumnsInfo(
             allocator,
             numOfColumns
         );
@@ -176,7 +176,7 @@ namespace QueryPipeline {
                 CoreEngine::SchemaColumn::Base(slotIndex, ordinalPosition, dataType)
             );
 
-            materializationInfo.Push(
+            filterColumnsInfo.Push(
             CoreEngine::StorageTypes::FilterColumnInfo(
                     CoreEngine::VectorizedKernels::JumpTables::GetPageMaterializationFunction(dataType),
                     ordinalPosition,
@@ -202,7 +202,7 @@ namespace QueryPipeline {
             if (firstIndex.isClustered)
                 return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
                     this->table, outputSchema,
-                    materializationInfo, true
+                    filterColumnsInfo, true
                 );
 
             // Otherwise use heap scan
@@ -215,7 +215,7 @@ namespace QueryPipeline {
         if (tableStats.tableId == INVALID_TABLE_ID || tableStats.rowCount < PipelineConstants::SMALL_TABLE){
             Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
-                this->table, outputSchema, materializationInfo,
+                this->table, outputSchema, filterColumnsInfo,
                 this->expression, firstIndex.isClustered
             );
         }
@@ -227,17 +227,23 @@ namespace QueryPipeline {
         Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);
 
         if (result.hasRange)
-            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(this->table, result.start, result.end, result.remainingPredicate);
+            return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeekRange>(
+                this->table, result.start, result.end,
+                filterColumnsInfo, result.remainingPredicate
+            );
 
         // scan the first index
         if (!result.canSeek)
             return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexScan>(
                 this->table, outputSchema,
-                materializationInfo, result.remainingPredicate,
+                filterColumnsInfo, result.remainingPredicate,
                 indexes[0].isClustered
             );
 
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeek>(this->table, result.start, result.remainingPredicate);
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalIndexSeek>(
+            this->table, result.start,
+            filterColumnsInfo, result.remainingPredicate
+        );
     }
 
     PhysicalPlan::PlanNode* LogicalJoin::CreateInnerJoinPhysicalPlan(QueryContext& context, JoinAlgorithmAnalysisResult& analysis) const{

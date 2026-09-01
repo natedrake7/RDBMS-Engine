@@ -107,12 +107,15 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<RID>* selectedRows,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        const Expressions::Expression* expression
+        const Expressions::Expression* expression,
+        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+        const UnsignedSmallInt slotIndex
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->SeekRange(executionContext, minKey, maxKey, selectedRows, expression);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            tree->SeekRange(executionContext, minKey, maxKey, selectedRows, filter);
             return;
         }
 
@@ -123,12 +126,15 @@ namespace CoreEngine::StorageTypes {
         const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<RID>* selectedRows,
         const DataTypes::Indexing::Key &key,
-        const Expressions::Expression* expression
+        const Expressions::Expression* expression,
+        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
+        const UnsignedSmallInt slotIndex
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            tree->Seek(executionContext, key, selectedRows, expression);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            tree->Seek(executionContext, key, selectedRows, filter);
             return;
         }
 
