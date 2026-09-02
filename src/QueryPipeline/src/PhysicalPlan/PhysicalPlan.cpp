@@ -128,22 +128,6 @@ namespace QueryPipeline::PhysicalPlan {
 
     bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
-    void PlanNode::LazyCachePage(
-        const CoreEngine::ExecutionContext& context,
-        const CoreEngine::StorageTypes::RID rid,
-        const UnsignedSmallInt slotIndex,
-        Pages::PageView* pagePtr
-    ){
-        if (!pagePtr->IsValid()
-           || pagePtr->PageId() != rid._pageId
-       ){
-            *pagePtr = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                context.GetFileKey(slotIndex, rid.GetSource()),
-                rid._pageId
-            );
-       }
-    }
-
     PhysicalMaterialize::PhysicalMaterialize(
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo>& materializationInfo,
         PlanNode* child,

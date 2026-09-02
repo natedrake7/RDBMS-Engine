@@ -27,5 +27,8 @@ namespace CoreEngine::Memory{
             void Reset() const override;
 
             bool IsEmpty() const;
+
+            ::Memory::AllocationStep RecordAllocationStart() const override;
+            void ReleaseFromAllocationStep(::Memory::AllocationStep& step) const override;
     };
 }

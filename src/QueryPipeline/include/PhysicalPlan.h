@@ -89,12 +89,6 @@ namespace QueryPipeline::PhysicalPlan {
         [[nodiscard]] const CoreEngine::OutputSchema* GetSchema() const;
 
         [[nodiscard]] bool UsesExternalStorage() const;
-        static inline void LazyCachePage(
-            const CoreEngine::ExecutionContext& context,
-            CoreEngine::StorageTypes::RID rid,
-            UnsignedSmallInt slotIndex,
-            Pages::PageView* pagePtr
-        );
     };
 
 

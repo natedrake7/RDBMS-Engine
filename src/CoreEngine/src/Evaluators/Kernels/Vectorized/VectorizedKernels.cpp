@@ -21,8 +21,8 @@ namespace CoreEngine::VectorizedKernels{
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* right = logicalExpr->right->vectorizedKernel(logicalExpr->right, context, chunk);
 
-        const auto* leftData = left->template DataAs<bool>();
-        const auto* rightData = right->template DataAs<bool>();
+        const auto* __restrict__ leftData = left->template DataAs<bool>();
+        const auto* __restrict__ rightData = right->template DataAs<bool>();
 
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
         auto* outData = out->template DataAs<bool>();

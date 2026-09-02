@@ -134,4 +134,23 @@ namespace CoreEngine::Memory{
     bool Allocator::IsEmpty() const{
         return this->_head == nullptr;
     }
+
+    ::Memory::AllocationStep Allocator::RecordAllocationStart() const{
+        return ::Memory::AllocationStep(this->_tail, this->_tail->_offset);
+    }
+
+    void Allocator::ReleaseFromAllocationStep(::Memory::AllocationStep& step) const{
+        auto* currentChunk = static_cast<Chunk*>(step._chunkAddress);
+        this->_tail = currentChunk;
+
+        currentChunk->_offset = step._chunkOffset;
+        currentChunk = currentChunk->_next;
+
+        step._chunkAddress = nullptr;
+
+        while (currentChunk != nullptr){
+            currentChunk->_offset = 0;
+            currentChunk = currentChunk->_next;
+        }
+    }
 }

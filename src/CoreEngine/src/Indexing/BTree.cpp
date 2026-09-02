@@ -1104,10 +1104,6 @@ namespace Indexing{
         auto currentNode = this->SearchKey(key);
 
         const auto& snapshot = context.GetSnapshot();
-        auto evaluationContext = Expressions::EvaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            &context
-        );
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
 
@@ -1115,9 +1111,9 @@ namespace Indexing{
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
-            evaluationContext._pages = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             filter.Start(endingIndex - startingIndex);
+
             for (Int i = startingIndex; i < endingIndex; i++){
                 if (!currentNode.RetrieveVisibleRow(snapshot, i, &rid))
                     continue;

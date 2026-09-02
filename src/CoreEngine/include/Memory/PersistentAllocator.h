@@ -26,5 +26,8 @@ namespace CoreEngine::Memory{
         [[nodiscard]] void* AllocateRaw(UnsignedInt size) const override;
         void Release() const override;
         void Reset() const override;
+
+        ::Memory::AllocationStep RecordAllocationStart() const override;
+        void ReleaseFromAllocationStep(::Memory::AllocationStep& step) const override;
     };
 }

@@ -12,11 +12,10 @@ namespace CoreEngine{
 
     class VectorizedPushedDownFilter{
         DataStructures::PolymorphicArray<StorageTypes::RID> _candidates;
-        DataChunk _chunk;
 
         const Expressions::Expression* _expression;
         const DataStructures::PolymorphicArray<StorageTypes::FilterColumnInfo>* _filterColumns;
-        const DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> _fileKeys;
+        DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> _fileKeys;
         const ExecutionContext* _executionContext;
 
         Int _schemaWidth;
@@ -42,8 +41,13 @@ namespace CoreEngine{
         }
 
         inline void Filter(DataStructures::PolymorphicArray<StorageTypes::RID>* result){
+            if (this->_candidates.Empty())
+                return;
+
             const auto* allocator = this->_executionContext->GetAllocator();
             const auto* fileKeysData = this->_fileKeys.Data();
+
+            auto allocationStart = allocator->RecordAllocationStart();
 
             DataChunk chunk;
             chunk.AllocateColumns(allocator, this->_candidates.Size(), this->_schemaWidth);
@@ -65,22 +69,25 @@ namespace CoreEngine{
 
             Int selectedCount = 0;
             UnsignedBigInt anyNull = 0;
-            for (auto w = 0; w < mask->WordsCount(); w++)
+            const auto wordsCount = mask->WordsCount();
+            for (auto w = 0; w < wordsCount; w++)
                 anyNull |= maskValidity[w];
 
+            const auto candidatesSize = this->_candidates.Size();
             if (anyNull == 0){
-                for (auto i = 0;i < this->_candidates.Size(); i++){
+                for (auto i = 0;i < candidatesSize; i++){
                     out[selectedCount] = candidatesData[i];
                     selectedCount += selected[i];
                 }
             }
             else{
-                for (auto i = 0;i < this->_candidates.Size(); i++){
+                for (auto i = 0;i < candidatesSize; i++){
                     out[selectedCount] = candidatesData[i];
-                    selectedCount += selected[i] && !mask->GetNullValue(i);
+                    selectedCount += selected[i] & !mask->GetNullValue(i);
                 }
             }
 
+            allocator->ReleaseFromAllocationStep(allocationStart);
             result->SetNewSize(result->Size() + selectedCount);
         }
     };

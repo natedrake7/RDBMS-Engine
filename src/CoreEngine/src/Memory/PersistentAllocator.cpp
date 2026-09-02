@@ -112,4 +112,14 @@ namespace CoreEngine::Memory{
             node = node->_next;
         }
     }
+
+    ::Memory::AllocationStep PersistentAllocator::RecordAllocationStart() const{
+        static_assert("PersistentAllocator::RecordAllocationStart Not implemented");
+        throw std::logic_error("PersistentAllocator::RecordAllocationStart Not implemented");
+    }
+
+    void PersistentAllocator::ReleaseFromAllocationStep(::Memory::AllocationStep& step) const{
+        static_assert("PersistentAllocator::ReleaseFromAllocationStep Not implemented");
+        throw std::logic_error("PersistentAllocator::ReleaseFromAllocationStep Not implemented");
+    }
 }
