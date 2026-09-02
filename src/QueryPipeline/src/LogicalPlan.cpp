@@ -152,6 +152,53 @@ namespace QueryPipeline {
         return this->expression != nullptr;
     }
 
+    DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> LogicalTableScan::BuildFilterColumns(
+        const QueryContext& context,
+        const CoreEngine::OutputSchema* schema
+    ) const{
+        const auto* allocator = context._compileContext.GetAllocator();
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumnsInfo(allocator);
+
+        if (!this->HasPredicate())
+            return filterColumnsInfo;
+
+        UnsignedBigInt seenColumns[ReferencedColumns::WORDS] = {};
+        const auto slotIndex = this->table->_slotIndex;
+        Expressions::ForEachColumnReference(this->expression, [&](const Expressions::ColumnExpression* columnExpression)
+        {
+            if (columnExpression->_slotIndex != slotIndex)
+                return;
+
+            const auto ordinalPosition = columnExpression->ordinalPosition;
+            auto* __restrict__ word = &seenColumns[ordinalPosition >> 6];
+            const auto bit = ordinalPosition & 63;
+
+            if (PackedWord<UnsignedBigInt>::GetBit(*word, bit))
+                return;
+
+            PackedWord<UnsignedBigInt>::SetBit(word, bit, true);
+            const auto position = schema->IndexOf(
+                CoreEngine::ColumnIdentity::Base(slotIndex, ordinalPosition)
+            );
+
+            if (position == INVALID_COLUMN_INDEX)
+                return;
+
+            const auto type = schema->_columns[position]._type;
+            filterColumnsInfo.Push(
+            CoreEngine::StorageTypes::FilterColumnInfo(
+                    CoreEngine::VectorizedKernels::JumpTables::GetPageMaterializationFunction(type),
+                    ordinalPosition,
+                    position,
+                    type
+                )
+            );
+        });
+
+
+        return filterColumnsInfo;
+    }
+
     LogicalTableScan::LogicalTableScan(Statements::DataSource* table, Expressions::Expression* expression)
         : table(table), expression(expression) {}
 
@@ -160,11 +207,6 @@ namespace QueryPipeline {
 
         const auto slotIndex = this->table->_slotIndex;
         const auto numOfColumns = context._referencedColumns.GetSlotCount(this->table->_slotIndex);
-
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::FilterColumnInfo> filterColumnsInfo(
-            allocator,
-            numOfColumns
-        );
 
         auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, numOfColumns);
 
@@ -175,15 +217,9 @@ namespace QueryPipeline {
             outputSchema->_columns.Push(
                 CoreEngine::SchemaColumn::Base(slotIndex, ordinalPosition, dataType)
             );
-
-            filterColumnsInfo.Push(
-            CoreEngine::StorageTypes::FilterColumnInfo(
-                    CoreEngine::VectorizedKernels::JumpTables::GetPageMaterializationFunction(dataType),
-                    ordinalPosition,
-                    dataType
-                )
-            );
         });
+
+        auto filterColumnsInfo = this->BuildFilterColumns(context, outputSchema);
 
         if (this->HasPredicate())
             Expressions::BindAndResolveExpressionKernel(this->expression, outputSchema);

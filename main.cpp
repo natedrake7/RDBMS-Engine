@@ -92,8 +92,6 @@
 
 //TODO use json accessors for updates as well.
 //TODO add CAST, TRYCAST
-//TODO update LogicalPlan->ToPhysical to bind expression kernels before to physical
-//TODO implement columnar evaluation
 
 //CREATE DATABASE MoviesDB
 //USE MoviesDB
@@ -114,8 +112,6 @@
 //select * from dbo.Movies
 //TODO make identity maybe templated
 //Potential improvement add timestamp to rowHeader and on MVCC use timestamp instead of active transactions
-
-//TODO make aggressive predicate pushdown on scans materialize only needed columns and not all referenced.
 
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();

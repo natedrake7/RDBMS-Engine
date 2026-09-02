@@ -384,4 +384,60 @@ namespace Expressions{
     void BindExpressionRowKernel(Expression* expression);
 
     void BindAndResolveExpressionKernel(Expression* expression, const CoreEngine::OutputSchema* schema);
+
+    template<typename TCallback>
+    void ForEachColumnReference(const Expression* expression, TCallback&& visitor){
+        if (expression == nullptr)
+            return;
+
+        switch (expression->expressionType){
+        case ExpressionType::Column:{
+            visitor(expression->AsColumn());
+            break;
+        }
+        case ExpressionType::Binary:{
+            auto* binaryExpression = expression->AsBinary();
+            ForEachColumnReference(binaryExpression->left, visitor);
+            ForEachColumnReference(binaryExpression->right, visitor);
+            break;
+        }
+        case ExpressionType::Logical:{
+            auto* logicalExpression = expression->AsLogical();
+            ForEachColumnReference(logicalExpression->left, visitor);
+            ForEachColumnReference(logicalExpression->right, visitor);
+            break;
+        }
+        case ExpressionType::Branch:{
+            const auto* branchExpression = expression->AsBranch();
+            for (const auto* result : branchExpression->results)
+                ForEachColumnReference(result, visitor);
+            for (const auto* result : branchExpression->branches)
+                ForEachColumnReference(result, visitor);
+            for (const auto* result : branchExpression->arguments)
+                ForEachColumnReference(result, visitor);
+            ForEachColumnReference(branchExpression->baseCase, visitor);
+            break;
+        }
+        case ExpressionType::Function:{
+            const auto* funcExpression = expression->AsFunction();
+            for (const auto* argument : funcExpression->arguments)
+                ForEachColumnReference(argument, visitor);
+            break;
+        }
+        case ExpressionType::Json:{
+            const auto* jsonExpression = expression->AsJson();
+            visitor(jsonExpression->columnPtr);
+            break;
+        }
+        case ExpressionType::Cast:{
+            const auto* castExpression = expression->AsCast();
+            ForEachColumnReference(castExpression->childExpr, visitor);
+            break;
+        }
+        case ExpressionType::Constant:
+        case ExpressionType::Variable:
+        default:
+            break;
+        }
+    }
 }

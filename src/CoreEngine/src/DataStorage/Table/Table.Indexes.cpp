@@ -109,12 +109,13 @@ namespace CoreEngine::StorageTypes {
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex
+        const UnsignedSmallInt slotIndex,
+        const UnsignedSmallInt schemaWidth
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex, schemaWidth);
             tree->SeekRange(executionContext, minKey, maxKey, selectedRows, filter);
             return;
         }
@@ -128,12 +129,13 @@ namespace CoreEngine::StorageTypes {
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex
+        const UnsignedSmallInt slotIndex,
+        const UnsignedSmallInt schemaWidth
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
         if (expression != nullptr) {
-            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex, schemaWidth);
             tree->Seek(executionContext, key, selectedRows, filter);
             return;
         }
@@ -163,7 +165,8 @@ namespace CoreEngine::StorageTypes {
         IndexState& state,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex
+        const UnsignedSmallInt slotIndex,
+        const UnsignedSmallInt schemaWidth
     ){
         if (this->IsEmpty())
             return;
@@ -171,7 +174,7 @@ namespace CoreEngine::StorageTypes {
         const auto* tree = this->GetClusteredIndexedTree();
 
         if(expression != nullptr){
-            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex);
+            VectorizedPushedDownFilter filter(expression, &filterColumns, &executionContext, slotIndex, schemaWidth);
             tree->Scan(executionContext, selectedRows, state, filter);
             return;
         }

@@ -12,25 +12,12 @@ namespace QueryPipeline::PhysicalPlan {
 
         ExecutionResult result(context);
 
-        Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::Join,
-            &context
-        );
-
         bool canFetchMore = true;
 
-        Pages::PageView pages[Constants::MAX_QUERY_JOINS];
-        CoreEngine::StorageTypes::RID rids[Constants::MAX_QUERY_JOINS];
-        while (canFetchMore) {
+        while (canFetchMore){
             auto rightResult = this->right->Execute(context);
             canFetchMore = rightResult.canFetchMore;
 
-            for (Int i = 0;i < leftResult.selectionVector->selectedRidsCount; i++){
-                // auto idx = PlanNode::SelectedIndex(
-                //     leftResult.selectionVector,
-                //
-                // )
-            }
 
         }
 

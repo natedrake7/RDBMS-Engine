@@ -19,15 +19,18 @@ namespace CoreEngine{
         const DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> _fileKeys;
         const ExecutionContext* _executionContext;
 
+        Int _schemaWidth;
+
         public:
         VectorizedPushedDownFilter(
             const Expressions::Expression* expression,
             const DataStructures::PolymorphicArray<StorageTypes::FilterColumnInfo>* filterColumns,
             const ExecutionContext* executionContext,
-            const UnsignedSmallInt slotIndex
+            const UnsignedSmallInt slotIndex,
+            const Int schemaWidth
         ):  _candidates(executionContext->GetAllocator()), _expression(expression),
             _filterColumns(filterColumns), _fileKeys(executionContext->GetFileKeys(slotIndex)),
-            _executionContext(executionContext){}
+            _executionContext(executionContext), _schemaWidth(schemaWidth){}
 
         inline void AddCandidate(const StorageTypes::RID& candidate){
             this->_candidates.Push(candidate);
@@ -43,14 +46,14 @@ namespace CoreEngine{
             const auto* fileKeysData = this->_fileKeys.Data();
 
             DataChunk chunk;
-            chunk.AllocateColumns(allocator, this->_candidates.Size(), this->_filterColumns->Size());
+            chunk.AllocateColumns(allocator, this->_candidates.Size(), this->_schemaWidth);
 
             for (auto i = 0; i < this->_filterColumns->Size(); i++) {
                 const auto& columnInfo = (*this->_filterColumns)[i];
 
                 auto* vector = DataVector::FlatVector(allocator, columnInfo._type, this->_candidates.Size());
                 columnInfo._function(fileKeysData, allocator, this->_candidates, vector, columnInfo._ordinalPosition);
-                chunk.SetColumn(vector, i);
+                chunk.SetColumn(vector, columnInfo._schemaPosition);
             }
 
             const auto* mask = Expressions::EvaluateExpression(this->_expression, this->_executionContext, &chunk);

@@ -62,7 +62,7 @@ namespace CoreEngine::StorageTypes{
         page_id_t cachedPageIds[RID::Source::Count] = {};
         Pages::PageView cachedPages[RID::Source::Count];
 
-        const auto* fileKeys = context.GetFileKeys(slotIndex).Data();
+        const auto fileKeys = context.GetFileKeys(slotIndex);
 
         const auto lazyFetchPage = [&](const page_id_t pageId, const RID::Source source){
             if (pageId != cachedPageIds[source]){

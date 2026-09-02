@@ -36,11 +36,11 @@ namespace Expressions {
 
 namespace QueryPipeline {
     struct JoinConditionInfo {
-        Int leftTableId;
+        Int leftSlotIndex;
         Int leftColumnId;
         column_index_t leftColumnIndex;
 
-        Int rightTableId;
+        Int rightSlotIndex;
         Int rightColumnId;
         column_index_t rightColumnIndex;
 
@@ -146,45 +146,35 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
         bool isReordered;
 
-        JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator);
+        JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, Int size);
     };
 
     struct JoinOrderAnalyzeInfo {
+        BigInt rowCount;
+        UnsignedSmallInt slotIndex;
         table_id_t tableId;
-        int64_t rowCount;
         bool hasIndex;
 
         Statements::JoinStatement* joinStatement;
 
-        JoinOrderAnalyzeInfo() {
-            this->tableId = INVALID_TABLE_ID;
-            this->rowCount = 0;
-            this->hasIndex = false;
-            this->joinStatement = nullptr;
-        }
+        JoinOrderAnalyzeInfo()
+            :   rowCount(0), slotIndex(0), tableId(INVALID_TABLE_ID),
+                hasIndex(false), joinStatement(nullptr){}
 
         JoinOrderAnalyzeInfo(
             const table_id_t tableId,
             const BigInt rowCount,
             const bool hasIndex
-        ) {
-            this->tableId = tableId;
-            this->rowCount = rowCount;
-            this->hasIndex = hasIndex;
-            this->joinStatement = nullptr;
-        }
+        ):  rowCount(rowCount), slotIndex(0), tableId(tableId),
+            hasIndex(hasIndex), joinStatement(nullptr){}
 
         JoinOrderAnalyzeInfo(
             const table_id_t tableId,
             const BigInt rowCount,
             const bool hasIndex,
             Statements::JoinStatement* joinStatement
-        ) {
-            this->tableId = tableId;
-            this->rowCount = rowCount;
-            this->hasIndex = hasIndex;
-            this->joinStatement = joinStatement;
-        }
+        ):  rowCount(rowCount), slotIndex(0), tableId(tableId),
+            hasIndex(hasIndex), joinStatement(joinStatement){}
 
         bool operator()(const JoinOrderAnalyzeInfo& lhs, const JoinOrderAnalyzeInfo& rhs) const {
             if (lhs.hasIndex != rhs.hasIndex)
@@ -195,16 +185,16 @@ namespace QueryPipeline {
     };
 
     struct PredicatePushDownResult {
-        Dictionary<table_id_t, Expressions::Expression*> tablePredicatesDictionary;
+        Dictionary<UnsignedSmallInt, Expressions::Expression*> _tablePredicatesDict;
         Expressions::Expression* remainingPredicate;
 
         PredicatePushDownResult() {
             this->remainingPredicate = nullptr;
         }
 
-        Expressions::Expression* PushDownFilter(const table_id_t tableId) const {
+        [[nodiscard]] Expressions::Expression* PushDownFilter(const UnsignedSmallInt slotIndex) const {
             Expressions::Expression* filter = nullptr;
-            this->tablePredicatesDictionary.TryGetValue(tableId, filter);
+            this->_tablePredicatesDict.TryGetValue(slotIndex, filter);
             return filter;
         }
     };

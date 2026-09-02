@@ -1170,6 +1170,5 @@ namespace Expressions{
         default:
             break;
         }
-
     }
 }

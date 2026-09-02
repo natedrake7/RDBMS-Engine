@@ -25,8 +25,8 @@ namespace QueryPipeline {
         Expressions::Expression* expression,
         DataStructures::PolymorphicArray<column_index_t>& leftKeyColumns,
         DataStructures::PolymorphicArray<column_index_t>& rightKeyColumns
-    ) : algorithm(algorithm), leftKeyColumns(std::move(leftKeyColumns)), rightKeyColumns(std::move(rightKeyColumns)), remainingPredicate(expression){
-    }
+    ):  algorithm(algorithm), leftKeyColumns(std::move(leftKeyColumns)),
+        rightKeyColumns(std::move(rightKeyColumns)), remainingPredicate(expression){}
 
     Range::Range()
         :   hasRange(false), canSeek(false),
@@ -57,8 +57,8 @@ namespace QueryPipeline {
         :   canIndexSeek(false), needsParameterBinding(false),
             columnId(INVALID_COLUMN_ID), expression(otherExpr){}
 
-    JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator)
-        : order(allocator), orderedJoins(allocator), isReordered(false) {}
+    JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, const Int size)
+        : order(allocator, size), orderedJoins(allocator, size), isReordered(false) {}
 
     JoinAlgorithmAnalysisResult Optimizer::ReturnNestedLoopJoinAlgorithm(
         DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo
@@ -128,7 +128,7 @@ namespace QueryPipeline {
             case Expressions::ExpressionType::Json:{
                 const auto* jsonExpr = expression->AsJson();
                 const auto* columnExpr = jsonExpr->columnPtr->AsColumn();
-                involvedTables.Add(columnExpr->tableId);
+                involvedTables.Add(columnExpr->_slotIndex);
                 break;
             }
             default:
@@ -138,9 +138,7 @@ namespace QueryPipeline {
 
     DataStructures::PolymorphicArray<table_id_t> Optimizer::GetInvolvedTables(const Expressions::Expression* expression) const{
         HashSet<table_id_t> involvedTablesSet;
-
         Optimizer::GetInvolvedTables(expression, involvedTablesSet);
-
         return involvedTablesSet.ToPolymorphicArray(this->context->_compileContext.GetAllocator());
     }
 
@@ -420,14 +418,14 @@ namespace QueryPipeline {
                 const auto* columnExpr = expression->AsColumn();
                 info.leftColumnId = columnExpr->columnId;
                 info.leftColumnIndex = columnExpr->ordinalPosition;
-                info.leftTableId = columnExpr->tableId;
+                info.leftSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         case Expressions::ExpressionType::Json:{
-                const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
+                const auto* columnExpr = expression->AsJson()->columnPtr;
                 info.leftColumnId = columnExpr->columnId;
                 info.leftColumnIndex = columnExpr->ordinalPosition;
-                info.leftTableId = columnExpr->tableId;
+                info.leftSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         default:
@@ -444,14 +442,14 @@ namespace QueryPipeline {
                 const auto* columnExpr = expression->AsColumn();
                 info.rightColumnId = columnExpr->columnId;
                 info.rightColumnIndex = columnExpr->ordinalPosition;
-                info.rightTableId = columnExpr->tableId;
+                info.rightSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         case Expressions::ExpressionType::Json:{
                 const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
                 info.rightColumnId = columnExpr->columnId;
                 info.rightColumnIndex = columnExpr->ordinalPosition;
-                info.rightTableId = columnExpr->tableId;
+                info.rightSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         default:
@@ -501,7 +499,7 @@ namespace QueryPipeline {
                 for (int i = 0;i < joinConditions.Size();i++){
                     const auto& joinCondition = joinConditions[i];
 
-                    const auto columnId = (joinCondition.leftTableId == tableStats.tableId)
+                    const auto columnId = (joinCondition.leftSlotIndex == tableStats.tableId)
                         ? joinCondition.leftColumnId
                         : joinCondition.rightColumnId;
 
@@ -538,11 +536,11 @@ namespace QueryPipeline {
         for (int i = 0;i < min;i++){
             const auto& joinCondition = conditionsInfo[leftKeyColumns[i]];
 
-            const auto leftExprIndex = (joinCondition.leftTableId == leftTableId)
+            const auto leftExprIndex = (joinCondition.leftSlotIndex == leftTableId)
                 ? joinCondition.leftColumnIndex
                 : joinCondition.rightColumnIndex;
 
-            const auto rightExprIndex = (joinCondition.leftTableId == rightTableId)
+            const auto rightExprIndex = (joinCondition.leftSlotIndex == rightTableId)
                 ? joinCondition.leftColumnIndex
                 : joinCondition.rightColumnIndex;
 
@@ -574,12 +572,12 @@ namespace QueryPipeline {
     }
 
     JoinOrderAnalyzeResult Optimizer::DetermineJoinOrder(Statements::SelectStatement* statement) const{
-        JoinOrderAnalyzeResult result(this->context->_compileContext.GetAllocator());
+        JoinOrderAnalyzeResult result(this->context->_compileContext.GetAllocator(), statement->_joins.Size() + 1);
 
         if (statement->IsConstant()) return result;
 
         if (!statement->HasJoins()){
-            result.order.Push(statement->table->_tableId);
+            result.order.Push(statement->table->_slotIndex);
             return result;
         }
 
@@ -601,13 +599,13 @@ namespace QueryPipeline {
         //each join info
         for (const auto& join : statement->_joins) {
             if (join->IsRightJoin()){
-                result.order.Insert(join->table->_tableId, 0);
+                result.order.Insert(join->table->_slotIndex, 0);
                 result.orderedJoins.Insert(join, 0);
                 continue;
             }
 
             if (!join->IsInnerJoin()) {
-                result.order.Push(join->table->_tableId);
+                result.order.Push(join->table->_slotIndex);
                 result.orderedJoins.Push(join);
                 continue;
             }
@@ -642,12 +640,12 @@ namespace QueryPipeline {
 
                 reorderedJoin = info.joinStatement;
 
-                result.order.Insert(info.tableId, result.order.Size() - preReorderSize);
+                result.order.Insert(info.slotIndex, result.order.Size() - preReorderSize);
                 result.orderedJoins.Insert(nullptr, result.orderedJoins.Size() - preReorderSize);
                 continue;
             }
 
-            result.order.Insert(info.tableId, result.order.Size() - preReorderSize);
+            result.order.Insert(info.slotIndex, result.order.Size() - preReorderSize);
 
             if (info.joinStatement == nullptr){
                 result.orderedJoins.Insert(reorderedJoin, result.orderedJoins.Size() - preReorderSize);
@@ -659,7 +657,7 @@ namespace QueryPipeline {
 
         //remove the first which is always null
         result.orderedJoins.erase(result.orderedJoins.begin());
-        result.isReordered = result.order[0] != statement->table->_tableId;
+        result.isReordered = result.order[0] != statement->table->_slotIndex;
 
         return result;
     }
@@ -673,8 +671,8 @@ namespace QueryPipeline {
 
         if (whereClause == nullptr && joins.Empty()) return result;
 
-        result.tablePredicatesDictionary = Dictionary<table_id_t, Expressions::Expression*>::FromArray(tables, nullptr);
-        Optimizer::ProcessPredicate(whereClause, result.tablePredicatesDictionary, result.remainingPredicate);
+        result._tablePredicatesDict = Dictionary<table_id_t, Expressions::Expression*>::FromArray(tables, nullptr);
+        Optimizer::ProcessPredicate(whereClause, result._tablePredicatesDict, result.remainingPredicate);
 
         for (const auto& join : joins) {
             // Cannot push down predicates for FULL OUTER JOIN as it would break semantics
@@ -682,7 +680,7 @@ namespace QueryPipeline {
             if (join->IsFullOuterJoin()) continue;
 
             Expressions::Expression* joinRemainingPredicate = nullptr;
-            Optimizer::ProcessPredicate(join->expression, result.tablePredicatesDictionary, joinRemainingPredicate);
+            Optimizer::ProcessPredicate(join->expression, result._tablePredicatesDict, joinRemainingPredicate);
             join->expression = joinRemainingPredicate;
         }
 

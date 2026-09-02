@@ -241,7 +241,8 @@ namespace CoreEngine::StorageTypes{
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex
+                UnsignedSmallInt slotIndex,
+                UnsignedSmallInt schemaWidth
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
@@ -249,7 +250,8 @@ namespace CoreEngine::StorageTypes{
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex
+                UnsignedSmallInt slotIndex,
+                UnsignedSmallInt schemaWidth
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,
@@ -263,7 +265,8 @@ namespace CoreEngine::StorageTypes{
                 IndexState& state,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex
+                UnsignedSmallInt slotIndex,
+                UnsignedSmallInt schemaWidth
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
