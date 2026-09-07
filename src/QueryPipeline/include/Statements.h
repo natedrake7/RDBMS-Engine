@@ -324,7 +324,11 @@ namespace QueryPipeline::Statements {
             const JoinOrderAnalyzeResult& joinReorderResult,
             const PredicatePushDownResult& predicatesResult
         ) const;
-        void BuildOrderByStatement(LogicalPlan*& current, const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary) const;
+        [[nodiscard]] LogicalPlan* BuildOrderByStatement(
+            const QueryContext& context,
+            LogicalPlan* current,
+            const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
+        ) const;
         [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;

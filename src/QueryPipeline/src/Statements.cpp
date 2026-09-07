@@ -809,16 +809,18 @@ namespace QueryPipeline::Statements {
     //         AssignColumnIndicesToExpression(columnIndicesDictionary, join->expression);
     // }
 
-    void SelectStatement::BuildOrderByStatement(
-        LogicalPlan*& current,
+     LogicalPlan* SelectStatement::BuildOrderByStatement(
+        const QueryContext& context,
+        LogicalPlan* current,
         const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
     ) const{
-        if(this->orderBy == nullptr) return;
+        if(this->orderBy == nullptr)
+            return nullptr;
 
         for (const auto& column : this->orderBy->columns)
             AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
-        current = new LogicalOrder(current, this->orderBy->columns);
+        return context._compileContext.Allocate<LogicalOrder>(current, this->orderBy->columns);
     }
 
     Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
@@ -873,7 +875,8 @@ namespace QueryPipeline::Statements {
 
         current = context._compileContext.Allocate<LogicalProject>(current, this->_projections, this->_slotCount);
 
-        this->BuildOrderByStatement(current, postProjectionIndicesDictionary);
+        if (this->orderBy)
+            current = this->BuildOrderByStatement(context, current, postProjectionIndicesDictionary);
 
         if (this->distinct)
             current = context._compileContext.Allocate<LogicalDistinct>(current);

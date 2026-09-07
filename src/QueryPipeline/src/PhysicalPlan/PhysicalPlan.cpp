@@ -766,7 +766,6 @@ namespace QueryPipeline::PhysicalPlan {
             return result;
 
         result.dataChunk._numberOfRows = this->top;
-        // result.results.RemoveFrom(this->top);
         result.canFetchMore = false;
         return result;
     }
