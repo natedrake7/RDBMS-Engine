@@ -57,7 +57,7 @@ namespace DataStructures{
 
             this->_allocator = other._allocator;
             this->_data = static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T)));
-            std::memcpy(this->_data, other._data, other._size * sizeof(T));
+            std::memcpy(static_cast<void*>(this->_data), static_cast<void*>(other._data), other._size * sizeof(T));
 
             this->_size = other._size;
             this->_capacity = other._capacity;
@@ -198,8 +198,8 @@ namespace DataStructures{
                 return;
 
             T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
-            std::memcpy(newData, this->_data, this->_size * sizeof(T));
-            std::memset(newData + this->_size, 0, (newCapacity - this->_size) * sizeof(T));
+            std::memcpy(static_cast<void*>(newData), this->_data, this->_size * sizeof(T));
+            std::memset(static_cast<void*>(newData + this->_size), 0, (newCapacity - this->_size) * sizeof(T));
 
             this->_data = newData;
             this->_capacity = newCapacity;
@@ -211,7 +211,7 @@ namespace DataStructures{
                 return;
 
             T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T)));
-            std::memcpy(newData, this->_data, this->_size * sizeof(T));
+            std::memcpy(static_cast<void*>(newData), this->_data, this->_size * sizeof(T));
 
             this->_data = newData;
             this->_capacity = newCapacity;

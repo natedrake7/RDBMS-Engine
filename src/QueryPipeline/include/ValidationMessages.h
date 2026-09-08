@@ -305,4 +305,18 @@ namespace QueryPipeline::Messages{
     }
 
     static constexpr DataTypes::StringView INVALID_JSON_ACCESSOR_TYPE = "Invalid json accessor type. Intermediate accessors must always be ->";
+
+    static constexpr DataTypes::StringView WILDCARD_NOT_ALLOWED_IN_ORDER_BY = "Wildcard * is not allows in order by clause";
+
+    static constexpr DataTypes::StringView ORDER_BY_NULL_VALUE = "NULL cannot be used in order by clause";
+
+    static constexpr DataTypes::String ORDER_BY_INTEGRAL_INVALID_VALUE(
+        const ::Memory::IAllocator* allocator,
+        const Int index
+    ){
+        const auto parsedInt = Converter::IntToStr<Int>(index, allocator);
+        return DataTypes::String::Concat(
+            allocator, "Invalid value: ", parsedInt, " specified in order by clause. Must be greater than or equal to 1 and smaller than the projection count"
+        );
+    }
 }

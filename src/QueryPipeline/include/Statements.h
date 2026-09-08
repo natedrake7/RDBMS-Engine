@@ -114,6 +114,7 @@ namespace QueryPipeline::Statements {
 
     struct OrderColumn {
         Expressions::Expression* expression;
+        Int outputIndex;
         Constants::OrderType type;
 
         OrderColumn();
@@ -302,6 +303,7 @@ namespace QueryPipeline::Statements {
         OrderByStatement* orderBy;
         WhereClause where;
         BigInt top;
+        UnsignedSmallInt _visibleProjectionCount;
         bool distinct;
 
         explicit SelectStatement(const ::Memory::IAllocator* allocator);
@@ -722,52 +724,11 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    static Errors::ValidationStatus CompilePostProjectionExpression(
+    static Errors::ValidationStatus ResolveOrderByExpression(
         const QueryContext& context,
-        Expressions::Expression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionColumnExpression(
-        const QueryContext& context,
-        Expressions::ColumnExpression* column,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionBinaryExpression(
-        const QueryContext& context,
-        const Expressions::BinaryExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionLogicalExpression(
-        const QueryContext& context,
-        const Expressions::LogicalExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionFunctionExpression(
-        const QueryContext& context,
-        const Expressions::FunctionExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionBranchExpression(
-        const QueryContext& context,
-        const Expressions::BranchExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionJsonExpression(
-        const QueryContext& context,
-        const Expressions::JsonExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    );
-
-    static Errors::ValidationStatus CompilePostProjectionCastExpression(
-        const QueryContext& context,
-        const Expressions::CastExpression* castExpr,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+        OrderColumn* column,
+        const Dictionary<DataTypes::String, Int>& aliasesDictionary,
+        Int visibleProjectionCount
     );
 
     /** @} End of Post Projection Alias Resolvement Functions */

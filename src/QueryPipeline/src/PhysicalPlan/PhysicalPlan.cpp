@@ -762,10 +762,13 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        if (this->top > result.dataChunk._numberOfRows)
+        if (this->top > result.dataChunk._numberOfRows){
+            this->top -= result.dataChunk._numberOfRows;
             return result;
+        }
 
-        result.dataChunk._numberOfRows = this->top;
+        result.dataChunk._numberOfRows = static_cast<Int>(this->top);
+        this->top = 0;
         result.canFetchMore = false;
         return result;
     }

@@ -89,7 +89,9 @@ namespace CoreEngine{
         std::memset(dataVector->_data, 0, dataVector->_dataEntrySize);
 
         dataVector->_validity = static_cast<UnsignedBigInt*>(allocator->AllocateRaw(sizeof(UnsignedBigInt)));
-        dataVector->_validity[0] = isNull ? ~0ull : 0ull;
+        dataVector->_validity[0] = isNull
+            ? ~0ull
+            : 0ull;
         return dataVector;
     }
 
@@ -124,6 +126,10 @@ namespace CoreEngine{
     DataChunk::DataChunk(DataChunk&& other) noexcept
         : _columns(other._columns), _selection(other._selection),
             _numberOfColumns(other._numberOfColumns), _numberOfRows(other._numberOfRows){
+        other._columns = nullptr;
+        other._selection = nullptr;
+        other._numberOfColumns = 0;
+        other._numberOfRows = 0;
     }
 
     DataChunk& DataChunk::operator=(DataChunk&& other) noexcept{
@@ -134,6 +140,11 @@ namespace CoreEngine{
         this->_selection = other._selection;
         this->_numberOfColumns = other._numberOfColumns;
         this->_numberOfRows = other._numberOfRows;
+
+        other._columns = nullptr;
+        other._selection = nullptr;
+        other._numberOfColumns = 0;
+        other._numberOfRows = 0;
         return *this;
     }
 
@@ -142,11 +153,15 @@ namespace CoreEngine{
             allocator->AllocateRaw(sizeof(DataVector*)*numberOfColumns)
         );
 
-        this->_selection = static_cast<UnsignedInt*>(
-            allocator->AllocateRaw(numberOfRows * sizeof(UnsignedInt))
-        );
+        // this->_selection = static_cast<UnsignedInt*>(
+        //     allocator->AllocateRaw(numberOfRows * sizeof(UnsignedInt))
+        // );
+        //
+        // std::memset(this->_selection, 0, numberOfRows * sizeof(UnsignedInt));
+        //
+        // for (auto i = 0; i < numberOfRows; i++)
+        //     this->_selection[i] = i;
 
-        std::memset(this->_selection, 0, numberOfRows * sizeof(UnsignedInt));
         this->_numberOfRows = numberOfRows;
         this->_numberOfColumns = numberOfColumns;
     }

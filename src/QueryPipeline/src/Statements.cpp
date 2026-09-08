@@ -322,10 +322,8 @@ namespace QueryPipeline::Statements {
 
     bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
 
-    OrderColumn::OrderColumn(){
-        this->expression = nullptr;
-        this->type = Constants::OrderType::ASCENDING;
-    }
+    OrderColumn::OrderColumn()
+        : expression(nullptr), outputIndex(INVALID_ORDINAL_POS), type(Constants::OrderType::ASCENDING) {}
 
     AlterColumn::AlterColumn(){
         this->columnId = INVALID_COLUMN_ID;
@@ -593,11 +591,10 @@ namespace QueryPipeline::Statements {
     }
 
     SelectStatement::SelectStatement(const ::Memory::IAllocator* allocator)
-        : Statement(), columnHeaders(allocator), _projections(allocator), _joins(allocator) {
-        this->top = INVALID_TOP;
-        this->distinct = false;
-        this->orderBy = nullptr;
-    }
+        :   Statement(), columnHeaders(allocator),
+            _projections(allocator), _joins(allocator),
+            orderBy(nullptr), top(INVALID_TOP),
+            _visibleProjectionCount(0), distinct(false){}
 
     Dictionary<DataTypes::String, column_index_t> SelectStatement::CreatePostProjectionIndicesDictionary() const{
         Dictionary<DataTypes::String, column_index_t> dict;
@@ -670,12 +667,14 @@ namespace QueryPipeline::Statements {
         );
 
         //start resolving aliases
-        for (int i = 0; i < this->_projections.Size(); i++) {
+        for (auto i = 0; i < this->_projections.Size(); i++) {
             statementValidationScope._indexPos = &i;
-            auto expressionResult = CompileExpression(context, statementValidationScope, this->_projections[i]);
-
-            if (!expressionResult.IsOk()) return expressionResult;
+            auto compileStatus = CompileExpression(context, statementValidationScope, this->_projections[i]);
+            if (!compileStatus.IsOk())
+                return compileStatus;
         }
+
+        this->_visibleProjectionCount = this->_projections.Size();
 
         auto result = this->CompileWhereClause(context, statementValidationScope);
         if (!result.IsOk()) return result;
@@ -683,36 +682,40 @@ namespace QueryPipeline::Statements {
         //validate join expressions
         statementValidationScope._indexPos = nullptr;
         for (const auto& join: this->_joins) {
-            auto expressionResult = CompileExpression(context, statementValidationScope, join->expression);
-
-            if (!expressionResult.IsOk()) return expressionResult;
+            auto compileStatus = CompileExpression(context, statementValidationScope, join->expression);
+            if (!compileStatus.IsOk())
+                return compileStatus;
         }
 
         if (this->orderBy == nullptr)
             return Errors::ValidationStatus::Ok();
 
-        Dictionary<DataTypes::String, const Expressions::Expression*> postProjectionAliases;
+        Dictionary<DataTypes::String, Int> aliasesDictionary;
+        for (auto i = 0;i < this->_visibleProjectionCount; i++){
+            const auto& projectionExprName = this->_projections[i]->name;
 
-        for (const auto* resultExpr : this->_projections) {
-            if (resultExpr->name.Empty()) continue;
+            if (projectionExprName.Empty())
+                continue;
 
-            if (postProjectionAliases.Contains(resultExpr->name)) {
+            if (aliasesDictionary.Contains(projectionExprName)) {
                 return Errors::ValidationStatus::Error(
                     Messages::DUPLICATE_RESULT_COLUMN_NAMES,
                     context.GetAllocator()
                 );
             }
 
-            postProjectionAliases.Add(resultExpr->name, resultExpr);
+            aliasesDictionary.Add(projectionExprName, i);
         }
 
-        for (const auto& column: this->orderBy->columns) {
-            auto postProjectionExpr = CompilePostProjectionExpression(
+        for (auto* column: this->orderBy->columns) {
+            auto compileStatus = ResolveOrderByExpression(
                 context,
-                column->expression,
-                postProjectionAliases
+                column,
+                aliasesDictionary,
+                this->_visibleProjectionCount
             );
-            if (!postProjectionExpr.IsOk()) return postProjectionExpr;
+            if (!compileStatus.IsOk())
+                return compileStatus;
         }
 
         return Errors::ValidationStatus::Ok();
@@ -817,7 +820,7 @@ namespace QueryPipeline::Statements {
         if(this->orderBy == nullptr)
             return nullptr;
 
-        for (const auto& column : this->orderBy->columns)
+        for (const auto* column : this->orderBy->columns)
             AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
         return context._compileContext.Allocate<LogicalOrder>(current, this->orderBy->columns);
@@ -875,11 +878,11 @@ namespace QueryPipeline::Statements {
 
         current = context._compileContext.Allocate<LogicalProject>(current, this->_projections, this->_slotCount);
 
-        if (this->orderBy)
-            current = this->BuildOrderByStatement(context, current, postProjectionIndicesDictionary);
-
         if (this->distinct)
             current = context._compileContext.Allocate<LogicalDistinct>(current);
+
+        if (this->orderBy)
+            current = this->BuildOrderByStatement(context, current, postProjectionIndicesDictionary);
 
         if (this->HasTopStatement())
             current = context._compileContext.Allocate<LogicalTop>(current, this->top);
@@ -2060,7 +2063,6 @@ namespace QueryPipeline::Statements {
     ){
         //if wildcard ensure statement is of select statement type
         if (DataTypes::StringView::ViewOf(column->alias) == WILDCARD) {
-
             auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope._statement);
 
             if (selectStatement == nullptr)
@@ -2730,33 +2732,52 @@ namespace QueryPipeline::Statements {
         AssignColumnIndicesToExpression(columnIndicesDictionary, castExpr->childExpr);
     }
 
-    Errors::ValidationStatus CompilePostProjectionExpression(
+    Errors::ValidationStatus ResolveOrderByExpression(
         const QueryContext& context,
-        Expressions::Expression *expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
+        OrderColumn* column,
+        const Dictionary<DataTypes::String, Int>& aliasesDictionary,
+        const Int visibleProjectionCount
     ){
-        switch (expression->expressionType) {
-            case Expressions::ExpressionType::Binary:
-                return CompilePostProjectionBinaryExpression(context, expression->AsBinary(), postProjectionAliases);
-            case Expressions::ExpressionType::Logical:
-                return CompilePostProjectionLogicalExpression(context, expression->AsLogical(), postProjectionAliases);
-            case Expressions::ExpressionType::Branch:
-                return CompilePostProjectionBranchExpression(context, expression->AsBranch(), postProjectionAliases);
-            case Expressions::ExpressionType::Function:
-                return CompilePostProjectionFunctionExpression(context, expression->AsFunction(), postProjectionAliases);
-            case Expressions::ExpressionType::Column:
-                return CompilePostProjectionColumnExpression(context, expression->AsColumn(), postProjectionAliases);
-            case Expressions::ExpressionType::Json:
-                return CompilePostProjectionJsonExpression(context, expression->AsJson(), postProjectionAliases);
-                break;
-            case Expressions::ExpressionType::Cast:
-                return CompilePostProjectionCastExpression(context, expression->AsCast(), postProjectionAliases);
-                break;
-            default:
-                break;
+        auto* expression = column->expression;
+        if (expression->IsColumn()){
+            auto* columnExpr = expression->AsColumn();
+            if (DataTypes::StringView::ViewOf(columnExpr->alias) == WILDCARD)
+                return Errors::ValidationStatus::Error(
+                    Messages::WILDCARD_NOT_ALLOWED_IN_ORDER_BY,
+                    context.GetAllocator()
+                );
+
+            if (aliasesDictionary.TryGetValue(columnExpr->alias, column->outputIndex))
+                return Errors::ValidationStatus::Ok();
+
+
         }
 
-        return Errors::ValidationStatus::Ok();
+        if (expression->IsConstant()){
+            const auto* constantExpr = expression->AsConstant();
+            if (constantExpr->value.IsNull())
+                return Errors::ValidationStatus::Error(
+                    Messages::ORDER_BY_NULL_VALUE,
+                    context.GetAllocator()
+                );
+
+            if (constantExpr->value.IsIntegral()){
+                const auto value = constantExpr->value.AsBigInt();
+                if (value < 1 || value > visibleProjectionCount)
+                    return Errors::ValidationStatus::Error(
+                        Messages::ORDER_BY_INTEGRAL_INVALID_VALUE(
+                            context.GetAllocator(),
+                            value
+                        )
+                    );
+
+                column->outputIndex = value - 1;
+                return Errors::ValidationStatus::Ok();
+            }
+
+
+        }
+
     }
 
     Errors::ValidationStatus CompilePostProjectionColumnExpression(
@@ -2775,86 +2796,8 @@ namespace QueryPipeline::Statements {
         }
 
         column->returnType = Expressions::GetExpressionReturnType(expression);
+        column->ordinalPosition = expression->ordinalPosition;
         return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompilePostProjectionBinaryExpression(
-        const QueryContext& context,
-        const Expressions::BinaryExpression *expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
-    ){
-        return
-            CompilePostProjectionExpression(context, expression->left, postProjectionAliases)
-            && CompilePostProjectionExpression(context, expression->right, postProjectionAliases);
-    }
-
-    Errors::ValidationStatus CompilePostProjectionLogicalExpression(
-        const QueryContext& context,
-        const Expressions::LogicalExpression *expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
-    ){
-        return
-            CompilePostProjectionExpression(context, expression->left, postProjectionAliases)
-            && CompilePostProjectionExpression(context, expression->right, postProjectionAliases);
-    }
-
-    Errors::ValidationStatus CompilePostProjectionFunctionExpression(
-        const QueryContext& context,
-        const Expressions::FunctionExpression *expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
-    ){
-        for (auto* childExpr : expression->arguments) {
-            auto childExprStatus = CompilePostProjectionExpression(context, childExpr, postProjectionAliases);
-            if (!childExprStatus.IsOk()) return childExprStatus;
-        }
-        //validate number of arguments
-        DataTypes::String errorMessage;
-        if (!expression->ValidateNumberOfArguments(errorMessage))
-            return Errors::ValidationStatus::Error(std::move(errorMessage));
-
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompilePostProjectionBranchExpression(
-        const QueryContext& context,
-        const Expressions::BranchExpression *expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression *> &postProjectionAliases
-    ){
-        for (const auto& argument : expression->arguments) {
-            auto result = CompilePostProjectionExpression(context, argument, postProjectionAliases);
-
-            if (!result.IsOk()) return result;
-        }
-
-        for (const auto& branch : expression->branches) {
-            auto result = CompilePostProjectionExpression(context, branch, postProjectionAliases);
-
-            if (!result.IsOk()) return result;
-        }
-
-        for (const auto& resultExpr : expression->results) {
-            auto result = CompilePostProjectionExpression(context, resultExpr, postProjectionAliases);
-
-            if (!result.IsOk()) return result;
-        }
-
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompilePostProjectionJsonExpression(
-        const QueryContext& context,
-        const Expressions::JsonExpression* expression,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    ){
-        return CompilePostProjectionColumnExpression(context, expression->columnPtr, postProjectionAliases);
-    }
-
-    Errors::ValidationStatus CompilePostProjectionCastExpression(
-        const QueryContext& context,
-        const Expressions::CastExpression* castExpr,
-        const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
-    ){
-        return CompilePostProjectionExpression(context, castExpr->childExpr, postProjectionAliases);
     }
 
     void AssignPostProjectionIndicesToExpression(

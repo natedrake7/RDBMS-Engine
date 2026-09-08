@@ -197,6 +197,7 @@ class Value{
         [[nodiscard]] DataTypes::JsonBinary AsJson(const ::Memory::IAllocator* allocator)const;
         [[nodiscard]] page_id_t AsLargeObjectPointer() const;
 
+        [[nodiscard]] bool IsIntegral()const;
         // friend std::ostream& operator<<(std::ostream& os, const Value& field);
 
         [[nodiscard]] bool ParseAsBoolFromString()const;

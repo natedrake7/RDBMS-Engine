@@ -350,7 +350,7 @@ namespace QueryPipeline::PhysicalPlan {
     };
 
     class PhysicalTop final : public PlanNode {
-        int64_t top;
+        BigInt top;
         PlanNode* child;
     public:
         PhysicalTop(PlanNode* child, BigInt top);

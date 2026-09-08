@@ -296,6 +296,10 @@ page_id_t Value::AsLargeObjectPointer() const{
     return *reinterpret_cast<const page_id_t*>(&this->_data);
 }
 
+bool Value::IsIntegral() const{
+    return this->_type >= DataType::TinyInt && this->_type <= DataType::BigInt;
+}
+
 // std::ostream & operator<<(std::ostream& os, const Value &field){
 //     if (field.IsNull()) {
 //         os << "NULL";
