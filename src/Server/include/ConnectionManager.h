@@ -7,6 +7,9 @@
 #include <atomic>
 #include <string>
 
+#include "../../Systemic/include/DataStructures/Dictionary.h"
+#include "../../Systemic/include/Network/Socket.h"
+
 #ifdef _WIN32
 #define NOMINMAX
 #define byte win_byte_override // Add this before any Windows headers
@@ -28,55 +31,58 @@
 #endif
 
 
-using namespace std;
-
 namespace Network {
+    class ClientConnection;
 
-  struct ConnectionParameters {
-    Int port;
-    Int serverSocket;
-    Int epollFileDescriptor;
-    std::string hostName;
+    struct ConnectionParameters {
+        Int port;
+        Int serverSocket;
+        Int epollFileDescriptor;
+        std::string hostName;
 
-    Int numberOfConnections;
-    Int timeoutTime;
+        Int numberOfConnections;
+        Int timeoutTime;
 
-    ConnectionParameters();
-    ConnectionParameters(const std::string& hostname, Int port, Int numberOfConnections, Int timeoutTime);
-  };
+        ConnectionParameters();
+        ConnectionParameters(std::string& hostname, Int port, Int numberOfConnections, Int timeoutTime);
+    };
 
+    void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
 
+    class ConnectionManager final{
+        ConnectionParameters _parameters;
+        Dictionary<socket_t, std::shared_ptr<ClientConnection>> _connectionPool;
+        std::vector<SocketEvent> _events;
+        ThreadPool _threadPool;
 
-  void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
+        void InitializeServerSocket();
+        void CloseServerConnection() const;
+        void AcceptNewConnections();
+        void CloseConnection(const std::shared_ptr<ClientConnection>& connection);
+        void BuildEventsSet();
+        void UpdateWriteInterest(const std::shared_ptr<ClientConnection>& connection)const;
 
-  class ConnectionManager {
-    ConnectionParameters parameters;
-    vector<SocketEvent> events;
-    ThreadPool threadPool;
+        [[nodiscard]] bool IsServiceReadable(std::shared_ptr<ClientConnection>& connection)const;
 
-    protected:
-      static void SendToClient(Int clientSocket, Network::ResponseProtocol* protocol);
+        static void SendToClient(Int clientSocket, Network::ResponseProtocol* protocol);
 
-      void GetQueryFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header, const vector<char>& buffer);
-      void AuthorizeClientConnection(Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char>& buffer)const;
-      void HandleClientConnection(Int clientSocket, mutex& clientMutex);
-      void ReadBodyFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header);
-      void CloseServerConnection() const;
-      void CloseClientConnection(Int clientSocket) const;
-      void InitializeServerSocket();
+        void GetQueryFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header, const std::vector<char>& buffer);
+        void AuthorizeClientConnection(Int clientSocket, const Network::ConnectionProtocolHeader &header, const std::vector<char>& buffer)const;
+        void HandleClientConnection(Int clientSocket, mutex& clientMutex);
+        void ReadBodyFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header);
 
-      static void ExecuteQuery(const std::string& query, Int socket, const Network::ConnectionProtocolHeader &header);
+        static void ExecuteQuery(const std::string& query, Int socket, const Network::ConnectionProtocolHeader &header);
 
 #ifdef _WIN32
-      void HandleClientDisconnection(const SocketEvent& event, Int& totalEvents, Int& index);
+        void HandleClientDisconnection(const SocketEvent& event, Int& totalEvents, Int& index);
 #else
-    void HandleClientDisconnection(Int socket, Int& totalEvents, Int& index);
+        void HandleClientDisconnection(Int socket, Int& totalEvents, Int& index);
 #endif
     public:
-      explicit ConnectionManager(const ConnectionParameters& parameters);
-      ~ConnectionManager() = default;
+        explicit ConnectionManager(const ConnectionParameters& parameters);
+        ~ConnectionManager() = default;
 
-      void HandleNewConnections(const atomic<bool>& isServerRunning);
+        void HandleNewConnections(const atomic<bool>& isServerRunning);
   };
 
 

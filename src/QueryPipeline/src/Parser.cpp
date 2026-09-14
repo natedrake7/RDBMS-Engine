@@ -84,6 +84,12 @@ namespace QueryPipeline{
         static auto& server = Network::Server::Get();
         const auto* session = server.GetSession(sessionId);
 
+        if (session == nullptr){
+            static constexpr DataTypes::StringView ERROR_MESSAGE = "Session not found";
+            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
+            return;
+        }
+
         Parsing::SqlParser parser(tokens, result.GetAllocator(), diagnostic);
         if (!parser.ParseStatements(result._compileContext.GetStatements(), &sessionId, session->databaseId)){
             result.status = Errors::Error(true, diagnostic.message, result.GetAllocator());

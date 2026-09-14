@@ -1,14 +1,14 @@
-#include "../../include/SessionManager.h"
+#include "../include/SessionManager.h"
 
-#include "../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
+#include "../../Systemic/include/Guards/ReaderGuard.h"
+#include "../../Systemic/include/Guards/WriterGuard.h"
 
 #include <ranges>
 
-#include "../../../CoreEngine/include/Managers/GlobalMemoryManager.h"
-#include "../../../QueryPipeline/include/CompileContext.h"
+#include "../../CoreEngine/include/Managers/GlobalMemoryManager.h"
+#include "../../QueryPipeline/include/CompileContext.h"
 
-#include "../../../Systemic/include/DataTypes/BoundVariable.h"
+#include "../../Systemic/include/DataTypes/BoundVariable.h"
 
 namespace Network::Sessions {
     SessionManager::~SessionManager(){

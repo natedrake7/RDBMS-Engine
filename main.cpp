@@ -113,6 +113,8 @@
 //TODO make identity maybe templated
 //Potential improvement add timestamp to rowHeader and on MVCC use timestamp instead of active transactions
 
+//TODO add SSL connectivity for sockets.
+
 int main(){
     const auto memoryInfo = Memory::GetOSMemoryInfo();
 

@@ -1,5 +1,5 @@
-#include "../../include/ThreadPool.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.h"
+#include "../include/ThreadPool.h"
+#include "../../Systemic/include/DataTypes/DataTypes.h"
 
 ThreadPool::ThreadPool() = default;
 
