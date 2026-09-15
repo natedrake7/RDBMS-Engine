@@ -10,28 +10,29 @@ namespace QueryPipeline{
 
 namespace Network::Sessions {
   class SessionManager {
-    Dictionary<DataTypes::Guid, Session*> _sessions;
-
+    Dictionary<session_id_t, std::shared_ptr<Session>> _sessions;
     mutable MultiThreading::Mutex mutex;
+    std::atomic<session_id_t> _nextSessionId;
 
-    [[nodiscard]] Session* TryGetSessionWithoutLock(const DataTypes::Guid& id)const;
+    [[nodiscard]] Session* TryGetSessionWithoutLock(session_id_t id)const;
+    [[nodiscard]] session_id_t NextSessionId();
 
-  public:
-    ~SessionManager();
+    public:
+        SessionManager();
 
-    const Session* CreateSession(const Security::User* user);
-    const Session* GetSession(const DataTypes::Guid& id)const;
-    [[nodiscard]] bool CloseSession(const DataTypes::Guid& id);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& id, Int databaseId)const;
+        const Session* CreateSession(const Security::User* user);
+        const Session* GetSession(session_id_t id)const;
+        [[nodiscard]] bool CloseSession(session_id_t id);
+        [[nodiscard]] bool UpdateSession(session_id_t id, Int databaseId)const;
 
-    [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& id, const Variable& variable)const;
+        [[nodiscard]] bool AddOrSetVariable(session_id_t id, const Variable& variable)const;
 
-    [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
-        const DataTypes::Guid &id,
-        const QueryPipeline::CompileContext& compileContext,
-        CoreEngine::ExecutionContext& executionContext,
-        QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
-    )const;
-    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
+        [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
+            session_id_t id,
+            const QueryPipeline::CompileContext& compileContext,
+            CoreEngine::ExecutionContext& executionContext,
+            QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
+        )const;
+        [[nodiscard]] bool CloseCursor(session_id_t id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
   };
 }

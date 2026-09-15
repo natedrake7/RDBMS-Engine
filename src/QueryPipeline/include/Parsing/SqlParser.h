@@ -186,14 +186,13 @@ namespace QueryPipeline::Parsing{
              */
             [[nodiscard]] bool ParseStatements(
                 DataStructures::PolymorphicArray<Statements::Statement*>* statements,
-                const DataTypes::Guid* sessionId,
                 Int databaseId
             );
 
             /**
              * Parses a single statement, without its terminating ';'.
              */
-            [[nodiscard]] Statements::Statement* ParseStatement(const DataTypes::Guid* sessionId, Int databaseId);
+            [[nodiscard]] Statements::Statement* ParseStatement(Int databaseId);
 
             /**
              * Parses a type reference: BOOL, INT, STRING(n), STRING(MAX), DECIMAL(p,s),

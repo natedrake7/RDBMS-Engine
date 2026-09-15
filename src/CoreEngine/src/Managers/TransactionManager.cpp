@@ -15,7 +15,7 @@ namespace CoreEngine {
         return instance;
     }
 
-    Snapshot TransactionManager::BeginTransaction(const DataTypes::Guid& sessionId){
+    Snapshot TransactionManager::BeginTransaction(const session_id_t sessionId){
         Snapshot snapshot;
 
         {

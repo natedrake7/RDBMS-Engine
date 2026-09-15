@@ -71,7 +71,7 @@ namespace QueryPipeline{
         return *this;
     }
 
-    void Parser::Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query) {
+    void Parser::Parse(QueryContext& result, const session_id_t sessionId, const std::string& query) {
         Parsing::Diagnostic diagnostic;
         DataStructures::PolymorphicArray<Parsing::Token> tokens(result.GetAllocator());
         const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView(query), tokens, diagnostic);
@@ -91,7 +91,7 @@ namespace QueryPipeline{
         }
 
         Parsing::SqlParser parser(tokens, result.GetAllocator(), diagnostic);
-        if (!parser.ParseStatements(result._compileContext.GetStatements(), &sessionId, session->databaseId)){
+        if (!parser.ParseStatements(result._compileContext.GetStatements(), session->databaseId)){
             result.status = Errors::Error(true, diagnostic.message, result.GetAllocator());
         }
      }
@@ -125,12 +125,12 @@ namespace QueryPipeline{
         return physicalPlan;
     }
 
-    void Parser::CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, const PipelineConstants::cursor_id_t cursorId) {
+    void Parser::CleanUpPostExecutionObjects(const session_id_t sessionId, const PipelineConstants::cursor_id_t cursorId) {
         static const auto& server = Network::Server::Get();
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
-    QueryContext Parser::StartTransaction(const std::string &query, const DataTypes::Guid &sessionId){
+    QueryContext Parser::StartTransaction(const std::string &query, const session_id_t sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
 
@@ -177,13 +177,13 @@ namespace QueryPipeline{
         return queryContext;
     }
 
-    void Parser::CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor) {
+    void Parser::CommitTransaction(const session_id_t sessionId, const Cursor* cursor) {
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.CommitTransaction(cursor->GetSnapshot());
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
     }
 
-    void Parser::RollbackTransaction(const DataTypes::Guid &sessionId, const Cursor* cursor) {
+    void Parser::RollbackTransaction(const session_id_t sessionId, const Cursor* cursor) {
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.RollbackTransaction(cursor->GetExecutionContext());
         Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());

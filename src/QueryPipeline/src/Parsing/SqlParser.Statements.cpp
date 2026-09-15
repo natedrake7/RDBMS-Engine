@@ -77,7 +77,6 @@ namespace QueryPipeline::Parsing{
 
     bool SqlParser::ParseStatements(
         DataStructures::PolymorphicArray<Statements::Statement*>* statements,
-        const DataTypes::Guid* sessionId,
         const Int databaseId
     ){
         if (this->AtEnd()){
@@ -86,7 +85,7 @@ namespace QueryPipeline::Parsing{
         }
 
         while (!this->AtEnd()){
-            auto* statement = this->ParseStatement(sessionId, databaseId);
+            auto* statement = this->ParseStatement(databaseId);
             if (statement == nullptr)
                 return false;
 
@@ -99,7 +98,7 @@ namespace QueryPipeline::Parsing{
         return true;
     }
 
-    Statements::Statement* SqlParser::ParseStatement(const DataTypes::Guid* sessionId, const Int databaseId){
+    Statements::Statement* SqlParser::ParseStatement(const Int databaseId){
         Statements::Statement* statement = nullptr;
         switch (this->Current().type){
             case TokenType::Select:

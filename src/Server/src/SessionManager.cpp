@@ -11,50 +11,52 @@
 #include "../../Systemic/include/DataTypes/BoundVariable.h"
 
 namespace Network::Sessions {
-    SessionManager::~SessionManager(){
-        for (const auto* session : this->_sessions | std::views::values)
-            delete session;
-    }
-
     const Session* SessionManager::CreateSession(const Security::User* user){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        auto* session = new Session(user);
+        const auto session = std::make_shared<Session>(user);
         session->databaseId = Constants::SYSTEM_CATALOG_ID;
+        session->sessionId = this->NextSessionId();
         this->_sessions.Add(session->sessionId, session);
-        return session;
+        return session.get();
     }
 
-    const Session* SessionManager::GetSession(const DataTypes::Guid &id)const{
-        Session* session = nullptr;
+    const Session* SessionManager::GetSession(const session_id_t id)const{
+        std::shared_ptr<Session> session;
 
         MultiThreading::ReaderGuard guard(&this->mutex);
         this->_sessions.TryGetValue(id, session);
 
-        return session;
+        return session.get();
     }
 
-    Session* SessionManager::TryGetSessionWithoutLock(const DataTypes::Guid &id)const{
-        Session* session = nullptr;
+    Session* SessionManager::TryGetSessionWithoutLock(const session_id_t id)const{
+        std::shared_ptr<Session> session;
         this->_sessions.TryGetValue(id, session);
-        return session;
+        return session.get();
     }
 
-    bool SessionManager::CloseSession(const DataTypes::Guid &id){
-        Session* session = nullptr;
+    session_id_t SessionManager::NextSessionId(){
+        return this->_nextSessionId.fetch_add(1, std::memory_order_relaxed);
+    }
+
+    SessionManager::SessionManager()
+        : _nextSessionId(INVALID_SESSION_ID + 1){}
+
+    bool SessionManager::CloseSession(const session_id_t id){
+        std::shared_ptr<Session> session;
 
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        if (this->_sessions.TryGetValue(id, session)) {
+        if (this->_sessions.Contains(id)){
             this->_sessions.Remove(id);
-            delete session;
             return true;
         }
 
         return false;
     }
 
-    bool SessionManager::UpdateSession(const DataTypes::Guid &id, const Int databaseId)const{
+    bool SessionManager::UpdateSession(const session_id_t id, const Int databaseId)const{
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = this->TryGetSessionWithoutLock(id);
@@ -68,7 +70,7 @@ namespace Network::Sessions {
     }
 
     bool SessionManager::AddOrSetVariable(
-        const DataTypes::Guid &id,
+        const session_id_t id,
         const Variable& variable
     )const {
         MultiThreading::WriterGuard guard(&this->mutex);
@@ -96,7 +98,7 @@ namespace Network::Sessions {
     }
 
     QueryPipeline::Cursor* SessionManager::CreateCursor(
-        const DataTypes::Guid &id,
+        const session_id_t id,
         const QueryPipeline::CompileContext& compileContext,
         CoreEngine::ExecutionContext& executionContext,
         QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
@@ -121,7 +123,7 @@ namespace Network::Sessions {
     }
 
     bool SessionManager::CloseCursor(
-        const DataTypes::Guid &id,
+        const session_id_t id,
         const QueryPipeline::PipelineConstants::cursor_id_t cursorId
     ) const{
         MultiThreading::WriterGuard guard(&this->mutex);

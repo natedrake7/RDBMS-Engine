@@ -56,10 +56,10 @@ namespace QueryPipeline{
     };
 
     class Parser{
-        static void Parse(QueryContext& result, const DataTypes::Guid& sessionId, const std::string& query);
+        static void Parse(QueryContext& result, session_id_t sessionId, const std::string& query);
         static LogicalPlan* BuildLogicalPlan(QueryContext& result, Statements::Statement* statement);
         static PhysicalPlan::PlanNode* BuildExecutionPlan(QueryContext& result, LogicalPlan* logicalPlan);
-        static void CleanUpPostExecutionObjects(const DataTypes::Guid& sessionId, PipelineConstants::cursor_id_t cursorId);
+        static void CleanUpPostExecutionObjects(session_id_t sessionId, PipelineConstants::cursor_id_t cursorId);
 
         public:
             static Parser& Get(){
@@ -67,10 +67,10 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static QueryContext StartTransaction(const std::string& query, const DataTypes::Guid& sessionId);
+            static QueryContext StartTransaction(const std::string& query, session_id_t sessionId);
 
-            static void CommitTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);
-            static void RollbackTransaction(const DataTypes::Guid& sessionId, const Cursor* cursor);
+            static void CommitTransaction(session_id_t sessionId, const Cursor* cursor);
+            static void RollbackTransaction(session_id_t sessionId, const Cursor* cursor);
     };
 
 }

@@ -15,14 +15,14 @@
 
 
 namespace QueryPipeline {
-    LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId, const Int databaseId)
+    LogicalPlan::LogicalPlan(const session_id_t sessionId, const Int databaseId)
         : sessionId(sessionId), databaseId(databaseId) {}
 
-    LogicalPlan::LogicalPlan(const DataTypes::Guid &sessionId)
+    LogicalPlan::LogicalPlan(const session_id_t sessionId)
         : sessionId(sessionId), databaseId(INVALID_DATABASE_ID) {}
 
     LogicalPlan::LogicalPlan()
-        : sessionId(DataTypes::Guid()), databaseId(INVALID_DATABASE_ID) {}
+        : sessionId(INVALID_SESSION_ID), databaseId(INVALID_DATABASE_ID) {}
 
     LogicalMaterialize::LogicalMaterialize(
         LogicalPlan* child,
@@ -59,7 +59,7 @@ namespace QueryPipeline {
         );
     }
 
-    LogicalDeclareVariable::LogicalDeclareVariable(const DataTypes::Guid &sessionId, Variable& variable, Expressions::Expression* expression)
+    LogicalDeclareVariable::LogicalDeclareVariable(const session_id_t sessionId, Variable& variable, Expressions::Expression* expression)
         : LogicalPlan(sessionId), variable(std::move(variable)), expression(expression) {}
 
     PhysicalPlan::PlanNode* LogicalDeclareVariable::ToPhysical(QueryContext& context) {
@@ -67,28 +67,28 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalDeclareVariable>(this->sessionId, this->variable, this->expression);
     }
 
-    LogicalCreateUser::LogicalCreateUser(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
+    LogicalCreateUser::LogicalCreateUser(const session_id_t sessionId, DataTypes::String& username, DataTypes::String& password, DataTypes::String& role)
         : LogicalPlan(sessionId), username(std::move(username)), password(std::move(password)), role(std::move(role)) {}
 
     PhysicalPlan::PlanNode* LogicalCreateUser::ToPhysical(QueryContext& context) {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalCreateUser>(this->username, this->password, this->role);
     }
 
-    LogicalGrantRole::LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& role)
+    LogicalGrantRole::LogicalGrantRole(const session_id_t sessionId, DataTypes::String& username, DataTypes::String& role)
         : LogicalPlan(sessionId), username(std::move(username)), role(std::move(role)) {}
 
     PhysicalPlan::PlanNode* LogicalGrantRole::ToPhysical(QueryContext& context) {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalGrantRole>(this->sessionId, this->username, this->role);
     }
 
-    LogicalCreateDatabase::LogicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& dbName)
+    LogicalCreateDatabase::LogicalCreateDatabase(const session_id_t sessionId, DataTypes::String& dbName)
         : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
 
     PhysicalPlan::PhysicalCreateDatabase* LogicalCreateDatabase::ToPhysical(QueryContext& context){
         return context._compileContext.Allocate<PhysicalPlan::PhysicalCreateDatabase>(this->sessionId, this->dbName);
     }
 
-    LogicalUseDatabase::LogicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
+    LogicalUseDatabase::LogicalUseDatabase(const session_id_t sessionId, const Int databaseId)
         : databaseId(databaseId), sessionId(sessionId) {}
 
     PhysicalPlan::PhysicalUseDatabase* LogicalUseDatabase::ToPhysical(QueryContext& context){
@@ -518,7 +518,7 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->insertPlan);
     }
 
-    LogicalSchemaCreate::LogicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
+    LogicalSchemaCreate::LogicalSchemaCreate(const session_id_t sessionId, const Int databaseId, DataTypes::String& schemaName)
         : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
     PhysicalPlan::PhysicalSchemaCreate* LogicalSchemaCreate::ToPhysical(QueryContext& context){
@@ -592,7 +592,7 @@ namespace QueryPipeline {
     }
 
     LogicalTableCreate::LogicalTableCreate(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource* table,
         DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
         DataStructures::PolymorphicArray<column_index_t> primaryKey,
@@ -612,7 +612,7 @@ namespace QueryPipeline {
     }
 
     LogicalIndexCreate::LogicalIndexCreate(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource *table,
         DataTypes::String& constraintName,
         DataStructures::PolymorphicArray<column_index_t> &columns
@@ -623,7 +623,7 @@ namespace QueryPipeline {
     }
 
     LogicalAlterTable::LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource *table,
         const Constants::AlterTableType& type,
         Statements::NewColumn *column
@@ -632,7 +632,7 @@ namespace QueryPipeline {
     }
 
     LogicalAlterTable::LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource *table,
         const Constants::AlterTableType& type,
         Statements::AlterColumn *column
@@ -641,7 +641,7 @@ namespace QueryPipeline {
     }
 
     LogicalAlterTable::LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource *table,
         const Constants::AlterTableType& type,
         Statements::RenameColumn *column
@@ -650,7 +650,7 @@ namespace QueryPipeline {
     }
 
     LogicalAlterTable::LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource *table,
         const Constants::AlterTableType& type,
         Statements::DropColumn *column

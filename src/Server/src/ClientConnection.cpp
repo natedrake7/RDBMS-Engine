@@ -21,7 +21,7 @@ namespace Network{
         return this->_session != nullptr;
     }
 
-    const DataTypes::Guid& ClientConnection::SessionId() const{
+    session_id_t ClientConnection::SessionId() const{
         if (!this->IsAuthenticated())
             throw std::runtime_error("Client is not authenticated");
 

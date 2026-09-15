@@ -12,7 +12,7 @@ namespace QueryPipeline {
 
 namespace Network {
     struct Session {
-        DataTypes::Guid sessionId;
+        session_id_t sessionId;
 
         const Security::User* user;
 
@@ -30,7 +30,7 @@ namespace Network {
 
         //add permissions later and session variables etc
         explicit Session(const Security::User* user)
-            :   sessionId(DataTypes::Guid::NewGuid()), user(user),
+            :   sessionId(INVALID_SESSION_ID), user(user),
                 createdAt(DataTypes::DateTime::Now()), lastActive(DataTypes::DateTime::Now()),
                 databaseId(0), nextCursorId(0),
                 transactionId(0) {}

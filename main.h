@@ -16,7 +16,7 @@ namespace Network{
 
 void shutdownClient(int signal);
 void RegisterSignalHandlers();
-void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId);
+void ExecuteQuery(const std::string& query, session_id_t sessionId);
 void CommandLineInterface(Network::Server& server);
 
 inline std::atomic serverRunning{false};

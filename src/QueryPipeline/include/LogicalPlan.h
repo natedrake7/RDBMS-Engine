@@ -6,11 +6,11 @@ namespace QueryPipeline {
 
     class LogicalPlan {
     public:
-        DataTypes::Guid sessionId;
+        session_id_t sessionId;
         Int databaseId;
 
-        LogicalPlan(const DataTypes::Guid& sessionId, Int databaseId);
-        explicit LogicalPlan(const DataTypes::Guid& sessionId);
+        LogicalPlan(session_id_t sessionId, Int databaseId);
+        explicit LogicalPlan(session_id_t sessionId);
         LogicalPlan();
         virtual ~LogicalPlan() = default;
         virtual PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) = 0;
@@ -33,7 +33,7 @@ namespace QueryPipeline {
         Variable variable;
         Expressions::Expression* expression;
 
-        LogicalDeclareVariable(const DataTypes::Guid& sessionId, Variable& variable, Expressions::Expression* expression);
+        LogicalDeclareVariable(session_id_t sessionId, Variable& variable, Expressions::Expression* expression);
         PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
@@ -44,7 +44,7 @@ namespace QueryPipeline {
         DataTypes::String role;
 
         explicit LogicalCreateUser(
-            const DataTypes::Guid& sessionId,
+            session_id_t sessionId,
             DataTypes::String&  username,
             DataTypes::String& password,
             DataTypes::String& role
@@ -57,7 +57,7 @@ namespace QueryPipeline {
         DataTypes::String username;
         DataTypes::String role;
 
-        explicit LogicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String & username, DataTypes::String & role);
+        explicit LogicalGrantRole(session_id_t sessionId, DataTypes::String & username, DataTypes::String & role);
         ~LogicalGrantRole()override = default;
         PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
     };
@@ -65,16 +65,16 @@ namespace QueryPipeline {
     class LogicalCreateDatabase final : public LogicalPlan {
     public:
         DataTypes::String dbName;
-        explicit LogicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& dbName);
+        explicit LogicalCreateDatabase(session_id_t sessionId, DataTypes::String& dbName);
         PhysicalPlan::PhysicalCreateDatabase* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalUseDatabase final : public LogicalPlan {
     public:
         Int databaseId;
-        DataTypes::Guid sessionId;
+        session_id_t sessionId;
 
-        explicit LogicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
+        explicit LogicalUseDatabase(session_id_t sessionId, Int databaseId);
         PhysicalPlan::PhysicalUseDatabase* ToPhysical(QueryContext& context)override;
     };
 
@@ -216,7 +216,7 @@ namespace QueryPipeline {
     public:
       DataTypes::String schemaName;
       Int databaseId;
-      explicit LogicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, DataTypes::String& schemaName);
+      explicit LogicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
       PhysicalPlan::PhysicalSchemaCreate* ToPhysical(QueryContext& context)override;
   };
 
@@ -250,7 +250,7 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<column_index_t> primaryKey;
 
         explicit LogicalTableCreate(
-            const DataTypes::Guid& sessionId,
+            session_id_t sessionId,
             Statements::DataSource* table,
             DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
             DataStructures::PolymorphicArray<column_index_t> primaryKey,
@@ -265,7 +265,7 @@ namespace QueryPipeline {
     DataTypes::String constraintName;
     DataStructures::PolymorphicArray<column_index_t> columns;
     explicit LogicalIndexCreate(
-      const DataTypes::Guid& sessionId,
+      session_id_t sessionId,
       Statements::DataSource* table,
       DataTypes::String& constraintName,
       DataStructures::PolymorphicArray<column_index_t>& columns
@@ -286,28 +286,28 @@ namespace QueryPipeline {
       } column;
 
       explicit LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        session_id_t sessionId,
         Statements::DataSource* table,
         const Constants::AlterTableType& type,
         Statements::NewColumn* column
       );
 
       explicit LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        session_id_t sessionId,
         Statements::DataSource* table,
         const Constants::AlterTableType& type,
         Statements::AlterColumn* column
       );
 
       explicit LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        session_id_t sessionId,
         Statements::DataSource* table,
         const Constants::AlterTableType& type,
         Statements::RenameColumn* column
       );
 
       explicit LogicalAlterTable(
-        const DataTypes::Guid& sessionId,
+        session_id_t sessionId,
         Statements::DataSource* table,
         const Constants::AlterTableType& type,
         Statements::DropColumn* column

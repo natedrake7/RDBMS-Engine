@@ -77,7 +77,7 @@ namespace Network {
 
   Errors::RuntimeStatus Server::GrantRole(
     const CoreEngine::ExecutionContext& context,
-    const DataTypes::Guid& currentSessionId,
+    const session_id_t currentSessionId,
     const DataTypes::String& username,
     const Security::Role *role
   )const{
@@ -94,7 +94,7 @@ namespace Network {
 
     Errors::RuntimeStatus Server::UpdateUserById(
         const CoreEngine::ExecutionContext& context,
-        const DataTypes::Guid& callerSessionId,
+        const session_id_t callerSessionId,
         const Int userId,
         const Int roleId
     )const{
@@ -180,24 +180,24 @@ namespace Network {
     return this->sessionManager.CreateSession(user);
   }
 
-  const Session * Server::GetSession(const DataTypes::Guid &key)const{
+  const Session * Server::GetSession(const session_id_t key)const{
     return this->sessionManager.GetSession(key);
   }
 
-  bool Server::CloseSession(const DataTypes::Guid &key) {
+  bool Server::CloseSession(const session_id_t key) {
     return this->sessionManager.CloseSession(key);
   }
 
-  bool Server::UpdateSession(const DataTypes::Guid &key, const Int databaseId)const{
+  bool Server::UpdateSession(const session_id_t key, const Int databaseId)const{
     return this->sessionManager.UpdateSession(key, databaseId);
   }
 
-  bool Server::AddOrSetVariable(const DataTypes::Guid &sessionId, const Variable& variable) const {
+  bool Server::AddOrSetVariable(const session_id_t sessionId, const Variable& variable) const {
     return this->sessionManager.AddOrSetVariable(sessionId, variable);
   }
 
   QueryPipeline::Cursor* Server::CreateCursor(
-    const DataTypes::Guid &id,
+    const session_id_t id,
     const QueryPipeline::CompileContext& compileContext,
     CoreEngine::ExecutionContext& executionContext,
     QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
@@ -206,7 +206,7 @@ namespace Network {
   }
 
     bool Server::CloseCursor(
-        const DataTypes::Guid &id,
+        const session_id_t id,
         const QueryPipeline::PipelineConstants::cursor_id_t cursorId
     ) const {
         return this->sessionManager.CloseCursor(id, cursorId);

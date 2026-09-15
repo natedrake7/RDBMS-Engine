@@ -4,6 +4,10 @@
 #include <string_view>
 #include <type_traits>
 
+typedef uint64_t session_id_t;
+
+static inline constexpr session_id_t INVALID_SESSION_ID = 0;
+
 typedef uint8_t UnsignedTinyInt;
 typedef uint16_t UnsignedSmallInt;
 typedef uint32_t UnsignedInt;

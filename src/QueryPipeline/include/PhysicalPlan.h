@@ -59,7 +59,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     class PlanNode {
     protected:
-        DataTypes::Guid sessionId;
+        session_id_t sessionId;
 
         // Owned by the compile arena and shared: a pass-through node points at its child's
         // schema, so a schema must never be mutated once built.
@@ -70,7 +70,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     public:
         PlanNode();
-        explicit PlanNode(const DataTypes::Guid& currentSessionId);
+        explicit PlanNode(session_id_t currentSessionId);
         explicit PlanNode(const CoreEngine::OutputSchema* schema);
         virtual ~PlanNode() = default;
         void InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows);
@@ -133,22 +133,22 @@ namespace QueryPipeline::PhysicalPlan {
         DataTypes::String username;
         DataTypes::String roleName;
     public:
-        explicit PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName);
+        explicit PhysicalGrantRole(session_id_t sessionId, DataTypes::String& username, DataTypes::String& roleName);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
     class PhysicalCreateDatabase final : public PlanNode {
         DataTypes::String dbName;
     public:
-        explicit PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name);
+        explicit PhysicalCreateDatabase(session_id_t sessionId, DataTypes::String& name);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
     class PhysicalUseDatabase final : public PlanNode {
-        DataTypes::Guid sessionId;
+        session_id_t sessionId;
         Int databaseId;
     public:
-        explicit PhysicalUseDatabase(const DataTypes::Guid& sessionId, Int databaseId);
+        explicit PhysicalUseDatabase(session_id_t sessionId, Int databaseId);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -156,7 +156,7 @@ namespace QueryPipeline::PhysicalPlan {
         DataTypes::String schemaName;
         Int databaseId;
     public:
-        explicit PhysicalSchemaCreate(const DataTypes::Guid& sessionId, Int databaseId, DataTypes::String& schemaName);
+        explicit PhysicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -167,7 +167,7 @@ namespace QueryPipeline::PhysicalPlan {
         Headers::Index primaryKey;
     public:
         PhysicalTableCreate(
-            const DataTypes::Guid& sessionId,
+            session_id_t sessionId,
             Statements::DataSource* table,
             DataStructures::PolymorphicArray<Statements::NewColumn*>& columns,
             const Headers::Index& primaryKey,
@@ -182,7 +182,7 @@ namespace QueryPipeline::PhysicalPlan {
         DataStructures::PolymorphicArray<column_index_t> columns;
     public:
         PhysicalIndexCreate(
-            const DataTypes::Guid& sessionId,
+            session_id_t sessionId,
             Statements::DataSource* table,
             DataTypes::String& constraintName,
             DataStructures::PolymorphicArray<column_index_t>& columns
@@ -202,7 +202,7 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DataSource* table;
         Statements::NewColumn* column;
     public:
-        PhysicalAddColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::NewColumn* column);
+        PhysicalAddColumn(session_id_t sessionId, Statements::DataSource* table, Statements::NewColumn* column);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -210,7 +210,7 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DataSource* table;
         Statements::DropColumn* column;
     public:
-        PhysicalDropColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::DropColumn* column);
+        PhysicalDropColumn(session_id_t sessionId, Statements::DataSource* table, Statements::DropColumn* column);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -218,7 +218,7 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DataSource* table;
         Statements::RenameColumn* column;
     public:
-        PhysicalRenameColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
+        PhysicalRenameColumn(session_id_t sessionId, Statements::DataSource* table, Statements::RenameColumn* column);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -226,7 +226,7 @@ namespace QueryPipeline::PhysicalPlan {
         Statements::DataSource* table;
         Statements::AlterColumn* column;
     public:
-        PhysicalAlterColumn(const DataTypes::Guid& sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
+        PhysicalAlterColumn(session_id_t sessionId, Statements::DataSource* table, Statements::AlterColumn* column);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -650,7 +650,7 @@ namespace QueryPipeline::PhysicalPlan {
         Variable variable;
         Expressions::Expression* expression;
     public:
-        explicit PhysicalDeclareVariable(const DataTypes::Guid& currentSessionId, Variable& variable, Expressions::Expression* expression);
+        explicit PhysicalDeclareVariable(session_id_t currentSessionId, Variable& variable, Expressions::Expression* expression);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 

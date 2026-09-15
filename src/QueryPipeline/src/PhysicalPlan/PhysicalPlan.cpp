@@ -61,15 +61,15 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PlanNode::PlanNode()
-        :   sessionId(DataTypes::Guid::Empty()), _schema(nullptr),
+        :   sessionId(INVALID_SESSION_ID), _schema(nullptr),
             session(nullptr), temporaryTableId(INVALID_TABLE_ID){}
 
-    PlanNode::PlanNode(const DataTypes::Guid &currentSessionId)
+    PlanNode::PlanNode(const session_id_t currentSessionId)
         :   sessionId(currentSessionId), _schema(nullptr),
             session(Network::Server::Get().GetSession(this->sessionId)), temporaryTableId(INVALID_TABLE_ID){}
 
     PlanNode::PlanNode(const CoreEngine::OutputSchema* schema)
-        :   sessionId(DataTypes::Guid::Empty()), _schema(schema),
+        :   sessionId(INVALID_SESSION_ID), _schema(schema),
             session(nullptr), temporaryTableId(INVALID_TABLE_ID){}
 
     void PlanNode::InsertToTemporaryDatabase(const DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>& rows){
@@ -179,7 +179,7 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
   }
 
-  PhysicalGrantRole::PhysicalGrantRole(const DataTypes::Guid& sessionId, DataTypes::String& username, DataTypes::String& roleName)
+  PhysicalGrantRole::PhysicalGrantRole(const session_id_t sessionId, DataTypes::String& username, DataTypes::String& roleName)
       : PlanNode(sessionId), username(std::move(username)), roleName(std::move(roleName)) {}
 
   ExecutionResult PhysicalGrantRole::Execute(CoreEngine::ExecutionContext& context) {
@@ -198,7 +198,7 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  PhysicalCreateDatabase::PhysicalCreateDatabase(const DataTypes::Guid& sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
+  PhysicalCreateDatabase::PhysicalCreateDatabase(const session_id_t sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
 
   ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
       if (this->session == nullptr || this->session->user == nullptr)
@@ -223,7 +223,7 @@ namespace QueryPipeline::PhysicalPlan {
       return ExecutionResult(context);
   }
 
-  PhysicalUseDatabase::PhysicalUseDatabase(const DataTypes::Guid &sessionId, const Int databaseId)
+  PhysicalUseDatabase::PhysicalUseDatabase(const session_id_t sessionId, const Int databaseId)
       : sessionId(sessionId), databaseId(databaseId){}
 
   ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
@@ -246,7 +246,7 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  PhysicalSchemaCreate::PhysicalSchemaCreate(const DataTypes::Guid& sessionId, const Int databaseId, DataTypes::String& schemaName)
+  PhysicalSchemaCreate::PhysicalSchemaCreate(const session_id_t sessionId, const Int databaseId, DataTypes::String& schemaName)
       : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult PhysicalSchemaCreate::Execute(CoreEngine::ExecutionContext& context){
@@ -267,7 +267,7 @@ namespace QueryPipeline::PhysicalPlan {
   }
 
     PhysicalTableCreate::PhysicalTableCreate(
-        const DataTypes::Guid& sessionId,
+        const session_id_t sessionId,
         Statements::DataSource*  table,
         DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
         const Headers::Index& primaryKey,
@@ -441,7 +441,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
   PhysicalIndexCreate::PhysicalIndexCreate(
-      const DataTypes::Guid& sessionId,
+      const session_id_t sessionId,
       Statements::DataSource *table,
       DataTypes::String& constraintName,
       DataStructures::PolymorphicArray<column_index_t> &columns
@@ -1072,7 +1072,7 @@ namespace QueryPipeline::PhysicalPlan {
     }
 
     PhysicalDeclareVariable::PhysicalDeclareVariable(
-        const DataTypes::Guid &currentSessionId,
+        const session_id_t currentSessionId,
         Variable& variable,
         Expressions::Expression* expression
     ): PlanNode(currentSessionId), variable(std::move(variable)), expression(expression){}

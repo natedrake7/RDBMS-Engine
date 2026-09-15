@@ -12,7 +12,7 @@ struct ModificationInfo {
 
 struct TransactionInfo {
     transaction_id_t transactionId;
-    DataTypes::Guid sessionId;
+    session_id_t sessionId;
     ModificationInfo modificationInfo;
 };
 
@@ -29,7 +29,7 @@ class TransactionManager {
 public:
     static TransactionManager& Get();
 
-    Snapshot BeginTransaction(const DataTypes::Guid& sessionId);
+    Snapshot BeginTransaction(session_id_t sessionId);
     void SetTransactionId(transaction_id_t transactionId);
     void CommitTransaction(const Snapshot& snapshot);
     void RollbackTransaction(const ExecutionContext& context);

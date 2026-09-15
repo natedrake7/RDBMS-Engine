@@ -205,7 +205,7 @@ void CommandLineInterface(Network::Server& server) {
     }
 }
 
-void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
+void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
     const auto start = std::chrono::high_resolution_clock::now();
 
     const auto parseResult = QueryPipeline::Parser::StartTransaction(query, sessionId);

@@ -30,7 +30,7 @@ namespace Network{
 
             [[nodiscard]] socket_t Socket() const;
             [[nodiscard]] bool IsAuthenticated()const;
-            [[nodiscard]] const DataTypes::Guid& SessionId()const;
+            [[nodiscard]] session_id_t SessionId()const;
             void Bind(const Session* session);
             void SendFrame(const Header& header, const char* payload, size_t payloadSize);
 

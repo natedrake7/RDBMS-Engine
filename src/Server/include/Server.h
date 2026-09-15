@@ -50,7 +50,7 @@ namespace Network {
     //Security Functions
     [[nodiscard]]Errors::RuntimeStatus GrantRole(
         const CoreEngine::ExecutionContext& context,
-        const DataTypes::Guid& currentSessionId,
+        session_id_t currentSessionId,
         const DataTypes::String& username,
         const Security::Role* role
     )const;
@@ -63,7 +63,7 @@ namespace Network {
     );
     Errors::RuntimeStatus UpdateUserById(
         const CoreEngine::ExecutionContext& context,
-        const DataTypes::Guid& callerSessionId,
+        session_id_t callerSessionId,
         Int userId,
         Int roleId
     )const;
@@ -75,18 +75,18 @@ namespace Network {
 
     //Session Functions
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
-    [[nodiscard]] const Network::Session* GetSession(const DataTypes::Guid& key)const;
-    [[nodiscard]] bool CloseSession(const DataTypes::Guid& key);
-    [[nodiscard]] bool UpdateSession(const DataTypes::Guid& key, Int databaseId)const;
-    [[nodiscard]] bool AddOrSetVariable(const DataTypes::Guid& sessionId, const Variable& variable)const;
+    [[nodiscard]] const Network::Session* GetSession(session_id_t key)const;
+    [[nodiscard]] bool CloseSession(session_id_t key);
+    [[nodiscard]] bool UpdateSession(session_id_t key, Int databaseId)const;
+    [[nodiscard]] bool AddOrSetVariable(session_id_t sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
-        const DataTypes::Guid &id,
+        session_id_t id,
         const QueryPipeline::CompileContext& compileContext,
         CoreEngine::ExecutionContext& executionContext,
         QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
     )const;
-    [[nodiscard]] bool CloseCursor(const DataTypes::Guid &id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
+    [[nodiscard]] bool CloseCursor(session_id_t id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,
