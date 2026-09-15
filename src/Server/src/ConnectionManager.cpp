@@ -2,9 +2,6 @@
 
 #include "../include/Server.h"
 #include "../../QueryPipeline/include/Parser.h"
-#include "../../Systemic/include/Network/AuthorizeProtocol.h"
-#include "../../Systemic/include/Network/QueryProtocol.h"
-#include "../../Systemic/include/Network/QueryResponseProtocol.h"
 #include "../include/ThreadPool.h"
 #include "../include/Constants.h"
 
@@ -39,13 +36,13 @@ namespace Network {
             numberOfConnections(20), timeoutTime(10){}
 
     ConnectionParameters::ConnectionParameters(
-        string& hostname, const Int port,
+        std::string& hostname, const Int port,
         const Int numberOfConnections, const Int timeoutTime
     ) : port(port), serverSocket(Constants::INVALID_FILE_DESCRIPTOR),
         epollFileDescriptor(Constants::INVALID_FILE_DESCRIPTOR), hostName(std::move(hostname)),
         numberOfConnections(numberOfConnections), timeoutTime(timeoutTime){}
 
-    void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning){
+    void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning){
         ConnectionManager _connectionManager(parameters);
         _connectionManager.HandleNewConnections(isServerRunning);
     }
@@ -54,7 +51,7 @@ namespace Network {
         this->_parameters = parameters;
     }
 
-    void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning){
+    void ConnectionManager::HandleNewConnections(const std::atomic<bool>& isServerRunning){
         this->InitializeServerSocket();
         this->_threadPool.InitializeWorkers(isServerRunning, 20);
 
@@ -78,7 +75,7 @@ namespace Network {
                 if (IsInterrupted())
                     continue;
 
-                std::cerr << "epoll_wait failed " << strerror(errno) << endl;
+                std::cerr << "epoll_wait failed " << strerror(errno) << std::endl;
             }
 
 #ifdef _WIN32
@@ -122,7 +119,7 @@ namespace Network {
             }
         }
 
-        std::cout << "Closing connections" << endl;
+        std::cout << "Closing connections" << std::endl;
         this->CloseServerConnection();
   }
 
@@ -292,7 +289,7 @@ void ConnectionManager::CloseServerConnection() const
 #endif
     }
 
-    void ConnectionManager::ServiceReadable(const std::shared_ptr<ClientConnection>& connection) const{
+    void ConnectionManager::ServiceReadable(const std::shared_ptr<ClientConnection>& connection){
         const auto fillStatus = connection->FillReadBuffer();
 
         Header header;
@@ -321,16 +318,17 @@ void ConnectionManager::CloseServerConnection() const
     ){
         switch (header._messageType) {
         case MessageType::Authorize:
-            ConnectionManager::HandleAuthorize(connection, header, payload);
+            ConnectionManager::HandleClientAuthentication(connection, header, payload);
             return;
         case MessageType::Query:
+            this->HandleQuery(connection, header, payload);
             return;
         default:
             break;
         }
     }
 
-    void ConnectionManager::HandleAuthorize(
+    void ConnectionManager::HandleClientAuthentication(
         const std::shared_ptr<ClientConnection>& connection,
         const Header& header,
         const char* payload
@@ -384,7 +382,7 @@ void ConnectionManager::CloseServerConnection() const
     }
 
     void ConnectionManager::ExecuteQuery(
-        std::shared_ptr<ClientConnection> connection,
+        const std::shared_ptr<ClientConnection>& connection,
         UnsignedInt requestId,
         std::string query
     ){

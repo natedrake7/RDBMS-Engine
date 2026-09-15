@@ -34,13 +34,7 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/DateTime.cpp
         src/Systemic/src/DataTypes/Decimal.cpp
         src/Systemic/src/DataTypes/Guid.cpp
-        src/Systemic/src/QueryResult.cpp
         src/Systemic/src/Coercions/Coercions.cpp
-        src/Systemic/src/Network/Protocols/ConnectionProtocol.cpp
-        src/Systemic/src/Network/Protocols/AuthorizeProtocol.cpp
-        src/Systemic/src/Network/Protocols/ResponseProtocol.cpp
-        src/Systemic/src/Network/Protocols/QueryProtocol.cpp
-        src/Systemic/src/Network/Protocols/QueryResponseProtocol.cpp
         src/Systemic/src/DataTypes/Value.cpp
         src/Systemic/src/Memory/Functions.cpp
         src/Systemic/src/DataTypes/StringView.cpp
@@ -52,6 +46,7 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/StringValue.cpp
         src/Systemic/src/Network/Header.cpp
         src/Systemic/src/Network/Transport.cpp
+        src/Systemic/src/QueryResult.cpp
 )
 
 target_link_libraries(Systemic PUBLIC $<$<PLATFORM_ID:Windows>:ws2_32>)

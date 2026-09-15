@@ -30,9 +30,6 @@ public:
     void SetColumnIndex(Int columnPos, column_index_t columnIndex);
     [[nodiscard]] BigInt ComputeHash()const;
 
-    void Serialize(std::vector<char>& buffer)const;
-    void Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, Int dataSize);
-
     void Update(DataStructures::PolymorphicArray<Value>& updates);
     void Update(const DataStructures::PolymorphicArray<Value>& updates);
     void Update(Value& update);

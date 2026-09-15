@@ -61,14 +61,14 @@ namespace Network {
         void BuildEventsSet();
         void UpdateWriteInterest(const std::shared_ptr<ClientConnection>& connection)const;
 
-        void ServiceReadable(const std::shared_ptr<ClientConnection>& connection)const;
-        static void DispatchRequest(
+        void ServiceReadable(const std::shared_ptr<ClientConnection>& connection);
+        void DispatchRequest(
             const std::shared_ptr<ClientConnection>& connection,
             const Header& header,
             const char* payload
         );
 
-        static void HandleAuthorize(
+        static void HandleClientAuthentication(
             const std::shared_ptr<ClientConnection>& connection,
             const Header& header,
             const char* payload
@@ -81,7 +81,7 @@ namespace Network {
         );
 
         static void ExecuteQuery(
-            std::shared_ptr<ClientConnection> connection,
+            const std::shared_ptr<ClientConnection>& connection,
             UnsignedInt requestId,
             std::string query
         );

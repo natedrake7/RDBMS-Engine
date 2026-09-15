@@ -1,11 +1,9 @@
 #include "../include/QueryResult.h"
 
-#include "../include/Network/QueryResponseProtocol.h"
-
 #include <iostream>
 
-#include "DataTypes/DateTime.h"
-#include "DataTypes/Decimal.h"
+#include "../include/DataTypes/DateTime.h"
+#include "../include/DataTypes/Decimal.h"
 
 QueryResult::QueryResult(const ::Memory::IAllocator* allocator)
     : data(allocator) {}
@@ -134,27 +132,6 @@ int64_t QueryResult::ComputeHash() const {
     return static_cast<int64_t>(seed);
 }
 
-void QueryResult::Serialize(std::vector<char>& buffer) const {
-    for (const auto& value : this->data) {
-        const auto size = value.Size();
-        const auto type = value.GetType();
-
-        Vector::AppendToBuffer(buffer, &size, sizeof(block_size_t));
-        Vector::AppendToBuffer(buffer, &type, sizeof(DataType));
-        Vector::AppendToBuffer(buffer, value.Data(), size);
-    }
-}
-
-void QueryResult::Deserialize(const std::vector<char>& buffer, UnsignedInt& offset, const Int dataSize) {
-    this->data.Reserve(dataSize);
-
-    // for (int i = 0; i < dataSize; i++) {
-    //     auto value = Value::Null(nullptr);
-    //     value.Deserialize(buffer, offset);
-    //     this->data.Push(std::move(value));
-    // }
-}
-
 void QueryResult::Update(DataStructures::PolymorphicArray<Value>& updates) {
     for (auto& value : updates) {
         auto& otherValue = this->data[value.GetColumnIndex()];
@@ -202,7 +179,7 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
     return true;
 }
 
-ostream& operator<<(std::ostream& os, const QueryResult& result) {
+std::ostream& operator<<(std::ostream& os, const QueryResult& result) {
     for (int i = 0; i < result.data.Size(); ++i) {
         const auto& column = result.data[i];
 
