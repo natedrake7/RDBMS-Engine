@@ -46,6 +46,15 @@ namespace Network{
             [[nodiscard]] bool IsClosing() const;
             [[nodiscard]] bool WantsWrite() const;
 
+            void SendTextFrame(
+                MessageType type,
+                UnsignedInt requestId,
+                UnsignedInt statementOrdinal,
+                const DataTypes::StringView& text
+            );
+
+            void SendControlFrame(MessageType type, UnsignedInt requestId);
+
             [[nodiscard]] bool TryBeginQuery();
             void EndQuery();
     };

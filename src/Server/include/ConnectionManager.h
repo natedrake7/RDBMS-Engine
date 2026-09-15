@@ -32,6 +32,7 @@
 
 
 namespace Network {
+    struct Header;
     class ClientConnection;
 
     struct ConnectionParameters {
@@ -62,22 +63,31 @@ namespace Network {
         void BuildEventsSet();
         void UpdateWriteInterest(const std::shared_ptr<ClientConnection>& connection)const;
 
-        [[nodiscard]] bool IsServiceReadable(std::shared_ptr<ClientConnection>& connection)const;
+        void ServiceReadable(const std::shared_ptr<ClientConnection>& connection)const;
+        static void DispatchRequest(
+            const std::shared_ptr<ClientConnection>& connection,
+            const Header& header,
+            const char* payload
+        );
 
-        static void SendToClient(Int clientSocket, Network::ResponseProtocol* protocol);
+        static void HandleAuthorize(
+            const std::shared_ptr<ClientConnection>& connection,
+            const Header& header,
+            const char* payload
+        );
 
-        void GetQueryFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header, const std::vector<char>& buffer);
-        void AuthorizeClientConnection(Int clientSocket, const Network::ConnectionProtocolHeader &header, const std::vector<char>& buffer)const;
-        void HandleClientConnection(Int clientSocket, mutex& clientMutex);
-        void ReadBodyFromClient(Int clientSocket, const Network::ConnectionProtocolHeader& header);
+        void HandleQuery(
+            const std::shared_ptr<ClientConnection>& connection,
+            const Header& header,
+            const char* payload
+        );
 
-        static void ExecuteQuery(const std::string& query, Int socket, const Network::ConnectionProtocolHeader &header);
+        static void ExecuteQuery(
+            const std::shared_ptr<ClientConnection>& connection,
+            UnsignedInt requestId,
+            std::string query
+        );
 
-#ifdef _WIN32
-        void HandleClientDisconnection(const SocketEvent& event, Int& totalEvents, Int& index);
-#else
-        void HandleClientDisconnection(Int socket, Int& totalEvents, Int& index);
-#endif
     public:
         explicit ConnectionManager(const ConnectionParameters& parameters);
         ~ConnectionManager() = default;

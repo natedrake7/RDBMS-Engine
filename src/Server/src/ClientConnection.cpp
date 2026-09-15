@@ -89,6 +89,27 @@ namespace Network{
         return this->_wantsWrite.load(std::memory_order_relaxed);
     }
 
+    void ClientConnection::SendTextFrame(
+        const MessageType type,
+        const UnsignedInt requestId,
+        const UnsignedInt statementOrdinal,
+        const DataTypes::StringView& text
+    ){
+        Header header;
+        header._messageType = type;
+        header._requestId = requestId;
+        header._statementOrdinal = statementOrdinal;
+        header._payloadLength = text.Size();
+        this->SendFrame(header, text.Data(), text.Size());
+    }
+
+    void ClientConnection::SendControlFrame(const MessageType type, const UnsignedInt requestId){
+        Header header;
+        header._messageType = type;
+        header._requestId = requestId;
+        this->SendFrame(header, nullptr, 0);
+    }
+
     bool ClientConnection::TryBeginQuery(){
         auto expected = false;
         return this->_queryInFlight.compare_exchange_strong(expected, true);

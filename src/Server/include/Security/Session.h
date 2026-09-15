@@ -32,7 +32,7 @@ namespace Network {
         explicit Session(const Security::User* user)
             :   sessionId(DataTypes::Guid::NewGuid()), user(user),
                 createdAt(DataTypes::DateTime::Now()), lastActive(DataTypes::DateTime::Now()),
-                databaseId(Constants::SYSTEM_CATALOG_ID), nextCursorId(0),
+                databaseId(0), nextCursorId(0),
                 transactionId(0) {}
 
         Session() = default;

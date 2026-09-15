@@ -113,4 +113,8 @@ namespace Network::Transport{
         this->_sent = 0;
         return IoStatus::Ok;
     }
+
+    size_t WriteQueue::PendingSize() const{
+        return this->_buffer.size() - this->_sent;
+    }
 }

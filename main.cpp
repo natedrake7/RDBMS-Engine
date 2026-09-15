@@ -140,7 +140,8 @@ int main(){
 
     serverRunning.store(true);
 
-    Network::ConnectionParameters parameters("127.0.0.5", 1433, 20, 10);
+    static std::string ipAddress = "127.0.0.1";
+    Network::ConnectionParameters parameters(ipAddress, 1433, 20, 10);
 
     std::thread connectionThread(Network::InitializeConnectionManagerThread, std::ref(parameters), std::ref(serverRunning));
 

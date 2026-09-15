@@ -20,6 +20,7 @@ namespace Network::Sessions {
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = new Session(user);
+        session->databaseId = Constants::SYSTEM_CATALOG_ID;
         this->_sessions.Add(session->sessionId, session);
         return session;
     }

@@ -17,6 +17,8 @@
 #include <ranges>
 
 #include "ClientConnection.h"
+#include "ValidationMessages.h"
+#include "../../Systemic/include/Network/PayloadReader.h"
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -56,99 +58,72 @@ namespace Network {
         this->InitializeServerSocket();
 
         std::vector<mutex> eventMutexes(this->_parameters.numberOfConnections);
-        this->_events.resize(this->_parameters.numberOfConnections);
-
         this->_threadPool.InitializeWorkers(isServerRunning, 20);
 
         Int eventCount = 0;
-        while (isServerRunning) {
+        while (isServerRunning.load(std::memory_order_relaxed)){
+            this->BuildEventsSet();
 #ifdef _WIN32
-	        const auto _ = WSAPoll(this->_events.data(), this->_events.size(), 10);
-            eventCount = this->_events.size();
+            const auto ready = WSAPoll(
+                this->_events.data(),
+                static_cast<ULONG>(this->_events.size()),
+                this->_parameters.timeoutTime
+            );
 #else
-            const auto currentEvents = epoll_wait(this->_parameters.epollFileDescriptor, this->_events.data(), this->_events.size(), 10);
-            eventCount = currentEvents;
+            const auto ready = epoll_wait(
+                this->_parameters.epollFileDescriptor,
+                this->_events.data(),
+                this->_events.size(),
+                this->_parameters.timeoutTime
+            );
+#endif
+            if (ready < 0){
+                if (IsInterrupted())
+                    continue;
+
+                std::cerr << "epoll_wait failed " << strerror(errno) << endl;
+            }
+
+#ifdef _WIN32
+            for (const auto& event : this->_events){
+                if (event.revents == 0)
+                    continue;
+
+                const auto socket = event.fd;
+                const auto hangup   = (event.revents & (POLLHUP | POLLERR | POLLNVAL)) != 0;
+                const auto readable = (event.revents & POLLIN)  != 0;
+                const auto writable = (event.revents & POLLOUT) != 0;
+#else
+            for (Int i = 0;i < ready; i++){
+                const auto socket = event.data.fd;
+                const auto hangup   = (event.events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) != 0;
+                const auto readable = (event.events & EPOLLIN)  != 0;
+                const auto writable = (event.events & EPOLLOUT) != 0;
 #endif
 
-          if (eventCount < 0 && errno != EINTR) {
-            std::cerr << "epoll_wait failed " << strerror(errno) << endl;
-            break;
-          }
+                if (socket == this->_parameters.serverSocket){
+                    if (readable)
+                        this->AcceptNewConnections();
 
-          for (int i = 0;i < eventCount; i++) {
+                    continue;
+                }
 
-            if (!eventMutexes[i].try_lock())
-                continue;
+                std::shared_ptr<ClientConnection> connection;
+                if (!this->_connectionPool.TryGetValue(socket, connection))
+                    continue;
 
-            eventMutexes[i].unlock();
-        
-#ifdef _WIN32
-            const auto& evt = this->_events[i];
+                if (writable && connection->DrainWrites() == Transport::IoStatus::Failed){
+                    this->CloseConnection(connection);
+                    continue;
+                }
 
-            if (evt.revents & (POLLHUP | POLLERR | POLLNVAL)) {
-              this->HandleClientDisconnection(evt,eventCount, i);
-              continue;
+                if (readable)
+                    this->ServiceReadable(connection);
+
+                if (hangup || connection->IsClosing())
+                    this->CloseConnection(connection);
             }
-
-            if (!(evt.revents & POLLIN))
-                continue;
-
-            if (evt.fd != this->_parameters.serverSocket) {
-                ConnectionManager::HandleClientConnection(evt.fd, eventMutexes[i]);
-                continue;
-            }
-
-            const auto clientSocket = accept(this->_parameters.serverSocket, nullptr, nullptr);
-            if (clientSocket == INVALID_SOCKET) {
-                cerr << "Failed to accept client (Windows)" << endl;
-                continue;
-            }
-
-            u_long mode = 1;
-            ioctlsocket(clientSocket, FIONBIO, &mode);
-
-            pollfd newEvent{};
-            newEvent.fd = clientSocket;
-            newEvent.events = POLLIN;
-            newEvent.revents = 0;
-            this->_events.push_back(std::move(newEvent));
-            std::cout << "Accepted client (Windows): " << clientSocket << std::endl;
-
-#else
-            auto& evt = this->_events[i];
-
-            if (evt.events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) {
-              this->HandleClientDisconnection(evt.data.fd, eventCount, i);
-              continue;
-            }
-
-            if (!(evt.events & EPOLLIN))
-                continue;
-
-            if (evt.data.fd != this->_parameters.serverSocket) {
-                ConnectionManager::HandleClientConnection(evt.data.fd, eventMutexes[i]);
-                continue;
-            }
-
-            sockaddr_in clientAddress{};
-            socklen_t clientSize = sizeof(clientAddress);
-            const int clientSocket = accept(this->_parameters.serverSocket, reinterpret_cast<sockaddr*>(&clientAddress), &clientSize);
-
-            if (clientSocket < 0) {
-                cerr << "Failed to accept client (Linux)" << endl;
-                continue;
-            }
-
-            fcntl(clientSocket, F_SETFL, fcntl(clientSocket, F_GETFL, 0) | O_NONBLOCK);
-
-            epoll_event newEvent{};
-            newEvent.events = EPOLLIN | EPOLLET | EPOLLRDHUP;
-            newEvent.data.fd = clientSocket;
-            epoll_ctl(this->_parameters.epollFileDescriptor, EPOLL_CTL_ADD, clientSocket, &newEvent);
-            cout << "Accepted client (Linux): " << clientSocket << endl;
-#endif
-      }
-    }
+        }
 
         std::cout << "Closing connections" << endl;
         this->CloseServerConnection();
@@ -283,21 +258,6 @@ void ConnectionManager::CloseServerConnection() const
         std::cout << "Client disconnected: " << socket << std::endl;
     }
 
-    void ConnectionManager::CloseServerConnection(){
-        // Connection destructors close their own sockets.
-        this->_connectionPool.clear();
-        this->_events.clear();
-
-        shutdown(this->_parameters.serverSocket, SHUT_RDWR_COMPAT);
-        Close(this->_parameters.serverSocket);
-
-#ifdef _WIN32
-        WSACleanup();
-#else
-        Close(this->_parameters.epollFileDescriptor);
-#endif
-    }
-
     void ConnectionManager::BuildEventsSet(){
 #ifdef _WIN32
         this->_events.clear();
@@ -336,189 +296,146 @@ void ConnectionManager::CloseServerConnection() const
 #endif
     }
 
-    bool ConnectionManager::IsServiceReadable(std::shared_ptr<ClientConnection>& connection) const{
-        const auto fillStatus = connection->Re();
-    }
+    void ConnectionManager::ServiceReadable(const std::shared_ptr<ClientConnection>& connection) const{
+        const auto fillStatus = connection->FillReadBuffer();
 
+        Header header;
+        const char* payload = nullptr;
 
-#ifdef WIN32
-  void ConnectionManager::HandleClientDisconnection(const SocketEvent& event, int& totalEvents, int& index){
-    std::cout << "Client disconnected: " << event.fd << std::endl;
+        while (true){
+            const auto frameStatus = connection->TryTakeHeader(header, payload);
 
-    this->CloseClientConnection(event.fd);
+            if (frameStatus == HeaderStatus::Incomplete)
+                break;
 
-    this->_events.erase(this->_events.begin() + index);
-    index--;
-    totalEvents--;
-  }
-#else
-  void ConnectionManager::HandleClientDisconnection(const Int socket, int &totalEvents, int &index){
-    std::cout << "Client disconnected: " << socket << std::endl;
+            if (frameStatus == HeaderStatus::Malformed){
+                std::cerr << "Malformed header on socket: " << connection->Socket() << std::endl;
+                connection->MarkClosing();
+                return;
+            }
 
-    this->CloseClientConnection(socket);
-
-    // this->events.erase(this->events.begin() + index);
-
-    // index--;
-    // totalEvents--;
-  }
-#endif
-
-
-  void ConnectionManager::HandleClientConnection(const Int clientSocket, mutex& clientMutex){
-    std::unique_lock<std::mutex> clientLock(clientMutex);
-
-    std::vector<char> buffer(Network::ConnectionProtocolHeader::GetSize());
-
-    const auto headerBytesRead = recv(clientSocket, buffer.data(), Network::ConnectionProtocolHeader::GetSize(), 0);
-
-#ifdef WIN32
-    const int err = WSAGetLastError();
-    if (err == WSAEWOULDBLOCK) {
-      // No data available now — just return and continue
-      return;
-    }
-#endif
-
-    if (headerBytesRead > 0) {
-      Network::ConnectionProtocolHeader header;
-      header.Deserialize(buffer);
-
-      this->ReadBodyFromClient(clientSocket, header);
-      return;
-    }
-    
-    if (headerBytesRead == 0) {
-      ConnectionManager::CloseClientConnection(clientSocket);
-      return;
-    }
-    
-    perror("recv failed");
-  }
-
-  void ConnectionManager::ReadBodyFromClient(const Int clientSocket, const Network::ConnectionProtocolHeader &header){
-    vector<char> buffer(header.size);
-    
-    if (recv(clientSocket, buffer.data(), header.size, 0) <= 0) {
-      std::cerr << "Failed to read body from client or body was empty" << std::endl;
-      return;
-    }
-
-    switch (header.type) {
-      case Network::Authorize:
-        this->AuthorizeClientConnection(clientSocket, header, buffer);
-        return;
-      case Network::Query:
-        this->GetQueryFromClient(clientSocket, header, buffer);
-        return;
-      case Network::Invalid:
-      default:
-        break;
-    }
-    
-    //invalid request type
-  }
-
-void ConnectionManager::AuthorizeClientConnection(
-    const Int clientSocket,
-    const Network::ConnectionProtocolHeader &header,
-    const vector<char>& buffer
-)const {
-    Network::AuthorizeProtocol protocol(header);
-
-    protocol.Deserialize(buffer);
-    auto& server = Network::Server::Get();
-
-    const auto* user = server.Authenticate(DataTypes::StringView(protocol.GetUsername()), DataTypes::StringView(protocol.GetPassword()));
-
-    if (user == nullptr) {
-      Network::ResponseProtocol responseProtocol(ResponseType::InvalidCredentials, DataTypes::Guid::Empty());
-      ConnectionManager::SendToClient(clientSocket, &responseProtocol);
-
-      this->CloseClientConnection(clientSocket);
-      return;
-    }
-
-    const auto* newSession = server.CreateSession(user);
-
-    Network::ResponseProtocol responseProtocol(ResponseType::Authenticated, newSession->sessionId);
-
-    ConnectionManager::SendToClient(clientSocket, &responseProtocol);
-}
-
-void ConnectionManager::GetQueryFromClient(const Int clientSocket, const Network::ConnectionProtocolHeader &header, const vector<char> &buffer){
-    Network::QueryProtocol protocol(header);
-
-    protocol.Deserialize(buffer);
-
-    this->_threadPool.Enqueue([query = protocol.GetQuery(), clientSocket, header] {  ConnectionManager::ExecuteQuery(query, clientSocket, header); });
-}
-
-void ConnectionManager::ExecuteQuery(const std::string& query, const Int socket, const Network::ConnectionProtocolHeader &header){
-    auto compileResult = QueryPipeline::Parser::StartTransaction(query, header.sessionId);
-
-    if (compileResult.status.hasError) {
-        DataStructures::PolymorphicArray<QueryResult> results;
-        Network::QueryResponseProtocol response(
-            compileResult.status.hasError,
-            false,
-            DataTypes::StringView::ViewOf(compileResult.status.message),
-            {},
-            results
-        );
-        ConnectionManager::SendToClient(socket, &response);
-        return;
-    }
-
-    bool hasError = false;
-    for (auto* cursor : compileResult.cursors) {
-      while (cursor->CanFetch()) {
-        auto batchResult = cursor->FetchNextBatch();
-
-        bool hasMore = batchResult.status.IsOk() && cursor->CanFetch();
-
-        // Network::QueryResponseProtocol response(
-        // batchResult.status.IsOk(),
-        //         hasMore,
-        //         batchResult.status.message.ToView(),
-        //         batchResult.displayColumnNames,
-        //      batchResult.results
-        //     );
-        // ConnectionManager::SendToClient(socket, &response);
-
-        if (!batchResult.status.IsOk()) {
-          hasError = true;
-          break;
+            this->DispatchRequest(connection, header, payload);
         }
-      }
+    }
 
-      if (hasError) {
-        QueryPipeline::Parser::RollbackTransaction(header.sessionId, cursor);
-        continue;
-      }
+    void ConnectionManager::DispatchRequest(
+        const std::shared_ptr<ClientConnection>& connection,
+        const Header& header,
+        const char* payload
+    ){
+        switch (header._messageType) {
+        case MessageType::Authorize:
+            ConnectionManager::HandleAuthorize(connection, header, payload);
+            return;
+        case MessageType::Query:
+            return;
+        default:
+            break;
+        }
+    }
 
-      QueryPipeline::Parser::CommitTransaction(header.sessionId, cursor);
+    void ConnectionManager::HandleAuthorize(
+        const std::shared_ptr<ClientConnection>& connection,
+        const Header& header,
+        const char* payload
+    ) {
+        PayloadReader reader(payload, header._payloadLength);
+
+        DataTypes::StringView username;
+        DataTypes::StringView password;
+
+        if (!reader.ReadStringView(username) || !reader.ReadStringView(password)) {
+            std::cerr << "Failed to read username or password" << std::endl;
+            return;
+        }
+
+        static auto& server = Server::Get();
+        const auto* user = server.Authenticate(username, password);
+
+        if (user == nullptr) {
+            std::cerr << "Failed to authenticate user" << std::endl;
+            connection->SendTextFrame(MessageType::AuthFailed, header._requestId, 0, Messages::AUTH_REQUEST_INVALID_CREDENTIALS);
+            connection->MarkClosing();
+            return;
+        }
+
+        connection->Bind(server.CreateSession(user));
+        connection->SendControlFrame(MessageType::AuthOk, header._requestId);
+    }
+
+    void ConnectionManager::HandleQuery(
+        const std::shared_ptr<ClientConnection>& connection,
+        const Header& header,
+        const char* payload
+    ){
+        if (!connection->IsAuthenticated()){
+            connection->SendTextFrame(MessageType::Error, header._requestId, 0, Messages::QUERY_REQUEST_NOT_AUTHENTICATED);
+            connection->MarkClosing();
+            return;
+        }
+
+        if (!connection->TryBeginQuery()){
+            connection->SendTextFrame(MessageType::Error, header._requestId, 0, Messages::QUERY_REQUEST_QUERY_ALREADY_RUNNING);
+            return;
+        }
+
+        std::string query(payload, header._payloadLength);
+        this->_threadPool.Enqueue(
+            [connection, header, query = std::move(query)]() mutable{
+                ConnectionManager::ExecuteQuery(connection, header._requestId, std::move(query));
+            });
+    }
+
+    void ConnectionManager::ExecuteQuery(
+        const std::shared_ptr<ClientConnection>& connection,
+        UnsignedInt requestId,
+        std::string query
+    ){
+        auto queryContext = QueryPipeline::Parser::StartTransaction(query, connection->SessionId());
+
+        if (queryContext.status.hasError){
+            connection->SendTextFrame(
+                MessageType::Error,
+                requestId, 0,
+                DataTypes::StringView::ViewOf(queryContext.status.message)
+            );
+            connection->SendControlFrame(MessageType::QueryComplete, requestId);
+            queryContext.Release();
+            return;
+        }
+
+        UnsignedInt statementOrdinal = 0;
+        for (auto* cursor: queryContext.cursors){
+            auto failed = false;
+
+            while (cursor->CanFetch()){
+                if (connection->IsClosing())
+                    break;
+
+                auto batch = cursor->FetchNextBatch();
+                if (!batch.status.IsOk()){
+                    connection->SendTextFrame(
+                        MessageType::Error,
+                        requestId, statementOrdinal,
+                        DataTypes::StringView::ViewOf(batch.status.message)
+                    );
+                    failed = true;
+                    break;
+                }
+
+                connection->WaitForWriteDrain();
+            }
+
+            if (failed){
+                QueryPipeline::Parser::RollbackTransaction(connection->SessionId(), cursor);
+            }
+            else{
+                QueryPipeline::Parser::CommitTransaction(connection->SessionId(), cursor);
+                connection->SendControlFrame(MessageType::StatementComplete, requestId);
+            }
+            statementOrdinal++;
+        }
+        connection->SendControlFrame(MessageType::QueryComplete, requestId);
+        queryContext.Release();
     }
 }
-
-void ConnectionManager::SendToClient(const Int clientSocket, Network::ResponseProtocol *protocol){
-    if (protocol == nullptr)
-      return;
-
-    const auto& packet = protocol->GetSerializedProtocol();
-
-    const auto bytesSent = send(clientSocket, packet.data(), protocol->GetSize(), 0);
-
-    if (bytesSent > 0)
-      return;
-    
-    if (bytesSent < 0) {
-      std::cerr << " Failed to send request to client"<< strerror(errno) << endl;
-      return;
-    }
-
-    cout << "Client disconnected" << endl;
-  }
-
-
-} // Server
