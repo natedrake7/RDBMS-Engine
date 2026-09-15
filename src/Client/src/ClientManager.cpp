@@ -3,13 +3,13 @@
 #include <iostream>
 #include <ostream>
 #include <vector>
-#include <cstring>
 #include <sstream>
 
 #include "../../Systemic/include/Converter.h"
-#include "../../Systemic/include/Network/AuthorizeProtocol.h"
-#include "../../Systemic/include/Network/QueryProtocol.h"
 #include "../../Systemic/include/Network/QueryResponseProtocol.h"
+#include "Network/PayloadReader.h"
+#include "Network/PayloadWriter.h"
+#include "Network/Transport.h"
 
 #ifdef _WIN32
 #define NOMINMAX
@@ -26,216 +26,243 @@
 
 
 namespace Client {
-  ConnectionManager::ConnectionManager() = default;
-
-  ConnectionManager::~ConnectionManager() {
-    this->CloseConnectionToServer();
-  }
-
-  bool ConnectionManager::ConnectToServer(const std::vector<std::string> &connectionString){
-    if (this->ReadConnectionString(connectionString) == false)
-      return false;
-
-    if (this->InitializeConnectionToServer() == false)
-      return false;
-
-    if (this->AuthenticateConnectionToServer() == false)
-      return false;
-
-    return true;
-  }
-
-  bool ConnectionManager::SendQuery(const std::string &query)const{
-    Network::QueryProtocol protocol(query, this->sessionId);
-
-    const auto& serializedProtocol = protocol.GetSerializedProtocol();
-
-    const auto bytesSent = send(this->parameters.socket, serializedProtocol.data(), protocol.GetSize(), 0);
-
-    if(bytesSent < 0)
-    {
-      std::cerr << "Failed to send request to server" << std::endl;
-      return false;
-    }
-
-    if (bytesSent == 0) {
-      std::cout << "Connection lost" << std::endl;
-      return false;
-    }
-
-    return true;
-  }
-
-  bool ConnectionManager::ParseQueryResponse()const{
-      Network::ResponseProtocolHeader responseHeader;
-      std::vector<char> buffer(Network::ResponseProtocolHeader::GetSize());
-
-      auto bytesReceived = recv(this->parameters.socket, buffer.data(), Network::ResponseProtocolHeader::GetSize(), 0);
-
-      responseHeader.Deserialize(buffer);
-
-      if (bytesReceived < 0) {
-        std::cerr << "Failed to get response from server" << std::endl;
-        return false;
-      }
-
-      if (bytesReceived == 0) {
-        std::cout << "Connection lost" << std::endl;
-        return false;
-      }
-
-      if (responseHeader.statusCode != ResponseType::QueryResponse) {
-        std::cerr << "Failed to get response from server" << std::endl;
-        return false;
-      }
-
-      Network::QueryResponseProtocol queryResponseProtocol(responseHeader);
-
-      buffer.resize(responseHeader.size);
-      bytesReceived = recv(this->parameters.socket, buffer.data(), responseHeader.size, 0);
-
-      if (bytesReceived < 0) {
-        std::cerr << "Failed to get response from server" << std::endl;
-        return false;
-      }
-
-      if (bytesReceived == 0) {
-        std::cout << "Connection lost" << std::endl;
-        return false;
-      }
-
-      queryResponseProtocol.Deserialize(buffer);
-
-      std::cout << queryResponseProtocol << std::endl;
-      return true;
-  }
-
-  bool ConnectionManager::ReadConnectionString(const std::vector<std::string> &connectionString){
-    for (int i = 0; i < connectionString.size(); i++) {
-      const auto& parameter = connectionString[i];
-
-      if (i + 1 >= connectionString.size()) {
-        std::cerr << "invalid argument specified in connection string!" << std::endl;
-        return false;
-      }
-
-      if (parameter == "-P") {
-        this->parameters.port = Converter::StrToInt<int32_t>(connectionString[++i]);
-        continue;
-      }
-      if (parameter == "-h") {
-        this->parameters.hostName = connectionString[++i];
-        continue;
-      }
-      if (parameter == "-u") {
-        this->parameters.username = connectionString[++i];
-        continue;
-      }
-      if (parameter == "-p") {
-        this->parameters.password = connectionString[++i];
-        continue;
-      }
-
-      std::cerr << "invalid argument specified in connection string!" << std::endl;
-      return false;
-    }
-
-    return true;
-  }
-
-  bool ConnectionManager::InitializeConnectionToServer(){
+    bool ConnectionManager::InitializeConnectionToServer(){
 #ifdef _WIN32
-    WSADATA wsaData;
-    if (WSAStartup(MAKEWORD(2, 2), &wsaData))
-      throw runtime_error("WSAStartup failed");
+        WSADATA wsaData;
+        if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0){
+            std::cerr << "Failed to initialize Winsock" << std::endl;
+            return false;
+        }
 #endif
+        this->_networkInitialized = true;
 
-    this->parameters.socket = socket(AF_INET, SOCK_STREAM, 0);
+        this->_parameters.socket = Network::ToSocket(socket(AF_INET, SOCK_STREAM, 0));
 
-    if (this->parameters.socket < 0) {
-      std::cerr << "Failed to initialize socket" << std::endl;
-      return false;
+        if (this->_parameters.socket < 0) {
+            std::cerr << "Failed to initialize socket" << std::endl;
+            return false;
+        }
+
+        sockaddr_in serverAddress = {};
+
+        serverAddress.sin_family = AF_INET;
+        serverAddress.sin_port = htons(static_cast<UnsignedSmallInt>(this->_parameters.port));
+
+        if (inet_pton(AF_INET, this->_parameters.hostName.c_str(), &serverAddress.sin_addr) != 1){
+            std::cerr << "Invalid host address: " << this->_parameters.hostName << std::endl;
+            return false;
+        }
+
+        if (connect(this->_parameters.socket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
+            std::cerr << "Failed to connect to host: " << this->_parameters.hostName << ":" << this->_parameters.port << std::endl;
+            return false;
+        }
+
+        return true;
     }
 
-    sockaddr_in serverAddress = {};
+    void ConnectionManager::CloseConnectionToServer(){
+        if (this->_parameters.socket != Network::INVALID_SOCKET_DESCRIPTOR){
+            Network::Close(this->_parameters.socket);
+            this->_parameters.socket = Network::INVALID_SOCKET_DESCRIPTOR;
+        }
 
-    serverAddress.sin_family = AF_INET;
-    serverAddress.sin_port = htons(this->parameters.port);
-
-    inet_pton(AF_INET, this->parameters.hostName.c_str(), &serverAddress.sin_addr);
-
-    if (connect(this->parameters.socket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
 #ifdef _WIN32
-      closesocket(this->parameters.socket);
-      WSACleanup();
-#else
-      close(this->parameters.socket);
+        if (this->_networkInitialized)
+            WSACleanup();
 #endif
-
-      std::cerr << "Failed to connect to host: " << this->parameters.hostName << ":" << this->parameters.port << std::endl;
-      return false;
+        this->_networkInitialized = false;
     }
 
-    return true;
-  }
+    bool ConnectionManager::AuthenticateConnectionToServer(){
+        std::vector<char> payload;
 
-  bool ConnectionManager::AuthenticateConnectionToServer(){
-    Network::AuthorizeProtocol protocol(this->parameters.username, this->parameters.password);
+        const Network::PayloadWriter writer(&payload);
 
-    const auto& serializedObject = protocol.GetSerializedProtocol();
+        writer.WriteString(this->_parameters.username);
+        writer.WriteString(this->_parameters.password);
 
-    const auto bytesSent = send(this->parameters.socket, serializedObject.data(), serializedObject.size(), 0);
+        const auto requestId = this->NextRequestId();
 
-    if (bytesSent < 0) {
-      std::cerr << "Failed to send request to server" << std::endl;
-      return false;
+        if (!this->SendFrame(Network::MessageType::Authorize, requestId, payload.data(), payload.size())){
+            std::cerr << "Failed to send authentication request" << std::endl;
+            return false;
+        }
+
+        std::vector<char> responsePayload;
+        Network::Header responseHeader;
+
+        if (!this->ReadFrame(&responseHeader, &responsePayload)){
+            std::cerr << "Connection closed during authentication" << std::endl;
+            return false;
+        }
+
+        if (responseHeader._requestId != requestId){
+            std::cerr << "Protocol error: unexpected request id during authentication" << std::endl;
+            return false;
+        }
+
+        Network::PayloadReader reader(responsePayload.data(), responsePayload.size());
+        DataTypes::StringView responseMessage;
+        if (!reader.ReadStringView(responseMessage)){
+            std::cerr << "Protocol error: unexpected response during authentication" << std::endl;
+            return false;
+        }
+
+        switch (responseHeader._messageType){
+        case Network::MessageType::AuthOk:
+            std::cout << "Successfully authenticated" << std::endl;
+            return true;
+        case Network::MessageType::AuthFailed:
+            std::cerr << "Authentication failed: "
+                      << responseMessage << std::endl;
+            return false;
+        default:
+            std::cerr << "Protocol error: unexpected message type during authentication" << std::endl;
+            return false;
+        }
+        return true;
     }
 
-    Network::ResponseProtocol responseProtocol;
+    bool ConnectionManager::ReadConnectionString(const std::vector<std::string> &connectionString){
+        for (auto i = 0; i < connectionString.size(); i++) {
+            const auto& parameter = connectionString[i];
 
-    const int responseProtocolSize = responseProtocol.GetSize();
+            if (i + 1 >= connectionString.size()) {
+                std::cerr << "invalid argument specified in connection string!" << std::endl;
+                return false;
+            }
 
-    vector<char> buffer(responseProtocolSize);
+            if (parameter == "-P") {
+                this->_parameters.port = Converter::StrToInt<Int>(connectionString[++i]);
+                continue;
+            }
+            if (parameter == "-h") {
+                this->_parameters.hostName = connectionString[++i];
+                continue;
+            }
+            if (parameter == "-u") {
+                this->_parameters.username = connectionString[++i];
+                continue;
+            }
+            if (parameter == "-p") {
+                this->_parameters.password = connectionString[++i];
+                continue;
+            }
 
-    const auto bytesReceived = recv(this->parameters.socket, buffer.data(), responseProtocolSize, 0);
+            std::cerr << "invalid argument specified in connection string!" << std::endl;
+            return false;
+        }
 
-    if (bytesReceived < 0) {
-      std::cerr << "Failed to receive response from server" << std::endl;
-      return false;
+        return true;
     }
 
-    if (bytesReceived == 0) {
-      std::cout << "Connection to server has been lost" << std::endl;
-      return false;
+    bool ConnectionManager::SendFrame(
+        const Network::MessageType type,
+        const UnsignedInt requestId,
+        const char* payload,
+        const UnsignedInt payloadLength
+    ) const{
+        Network::Header header;
+        header._messageType = type;
+        header._requestId = requestId;
+        header._payloadLength = payloadLength;
+
+        std::vector<char> buffer(Network::Header::SIZE + payloadLength);
+        header.Encode(buffer.data());
+
+        if (payloadLength > 0)
+            std::memcpy(buffer.data() + Network::Header::SIZE, payload, payloadLength);
+
+        return Network::Transport::SendAll(this->_parameters.socket, buffer.data(), buffer.size()) == Network::Transport::IoStatus::Ok;
     }
 
-    responseProtocol.Deserialize(buffer);
+    bool ConnectionManager::ReadFrame(Network::Header* header, std::vector<char>* payload) const{
+        char headerBytes[Network::Header::SIZE];
 
-    const auto& statusCode = responseProtocol.GetResponseType();
+        if (Network::Transport::ReceiveExact(this->_parameters.socket, headerBytes, Network::Header::SIZE) != Network::Transport::IoStatus::Ok)
+            return false;
 
-    if (statusCode == ResponseType::InvalidCredentials) {
-      std::cerr << "Failed to authenticate user" << std::endl;
-      return false;
+        header->Decode(headerBytes);
+        payload->resize(header->_payloadLength);
+
+        return Network::Transport::ReceiveExact(this->_parameters.socket, payload->data(), header->_payloadLength) == Network::Transport::IoStatus::Ok;
     }
 
-    if (statusCode != ResponseType::Authenticated) {
-      std::cerr << "Unexpected response from server" << std::endl;
-      return false;
+    bool ConnectionManager::ReadQueryResponse(const UnsignedInt requestId) const{
+        std::vector<char> buffer;
+        Network::Header header;
+        UnsignedInt statementsCompleted = 0;
+
+        while (true){
+            if (!this->ReadFrame(&header, &buffer)){
+                std::cerr << "Connection closed during query response" << std::endl;
+                return false;
+            }
+
+            if (header._requestId != requestId){
+                std::cerr << "Protocol error: received a frame for request " << header._requestId
+                         << " while waiting for " << requestId << std::endl;
+                return false;
+            }
+
+            switch (header._messageType) {
+            case Network::MessageType::Error:
+                std::cerr << "Query failed: " << DataTypes::StringView(buffer.data(), buffer.size()) << std::endl;
+                break;
+            case Network::MessageType::RowDescription:
+            case Network::MessageType::DataBatch:
+                break;
+            case Network::MessageType::StatementComplete:
+                statementsCompleted++;
+                break;
+            case Network::MessageType::QueryComplete:
+                std::cout << "Statements completed: " << statementsCompleted << std::endl;
+                return true;
+            default:
+                std::cerr   << "Protocol error: unexpected message type "
+                            << static_cast<UnsignedSmallInt>(header._messageType) << std::endl;
+                return false;
+            }
+        }
     }
 
-    this->sessionId = responseProtocol.GetSessionId();
+    ConnectionManager::~ConnectionManager() {
+        this->CloseConnectionToServer();
+    }
 
-    std::cout << "Successfully authenticated" << std::endl;
-    return true;
-  }
+    bool ConnectionManager::ConnectToServer(const std::vector<std::string> &connectionString){
+        if (!this->ReadConnectionString(connectionString))
+            return false;
 
-  void ConnectionManager::CloseConnectionToServer(){
-#ifdef _WIN32
-      closesocket(this->parameters.socket);
-      WSACleanup();
-#else
-      close(this->parameters.socket);
-#endif
+        if (!this->InitializeConnectionToServer()){
+            this->CloseConnectionToServer();
+            return false;
+        }
+
+        if (!this->AuthenticateConnectionToServer()){
+            this->CloseConnectionToServer();
+            return false;
+        }
+
+        return true;
+    }
+
+    bool ConnectionManager::ExecuteQuery(const std::string &query){
+        if (query.size() > Network::Header::MAX_PAYLOAD_LENGTH){
+            std::cerr << "Query exceeds maximum payload length" << std::endl;
+            return false;
+        }
+
+        const auto requestId = this->NextRequestId();
+        const auto start = std::chrono::high_resolution_clock::now();
+
+        if (!this->SendFrame(Network::MessageType::Query, requestId, query.data(), query.size())){
+            std::cerr << "Failed to send query" << std::endl;
+            return false;
+        }
+
+        return this->ReadQueryResponse(requestId);
   }
 
 

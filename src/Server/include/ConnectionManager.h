@@ -1,6 +1,4 @@
 #pragma once
-#include "../../Systemic/include/Network/ResponseProtocol.h"
-#include "../../Systemic/include/Network/ConnectionProtocol.h"
 #include "ThreadPool.h"
 
 
@@ -48,7 +46,7 @@ namespace Network {
         ConnectionParameters(std::string& hostname, Int port, Int numberOfConnections, Int timeoutTime);
     };
 
-    void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const atomic<bool>& isServerRunning);
+    void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning);
 
     class ConnectionManager final{
         ConnectionParameters _parameters;
@@ -83,7 +81,7 @@ namespace Network {
         );
 
         static void ExecuteQuery(
-            const std::shared_ptr<ClientConnection>& connection,
+            std::shared_ptr<ClientConnection> connection,
             UnsignedInt requestId,
             std::string query
         );
@@ -92,7 +90,7 @@ namespace Network {
         explicit ConnectionManager(const ConnectionParameters& parameters);
         ~ConnectionManager() = default;
 
-        void HandleNewConnections(const atomic<bool>& isServerRunning);
+        void HandleNewConnections(const std::atomic<bool>& isServerRunning);
   };
 
 

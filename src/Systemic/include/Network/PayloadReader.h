@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../DataTypes/DataTypes.h"
-#include <cstring>
+#include "../DataTypes/StringView.h"
 #include <string>
 
 
@@ -11,7 +11,8 @@ namespace Network{
         UnsignedInt _offset;
 
         [[nodiscard]] bool BoundsCheck(const UnsignedInt dataSize) const{
-            return this->_offset + dataSize <= this->_size;
+            // Subtraction, not addition: _offset + dataSize wraps for a hostile length.
+            return dataSize <= this->_size - this->_offset;
         }
 
         public:

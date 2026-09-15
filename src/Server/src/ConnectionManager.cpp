@@ -56,11 +56,8 @@ namespace Network {
 
     void ConnectionManager::HandleNewConnections(const atomic<bool>& isServerRunning){
         this->InitializeServerSocket();
-
-        std::vector<mutex> eventMutexes(this->_parameters.numberOfConnections);
         this->_threadPool.InitializeWorkers(isServerRunning, 20);
 
-        Int eventCount = 0;
         while (isServerRunning.load(std::memory_order_relaxed)){
             this->BuildEventsSet();
 #ifdef _WIN32
@@ -130,14 +127,13 @@ namespace Network {
   }
 
   void ConnectionManager::InitializeServerSocket(){
-            
 #ifdef _WIN32
     WSADATA wsaData;
     if (WSAStartup(MAKEWORD(2, 2), &wsaData))
       throw std::runtime_error( "WSAStartup failed");
 #endif
 
-    const auto sock = socket(AF_INET, SOCK_STREAM, 0);
+    const auto sock = ToSocket(socket(AF_INET, SOCK_STREAM, 0));
 
     if (sock < 0)
       throw std::runtime_error("Failed to create socket");
@@ -215,7 +211,7 @@ void ConnectionManager::CloseServerConnection() const
 
     void ConnectionManager::AcceptNewConnections(){
         while (true){
-            const auto clientSocket = accept(this->_parameters.serverSocket, nullptr, nullptr);
+            const auto clientSocket = ToSocket(accept(this->_parameters.serverSocket, nullptr, nullptr));
 
             if (clientSocket < 0){
                 if (!WouldBlock())
@@ -360,7 +356,7 @@ void ConnectionManager::CloseServerConnection() const
         }
 
         connection->Bind(server.CreateSession(user));
-        connection->SendControlFrame(MessageType::AuthOk, header._requestId);
+        connection->SendControlFrame(MessageType::AuthOk, header._requestId, 0);
     }
 
     void ConnectionManager::HandleQuery(
@@ -370,6 +366,7 @@ void ConnectionManager::CloseServerConnection() const
     ){
         if (!connection->IsAuthenticated()){
             connection->SendTextFrame(MessageType::Error, header._requestId, 0, Messages::QUERY_REQUEST_NOT_AUTHENTICATED);
+            connection->SendControlFrame(MessageType::QueryComplete, header._requestId, 0);
             connection->MarkClosing();
             return;
         }
@@ -387,10 +384,12 @@ void ConnectionManager::CloseServerConnection() const
     }
 
     void ConnectionManager::ExecuteQuery(
-        const std::shared_ptr<ClientConnection>& connection,
+        std::shared_ptr<ClientConnection> connection,
         UnsignedInt requestId,
         std::string query
     ){
+        const QueryGuard queryGuard(connection);
+
         auto queryContext = QueryPipeline::Parser::StartTransaction(query, connection->SessionId());
 
         if (queryContext.status.hasError){
@@ -399,7 +398,7 @@ void ConnectionManager::CloseServerConnection() const
                 requestId, 0,
                 DataTypes::StringView::ViewOf(queryContext.status.message)
             );
-            connection->SendControlFrame(MessageType::QueryComplete, requestId);
+            connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);
             queryContext.Release();
             return;
         }
@@ -431,11 +430,11 @@ void ConnectionManager::CloseServerConnection() const
             }
             else{
                 QueryPipeline::Parser::CommitTransaction(connection->SessionId(), cursor);
-                connection->SendControlFrame(MessageType::StatementComplete, requestId);
+                connection->SendControlFrame(MessageType::StatementComplete, requestId, statementOrdinal);
             }
             statementOrdinal++;
         }
-        connection->SendControlFrame(MessageType::QueryComplete, requestId);
+        connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);
         queryContext.Release();
     }
 }

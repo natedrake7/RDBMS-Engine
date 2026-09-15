@@ -187,7 +187,7 @@ void CommandLineInterface(Network::Server& server) {
 
     const auto* session = server.CreateSession(user);
 
-    std::cout << "Please enter a query: "<< endl;
+    std::cout << "Please enter a query: "<< std::endl;
 #endif
 
     constexpr std::string exit = "exit";
@@ -258,7 +258,7 @@ void ExecuteQuery(const std::string& query, const DataTypes::Guid& sessionId) {
 void shutdownClient(int signal) {
     serverRunning.store(false, std::memory_order_relaxed);
 
-    cout << "Server shutting down..." << endl;
+    std::cout << "Server shutting down..." << std::endl;
     Network::Server::Get().Shutdown();
     exit(0);
 }

@@ -117,4 +117,45 @@ namespace Network::Transport{
     size_t WriteQueue::PendingSize() const{
         return this->_buffer.size() - this->_sent;
     }
+
+    IoStatus SendAll(const socket_t socket, const char* buffer, const size_t size){
+        size_t sent = 0;
+        while (sent < size){
+            const auto bytesSent = send(socket, buffer + sent, size - sent, SEND_FLAGS);
+
+            if (bytesSent > 0){
+                sent += bytesSent;
+                continue;
+            }
+
+            if (IsInterrupted())
+                continue;
+
+            return IoStatus::Failed;
+        }
+
+        return IoStatus::Ok;
+    }
+
+    IoStatus ReceiveExact(const socket_t socket, char* buffer, const size_t size){
+        size_t received = 0;
+        while (received < size){
+            const auto bytesReceived = recv(socket, buffer + received, size - received, 0);
+
+            if (bytesReceived > 0){
+                received += bytesReceived;
+                continue;
+            }
+
+            if (bytesReceived == 0)
+                return IoStatus::Closed;
+
+            if (IsInterrupted())
+                continue;
+
+            return IoStatus::Failed;
+        }
+
+        return IoStatus::Ok;
+    }
 }

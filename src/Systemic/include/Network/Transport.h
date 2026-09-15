@@ -53,4 +53,7 @@ namespace Network::Transport{
 
             [[nodiscard]] size_t PendingSize()const;
     };
+
+    [[nodiscard]] IoStatus SendAll(socket_t socket, const char* buffer, size_t size);
+    [[nodiscard]] IoStatus ReceiveExact(socket_t socket, char* buffer, size_t size);
 }

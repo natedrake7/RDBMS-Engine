@@ -53,9 +53,20 @@ namespace Network{
                 const DataTypes::StringView& text
             );
 
-            void SendControlFrame(MessageType type, UnsignedInt requestId);
+            void SendControlFrame(MessageType type, UnsignedInt requestId, UnsignedInt statementOrdinal);
 
             [[nodiscard]] bool TryBeginQuery();
             void EndQuery();
+    };
+
+    struct QueryGuard{
+        std::shared_ptr<ClientConnection> _connection;
+
+        explicit QueryGuard(std::shared_ptr<ClientConnection> connection)
+            : _connection(std::move(connection)){}
+
+        ~QueryGuard(){
+            this->_connection->EndQuery();
+        }
     };
 }

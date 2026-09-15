@@ -21,6 +21,27 @@
 namespace Network{
     typedef Int socket_t;
 
+#ifdef _WIN32
+    using native_socket_t = SOCKET;
+#else
+    using native_socket_t = int;
+#endif
+    inline constexpr socket_t INVALID_SOCKET_DESCRIPTOR = -1;
+    
+    [[nodiscard]] inline socket_t ToSocket(const native_socket_t handle){
+#ifdef _WIN32
+        if (handle == INVALID_SOCKET)
+            return INVALID_SOCKET_DESCRIPTOR;
+#endif
+        return static_cast<socket_t>(handle);
+    }
+
+#if defined(MSG_NOSIGNAL)
+    inline constexpr int SEND_FLAGS = MSG_NOSIGNAL;
+#else
+    inline constexpr int SEND_FLAGS = 0;
+#endif
+
     [[nodiscard]] inline bool WouldBlock(){
 #ifdef _WIN32
         return WSAGetLastError() == WSAEWOULDBLOCK;

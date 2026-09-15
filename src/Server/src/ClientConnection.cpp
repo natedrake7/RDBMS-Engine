@@ -103,10 +103,15 @@ namespace Network{
         this->SendFrame(header, text.Data(), text.Size());
     }
 
-    void ClientConnection::SendControlFrame(const MessageType type, const UnsignedInt requestId){
+    void ClientConnection::SendControlFrame(
+        const MessageType type,
+        const UnsignedInt requestId,
+        const UnsignedInt statementOrdinal
+    ){
         Header header;
         header._messageType = type;
         header._requestId = requestId;
+        header._statementOrdinal = statementOrdinal;
         this->SendFrame(header, nullptr, 0);
     }
 
