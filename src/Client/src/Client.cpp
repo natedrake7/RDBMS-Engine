@@ -5,7 +5,6 @@
 #include <csignal>
 
 #include "../include/Client.h"
-#include "../../Systemic/include/Network/QueryResponseProtocol.h"
 #include "../include/ClientManager.h"
 
 #ifdef _WIN32
@@ -70,5 +69,5 @@ int main(){
 
     //notify server connection closes
     std::cout << "Connection Closed" << std::endl;
-  return 0;
+    return 0;
 }
