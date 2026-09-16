@@ -1,7 +1,13 @@
 ﻿#include "../include/ClientConnection.h"
 
+#include <cassert>
+
 #include "Constants.h"
 #include "Security/Session.h"
+
+#ifndef NDEBUG
+    #define IS_DEBUG
+#endif
 
 namespace Network{
     ClientConnection::ClientConnection(const socket_t socket)
@@ -46,6 +52,12 @@ namespace Network{
     }
 
     void ClientConnection::SendEncodedFrame(std::vector<char>* buffer){
+#ifdef IS_DEBUG
+        Header header;
+        header.Decode(buffer->data());
+        assert(buffer->size() == Header::SIZE + header._payloadLength && "Encoded frame length does not match its header");
+#endif
+
         std::lock_guard guard(this->_mutex);
 
         this->_write.AppendBuffer(buffer);
@@ -59,9 +71,9 @@ namespace Network{
     }
 
     void ClientConnection::SendStatementComplete(
-        request_id_t requestId,
-        statement_ordinal_t statementOrdinal,
-        UnsignedBigInt rowCount
+        const request_id_t requestId,
+        const statement_ordinal_t statementOrdinal,
+        const UnsignedBigInt rowCount
     ){
         Header header;
         header._messageType = MessageType::StatementComplete;

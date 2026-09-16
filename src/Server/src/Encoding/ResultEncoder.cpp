@@ -19,13 +19,13 @@ namespace Network{
         header._requestId = requestId;
         header._statementOrdinal = statementOrdinal;
         header._payloadLength = buffer->size() - Header::SIZE;
-        buffer->insert(buffer->begin(), reinterpret_cast<const char*>(&header), reinterpret_cast<const char*>(&header) + Header::SIZE);
+        header.Encode(buffer->data());
     }
 
     void ResultEncoder::EncodeRowDescription(
         std::vector<char>* buffer,
-        request_id_t requestId,
-        statement_ordinal_t statementOrdinal,
+        const request_id_t requestId,
+        const statement_ordinal_t statementOrdinal,
         const DataStructures::PolymorphicArray<DataTypes::String>& columnNames,
         const CoreEngine::OutputSchema* querySchema
     ){
