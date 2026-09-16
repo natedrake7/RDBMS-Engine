@@ -102,25 +102,21 @@ namespace Client {
             return false;
         }
 
-        Network::PayloadReader reader(responsePayload.data(), responsePayload.size());
-        DataTypes::StringView responseMessage;
-        if (!reader.ReadStringView(responseMessage)){
-            std::cerr << "Protocol error: unexpected response during authentication" << std::endl;
-            return false;
-        }
-
         switch (responseHeader._messageType){
         case Network::MessageType::AuthOk:
             std::cout << "Successfully authenticated" << std::endl;
             return true;
-        case Network::MessageType::AuthFailed:
+        case Network::MessageType::AuthFailed: {
+            const DataTypes::StringView responseMessage(responsePayload.data(), responsePayload.size());
             std::cerr << "Authentication failed: "
                       << responseMessage << std::endl;
             return false;
+        }
         default:
             std::cerr << "Protocol error: unexpected message type during authentication" << std::endl;
             return false;
         }
+
         return true;
     }
 
@@ -218,6 +214,7 @@ namespace Client {
                 }
 
                 decoder.PrintHeader(std::cout);
+                break;
             }
             case Network::MessageType::DataBatch:
                 break;
