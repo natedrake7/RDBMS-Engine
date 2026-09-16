@@ -45,6 +45,32 @@ namespace Network{
         this->_wantsWrite.store(flushStatus == Transport::IoStatus::WouldBlock, std::memory_order_relaxed);
     }
 
+    void ClientConnection::SendEncodedFrame(std::vector<char>* buffer){
+        std::lock_guard guard(this->_mutex);
+
+        this->_write.AppendBuffer(buffer);
+        const auto flushStatus = this->_write.Flush(this->_socket);
+        if (flushStatus == Transport::IoStatus::Failed){
+            this->MarkClosing();
+            return;
+        }
+
+        this->_wantsWrite.store(flushStatus == Transport::IoStatus::WouldBlock, std::memory_order_relaxed);
+    }
+
+    void ClientConnection::SendStatementComplete(
+        request_id_t requestId,
+        statement_ordinal_t statementOrdinal,
+        UnsignedBigInt rowCount
+    ){
+        Header header;
+        header._messageType = MessageType::StatementComplete;
+        header._requestId = requestId;
+        header._statementOrdinal = statementOrdinal;
+        header._payloadLength = sizeof(rowCount);
+        this->SendFrame(header, reinterpret_cast<const char*>(&rowCount), sizeof(rowCount));
+    }
+
     Transport::IoStatus ClientConnection::FillReadBuffer(){
         return this->_read.Fill(this->_socket);
     }

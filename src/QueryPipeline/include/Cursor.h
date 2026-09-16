@@ -24,5 +24,6 @@ namespace QueryPipeline {
     [[nodiscard]] const CoreEngine::ExecutionContext& GetExecutionContext()const;
     [[nodiscard]] const CoreEngine::Snapshot& GetSnapshot()const;
     [[nodiscard]] PipelineConstants::cursor_id_t GetId()const;
+    [[nodiscard]] const CoreEngine::OutputSchema* GetSchema()const;
   };
 }

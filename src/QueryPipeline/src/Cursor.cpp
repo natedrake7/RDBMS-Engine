@@ -21,4 +21,6 @@ namespace QueryPipeline {
     const CoreEngine::Snapshot& Cursor::GetSnapshot() const{ return this->executionContext.GetSnapshot(); }
 
     PipelineConstants::cursor_id_t Cursor::GetId() const{ return this->id; }
+
+    const CoreEngine::OutputSchema* Cursor::GetSchema() const{ return this->plan->GetSchema(); }
 }

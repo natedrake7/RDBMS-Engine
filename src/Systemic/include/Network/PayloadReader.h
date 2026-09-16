@@ -19,6 +19,25 @@ namespace Network{
             PayloadReader(const char* data, const UnsignedInt size)
                 : _data(data), _size(size), _offset(0){}
 
+            template<typename T> requires std::is_trivially_copyable_v<T>
+            [[nodiscard]] bool Read(T& value){
+                if (!this->BoundsCheck(sizeof(T)))
+                    return false;
+
+                std::memcpy(&value, this->_data + this->_offset, sizeof(T));
+                this->_offset += sizeof(T);
+                return true;
+            }
+
+            [[nodiscard]] bool ReadSpan(const char*& data, const UnsignedInt size){
+                if (!this->BoundsCheck(size))
+                    return false;
+
+                data = this->_data + this->_offset;
+                this->_offset += size;
+                return true;
+            }
+
             [[nodiscard]] bool ReadUnsignedInt(UnsignedInt& value){
                 if (!this->BoundsCheck(sizeof(UnsignedInt)))
                     return false;

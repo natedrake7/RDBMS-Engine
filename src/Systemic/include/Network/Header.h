@@ -34,13 +34,13 @@ namespace Network{
         UnsignedInt _payloadLength;
         MessageType _messageType;
         HeaderFlags _frameFlags;
-        UnsignedInt _requestId;
-        UnsignedInt _statementOrdinal;
+        request_id_t _requestId;
+        statement_ordinal_t _statementOrdinal;
 
         static constexpr auto SIZE =
                 sizeof(UnsignedInt) + sizeof(MessageType)
-                + sizeof(HeaderFlags) + sizeof(UnsignedInt)
-                + sizeof(UnsignedInt);
+                + sizeof(HeaderFlags) + sizeof(request_id_t)
+                + sizeof(statement_ordinal_t);
 
         static constexpr auto MAX_PAYLOAD_LENGTH = 64 * 1024 * 1024;
 

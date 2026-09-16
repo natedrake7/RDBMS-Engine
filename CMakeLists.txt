@@ -162,6 +162,7 @@ add_library(Server STATIC
         src/Server/src/RoleManager.cpp
         src/Server/src/UserManager.cpp
         src/Server/src/ClientConnection.cpp
+        src/Server/src/Encoding/ResultEncoder.cpp
 )
 
 target_include_directories(Server PUBLIC src/Server/include)
@@ -171,6 +172,7 @@ target_link_libraries(Server PRIVATE QueryPipeline PRIVATE unofficial::argon2::l
 add_executable(Client
         src/Client/src/client.cpp
          src/Client/src/ClientManager.cpp
+        src/Client/src/Decoding/ResultDecoder.cpp
 )
 
 target_include_directories(Client PUBLIC src/Client/include)

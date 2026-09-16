@@ -34,6 +34,13 @@ namespace Network{
             void Bind(const Session* session);
             void SendFrame(const Header& header, const char* payload, size_t payloadSize);
 
+            void SendEncodedFrame(std::vector<char>* buffer);
+            void SendStatementComplete(
+                request_id_t requestId,
+                statement_ordinal_t statementOrdinal,
+                UnsignedBigInt rowCount
+            );
+
             [[nodiscard]] Transport::IoStatus FillReadBuffer();
             [[nodiscard]] HeaderStatus TryTakeHeader(Header& header, const char*& payload);
 
@@ -48,12 +55,12 @@ namespace Network{
 
             void SendTextFrame(
                 MessageType type,
-                UnsignedInt requestId,
-                UnsignedInt statementOrdinal,
+                request_id_t requestId,
+                statement_ordinal_t statementOrdinal,
                 const DataTypes::StringView& text
             );
 
-            void SendControlFrame(MessageType type, UnsignedInt requestId, UnsignedInt statementOrdinal);
+            void SendControlFrame(MessageType type, request_id_t requestId, statement_ordinal_t statementOrdinal);
 
             [[nodiscard]] bool TryBeginQuery();
             void EndQuery();

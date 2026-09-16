@@ -4,6 +4,9 @@
 #include <string_view>
 #include <type_traits>
 
+typedef uint32_t request_id_t;
+typedef uint32_t statement_ordinal_t;
+
 typedef uint64_t session_id_t;
 
 static inline constexpr session_id_t INVALID_SESSION_ID = 0;

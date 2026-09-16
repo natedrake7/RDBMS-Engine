@@ -49,6 +49,8 @@ namespace Network::Transport{
 
             void Append(const Header& header, const char* payload, size_t payloadSize);
 
+            void AppendBuffer(std::vector<char>* buffer);
+
             [[nodiscard]] IoStatus Flush(socket_t socket);
 
             [[nodiscard]] size_t PendingSize()const;

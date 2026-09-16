@@ -16,6 +16,7 @@
 #include "ClientConnection.h"
 #include "ValidationMessages.h"
 #include "../../Systemic/include/Network/PayloadReader.h"
+#include "Encoding/ResultEncoder.h"
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -383,7 +384,7 @@ void ConnectionManager::CloseServerConnection() const
 
     void ConnectionManager::ExecuteQuery(
         const std::shared_ptr<ClientConnection>& connection,
-        UnsignedInt requestId,
+        request_id_t requestId,
         std::string query
     ){
         const QueryGuard queryGuard(connection);
@@ -401,9 +402,13 @@ void ConnectionManager::CloseServerConnection() const
             return;
         }
 
-        UnsignedInt statementOrdinal = 0;
+        std::vector<char> buffer;
+        statement_ordinal_t statementOrdinal = 0;
         for (auto* cursor: queryContext.cursors){
             auto failed = false;
+            auto schemaSent = false;
+
+            const auto* schema = cursor->GetSchema();
 
             while (cursor->CanFetch()){
                 if (connection->IsClosing())
@@ -418,6 +423,19 @@ void ConnectionManager::CloseServerConnection() const
                     );
                     failed = true;
                     break;
+                }
+
+                if (!schemaSent && batch.displayColumnNames.Size() > 0){
+                    ResultEncoder::EncodeRowDescription(
+                        &buffer,
+                        requestId,
+                        statementOrdinal,
+                        batch.displayColumnNames,
+                        schema
+                    );
+
+                    connection->SendEncodedFrame(&buffer);
+                    schemaSent = true;
                 }
 
                 connection->WaitForWriteDrain();

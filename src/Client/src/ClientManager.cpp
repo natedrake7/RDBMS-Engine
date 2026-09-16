@@ -6,7 +6,7 @@
 #include <sstream>
 
 #include "../../Systemic/include/Converter.h"
-#include "../../Systemic/include/Network/QueryResponseProtocol.h"
+#include "Decoding/ResultDecoder.h"
 #include "Network/PayloadReader.h"
 #include "Network/PayloadWriter.h"
 #include "Network/Transport.h"
@@ -194,6 +194,7 @@ namespace Client {
         Network::Header header;
         UnsignedInt statementsCompleted = 0;
 
+        ResultDecoder decoder;
         while (true){
             if (!this->ReadFrame(&header, &buffer)){
                 std::cerr << "Connection closed during query response" << std::endl;
@@ -210,7 +211,14 @@ namespace Client {
             case Network::MessageType::Error:
                 std::cerr << "Query failed: " << DataTypes::StringView(buffer.data(), buffer.size()) << std::endl;
                 break;
-            case Network::MessageType::RowDescription:
+            case Network::MessageType::RowDescription:{
+                if (!decoder.DecodeRowDescription(&buffer)){
+                    std::cerr << "Protocol error: failed to decode row description" << std::endl;
+                    return false;
+                }
+
+                decoder.PrintHeader(std::cout);
+            }
             case Network::MessageType::DataBatch:
                 break;
             case Network::MessageType::StatementComplete:

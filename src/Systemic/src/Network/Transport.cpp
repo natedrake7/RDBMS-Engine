@@ -81,6 +81,18 @@ namespace Network::Transport{
             std::memcpy(this->_buffer.data() + base + Header::SIZE, payload, payloadSize);
     }
 
+    void WriteQueue::AppendBuffer(std::vector<char>* buffer){
+        if (this->PendingSize() == 0){
+            this->_buffer.clear();
+            this->_sent = 0;
+            std::swap(this->_buffer, *buffer);
+            return;
+        }
+
+        this->_buffer.insert(this->_buffer.end(), buffer->begin(), buffer->end());
+        buffer->clear();
+    }
+
     IoStatus WriteQueue::Flush(socket_t socket){
         while (this->_sent < this->_buffer.size()){
             const auto bytesSent = send(
