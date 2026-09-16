@@ -95,7 +95,7 @@ inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
 }
 
 static_assert(static_cast<UnsignedTinyInt>(DataType::RowIdentifier) == DATATYPE_COUNT - 1,
-              "DataType must be 0-based and contiguous so it can index tables of size DATATYPE_COUNT"
+    "DataType must be 0-based and contiguous so it can index tables of size DATATYPE_COUNT"
 );
 
 enum class StringComparisonType: UnsignedTinyInt{

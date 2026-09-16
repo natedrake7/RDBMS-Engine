@@ -372,6 +372,7 @@ void ConnectionManager::CloseServerConnection() const
 
         if (!connection->TryBeginQuery()){
             connection->SendTextFrame(MessageType::Error, header._requestId, 0, Messages::QUERY_REQUEST_QUERY_ALREADY_RUNNING);
+            connection->SendControlFrame(MessageType::QueryComplete, header._requestId, 0);
             return;
         }
 

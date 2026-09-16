@@ -45,6 +45,10 @@ namespace CoreEngine{
         return this->_validity[index >> 6] >> (index & 63) & 1;
     }
 
+    Int DataVector::ValidityBytes() const{
+        return this->WordsCount() * sizeof(UnsignedBigInt);
+    }
+
     Int DataVector::WordsCount() const{
         return DataVector::WordsCount(this->_count);
     }

@@ -45,7 +45,10 @@ namespace CoreEngine{
         [[nodiscard]] UnsignedInt DictionaryIndex(UnsignedInt logicalIndex) const;
         [[nodiscard]] bool GetNullValue(UnsignedInt index) const;
 
+
+        [[nodiscard]] Int ValidityBytes()const;
         [[nodiscard]] Int WordsCount()const;
+
 
         [[nodiscard]] static Int WordsCount(Int count);
         [[nodiscard]] static Int BitSizeFromBool(Int count);
