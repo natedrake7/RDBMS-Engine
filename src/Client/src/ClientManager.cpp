@@ -36,9 +36,9 @@ namespace Client {
 #endif
         this->_networkInitialized = true;
 
-        this->_parameters.socket = Network::ToSocket(socket(AF_INET, SOCK_STREAM, 0));
+        this->_parameters._socket = Network::ToSocket(socket(AF_INET, SOCK_STREAM, 0));
 
-        if (this->_parameters.socket < 0) {
+        if (this->_parameters._socket < 0) {
             std::cerr << "Failed to initialize socket" << std::endl;
             return false;
         }
@@ -46,15 +46,15 @@ namespace Client {
         sockaddr_in serverAddress = {};
 
         serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(static_cast<UnsignedSmallInt>(this->_parameters.port));
+        serverAddress.sin_port = htons(static_cast<UnsignedSmallInt>(this->_parameters._port));
 
-        if (inet_pton(AF_INET, this->_parameters.hostName.c_str(), &serverAddress.sin_addr) != 1){
-            std::cerr << "Invalid host address: " << this->_parameters.hostName << std::endl;
+        if (inet_pton(AF_INET, this->_parameters._hostname.c_str(), &serverAddress.sin_addr) != 1){
+            std::cerr << "Invalid host address: " << this->_parameters._hostname << std::endl;
             return false;
         }
 
-        if (connect(this->_parameters.socket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
-            std::cerr << "Failed to connect to host: " << this->_parameters.hostName << ":" << this->_parameters.port << std::endl;
+        if (connect(this->_parameters._socket, reinterpret_cast<sockaddr*>(&serverAddress), sizeof(serverAddress)) < 0) {
+            std::cerr << "Failed to connect to host: " << this->_parameters._hostname << ":" << this->_parameters._port << std::endl;
             return false;
         }
 
@@ -62,9 +62,9 @@ namespace Client {
     }
 
     void ConnectionManager::CloseConnectionToServer(){
-        if (this->_parameters.socket != Network::INVALID_SOCKET_DESCRIPTOR){
-            Network::Close(this->_parameters.socket);
-            this->_parameters.socket = Network::INVALID_SOCKET_DESCRIPTOR;
+        if (this->_parameters._socket != Network::INVALID_SOCKET_DESCRIPTOR){
+            Network::Close(this->_parameters._socket);
+            this->_parameters._socket = Network::INVALID_SOCKET_DESCRIPTOR;
         }
 
 #ifdef _WIN32
@@ -79,8 +79,8 @@ namespace Client {
 
         const Network::PayloadWriter writer(&payload);
 
-        writer.WriteString(this->_parameters.username);
-        writer.WriteString(this->_parameters.password);
+        writer.WriteString(this->_parameters._username);
+        writer.WriteString(this->_parameters._password);
 
         const auto requestId = this->NextRequestId();
 
@@ -130,19 +130,19 @@ namespace Client {
             }
 
             if (parameter == "-P") {
-                this->_parameters.port = Converter::StrToInt<Int>(connectionString[++i]);
+                this->_parameters._port = Converter::StrToInt<Int>(connectionString[++i]);
                 continue;
             }
             if (parameter == "-h") {
-                this->_parameters.hostName = connectionString[++i];
+                this->_parameters._hostname = connectionString[++i];
                 continue;
             }
             if (parameter == "-u") {
-                this->_parameters.username = connectionString[++i];
+                this->_parameters._username = connectionString[++i];
                 continue;
             }
             if (parameter == "-p") {
-                this->_parameters.password = connectionString[++i];
+                this->_parameters._password = connectionString[++i];
                 continue;
             }
 
@@ -170,19 +170,19 @@ namespace Client {
         if (payloadLength > 0)
             std::memcpy(buffer.data() + Network::Header::SIZE, payload, payloadLength);
 
-        return Network::Transport::SendAll(this->_parameters.socket, buffer.data(), buffer.size()) == Network::Transport::IoStatus::Ok;
+        return Network::Transport::SendAll(this->_parameters._socket, buffer.data(), buffer.size()) == Network::Transport::IoStatus::Ok;
     }
 
     bool ConnectionManager::ReadFrame(Network::Header* header, std::vector<char>* payload) const{
         char headerBytes[Network::Header::SIZE];
 
-        if (Network::Transport::ReceiveExact(this->_parameters.socket, headerBytes, Network::Header::SIZE) != Network::Transport::IoStatus::Ok)
+        if (Network::Transport::ReceiveExact(this->_parameters._socket, headerBytes, Network::Header::SIZE) != Network::Transport::IoStatus::Ok)
             return false;
 
         header->Decode(headerBytes);
         payload->resize(header->_payloadLength);
 
-        return Network::Transport::ReceiveExact(this->_parameters.socket, payload->data(), header->_payloadLength) == Network::Transport::IoStatus::Ok;
+        return Network::Transport::ReceiveExact(this->_parameters._socket, payload->data(), header->_payloadLength) == Network::Transport::IoStatus::Ok;
     }
 
     bool ConnectionManager::ReadQueryResponse(const UnsignedInt requestId) const{

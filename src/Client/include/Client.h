@@ -2,15 +2,17 @@
 
 #include <string>
 
-#include "DataTypes/DataTypes.h"
+#include "../../Systemic/include/DataTypes/DataTypes.h"
+#include "Network/Socket.h"
 
 struct ConnectionParameters {
-    std::string hostName;
-    std::string username;
-    std::string password;
+    std::string _hostname;
+    std::string _username;
+    std::string _password;
 
-    Int port;
-    Int socket;
+    Int _port;
+    Network::socket_t _socket;
 
-    ConnectionParameters() = default;
+    ConnectionParameters()
+        : _port(0), _socket(0){}
 };

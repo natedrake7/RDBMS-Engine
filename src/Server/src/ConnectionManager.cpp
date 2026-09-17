@@ -379,7 +379,17 @@ void ConnectionManager::CloseServerConnection() const
         std::string query(payload, header._payloadLength);
         this->_threadPool.Enqueue(
             [connection, header, query = std::move(query)]() mutable{
-                ConnectionManager::ExecuteQuery(connection, header._requestId, std::move(query));
+                try{
+                    ConnectionManager::ExecuteQuery(connection, header._requestId, std::move(query));
+                }
+                catch (const std::exception& ex){
+                    connection->SendTextFrame(
+                        MessageType::Error,
+                        header._requestId, 0,
+                        DataTypes::StringView::ViewOf(ex.what())
+                    );
+                    connection->SendControlFrame(MessageType::QueryComplete, header._requestId, 0);
+                }
             });
     }
 

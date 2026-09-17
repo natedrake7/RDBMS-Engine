@@ -24,6 +24,8 @@ namespace Network{
         static constexpr size_t HIGH_WATERMARK = 4 * 1024 * 1024;
         static constexpr size_t LOW_WATERMARK  = 1 * 1024 * 1024;
 
+        void CloseClientConnection() const;
+
         public:
             explicit ClientConnection(socket_t socket);
             ~ClientConnection();

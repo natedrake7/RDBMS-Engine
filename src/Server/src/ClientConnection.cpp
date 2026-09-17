@@ -3,6 +3,7 @@
 #include <cassert>
 
 #include "Constants.h"
+#include "Server.h"
 #include "Security/Session.h"
 
 #ifndef NDEBUG
@@ -10,13 +11,19 @@
 #endif
 
 namespace Network{
+    void ClientConnection::CloseClientConnection() const{
+        if (this->_socket != Constants::INVALID_FILE_DESCRIPTOR)
+            Close(this->_socket);
+        if (this->_session != nullptr)
+            const auto _ = Network::Server::Get().CloseSession(this->_session->sessionId);
+    }
+
     ClientConnection::ClientConnection(const socket_t socket)
         :   _socket(socket), _session(nullptr),
             _wantsWrite(false), _closing(false){}
 
     ClientConnection::~ClientConnection(){
-        if (this->_socket != Constants::INVALID_FILE_DESCRIPTOR)
-            Close(this->_socket);
+        this->CloseClientConnection();
     }
 
     socket_t ClientConnection::Socket() const{

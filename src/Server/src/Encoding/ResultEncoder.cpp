@@ -39,7 +39,7 @@ namespace Network{
 
         auto* __restrict__ bufferData = buffer->data() + baseSize;
 
-        if (column->IsFlat() || column->IsConstant()){
+        if ((column->IsFlat() || column->IsConstant()) && rowOffset == 0){
             std::memcpy(bufferData, column->_validity, validityBytes);
             return;
         }
@@ -98,12 +98,12 @@ namespace Network{
         ResultEncoder::BeginFrame(buffer);
         ResultEncoder::Put<Int>(buffer, columnNames.Size());
 
-        for (auto i = 0;i < columnNames.Size(); i++){
+        for (auto i = 0; i < columnNames.Size(); i++){
             const auto& name = columnNames[i];
             ResultEncoder::Put<Int>(buffer, name.Size());
             buffer->insert(buffer->end(), name.Data(), name.Data() + name.Size());
 
-            const auto type = querySchema->_columns[i]._type;
+            const auto type = querySchema == nullptr ? DataType::Null : querySchema->_columns[i]._type;
             ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
         }
 
@@ -154,6 +154,7 @@ namespace Network{
             case DataType::BigInt:
             case DataType::DateTime:
             case DataType::Guid:
+            case DataType::Null:
                 ResultEncoder::PutFixedSizeData(buffer, column, encodedOffset, encodedRows);
                 break;
             default:
