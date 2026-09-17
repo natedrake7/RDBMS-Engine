@@ -13,7 +13,7 @@ namespace Client{
         ColumnView& columnView,
         const UnsignedInt encodedRows
     ){
-        const UnsignedBigInt offSetBytes = (encodedRows + 1) * sizeof(UnsignedBigInt);
+        const auto offSetBytes = (static_cast<UnsignedBigInt>(encodedRows + 1)) * sizeof(UnsignedInt);
 
         if (offSetBytes > MAX_SPAN || !reader.ReadSpan(columnView._offsets, offSetBytes))
             return false;
@@ -34,7 +34,7 @@ namespace Client{
         if (!reader.Read<UnsignedSmallInt>(columnView._width))
             return false;
 
-        const auto valueBytes = static_cast<UnsignedBigInt>(columnView._width * encodedRows);
+        const auto valueBytes = static_cast<UnsignedBigInt>(columnView._width) * encodedRows;
         if (valueBytes > MAX_SPAN || !reader.ReadSpan(columnView._data, valueBytes))
             return false;
 
