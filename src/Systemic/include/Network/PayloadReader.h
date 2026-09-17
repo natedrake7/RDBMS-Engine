@@ -29,7 +29,7 @@ namespace Network{
                 return true;
             }
 
-            [[nodiscard]] bool ReadSpan(const char*& data, const UnsignedInt size){
+            [[nodiscard]] bool ReadSpan(const char*& data, const UnsignedBigInt size){
                 if (!this->BoundsCheck(size))
                     return false;
 

@@ -13,12 +13,12 @@ namespace Client{
         ColumnView& columnView,
         const UnsignedInt encodedRows
     ){
-        const auto offSetBytes = (encodedRows + 1) * sizeof(UnsignedBigInt);
+        const UnsignedBigInt offSetBytes = (encodedRows + 1) * sizeof(UnsignedBigInt);
 
         if (offSetBytes > MAX_SPAN || !reader.ReadSpan(columnView._offsets, offSetBytes))
             return false;
 
-        std::memcpy(&columnView._blobSize, columnView._offsets + encodedRows * sizeof(UnsignedBigInt), sizeof(UnsignedBigInt));
+        std::memcpy(&columnView._blobSize, columnView._offsets + encodedRows * sizeof(UnsignedInt), sizeof(UnsignedInt));
 
         if (!reader.ReadSpan(columnView._data, columnView._blobSize))
             return false;
@@ -34,14 +34,14 @@ namespace Client{
         if (!reader.Read<UnsignedSmallInt>(columnView._width))
             return false;
 
-        const auto valueBytes = columnView._width * encodedRows;
+        const auto valueBytes = static_cast<UnsignedBigInt>(columnView._width * encodedRows);
         if (valueBytes > MAX_SPAN || !reader.ReadSpan(columnView._data, valueBytes))
             return false;
 
         return true;
     }
 
-    void ResultDecoder::PrintValue(std::ostream& os, const ColumnView& columnView, UnsignedInt row){
+    void ResultDecoder::PrintValue(std::ostream& os, const ColumnView& columnView, const UnsignedInt row){
         switch (columnView._type){
         case DataType::Bool:{
             auto value = false;
@@ -139,26 +139,25 @@ namespace Client{
 
         this->_columnViews.assign(this->_columnCount, ColumnView());
         for (auto& columnView : this->_columnViews){
-            DataType type;
-            UnsignedTinyInt flags;
+            UnsignedTinyInt flags = 0;
+            UnsignedInt encodedRows = 0;
 
-            if (!reader.Read<DataType>(type) || !reader.Read<UnsignedTinyInt>(flags))
-                return false;
+            if (!reader.Read<DataType>(columnView._type)
+                || !reader.Read<UnsignedTinyInt>(flags)
+                || !reader.Read<UnsignedInt>(encodedRows)
+            ) return false;
 
-            columnView._type = type;
+
             columnView._isConstant = (flags & Network::ResultFormat::COLUMN_IS_CONSTANT) != 0;
 
-            if (!reader.ReadSpan(columnView._validity, Network::ResultFormat::ValidityBytes(this->_rowCount)))
+            if (!reader.ReadSpan(columnView._validity, Network::ResultFormat::ValidityBytes(encodedRows)))
                 return false;
 
-            if (Network::ResultFormat::IsVariableLengthColumn(type)){
-                const auto success = DecodeVariableLengthColumn(reader, columnView, this->_rowCount);
-                if (!success)
-                    return false;
-                continue;
-            }
+            const auto decoded = (Network::ResultFormat::IsVariableLengthColumn(columnView._type))
+                ? DecodeVariableLengthColumn(reader, columnView, encodedRows)
+                : DecodeFixedLengthColumn(reader, columnView, encodedRows);
 
-            if (!DecodeFixedLengthColumn(reader, columnView, this->_rowCount))
+            if (!decoded)
                 return false;
         }
 

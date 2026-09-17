@@ -52,7 +52,7 @@ namespace Network{
         for (Int i = 0; i < rowCount; i++){
             const auto index = *(selection + rowOffset + i);
             if (column->GetNullValue(index))
-                *(bufferData + baseSize + (i >> 3)) |= static_cast<char>(1u << (i & 7));
+                *(bufferData + (i >> 3)) |= static_cast<char>(1u << (i & 7));
         }
     }
 
@@ -120,7 +120,7 @@ namespace Network{
         const ::Memory::IAllocator* allocator
     ){
         ResultEncoder::BeginFrame(buffer);
-        ResultEncoder::Put<Int>(buffer, chunk->_numberOfRows);
+        ResultEncoder::Put<Int>(buffer, rowCount);
         ResultEncoder::Put<Int>(buffer, chunk->_numberOfColumns);
 
         for (auto i = 0;i < chunk->_numberOfColumns; i++){
@@ -134,6 +134,8 @@ namespace Network{
             ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
             ResultEncoder::Put<UnsignedTinyInt>(buffer, isConstant ? ResultFormat::COLUMN_IS_CONSTANT : 0);
             ResultEncoder::Put<UnsignedInt>(buffer, encodedRows);
+
+            ResultEncoder::PutValidity(buffer, column, encodedOffset, encodedRows);
 
             switch (column->_type) {
             case DataType::String:
@@ -153,6 +155,7 @@ namespace Network{
             case DataType::DateTime:
             case DataType::Guid:
                 ResultEncoder::PutFixedSizeData(buffer, column, encodedOffset, encodedRows);
+                break;
             default:
                 throw std::runtime_error("Unsupported type in ResultEncoder::EncodeDataBatch");
             }
