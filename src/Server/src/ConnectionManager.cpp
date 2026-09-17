@@ -410,6 +410,7 @@ void ConnectionManager::CloseServerConnection() const
             auto schemaSent = false;
 
             const auto* schema = cursor->GetSchema();
+            const auto* executionAllocator = cursor->GetExecutionContext().GetAllocator();
 
             while (cursor->CanFetch()){
                 if (connection->IsClosing())
@@ -439,6 +440,26 @@ void ConnectionManager::CloseServerConnection() const
                     schemaSent = true;
                 }
 
+                const auto rowCount = batch.dataChunk._numberOfRows;
+                if (schemaSent && rowCount > 0){
+                    const auto sent = ConnectionManager::SendRows(
+                        connection, &buffer,
+                        requestId, statementOrdinal,
+                        &batch.dataChunk, 0, rowCount,
+                        executionAllocator
+                    );
+
+                    if (!sent){
+                        connection->SendTextFrame(
+                            MessageType::Error,
+                            requestId, statementOrdinal,
+                            Messages::QUERY_REQUEST_RESULT_SET_TOO_LARGE
+                        );
+                        failed = true;
+                        break;
+                    }
+                }
+
                 connection->WaitForWriteDrain();
             }
 
@@ -453,5 +474,30 @@ void ConnectionManager::CloseServerConnection() const
         }
         connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);
         queryContext.Release();
+    }
+
+    bool ConnectionManager::SendRows(
+        const std::shared_ptr<ClientConnection>& connection,
+        std::vector<char>* buffer,
+        const request_id_t requestId,
+        const statement_ordinal_t statementOrdinal,
+        const CoreEngine::DataChunk* chunk,
+        const Int offset,
+        const Int rowCount,
+        const Memory::IAllocator* allocator
+    ){
+        ResultEncoder::EncodeDataBatch(buffer, requestId, statementOrdinal, chunk, offset, rowCount, allocator);
+
+        if (buffer->size() - Header::SIZE <= Header::MAX_PAYLOAD_LENGTH){
+            connection->SendEncodedFrame(buffer);
+            return true;
+        }
+
+        if (rowCount == 1)
+            return false;
+
+        const auto half = rowCount / 2;
+        return ConnectionManager::SendRows(connection, buffer, requestId, statementOrdinal, chunk, offset, half, allocator) &&
+               ConnectionManager::SendRows(connection, buffer, requestId, statementOrdinal, chunk, offset + half, rowCount - half, allocator);
     }
 }

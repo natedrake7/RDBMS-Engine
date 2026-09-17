@@ -216,8 +216,15 @@ namespace Client {
                 decoder.PrintHeader(std::cout);
                 break;
             }
-            case Network::MessageType::DataBatch:
+            case Network::MessageType::DataBatch:{
+                if (!decoder.DecodeDataBatch(&buffer)){
+                    std::cerr << "Protocol error: failed to decode data batch" << std::endl;
+                    return false;
+                }
+
+                decoder.PrintBatch(std::cout);
                 break;
+            }
             case Network::MessageType::StatementComplete:
                 statementsCompleted++;
                 break;

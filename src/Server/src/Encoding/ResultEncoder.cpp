@@ -1,5 +1,6 @@
 ﻿#include "../include/Encoding/ResultEncoder.h"
 
+#include "ResultFormat.h"
 #include "../../../CoreEngine/include/Contexts/OutputSchema.h"
 #include "../../../CoreEngine/include/Vectorization/Vectorization.h"
 #include "../../../Systemic/include/DataTypes/String.h"
@@ -27,35 +28,36 @@ namespace Network{
 
     void ResultEncoder::PutValidity(
         std::vector<char>* buffer,
-        const CoreEngine::DataChunk* chunk,
         const CoreEngine::DataVector* column,
         const Int rowOffset,
         const Int rowCount
     ){
         const auto baseSize = buffer->size();
-        const auto validityBytes = column->ValidityBytes();
+        const auto validityBytes = ResultFormat::ValidityBytes(rowCount);
 
         buffer->resize(baseSize + validityBytes, 0);
 
-        if (column->IsFlat() && chunk->_selection == nullptr && rowOffset == 0){
-            std::memcpy(buffer->data() + baseSize, column->_validity, validityBytes);
+        auto* __restrict__ bufferData = buffer->data() + baseSize;
+
+        if (column->IsFlat() || column->IsConstant()){
+            std::memcpy(bufferData, column->_validity, validityBytes);
             return;
         }
 
-        auto* __restrict__ bufferData = buffer->data();
+        const auto* __restrict__ selection = column->_selection;
+
+        if (selection == nullptr)
+            return;
 
         for (Int i = 0; i < rowCount; i++){
-            const auto slotIndex = chunk->RowPhysicalIndex(rowOffset + i);
-            const auto columnIndex = column->PhysicalIndex(slotIndex);
-
-            if (column->GetNullValue(columnIndex))
+            const auto index = *(selection + rowOffset + i);
+            if (column->GetNullValue(index))
                 *(bufferData + baseSize + (i >> 3)) |= static_cast<char>(1u << (i & 7));
         }
     }
 
     void ResultEncoder::PutFixedSizeData(
         std::vector<char>* buffer,
-        const CoreEngine::DataChunk* chunk,
         const CoreEngine::DataVector* column,
         const Int rowOffset,
         const Int rowCount
@@ -66,31 +68,24 @@ namespace Network{
         const auto baseSize = buffer->size();
         buffer->resize(baseSize + dataSize * rowCount);
 
-        if (column->IsFlat() && chunk->_selection == nullptr && rowOffset == 0){
-            std::memcpy(buffer->data() + baseSize, column->_data, dataSize * rowCount);
+        if (column->IsFlat() || column->IsConstant()){
+            std::memcpy(buffer->data() + baseSize, column->_data + rowOffset * dataSize, rowCount * dataSize);
             return;
         }
 
         auto* __restrict__ bufferData = buffer->data();
         const auto* __restrict__ columnData = column->_data;
+        const auto* __restrict__ selection = column->_selection;
+
+        if (selection == nullptr)
+            return;
 
         for (Int i = 0; i < rowCount; i++){
-            const auto rowIndex = chunk->RowPhysicalIndex(rowOffset + i);
-            const auto columnIndex = column->PhysicalIndex(rowIndex);
-            const auto dataOffset = columnIndex * dataSize;
+            const auto index = *(selection + rowOffset + i);
+            const auto dataOffset = index * dataSize;
 
             std::memcpy(bufferData + baseSize + (i * dataSize), columnData + dataOffset, dataSize);
         }
-    }
-
-    void ResultEncoder::PutVariableSizeData(
-        std::vector<char>* buffer,
-        const CoreEngine::DataChunk* chunk,
-        const CoreEngine::DataVector* column,
-        Int rowOffset,
-        Int rowCount
-    ){
-        // const auto
     }
 
     void ResultEncoder::EncodeRowDescription(
@@ -113,5 +108,56 @@ namespace Network{
         }
 
         ResultEncoder::EndFrame(buffer, MessageType::RowDescription, requestId, statementOrdinal);
+    }
+
+    void ResultEncoder::EncodeDataBatch(
+        std::vector<char>* buffer,
+        const request_id_t requestId,
+        const statement_ordinal_t statementOrdinal,
+        const CoreEngine::DataChunk* chunk,
+        const Int rowOffset,
+        const Int rowCount,
+        const ::Memory::IAllocator* allocator
+    ){
+        ResultEncoder::BeginFrame(buffer);
+        ResultEncoder::Put<Int>(buffer, chunk->_numberOfRows);
+        ResultEncoder::Put<Int>(buffer, chunk->_numberOfColumns);
+
+        for (auto i = 0;i < chunk->_numberOfColumns; i++){
+            const auto* __restrict__ column = chunk->_columns[i];
+            const auto type = column->_type;
+            const auto isConstant = column->IsConstant();
+
+            const auto encodedOffset = isConstant ? 0 : rowOffset;
+            const auto encodedRows = isConstant ? 1 : rowCount;
+
+            ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
+            ResultEncoder::Put<UnsignedTinyInt>(buffer, isConstant ? ResultFormat::COLUMN_IS_CONSTANT : 0);
+            ResultEncoder::Put<UnsignedInt>(buffer, encodedRows);
+
+            switch (column->_type) {
+            case DataType::String:
+                ResultEncoder::PutVariableSizeData<DataTypes::StringValue>(buffer, column, encodedOffset, encodedRows, allocator);
+                break;
+            case DataType::Decimal:
+                ResultEncoder::PutVariableSizeData<DataTypes::Decimal>(buffer, column, encodedOffset, encodedRows, allocator);
+                break;
+            case DataType::Json:
+                ResultEncoder::PutVariableSizeData<DataTypes::JsonBinary>(buffer, column, encodedOffset, encodedRows, allocator);
+                break;
+            case DataType::Bool:
+            case DataType::TinyInt:
+            case DataType::SmallInt:
+            case DataType::Int:
+            case DataType::BigInt:
+            case DataType::DateTime:
+            case DataType::Guid:
+                ResultEncoder::PutFixedSizeData(buffer, column, encodedOffset, encodedRows);
+            default:
+                throw std::runtime_error("Unsupported type in ResultEncoder::EncodeDataBatch");
+            }
+        }
+
+        ResultEncoder::EndFrame(buffer, MessageType::DataBatch, requestId, statementOrdinal);
     }
 }

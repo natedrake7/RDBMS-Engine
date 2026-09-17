@@ -18,5 +18,9 @@ namespace Network::ResultFormat{
                 || type == DataType::Decimal;
     }
 
+    [[nodiscard]] inline constexpr UnsignedInt ValidityBytes(const Int rowCount){
+        return (rowCount + 7) / 8;
+    }
+
 
 }

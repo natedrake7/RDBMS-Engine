@@ -9,4 +9,6 @@ namespace Network::Messages{
     static constexpr DataTypes::StringView QUERY_REQUEST_NOT_AUTHENTICATED = "User is not authenticated";
     static constexpr DataTypes::StringView QUERY_REQUEST_QUERY_ALREADY_RUNNING = "A query is already running on the current session";
 
+    static constexpr DataTypes::StringView QUERY_REQUEST_RESULT_SET_TOO_LARGE = "A row exceeds the maximum bandwidth";
+
 }

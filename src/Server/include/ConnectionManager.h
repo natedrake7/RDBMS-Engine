@@ -5,6 +5,7 @@
 #include <atomic>
 #include <string>
 
+#include "../../CoreEngine/include/Logger/CrashRecoveryLogger.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../../Systemic/include/Network/Socket.h"
 
@@ -15,6 +16,11 @@
     #include <windows.h>
     #include <winsock2.h>
     #pragma comment(lib, "ws2_32.lib")
+namespace CoreEngine
+{
+    struct DataChunk;
+}
+
     using SocketEvent = pollfd;
 
 #undef byte // Clean up after including
@@ -84,6 +90,17 @@ namespace Network {
             const std::shared_ptr<ClientConnection>& connection,
             UnsignedInt requestId,
             std::string query
+        );
+
+        [[nodiscard]] static bool SendRows(
+            const std::shared_ptr<ClientConnection>& connection,
+            std::vector<char>* buffer,
+            request_id_t requestId,
+            statement_ordinal_t statementOrdinal,
+            const CoreEngine::DataChunk* chunk,
+            Int offset,
+            Int rowCount,
+            const ::Memory::IAllocator* allocator
         );
 
     public:

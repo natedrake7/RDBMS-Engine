@@ -695,6 +695,7 @@ namespace QueryPipeline::PhysicalPlan {
             return result;
 
         CoreEngine::DataChunk newChunk;
+        newChunk._selection = result.dataChunk._selection;
         newChunk.AllocateColumns(
             context.GetAllocator(),
             rowCount,

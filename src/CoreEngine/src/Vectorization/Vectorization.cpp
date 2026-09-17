@@ -157,15 +157,6 @@ namespace CoreEngine{
             allocator->AllocateRaw(sizeof(DataVector*)*numberOfColumns)
         );
 
-        // this->_selection = static_cast<UnsignedInt*>(
-        //     allocator->AllocateRaw(numberOfRows * sizeof(UnsignedInt))
-        // );
-        //
-        // std::memset(this->_selection, 0, numberOfRows * sizeof(UnsignedInt));
-        //
-        // for (auto i = 0; i < numberOfRows; i++)
-        //     this->_selection[i] = i;
-
         this->_numberOfRows = numberOfRows;
         this->_numberOfColumns = numberOfColumns;
     }
