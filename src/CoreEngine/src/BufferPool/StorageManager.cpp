@@ -200,7 +200,7 @@ Pages::HeaderPageView StorageManager::CreateHeaderPage(const FileKey fileKey){
 }
 
 Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(const FileKey fileKey, const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GAM);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::GLOBAL_ALLOCATION);
 
     auto* header = reinterpret_cast<Pages::GlobalAllocationPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
     header->_appendBitId = 0;
@@ -216,7 +216,7 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
     const page_id_t pageId,
     const page_id_t gamPageId
 ){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::IAM);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::ALLOCATION);
 
     auto* additionalHeader = reinterpret_cast<Pages::IndexAllocationPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
 
@@ -229,7 +229,7 @@ Pages::AllocationPageView StorageManager::CreateAllocationPage(
 
 
 Pages::PageFreeSpaceView StorageManager::CreatePageFreeSpacePage(const FileKey fileKey,const page_id_t pageId){
-    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREESPACE);
+    auto* frame = this->CreateFrame(fileKey, pageId, Constants::PageType::FREE_SPACE);
     return Pages::PageFreeSpaceView(frame);
 }
 

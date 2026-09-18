@@ -59,9 +59,9 @@ namespace Pages{
         }
 
 		IndexPageAdditionalHeader()
-		    :   _flags(0),
-                previousNode(INVALID_PAGE_ID),
-                nextNode(INVALID_PAGE_ID){
+		    :   previousNode(INVALID_PAGE_ID),
+                nextNode(INVALID_PAGE_ID),
+                _flags(0){
             this->SetTreeType(Constants::TreeType::NonClustered);
             this->SetIsLeaf(false);
             this->SetIsRoot(false);

@@ -102,7 +102,7 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->_frame->Header()->Type() == Constants::PageType::INDEX;
+        return this->_frame->Header()->Type() == Constants::PageType::INDEXED;
     }
 
     PageView::PageView()

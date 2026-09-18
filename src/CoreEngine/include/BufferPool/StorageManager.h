@@ -147,11 +147,11 @@ namespace Storage {
         if constexpr (std::is_same_v<TView, Pages::PageView>)
             return Constants::PageType::DATA;
         else if constexpr (std::is_same_v<TView, Pages::IndexPageView>)
-            return Constants::PageType::INDEX;
+            return Constants::PageType::INDEXED;
         else if constexpr (std::is_same_v<TView, Pages::LargeObjectView>)
-            return Constants::PageType::LOB;
+            return Constants::PageType::LOB_ROOT;
         else if constexpr (std::is_same_v<TView, Pages::OverflowPageView>)
-            return Constants::PageType::OVERFLOWTYPE;
+            return Constants::PageType::OVERFLOW_TYPE;
         else
             static_assert(DataTypes::AlwaysFalse<TView>, "Invalid Page Type");
 

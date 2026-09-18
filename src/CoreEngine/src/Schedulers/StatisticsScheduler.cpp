@@ -289,7 +289,7 @@ namespace CoreEngine {
 
                 const auto pageSize = page.PageSize();
                 const auto fallBackPageType = page.GetPageType();
-                if (pageSize == 0 || (fallBackPageType != Constants::PageType::INDEX && fallBackPageType != Constants::PageType::DATA))
+                if (pageSize == 0 || (fallBackPageType != Constants::PageType::INDEXED && fallBackPageType != Constants::PageType::DATA))
                     continue;
 
                 averageRowsPerPage += pageSize;

@@ -2,7 +2,7 @@
 #include "../DataTypes/DateTime.h"
 #include "../DataTypes/Guid.h"
 #include "../DataTypes/DataTypes.h"
-#include "DataTypes/PackedWord.h"
+#include "../DataTypes/PackedWord.h"
 
 namespace Network{
     inline constexpr protocol_version_t MIN_PROTOCOL_VERSION = 1;
