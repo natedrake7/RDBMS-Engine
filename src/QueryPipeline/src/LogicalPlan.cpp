@@ -170,13 +170,11 @@ namespace QueryPipeline {
                 return;
 
             const auto ordinalPosition = columnExpression->ordinalPosition;
-            auto* __restrict__ word = &seenColumns[ordinalPosition >> 6];
-            const auto bit = ordinalPosition & 63;
 
-            if (PackedWord<UnsignedBigInt>::GetBit(*word, bit))
+            if (EngineBitmap::GetBitmapBit(seenColumns, ordinalPosition))
                 return;
 
-            PackedWord<UnsignedBigInt>::SetBit(word, bit, true);
+            EngineBitmap::SetBitmapBit(seenColumns, ordinalPosition, true);
             const auto position = schema->IndexOf(
                 CoreEngine::ColumnIdentity::Base(slotIndex, ordinalPosition)
             );

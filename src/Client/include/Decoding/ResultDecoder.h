@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "DataTypes/DataTypes.h"
+#include "Network/WireTypes.h"
 
 namespace Network
 {
@@ -42,7 +43,7 @@ namespace Client{
             UnsignedInt _blobSize;
             UnsignedSmallInt _width;
 
-            DataType _type;
+            Network::WireType _type;
             bool _isConstant;
 
 
@@ -52,7 +53,7 @@ namespace Client{
                   , _offsets(nullptr)
                   , _blobSize(0)
                   , _width(0)
-                  , _type(DataType::Null)
+                  , _type(Network::WireType::Null)
                   , _isConstant(false)
             {}
         };

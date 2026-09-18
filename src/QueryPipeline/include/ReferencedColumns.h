@@ -14,22 +14,17 @@ namespace QueryPipeline{
             const column_index_t ordinalPosition,
             const DataType type
         ){
-            auto* word = &this->_mask[slotIndex][ordinalPosition >> 6];
-            const auto bit = static_cast<UnsignedTinyInt>(ordinalPosition & 63);
-
-            if (PackedWord<UnsignedBigInt>::GetBit(*word, bit))
+            auto* word = this->_mask[slotIndex];
+            if (EngineBitmap::GetBitmapBit(word, ordinalPosition))
                 return;
 
             this->_count[slotIndex]++;
-            PackedWord<UnsignedBigInt>::SetBit(word, bit, true);
+            EngineBitmap::SetBitmapBit(word, ordinalPosition, true);
             this->_types[slotIndex][ordinalPosition] = type;
         }
 
         [[nodiscard]] bool Contains(const UnsignedSmallInt slotIndex, const column_index_t ordinalPosition) const{
-            return PackedWord<UnsignedBigInt>::GetBit(
-                this->_mask[slotIndex][ordinalPosition >> 6],
-                ordinalPosition & 63
-            );
+            return PackedWord<UnsignedBigInt>::GetBitmapBit(this->_mask[slotIndex], ordinalPosition);
         }
 
         [[nodiscard]] DataType GetType(const UnsignedSmallInt slotIndex, const column_index_t ordinalPosition) const{

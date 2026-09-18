@@ -1,11 +1,11 @@
 ﻿#include "../../include/Decoding/ResultDecoder.h"
 #include <ostream>
 
-#include "../../../Server/include/ClientConnection.h"
-#include "../../../Server/include/ResultFormat.h"
 #include "DataTypes/DateTime.h"
 #include "DataTypes/Guid.h"
+#include "DataTypes/PackedWord.h"
 #include "Network/PayloadReader.h"
+#include "Network/Header.h"
 
 namespace Client{
     bool ResultDecoder::DecodeVariableLengthColumn(
@@ -43,7 +43,7 @@ namespace Client{
 
     void ResultDecoder::PrintValue(std::ostream& os, const ColumnView& columnView, const UnsignedInt row){
         switch (columnView._type){
-        case DataType::Bool:{
+        case Network::WireType::Bool:{
             auto value = false;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << (value ? "TRUE" : "FALSE");
@@ -51,35 +51,35 @@ namespace Client{
             }
             break;
         }
-        case DataType::TinyInt:{
+        case Network::WireType::TinyInt:{
             TinyInt value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << static_cast<Int>(value); return;
             }
             break;
         }
-        case DataType::SmallInt:{
+        case Network::WireType::SmallInt:{
             SmallInt value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
-        case DataType::Int:{
+        case Network::WireType::Int:{
             Int value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
-        case DataType::BigInt:{
+        case Network::WireType::BigInt:{
             BigInt value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
-        case DataType::DateTime:{
+        case Network::WireType::DateTime:{
             BigInt timestamp = 0;       // milliseconds since the Unix epoch, UTC
             if (Load(columnView._data, columnView._width, row, timestamp)){
                 DataTypes::DateTime(timestamp).Print(os);
@@ -87,16 +87,16 @@ namespace Client{
             }
             break;
         }
-        case DataType::Guid:{
+        case Network::WireType::Guid:{
             if (columnView._width != DataTypes::GUID_SIZE)
                 break;
 
             os << DataTypes::Guid(reinterpret_cast<const object_t*>(columnView._data + row * columnView._width));
             return;
         }
-        case DataType::String:
-        case DataType::Json:
-        case DataType::Decimal:{
+        case Network::WireType::String:
+        case Network::WireType::Json:
+        case Network::WireType::Decimal:{
             UnsignedInt begin = 0;
             UnsignedInt end = 0;
             std::memcpy(&begin, columnView._offsets + row * sizeof(UnsignedInt), sizeof(UnsignedInt));
@@ -142,18 +142,18 @@ namespace Client{
             UnsignedTinyInt flags = 0;
             UnsignedInt encodedRows = 0;
 
-            if (!reader.Read<DataType>(columnView._type)
+            if (!reader.Read<Network::WireType>(columnView._type)
                 || !reader.Read<UnsignedTinyInt>(flags)
                 || !reader.Read<UnsignedInt>(encodedRows)
             ) return false;
 
 
-            columnView._isConstant = (flags & Network::ResultFormat::COLUMN_IS_CONSTANT) != 0;
+            columnView._isConstant = (flags & static_cast<char>(Network::ColumnFlags::Constant)) != 0;
 
-            if (!reader.ReadSpan(columnView._validity, Network::ResultFormat::ValidityBytes(encodedRows)))
+            if (!reader.ReadSpan(columnView._validity, Network::ValidityBytes(encodedRows)))
                 return false;
 
-            const auto decoded = (Network::ResultFormat::IsVariableLengthColumn(columnView._type))
+            const auto decoded = (Network::IsVariableLength(columnView._type))
                 ? DecodeVariableLengthColumn(reader, columnView, encodedRows)
                 : DecodeFixedLengthColumn(reader, columnView, encodedRows);
 
@@ -174,7 +174,7 @@ namespace Client{
     void ResultDecoder::PrintBatch(std::ostream& os) const{
         for (auto index = 0; index < this->_rowCount; ++index){
             for (const auto& column : this->_columnViews){
-                if ((column._validity[index >> 3] >> (index & 7)) & 1)
+                if (PackedByte::GetBitmapBit(reinterpret_cast<const UnsignedTinyInt*>(column._validity), index))
                     os << "NULL";
                 else
                     ResultDecoder::PrintValue(os, column, index);

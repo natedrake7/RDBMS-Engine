@@ -34,9 +34,9 @@ namespace Pages{
 
         extent_id_t bit = from;
         while (bit <= to){
-            if ((bit & 63) == 0 && bit + 64 <= to){
+            if (PackedWord<UnsignedBigInt>::BitIndex(bit) == 0 && bit + 64 <= to){
                 uint64_t word;
-                std::memcpy(&word, this->_frame->_data + this->initialOffset + (bit >> 3), sizeof(word));
+                std::memcpy(&word, this->_frame->_data + this->initialOffset + PackedByte::WordIndex(bit), sizeof(word));
                 if (word == 0x00){
                     if (length == 0)
                         start = bit;

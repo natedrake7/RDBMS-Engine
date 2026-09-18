@@ -19,9 +19,7 @@ namespace CoreEngine{
     }
 
     void DataVector::SetNullValue(const UnsignedInt index, const bool value) const{
-        const auto w = index >> 6;
-        const auto m = 1ull << (index & 63);
-        this->_validity[w] = ( this->_validity[w] & ~m) | (static_cast<UnsignedBigInt>(value) << (index & 63));
+        EngineBitmap::SetBitmapBit(this->_validity, index, value);
     }
 
     UnsignedInt DataVector::PhysicalIndex(const UnsignedInt logicalIndex) const{
@@ -39,10 +37,6 @@ namespace CoreEngine{
 
     UnsignedInt DataVector::DictionaryIndex(const UnsignedInt logicalIndex) const{
         return this->_selection[logicalIndex];
-    }
-
-    bool DataVector::GetNullValue(const UnsignedInt index) const{
-        return this->_validity[index >> 6] >> (index & 63) & 1;
     }
 
     Int DataVector::ValidityBytes() const{

@@ -1,10 +1,15 @@
 ﻿#include "../include/Encoding/ResultEncoder.h"
 
-#include "ResultFormat.h"
+#include <bit>
+#include <cassert>
+
 #include "../../../CoreEngine/include/Contexts/OutputSchema.h"
 #include "../../../CoreEngine/include/Vectorization/Vectorization.h"
 #include "../../../Systemic/include/DataTypes/String.h"
 #include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
+#include "../../../Systemic/include/Network/TypeMapping.h"
+
+static_assert(std::endian::native == std::endian::little);
 
 namespace Network{
     void ResultEncoder::BeginFrame(std::vector<char>* buffer){
@@ -33,26 +38,54 @@ namespace Network{
         const Int rowCount
     ){
         const auto baseSize = buffer->size();
-        const auto validityBytes = ResultFormat::ValidityBytes(rowCount);
+        const auto validityBytesSize = Network::ValidityBytes(rowCount);
 
-        buffer->resize(baseSize + validityBytes, 0);
+        buffer->resize(baseSize + validityBytesSize, 0);
 
         auto* __restrict__ bufferData = buffer->data() + baseSize;
+        const auto* __restrict__ validityWords = column->_validity;
+        const auto* __restrict__ validityBytes = reinterpret_cast<const char*>(validityWords);
 
-        if ((column->IsFlat() || column->IsConstant()) && rowOffset == 0){
-            std::memcpy(bufferData, column->_validity, validityBytes);
-            return;
-        }
+        switch (column->_kind){
+            case CoreEngine::DataVectorKind::Flat:{
+                assert(WireBitmap::BitIndex(rowOffset) == 0 && "flat validity std::memcpy requires byte-aligned rowOffset");
+                std::memcpy(bufferData, validityBytes + WireBitmap::WordIndex(rowOffset), validityBytesSize);
+                break;
+            }
+            case CoreEngine::DataVectorKind::Constant:
+                std::memcpy(bufferData, validityBytes, 1);
+                break;
+            case CoreEngine::DataVectorKind::Dictionary:{
+                assert(column->_selection != nullptr);
+                if (column->_selection == nullptr)
+                    return;
 
-        const auto* __restrict__ selection = column->_selection;
+                const auto* __restrict__ selection = column->_selection + rowOffset;
 
-        if (selection == nullptr)
-            return;
+                const auto isNull = [validityWords](const UnsignedInt p){
+                    return EngineBitmap::GetBitmapBit(validityWords, p);
+                };
 
-        for (Int i = 0; i < rowCount; i++){
-            const auto index = *(selection + rowOffset + i);
-            if (column->GetNullValue(index))
-                *(bufferData + (i >> 3)) |= static_cast<char>(1u << (i & 7));
+                const auto fullBytes = WireBitmap::WordIndex(rowCount);
+                for (UnsignedInt byte = 0; byte < fullBytes; byte++){
+                    const auto* rows = selection + (byte << 3);
+                    UnsignedTinyInt bits = 0;
+                    for (auto k = 0; k < 8; ++k)
+                        PackedByte::OrBit(&bits, k, isNull(rows[k]));
+
+                    bufferData[byte] = static_cast<char>(bits);
+                }
+
+                // Tail: the last 1..7 rows
+                if (const UnsignedTinyInt tail =  WireBitmap::BitIndex(rowCount); tail != 0){
+                    const auto* rows = selection + (fullBytes << 3);
+                    UnsignedTinyInt bits = 0;
+                    for (UnsignedTinyInt k = 0; k < tail; ++k)
+                        PackedByte::OrBit(&bits, k, isNull(rows[k]));
+                    bufferData[fullBytes] = static_cast<char>(bits);
+                }
+                break;
+            }
         }
     }
 
@@ -62,14 +95,17 @@ namespace Network{
         const Int rowOffset,
         const Int rowCount
     ){
-        const auto dataSize = column->_dataEntrySize;
-        ResultEncoder::Put<UnsignedSmallInt>(buffer, dataSize);
+        const auto width = column->_dataEntrySize;
+        ResultEncoder::Put<UnsignedSmallInt>(buffer, width);
+
+        if (width == 0 || rowCount == 0)
+            return;
 
         const auto baseSize = buffer->size();
-        buffer->resize(baseSize + dataSize * rowCount);
+        buffer->resize(baseSize + width * rowCount);
 
         if (column->IsFlat() || column->IsConstant()){
-            std::memcpy(buffer->data() + baseSize, column->_data + rowOffset * dataSize, rowCount * dataSize);
+            std::memcpy(buffer->data() + baseSize, column->_data + rowOffset * width, rowCount * width);
             return;
         }
 
@@ -82,9 +118,9 @@ namespace Network{
 
         for (Int i = 0; i < rowCount; i++){
             const auto index = *(selection + rowOffset + i);
-            const auto dataOffset = index * dataSize;
+            const auto dataOffset = index * width;
 
-            std::memcpy(bufferData + baseSize + (i * dataSize), columnData + dataOffset, dataSize);
+            std::memcpy(bufferData + baseSize + (i * width), columnData + dataOffset, width);
         }
     }
 
@@ -103,7 +139,7 @@ namespace Network{
             ResultEncoder::Put<Int>(buffer, name.Size());
             buffer->insert(buffer->end(), name.Data(), name.Data() + name.Size());
 
-            const auto type = querySchema == nullptr ? DataType::Null : querySchema->_columns[i]._type;
+            const auto type = Network::ToWire(querySchema->_columns[i]._type);
             ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
         }
 
@@ -125,16 +161,19 @@ namespace Network{
 
         for (auto i = 0;i < chunk->_numberOfColumns; i++){
             const auto* __restrict__ column = chunk->_columns[i];
-            const auto type = column->_type;
+            const auto type = Network::ToWire(column->_type);
             const auto isConstant = column->IsConstant();
-
             const auto encodedOffset = isConstant ? 0 : rowOffset;
             const auto encodedRows = isConstant ? 1 : rowCount;
 
-            ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
-            ResultEncoder::Put<UnsignedTinyInt>(buffer, isConstant ? ResultFormat::COLUMN_IS_CONSTANT : 0);
-            ResultEncoder::Put<UnsignedInt>(buffer, encodedRows);
+            if (type == WireType::Invalid)
+                throw std::runtime_error("Invalid wire type in ResultEncoder::EncodeDataBatch");
 
+            ResultEncoder::Put<UnsignedTinyInt>(buffer, static_cast<UnsignedTinyInt>(type));
+
+            const auto flags = static_cast<UnsignedTinyInt>(isConstant ? Network::ColumnFlags::Constant : Network::ColumnFlags::None);
+            ResultEncoder::Put<UnsignedTinyInt>(buffer, flags);
+            ResultEncoder::Put<UnsignedInt>(buffer, encodedRows);
             ResultEncoder::PutValidity(buffer, column, encodedOffset, encodedRows);
 
             switch (column->_type) {

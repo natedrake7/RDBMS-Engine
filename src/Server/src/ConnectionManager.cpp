@@ -506,7 +506,13 @@ void ConnectionManager::CloseServerConnection() const
         if (rowCount == 1)
             return false;
 
-        const auto half = rowCount / 2;
+        const auto half = (rowCount / 2) & ~7;
+        //large rows < 16 exceed 64 MB (LOBS are sent another way)
+        //returns rows as x8
+        if (half == 0)
+            return false;
+
+
         return ConnectionManager::SendRows(connection, buffer, requestId, statementOrdinal, chunk, offset, half, allocator) &&
                ConnectionManager::SendRows(connection, buffer, requestId, statementOrdinal, chunk, offset + half, rowCount - half, allocator);
     }

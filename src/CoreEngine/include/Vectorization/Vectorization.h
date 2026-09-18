@@ -43,8 +43,9 @@ namespace CoreEngine{
 
         [[nodiscard]] UnsignedInt PhysicalIndex(UnsignedInt logicalIndex) const;
         [[nodiscard]] UnsignedInt DictionaryIndex(UnsignedInt logicalIndex) const;
-        [[nodiscard]] bool GetNullValue(UnsignedInt index) const;
-
+        [[nodiscard]] bool GetNullValue(const UnsignedInt index) const{
+            return EngineBitmap::GetBitmapBit(this->_validity, index);
+        }
 
         [[nodiscard]] Int ValidityBytes()const;
         [[nodiscard]] Int WordsCount()const;
