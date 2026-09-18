@@ -79,6 +79,7 @@ namespace Client {
 
         const Network::PayloadWriter writer(&payload);
 
+        writer.Write<protocol_version_t>(Network::PROTOCOL_VERSION);
         writer.WriteString(this->_parameters._username);
         writer.WriteString(this->_parameters._password);
 

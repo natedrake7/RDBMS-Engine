@@ -2,6 +2,7 @@
 #include <atomic>
 #include <condition_variable>
 
+#include "../../Systemic/include/CancellationToken.h"
 #include "../../Systemic/include/Network/Socket.h"
 #include "../../Systemic/include/Network/Transport.h"
 
@@ -17,24 +18,37 @@ namespace Network{
         std::condition_variable _writeDrain;
 
         const Session* _session;
+
+        protocol_version_t _protocolVersion;
+
+        std::atomic<request_id_t> _activeRequestId;
+        std::atomic<request_id_t> _cancelledRequestId;
+
         std::atomic<bool> _wantsWrite;
         std::atomic<bool> _closing;
-        std::atomic<bool> _queryInFlight;
+
 
         static constexpr size_t HIGH_WATERMARK = 4 * 1024 * 1024;
         static constexpr size_t LOW_WATERMARK  = 1 * 1024 * 1024;
 
+        void MarkClosingNoLock();
         void CloseClientConnection() const;
 
         public:
             explicit ClientConnection(socket_t socket);
             ~ClientConnection();
 
+            [[nodiscard]] CancellationToken CreateCancellationToken()const;
+
             [[nodiscard]] socket_t Socket() const;
             [[nodiscard]] bool IsAuthenticated()const;
             [[nodiscard]] session_id_t SessionId()const;
+            [[nodiscard]] protocol_version_t ProtocolVersion()const;
+
             void Bind(const Session* session);
             void SendFrame(const Header& header, const char* payload, size_t payloadSize);
+
+            void SetProtocolVersion(protocol_version_t version);
 
             void SendEncodedFrame(std::vector<char>* buffer);
             void SendStatementComplete(
@@ -64,8 +78,11 @@ namespace Network{
 
             void SendControlFrame(MessageType type, request_id_t requestId, statement_ordinal_t statementOrdinal);
 
-            [[nodiscard]] bool TryBeginQuery();
+            [[nodiscard]] bool TryBeginQuery(request_id_t requestId);
             void EndQuery();
+
+            void RequestCancel(request_id_t requestId);
+            [[nodiscard]] bool IsCancelled()const;
     };
 
     struct QueryGuard{
