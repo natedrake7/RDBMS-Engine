@@ -10,6 +10,7 @@
 
 #include <iostream>
 
+#include "../../Systemic/include/CancellationToken.h"
 #include "../include/CompileContext.h"
 #include "Parsing/Lexer.h"
 #include "Parsing/SqlParser.h"

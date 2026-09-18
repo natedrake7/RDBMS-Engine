@@ -15,7 +15,9 @@
 
 #include "ClientConnection.h"
 #include "ValidationMessages.h"
+#include "../../Systemic/include/CancellationToken.h"
 #include "../../Systemic/include/Network/PayloadReader.h"
+#include "../../Systemic/include/Network/WireTypes.h"
 #include "Encoding/ResultEncoder.h"
 
 #ifdef _WIN32
@@ -324,6 +326,11 @@ void ConnectionManager::CloseServerConnection() const
         case MessageType::Query:
             this->HandleQuery(connection, header, payload);
             return;
+        case MessageType::CancelRequest:{
+            if (!connection->IsAuthenticated())
+                return;
+            connection->RequestCancel(header._requestId);
+        }
         default:
             break;
         }
@@ -336,11 +343,34 @@ void ConnectionManager::CloseServerConnection() const
     ) {
         PayloadReader reader(payload, header._payloadLength);
 
+
+        protocol_version_t clientVersion;
+        if (!reader.Read<protocol_version_t>(clientVersion)){
+            std::cerr << "Failed to read protocol version for client" << std::endl;
+            connection->SendTextFrame(MessageType::AuthFailed, header._requestId, 0, Messages::AUTH_REQUEST_MALFORMED_REQUEST);
+            connection->MarkClosing();
+        }
+
+        if (clientVersion < Network::MIN_PROTOCOL_VERSION || clientVersion > Network::PROTOCOL_VERSION){
+            const auto message = std::format("Unsupported protocol version {} (server supports {}..{})", clientVersion, MIN_PROTOCOL_VERSION, PROTOCOL_VERSION);
+            connection->SendTextFrame(
+                MessageType::AuthFailed,
+                header._requestId, 0,
+                DataTypes::StringView::ViewOf(message)
+            );
+            connection->MarkClosing();
+            return;
+        }
+
+        connection->SetProtocolVersion(clientVersion);
+
         DataTypes::StringView username;
         DataTypes::StringView password;
 
         if (!reader.ReadStringView(username) || !reader.ReadStringView(password)) {
             std::cerr << "Failed to read username or password" << std::endl;
+            connection->SendTextFrame(MessageType::AuthFailed, header._requestId, 0, Messages::AUTH_REQUEST_MALFORMED_REQUEST);
+            connection->MarkClosing();
             return;
         }
 
@@ -370,7 +400,7 @@ void ConnectionManager::CloseServerConnection() const
             return;
         }
 
-        if (!connection->TryBeginQuery()){
+        if (!connection->TryBeginQuery(header._requestId)){
             connection->SendTextFrame(MessageType::Error, header._requestId, 0, Messages::QUERY_REQUEST_QUERY_ALREADY_RUNNING);
             connection->SendControlFrame(MessageType::QueryComplete, header._requestId, 0);
             return;
@@ -379,17 +409,7 @@ void ConnectionManager::CloseServerConnection() const
         std::string query(payload, header._payloadLength);
         this->_threadPool.Enqueue(
             [connection, header, query = std::move(query)]() mutable{
-                try{
-                    ConnectionManager::ExecuteQuery(connection, header._requestId, std::move(query));
-                }
-                catch (const std::exception& ex){
-                    connection->SendTextFrame(
-                        MessageType::Error,
-                        header._requestId, 0,
-                        DataTypes::StringView::ViewOf(ex.what())
-                    );
-                    connection->SendControlFrame(MessageType::QueryComplete, header._requestId, 0);
-                }
+                ConnectionManager::ExecuteQuery(connection, header._requestId, std::move(query));
             });
     }
 
@@ -417,69 +437,92 @@ void ConnectionManager::CloseServerConnection() const
         statement_ordinal_t statementOrdinal = 0;
         for (auto* cursor: queryContext.cursors){
             auto failed = false;
-            auto schemaSent = false;
+            try{
+                auto schemaSent = false;
 
-            const auto* schema = cursor->GetSchema();
-            const auto* executionAllocator = cursor->GetExecutionContext().GetAllocator();
+                const auto* schema = cursor->GetSchema();
+                const auto* executionAllocator = cursor->GetExecutionContext().GetAllocator();
 
-            while (cursor->CanFetch()){
-                if (connection->IsClosing())
-                    break;
+                auto token = connection->CreateCancellationToken();
+                cursor->AttachCancellationToken(token);
 
-                auto batch = cursor->FetchNextBatch();
-                if (!batch.status.IsOk()){
-                    connection->SendTextFrame(
-                        MessageType::Error,
-                        requestId, statementOrdinal,
-                        DataTypes::StringView::ViewOf(batch.status.message)
-                    );
-                    failed = true;
-                    break;
-                }
+                while (cursor->CanFetch()){
+                    if (connection->IsClosing())
+                        break;
 
-                if (!schemaSent && batch.displayColumnNames.Size() > 0){
-                    ResultEncoder::EncodeRowDescription(
-                        &buffer,
-                        requestId,
-                        statementOrdinal,
-                        batch.displayColumnNames,
-                        schema
-                    );
-
-                    connection->SendEncodedFrame(&buffer);
-                    schemaSent = true;
-                }
-
-                const auto rowCount = batch.dataChunk._numberOfRows;
-                if (schemaSent && rowCount > 0){
-                    const auto sent = ConnectionManager::SendRows(
-                        connection, &buffer,
-                        requestId, statementOrdinal,
-                        &batch.dataChunk, 0, rowCount,
-                        executionAllocator
-                    );
-
-                    if (!sent){
+                    if (connection->IsCancelled()){
                         connection->SendTextFrame(
                             MessageType::Error,
                             requestId, statementOrdinal,
-                            Messages::QUERY_REQUEST_RESULT_SET_TOO_LARGE
+                            Messages::QUERY_CANCELLED
                         );
                         failed = true;
                         break;
                     }
-                }
 
-                connection->WaitForWriteDrain();
+                    auto batch = cursor->FetchNextBatch();
+                    if (!batch.status.IsOk()){
+                        connection->SendTextFrame(
+                            MessageType::Error,
+                            requestId, statementOrdinal,
+                            DataTypes::StringView::ViewOf(batch.status.message)
+                        );
+                        failed = true;
+                        break;
+                    }
+
+                    if (!schemaSent && batch.displayColumnNames.Size() > 0){
+                        ResultEncoder::EncodeRowDescription(
+                            &buffer,
+                            requestId,
+                            statementOrdinal,
+                            batch.displayColumnNames,
+                            schema
+                        );
+
+                        connection->SendEncodedFrame(&buffer);
+                        schemaSent = true;
+                    }
+
+                    const auto rowCount = batch.dataChunk._numberOfRows;
+                    if (schemaSent && rowCount > 0){
+                        const auto sent = ConnectionManager::SendRows(
+                            connection, &buffer,
+                            requestId, statementOrdinal,
+                            &batch.dataChunk, 0, rowCount,
+                            executionAllocator
+                        );
+
+                        if (!sent){
+                            connection->SendTextFrame(
+                                MessageType::Error,
+                                requestId, statementOrdinal,
+                                Messages::QUERY_REQUEST_RESULT_SET_TOO_LARGE
+                            );
+                            failed = true;
+                            break;
+                        }
+                    }
+
+                    connection->WaitForWriteDrain();
+                }
+            }
+            catch (const std::exception& ex){
+                connection->SendTextFrame(
+                    MessageType::Error,
+                    requestId, 0,
+                    DataTypes::StringView::ViewOf(ex.what())
+                );
+                connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);
             }
 
             if (failed){
                 QueryPipeline::Parser::RollbackTransaction(connection->SessionId(), cursor);
+                break;
             }
-            else{
-                QueryPipeline::Parser::CommitTransaction(connection->SessionId(), cursor);
-                connection->SendControlFrame(MessageType::StatementComplete, requestId, statementOrdinal);
-            }
+
+            QueryPipeline::Parser::CommitTransaction(connection->SessionId(), cursor);
+            connection->SendControlFrame(MessageType::StatementComplete, requestId, statementOrdinal);
             statementOrdinal++;
         }
         connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);

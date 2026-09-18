@@ -20,10 +20,20 @@ namespace Network{
 
     ClientConnection::ClientConnection(const socket_t socket)
         :   _socket(socket), _session(nullptr),
-            _wantsWrite(false), _closing(false){}
+            _protocolVersion(0), _activeRequestId(0),
+            _cancelledRequestId(0), _wantsWrite(false),
+            _closing(false){}
 
     ClientConnection::~ClientConnection(){
         this->CloseClientConnection();
+    }
+
+    CancellationToken ClientConnection::CreateCancellationToken() const{
+        return CancellationToken(
+            &this->_activeRequestId,
+            &this->_cancelledRequestId,
+            &this->_closing
+        );
     }
 
     socket_t ClientConnection::Socket() const{
@@ -41,6 +51,10 @@ namespace Network{
         return this->_session->sessionId;
     }
 
+    protocol_version_t ClientConnection::ProtocolVersion() const{
+        return this->_protocolVersion;
+    }
+
     void ClientConnection::Bind(const Session* session){
         this->_session = session;
     }
@@ -51,11 +65,15 @@ namespace Network{
         this->_write.Append(header, payload, payloadSize);
         const auto flushStatus = this->_write.Flush(this->_socket);
         if (flushStatus == Transport::IoStatus::Failed){
-            this->MarkClosing();
+            this->MarkClosingNoLock();
             return;
         }
 
         this->_wantsWrite.store(flushStatus == Transport::IoStatus::WouldBlock, std::memory_order_relaxed);
+    }
+
+    void ClientConnection::SetProtocolVersion(const protocol_version_t version){
+        this->_protocolVersion = version;
     }
 
     void ClientConnection::SendEncodedFrame(std::vector<char>* buffer){
@@ -70,7 +88,7 @@ namespace Network{
         this->_write.AppendBuffer(buffer);
         const auto flushStatus = this->_write.Flush(this->_socket);
         if (flushStatus == Transport::IoStatus::Failed){
-            this->MarkClosing();
+            this->MarkClosingNoLock();
             return;
         }
 
@@ -100,9 +118,14 @@ namespace Network{
 
     void ClientConnection::WaitForWriteDrain(){
         std::unique_lock guard(this->_mutex);
+
+        if (this->_write.PendingSize() < HIGH_WATERMARK)
+            return;
+
         this->_writeDrain.wait(guard, [this]{
-            return this->_write.PendingSize() < HIGH_WATERMARK
-                || this->_closing.load(std::memory_order_relaxed);
+            return this->_write.PendingSize() < LOW_WATERMARK
+                || this->_closing.load(std::memory_order_relaxed)
+                || this->IsCancelled();
         });
     }
 
@@ -122,6 +145,11 @@ namespace Network{
     }
 
     void ClientConnection::MarkClosing(){
+        std::lock_guard guard(this->_mutex);
+        this->MarkClosingNoLock();
+    }
+
+    void ClientConnection::MarkClosingNoLock(){
         this->_closing.store(true, std::memory_order_relaxed);
         this->_writeDrain.notify_all();
     }
@@ -160,12 +188,27 @@ namespace Network{
         this->SendFrame(header, nullptr, 0);
     }
 
-    bool ClientConnection::TryBeginQuery(){
-        auto expected = false;
-        return this->_queryInFlight.compare_exchange_strong(expected, true);
+    bool ClientConnection::TryBeginQuery(const request_id_t requestId){
+        if (requestId == 0)
+            return false;
+
+        request_id_t expected = 0;
+        return this->_activeRequestId.compare_exchange_strong(expected, requestId, std::memory_order_acq_rel);
     }
 
     void ClientConnection::EndQuery(){
-        this->_queryInFlight.store(false, std::memory_order_relaxed);
+        this->_activeRequestId.store(0, std::memory_order_relaxed);
+    }
+
+    void ClientConnection::RequestCancel(const request_id_t requestId){
+        this->_cancelledRequestId.store(requestId, std::memory_order_relaxed);
+
+        std::lock_guard guard(this->_mutex);
+        this->_writeDrain.notify_all();
+    }
+
+    bool ClientConnection::IsCancelled() const{
+        const auto active = this->_activeRequestId.load(std::memory_order_acquire);
+        return active != 0 && this->_cancelledRequestId.load(std::memory_order_acquire) == active;
     }
 }

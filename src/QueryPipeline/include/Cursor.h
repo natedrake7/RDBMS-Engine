@@ -3,6 +3,8 @@
 #include "PhysicalPlan.h"
 #include "../../CoreEngine/include/Contexts/ExecutionContext.h"
 
+struct CancellationToken;
+
 namespace QueryPipeline {
   class Cursor {
     PipelineConstants::cursor_id_t id;
@@ -25,5 +27,7 @@ namespace QueryPipeline {
     [[nodiscard]] const CoreEngine::Snapshot& GetSnapshot()const;
     [[nodiscard]] PipelineConstants::cursor_id_t GetId()const;
     [[nodiscard]] const CoreEngine::OutputSchema* GetSchema()const;
+
+    void AttachCancellationToken(CancellationToken& cancellationToken);
   };
 }

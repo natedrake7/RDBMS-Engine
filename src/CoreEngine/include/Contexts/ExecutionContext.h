@@ -1,4 +1,5 @@
 ﻿#pragma once
+#include "../../Systemic/include/CancellationToken.h"
 #include "../DatabaseConstants.h"
 #include "../../Systemic/include/Constants.h"
 #include "../../Systemic/include/DataStructures/HashSet.h"
@@ -92,15 +93,17 @@ namespace CoreEngine {
     };
 
     class ExecutionContext {
-        ScanHandle scanHandles[Constants::MAX_QUERY_JOINS];
-        ExecutionSchema schema;
+        ScanHandle _scanHandles[Constants::MAX_QUERY_JOINS];
+        ExecutionSchema _schema;
 
-        Snapshot snapshot;
-        Memory::Allocator allocator;
+        Snapshot _snapshot;
+        Memory::Allocator _allocator;
 
-        const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables;
+        CancellationToken _cancellationToken;
 
-        Int batchSize;
+        const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* _variables;
+
+        Int _batchSize;
 
         constexpr static UnsignedInt DEFAULT_ALLOCATION_SIZE = 1024 * 1024 * 10;
 
@@ -125,6 +128,8 @@ namespace CoreEngine {
             [[nodiscard]] Int GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
+
+            void AttachCancellationToken(CancellationToken& cancellationToken);
 
             void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
             const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;

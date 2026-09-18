@@ -4,6 +4,8 @@
 #include <string_view>
 #include <type_traits>
 
+typedef uint16_t protocol_version_t;
+
 typedef uint32_t request_id_t;
 typedef uint32_t statement_ordinal_t;
 

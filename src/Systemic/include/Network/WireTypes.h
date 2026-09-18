@@ -5,7 +5,8 @@
 #include "DataTypes/PackedWord.h"
 
 namespace Network{
-    inline constexpr UnsignedSmallInt PROTOCOL_VERSION = 1;
+    inline constexpr protocol_version_t MIN_PROTOCOL_VERSION = 1;
+    inline constexpr protocol_version_t PROTOCOL_VERSION = 1;
 
     // Explicit, stable codes. Never renumber; only append.
     enum class WireType : UnsignedTinyInt{
