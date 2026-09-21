@@ -25,21 +25,6 @@ namespace DataTypes::Indexing{
         this->InsertKeys(allocator, subKeys);
     }
 
-    Key::Key(Key&& otherKey) noexcept{
-        this->_data = otherKey._data;
-        otherKey._data = nullptr;
-    }
-
-    Key& Key::operator=(Key&& otherKey) noexcept{
-        if (this == &otherKey)
-            return *this;
-
-        this->_data = otherKey._data;
-        otherKey._data = nullptr;
-
-        return *this;
-    }
-
     bool operator==(const Key& lhs, const Key& rhs){
         return Key::Compare(lhs,rhs) == Comparators::Comparator::Equal;
     }
@@ -180,10 +165,6 @@ namespace DataTypes::Indexing{
         }
     }
 
-    bool Key::Empty() const{
-        return this->Count() == 0;
-    }
-
     Comparators::Comparator Key::CompareEntryAt(const Key& lhs, const Key& rhs, const Int index){
         const auto* lhsEntry = lhs.GetEntry(index);
         const auto* rhsEntry = rhs.GetEntry(index);
@@ -197,18 +178,6 @@ namespace DataTypes::Indexing{
             return Comparators::Compare(cmp, 0);
 
         return Comparators::Compare(lhsEntry->Size(), rhsEntry->Size());
-    }
-
-    key_size_t Key::Count() const{
-        return *reinterpret_cast<const key_size_t*>(this->_data);
-    }
-
-    const KeyEntry* Key::GetEntry(const Int index) const{
-        return reinterpret_cast<const KeyEntry*>(this->_data + HEADER_SIZE + index * sizeof(KeyEntry));
-    }
-
-    key_size_t Key::Size() const{
-        return *reinterpret_cast<const key_size_t*>(this->_data + sizeof(key_size_t));
     }
 
     String Key::ToString(const Memory::IAllocator* allocator) const{

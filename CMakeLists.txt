@@ -128,7 +128,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/Additional/SlotDirectory.cpp
         src/CoreEngine/src/Pages/Additional/Frame.cpp
         src/CoreEngine/src/Pages/Additional/IndexPageStructs.cpp
-        src/CoreEngine/src/Pages/LargeObjectView.cpp
+        src/CoreEngine/src/Pages/LargeObjects/LobDataView.cpp
         src/CoreEngine/src/Pages/OverflowPageView.cpp
         src/CoreEngine/src/Managers/GlobalMemoryManager.cpp
         src/CoreEngine/src/Contexts/ExecutionContext.cpp
@@ -144,6 +144,10 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/ExtentReservation.cpp
         src/CoreEngine/src/Database.Templates.cpp
         src/CoreEngine/src/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.cpp
+        src/CoreEngine/src/Pages/LargeObjects/LobRootView.cpp
+        src/CoreEngine/src/Pages/LargeObjects/LobIndexView.cpp
+        src/CoreEngine/src/DataStorage/LargeObjects/LobReader.cpp
+        src/CoreEngine/src/DataStorage/LargeObjects/LobWriter.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

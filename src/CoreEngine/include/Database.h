@@ -9,12 +9,8 @@
 #include "Logger/Logger.h"
 #include "Pages/AllocationPageView.h"
 #include "Pages/GlobalAllocationPageView.h"
-#include "Pages/IndexPageView.h"
-#include "Pages/LargeObjectView.h"
-#include "Pages/OverflowPageView.h"
 #include "Pages/PageFreeSpaceView.h"
 #include "BufferPool/FileKey.h"
-
 
 namespace Memory{
     class IAllocator;

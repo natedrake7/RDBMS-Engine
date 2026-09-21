@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <cassert>
+
 #include "../../DatabaseConstants.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
 
@@ -46,7 +48,8 @@ namespace Pages{
         inline constexpr UnsignedInt ROOT_FANOUT = ROOT_PAYLOAD / sizeof(page_id_t);
         inline constexpr UnsignedInt INDEX_FANOUT = INDEX_PAYLOAD / sizeof(page_id_t);
 
-        inline constexpr UnsignedBigInt MAX_LENGTH = 2ull * Constants::GB;
+        inline constexpr UnsignedBigInt TREE_CAPACITY = static_cast<UnsignedBigInt>(ROOT_FANOUT) * INDEX_FANOUT * DATA_CAPACITY;
+        inline constexpr UnsignedBigInt MAX_LENGTH = 2 * Constants::GB;
 
         [[nodiscard]] inline constexpr UnsignedInt DataPageCount(const UnsignedBigInt length){
             return static_cast<UnsignedInt>((length + DATA_CAPACITY - 1) / (DATA_CAPACITY));
@@ -68,11 +71,16 @@ namespace Pages{
         }
 
         [[nodiscard]] inline constexpr UnsignedInt DataPageBytes(const UnsignedBigInt length, const UnsignedInt pageIndex){
+            assert(length > INLINE_CAPACITY);
+
             const auto last = DataPageCount(length) - 1;
             return pageIndex == last
                 ? static_cast<UnsignedInt>(length - static_cast<UnsignedBigInt>(last) * DATA_CAPACITY)
                 : DATA_CAPACITY;
         }
+
+        static_assert(MAX_LENGTH <= TREE_CAPACITY, "34 GB must fit in two levels");
+        static_assert(IndexPageCount(MAX_LENGTH) <= ROOT_FANOUT, "34 GB must fit in two levels");
 
         struct Position{
             UnsignedInt _dataPage;     // index of the data page (unused at level 0)

@@ -69,7 +69,10 @@ namespace CoreEngine::StorageTypes{
     template Pages::PageView ExtentReservation::Next<Pages::PageView>();
     template Pages::IndexPageView ExtentReservation::Next<Pages::IndexPageView>();
     template Pages::OverflowPageView ExtentReservation::Next<Pages::OverflowPageView>();
-    template Pages::LargeObjectView ExtentReservation::Next<Pages::LargeObjectView>();
+
+    template Pages::LobRootView ExtentReservation::Next<Pages::LobRootView>();
+    template Pages::LobIndexView ExtentReservation::Next<Pages::LobIndexView>();
+    template Pages::LobDataView ExtentReservation::Next<Pages::LobDataView>();
 
     ExtentReservation::ExtentReservation(ExtentReservation&& other) noexcept
         : _segments(std::move(other._segments)), _db(other._db), _segmentIndex(other._segmentIndex),

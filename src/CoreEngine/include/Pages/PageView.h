@@ -215,5 +215,7 @@ namespace Pages{
             Int indexPosition,
             CoreEngine::StorageTypes::RID* outRID
         )const;
+
+        void Unpin();
     };
 }

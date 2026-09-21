@@ -27,7 +27,7 @@ namespace CoreEngine{
 
     template Pages::PageView Database::LazyAllocateSinglePage<Pages::PageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
     template Pages::IndexPageView Database::LazyAllocateSinglePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::LargeObjectView Database::LazyAllocateSinglePage<Pages::LargeObjectView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::LobDataView Database::LazyAllocateSinglePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
     template Pages::OverflowPageView Database::LazyAllocateSinglePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
 
     template<typename TVIew>
@@ -81,6 +81,9 @@ namespace CoreEngine{
 
     template Pages::PageView Database::LazyAllocateTablePage<Pages::PageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
     template Pages::IndexPageView Database::LazyAllocateTablePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::LargeObjectView Database::LazyAllocateTablePage<Pages::LargeObjectView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
     template Pages::OverflowPageView Database::LazyAllocateTablePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+
+    template Pages::LobRootView Database::LazyAllocateTablePage<Pages::LobRootView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::LobIndexView Database::LazyAllocateTablePage<Pages::LobIndexView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::LobDataView Database::LazyAllocateTablePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
 }

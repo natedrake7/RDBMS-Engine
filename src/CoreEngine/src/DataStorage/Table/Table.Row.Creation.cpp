@@ -46,7 +46,7 @@ namespace CoreEngine::StorageTypes{
                 continue;
             }
 
-            if (value.Size() >= Constants::LARGE_OBJECT_THRESHOLD_SIZE){
+            if (value.Size() >= 1000){
                 const auto pageId = this->InsertLargeObject(
                     rowContext.allocator,
                     value

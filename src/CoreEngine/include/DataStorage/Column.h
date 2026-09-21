@@ -12,7 +12,7 @@ namespace CoreEngine::StorageTypes{
     struct ColumnHeader{
         Headers::DefaultValuesHeader defaultValue;
 
-        Int id;
+        Int _id;
         column_index_t columnIndex;
         row_size_t recordSize;
         TinyInt precision;
@@ -21,16 +21,17 @@ namespace CoreEngine::StorageTypes{
     };
 
     class Column{
-        ColumnHeader header;
-        IdentityManager identityManager;
+        ColumnHeader _header;
+        IdentityManager _identityManager;
 
-        DataTypes::String name;
+        DataTypes::String _name;
 
         Memory::PersistentAllocator _allocator;
 
-        const Table *table;
-        bool allowNulls;
-        bool isOverflowed;
+        const Table* _table;
+        bool _allowNulls;
+        bool _isLob;
+        bool _isOverflowed;
 
     public:
         Column(
@@ -91,6 +92,8 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
 
         void SetIsOverflowed(bool isOverflow);
+
+        void SetIsLob(bool isLob);
 
         [[nodiscard]] BigInt GenerateIdentityValue(const ::Memory::IAllocator* allocator);
 

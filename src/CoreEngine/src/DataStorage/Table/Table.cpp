@@ -1078,7 +1078,7 @@ namespace CoreEngine::StorageTypes {
 
         for (const auto &column : this->_columns)
             maximumRowSize += column->isColumnLOB()
-                                  ? Constants::LARGE_OBJECT_POINTER_SIZE
+                                  ? Constants::LOB_REFERENCE_SIZE
                                   : column->Size();
 
         return maximumRowSize;
@@ -1102,13 +1102,13 @@ namespace CoreEngine::StorageTypes {
             if (column->isColumnOverflowed())
                 maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
             else if (column->isColumnLOB())
-                maximumRowSize += Constants::LARGE_OBJECT_POINTER_SIZE;
+                maximumRowSize += Constants::LOB_REFERENCE_SIZE;
             else
                 maximumRowSize += columnSize;
 
             if(columnSize <= largestVariableLengthColumnSize
                 || column->isColumnOverflowed()
-                || columnSize >= Constants::LARGE_DATA_OBJECT_SIZE
+                || columnSize >= Constants::LOB_REFERENCE_SIZE
                 || clusteredColumns.Contains(column->OrdinalPosition())
             ) continue;
 

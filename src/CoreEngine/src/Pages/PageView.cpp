@@ -130,8 +130,7 @@ namespace Pages{
     }
 
     PageView::~PageView(){
-        if (this->IsValid())
-            this->_frame->Unpin();
+        this->Unpin();
     }
 
     PageHeader* PageView::GetHeader() const{
@@ -659,6 +658,12 @@ namespace Pages{
         }
 
         return CoreEngine::VersionDatabase::Get().RetrieveVersionedRID(snapshot, rowHeader, outRID);
+    }
+
+    void PageView::Unpin(){
+        if (this->IsValid())
+            this->_frame->Unpin();
+        this->_frame = nullptr;
     }
 
     template bool PageView::GetColumnAt<bool>(const ::Memory::IAllocator*, Int, Int, bool*) const;

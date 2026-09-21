@@ -19,9 +19,8 @@ namespace CoreEngine::Memory{
     void Allocator::AllocateNewChunk(const UnsignedInt size) const{
         const auto newChunkSize = this->NewChunkCapacity(size);
 
-        if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false){
+        if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false)
             throw std::bad_alloc();
-        }
 
         auto* newChunk = static_cast<Chunk*>(std::malloc(sizeof(Chunk) + newChunkSize));
 
@@ -136,10 +135,16 @@ namespace CoreEngine::Memory{
     }
 
     ::Memory::AllocationStep Allocator::RecordAllocationStart() const{
+        if (this->_tail == nullptr)
+            this->AllocateNewChunk(0);
+
         return ::Memory::AllocationStep(this->_tail, this->_tail->_offset);
     }
 
     void Allocator::ReleaseFromAllocationStep(::Memory::AllocationStep& step) const{
+        if (step._chunkAddress == nullptr)
+            return;
+
         auto* currentChunk = static_cast<Chunk*>(step._chunkAddress);
         this->_tail = currentChunk;
 

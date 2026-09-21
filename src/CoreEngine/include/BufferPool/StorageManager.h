@@ -7,9 +7,11 @@
 #include "../Pages/GlobalAllocationPageView.h"
 #include "../Pages/HeaderPageView.h"
 #include "../Pages/IndexPageView.h"
-#include "../Pages/LargeObjectView.h"
+#include "../Pages/LargeObjects/LobDataView.h"
 #include "../Pages/OverflowPageView.h"
 #include "../Pages/PageFreeSpaceView.h"
+#include "Pages/LargeObjects/LobIndexView.h"
+#include "Pages/LargeObjects/LobRootView.h"
 
 namespace CoreEngine {
   class Database;
@@ -148,8 +150,12 @@ namespace Storage {
             return Constants::PageType::DATA;
         else if constexpr (std::is_same_v<TView, Pages::IndexPageView>)
             return Constants::PageType::INDEXED;
-        else if constexpr (std::is_same_v<TView, Pages::LargeObjectView>)
+        else if constexpr (std::is_same_v<TView, Pages::LobRootView>)
             return Constants::PageType::LOB_ROOT;
+        else if constexpr (std::is_same_v<TView, Pages::LobIndexView>)
+            return Constants::PageType::LOB_INDEX;
+        else if constexpr (std::is_same_v<TView, Pages::LobDataView>)
+            return Constants::PageType::LOB_DATA;
         else if constexpr (std::is_same_v<TView, Pages::OverflowPageView>)
             return Constants::PageType::OVERFLOW_TYPE;
         else
@@ -164,7 +170,6 @@ namespace Storage {
         const page_id_t pageId
     ){
         auto* frame = this->CreateFrame(fileKey, pageId, StorageManager::DeducePageType<TView>());
-
         if constexpr (std::is_same_v<TView, Pages::PageView>)
             frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
         else if constexpr (std::is_same_v<TView, Pages::IndexPageView>){
@@ -173,8 +178,12 @@ namespace Storage {
             additionalHeader->nextNode = INVALID_PAGE_ID;
             additionalHeader->previousNode = INVALID_PAGE_ID;
         }
-        else if constexpr (std::is_same_v<TView, Pages::LargeObjectView>)
-            frame->Header()->bytesLeft = Constants::LARGE_OBJECT_PAGE_SIZE;
+        //LOB Pages don't track available space through pageHeader.
+        else if constexpr (
+            std::is_same_v<TView, Pages::LobDataView>
+            || std::is_same_v<TView, Pages::LobIndexView>
+            || std::is_same_v<TView, Pages::LobRootView>
+        ) frame->Header()->bytesLeft = 0;
         else if constexpr (std::is_same_v<TView, Pages::OverflowPageView>)
             frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
         else
@@ -195,9 +204,12 @@ namespace Storage {
     template Pages::PageView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::IndexPageView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::HeaderPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::LargeObjectView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::OverflowPageView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::GlobalAllocationPageView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::AllocationPageView StorageManager::GetPage(FileKey, page_id_t);
     template Pages::PageFreeSpaceView StorageManager::GetPage(FileKey, page_id_t);
+
+    template Pages::LobRootView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::LobIndexView StorageManager::GetPage(FileKey, page_id_t);
+    template Pages::LobDataView StorageManager::GetPage(FileKey, page_id_t);
 }

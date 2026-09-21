@@ -15,7 +15,7 @@ namespace Expressions
 }
 
 namespace Pages{
-    class LargeObjectView;
+    class LobDataView;
 }
 
 namespace CoreEngine::StorageTypes{

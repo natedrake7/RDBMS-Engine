@@ -61,15 +61,28 @@ namespace DataTypes::Indexing {
         requires (sizeof...(Ts) > 0 && (DataTypes::Primitive<Ts> && ...))
         explicit Key(const Memory::IAllocator* allocator, const Ts&... values);
 
-        Key(Key&& otherKey) noexcept;
-        Key& operator=(Key&& otherKey) noexcept;
+        Key(Key&&) noexcept = default;
+        Key& operator=(Key&&) noexcept = default;
 
-        [[nodiscard]] key_size_t Count() const;
-        [[nodiscard]] inline const KeyEntry* GetEntry(Int index)const;
+        Key(const Key&) = delete;
+        Key& operator=(const Key&) = delete;
 
-        [[nodiscard]] key_size_t Size()const;
+        [[nodiscard]] inline key_size_t Count() const{
+            return *reinterpret_cast<const key_size_t*>(this->_data);
+        }
 
-        [[nodiscard]] bool Empty()const;
+        [[nodiscard]] inline const KeyEntry* GetEntry(const Int index)const{
+            return reinterpret_cast<const KeyEntry*>(this->_data + HEADER_SIZE + index * sizeof(KeyEntry));
+        }
+
+        [[nodiscard]] inline key_size_t Size()const{
+            return *reinterpret_cast<const key_size_t*>(this->_data + sizeof(key_size_t));
+        }
+
+        [[nodiscard]] inline bool Empty()const{
+            return this->Count() == 0;
+        }
+
         [[nodiscard]] static Comparators::Comparator CompareEntryAt(const Key& lhs, const Key& rhs, Int index);
 
         friend bool operator==(const Key& lhs, const Key& rhs);

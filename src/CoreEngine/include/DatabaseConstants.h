@@ -77,11 +77,6 @@ namespace Constants{
 
     inline constexpr Int VECTORIZATION_THRESHOLD = 128;
 
-    enum class ExecutionMode : UnsignedTinyInt{
-        Row = 0,
-        Vectorized = 1
-    };
-
     inline constexpr size_t MAX_QUERY_JOINS = 10;
     inline constexpr size_t MAX_TABLE_COLUMNS = 128;
 
@@ -95,7 +90,7 @@ namespace Constants{
     inline constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + 2 * sizeof(page_id_t);
     inline constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
 
-    inline constexpr size_t PAGE_SIZE = 8 * 1024;
+    inline constexpr size_t PAGE_SIZE = 8 * KB;
     inline constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
     inline constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
     inline constexpr size_t EXTENT_SIZE = 8;
@@ -119,6 +114,8 @@ namespace Constants{
     inline constexpr size_t LOB_INDEX_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
     inline constexpr size_t LOB_DATA_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
 
+    inline constexpr Int LOB_REFERENCE_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
+
     inline constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE + PackedByte::SIZE + 3; //3 stands for alignment and reserved space
     inline constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
 
@@ -132,13 +129,7 @@ namespace Constants{
 
     inline constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 
-    inline constexpr Int LARGE_OBJECT_POINTER_SIZE = sizeof(page_id_t);
-    inline constexpr Int LARGE_OBJECT_METADATA_SIZE = PAGE_HEADER_SIZE + sizeof(page_size_t) + sizeof(page_id_t) + 2; //2 is for alignment
     inline constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
-
-    inline constexpr size_t LARGE_DATA_OBJECT_SIZE = PAGE_SIZE - LARGE_OBJECT_METADATA_SIZE;;
-    inline constexpr size_t LARGE_OBJECT_THRESHOLD_SIZE = PAGE_SIZE_WITHOUT_HEADER;
-    inline constexpr size_t LARGE_DATA_MAX_SIZE = 2 * 1024 * 1024; //2 * Byte -> KB -> MB -> GB;
 
     enum class FunctionType : UnsignedTinyInt {
         // -----------------------
