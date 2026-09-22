@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "ExtentReservation.h"
-#include "SerializedRow.h"
+#include "Row/SerializedRow.h"
 #include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../Indexing/BTree.h"
@@ -19,6 +19,7 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct RowSerializationContext;
     class SerializedRow;
 }
 
@@ -118,24 +119,30 @@ namespace CoreEngine::StorageTypes{
 
         public:
             template<typename ValueProvider>
+            void EvaluateRow(RowSerializationContext& context, ValueProvider&& provider)const;
+
+            [[nodiscard]] Errors::RuntimeStatus PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize)const;
+
+            void WriteOffRowValues(const RowSerializationContext& context)const;
+
+            [[nodiscard]] SerializedRow WriteRow(const RowSerializationContext& context, UnsignedInt rowSize)const;
+
+            template<typename ValueProvider>
             SerializedRow SerializeRowGeneric(
                 Errors::RuntimeStatus& status,
-                const RowSerializationContext& rowContext,
-                object_t* buffer,
+                RowSerializationContext& rowContext,
                 ValueProvider&& provider
             ) const;
 
             SerializedRow SerializeRow(
                 Errors::RuntimeStatus& status,
-                const RowSerializationContext& rowContext,
-                object_t* buffer,
+                RowSerializationContext& rowContext,
                 const DataStructures::PolymorphicArray<Value>& values
             ) const;
 
             SerializedRow SerializeRow(
                 Errors::RuntimeStatus& status,
-                const RowSerializationContext& rowContext,
-                object_t* buffer,
+                RowSerializationContext& rowContext,
                 const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
                 const InsertPlan& insertPlan,
                 const Expressions::EvaluationContext& evaluationContext
@@ -389,11 +396,23 @@ namespace CoreEngine::StorageTypes{
         /** @} End of: Delete Functions*/
 
         /**
+        * @name Validation Functions
+        * Function to validate table structure
+        * @{
+        */
+            [[nodiscard]] Errors::RuntimeStatus ValidateTableLayout(const ::Memory::IAllocator* allocator)const;
+        /** @} End of: Validation Functions*/
+
+        /**
         * @name Calculation and Utility Functions
         * Mostly general utility functions for the table.
         * @{
         */
-
+            [[nodiscard]] row_size_t MaxInlineRowSize()const;
+            [[nodiscard]] row_size_t ClusteredKeySize()const;
+            [[nodiscard]] row_size_t WorstCaseRowSize()const;
+            [[nodiscard]] bool IsKeyColumn(column_index_t ordinalPosition)const;
+            [[nodiscard]] bool CanStoreColumnOffRow(column_index_t ordinalPosition)const;
         /** @} End of: Calculation and Utility Functions*/
 
         /**

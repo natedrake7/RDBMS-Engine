@@ -63,6 +63,10 @@ namespace CoreEngine::StorageTypes {
 
     const DataTypes::String& Column::GetColumnName() const{ return this->_name; }
 
+    DataTypes::StringView Column::GetColumnNameView() const{
+         return DataTypes::StringView::ViewOf(this->_name);
+    }
+
     void Column::SetColumnName(const DataTypes::StringView& otherName){ this->_name = DataTypes::String::FromView(otherName, &this->_allocator);}
 
     DataType Column::Type() const { return this->_header.columnType; }
@@ -101,8 +105,19 @@ namespace CoreEngine::StorageTypes {
         this->_isLob = isLob;
     }
 
-    BigInt Column::GenerateIdentityValue(const ::Memory::IAllocator* allocator){
-        return this->_identityManager.Generate(allocator);
+    Value Column::GenerateIdentityValue(const ::Memory::IAllocator* allocator){
+        switch (this->_header.columnType){
+            case DataType::TinyInt:
+                return Value(this->_identityManager.Generate<TinyInt>(allocator), this->_header.columnIndex);
+            case DataType::SmallInt:
+                return Value(this->_identityManager.Generate<SmallInt>(allocator), this->_header.columnIndex);
+            case DataType::Int:
+                return Value(this->_identityManager.Generate<Int>(allocator), this->_header.columnIndex);
+            case DataType::BigInt:
+                return Value(this->_identityManager.Generate<BigInt>(allocator), this->_header.columnIndex);
+            default:
+                throw std::logic_error("Column::GenerateIdentityValue: Invalid column type");
+        }
     }
 
     void Column::UpdateMetadata(const ::Memory::IAllocator* allocator)const{

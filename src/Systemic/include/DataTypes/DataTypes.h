@@ -28,6 +28,7 @@ typedef uint8_t byte_t;
 
 // block types
 typedef uint16_t block_size_t;
+typedef uint32_t value_size_t;
 
 // column types
 typedef uint8_t column_index_t;

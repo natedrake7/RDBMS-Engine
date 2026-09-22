@@ -3,7 +3,7 @@
 
 #include <limits>
 
-#include "DataStorage/Row.h"
+#include "../../include/DataStorage/Row/Row.h"
 
 long double AggregateFunctions::Average(
     const std::vector<CoreEngine::StorageTypes::RID>& rows,

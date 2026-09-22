@@ -23,8 +23,11 @@ namespace CoreEngine::StorageTypes{
         void SetHeader(const Headers::IdentityColumnsHeader& newHeader);
         [[nodiscard]] const Headers::IdentityColumnsHeader& GetHeader() const;
 
-        [[nodiscard]] BigInt Generate(const ::Memory::IAllocator* allocator);
-        [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] T Generate(const ::Memory::IAllocator* allocator);
+
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, T& value);
         void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
         [[nodiscard]] bool IsValid()const;

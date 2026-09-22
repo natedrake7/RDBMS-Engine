@@ -4,7 +4,7 @@
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/QueryResult.h"
 #include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../include/DataStorage/Row.h"
+#include "../../include/DataStorage/Row/Row.h"
 #include "Plugin.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStructures/PolymorphicArray.h"

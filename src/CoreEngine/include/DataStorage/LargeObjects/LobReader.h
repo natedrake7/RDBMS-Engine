@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "../LobReference.h"
+#include "../../../../Systemic/include/DataTypes/LobReference.h"
 #include "../../../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../BufferPool/StorageManager.h"
 #include "../../Pages/LargeObjects/LobIndexView.h"
@@ -13,7 +13,7 @@ namespace CoreEngine::StorageTypes{
 
     class LobReader{
         Storage::FileKey _fileKey;
-        LobReference _reference;
+        DataTypes::LobReference _reference;
 
         Pages::LobRootView _rootView;
         Pages::LobIndexView _indexView;
@@ -31,7 +31,7 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] Pages::LobDataView FetchDataPage(const Pages::LobLayout::Position& position);
 
         public:
-            LobReader(const Storage::FileKey& fileKey, const LobReference& reference);
+            LobReader(const Storage::FileKey& fileKey, const DataTypes::LobReference& reference);
 
             LobReader(const LobReader&) = delete;
             LobReader& operator=(const LobReader&) = delete;

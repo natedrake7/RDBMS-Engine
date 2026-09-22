@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../DatabaseConstants.h"
 #include "../../Systemic/include/QueryResult.h"
-#include "../DataStorage/Row.h"
+#include "../DataStorage/Row/Row.h"
 #include "Additional/Frame.h"
 #include "Additional/RawRowReference.h"
 #include "Additional/SlotDirectory.h"

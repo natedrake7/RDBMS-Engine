@@ -126,6 +126,19 @@ Value::Value(
     }
 }
 
+Value::Value(
+    const DataTypes::LobReference& data,
+    const DataType type,
+    const column_index_t index
+){
+    this->_data._lob = data;
+    this->_size = sizeof(DataTypes::LobReference);
+    this->_columnIndex = index;
+    this->_type = type;
+    this->_isNull = false;
+    this->_isLob = true;
+}
+
 Value::Value(const column_index_t index)
     : _columnIndex(index) {}
 
@@ -211,6 +224,14 @@ Value Value::SessionValue(
     return Value(data, size, type, index);
 }
 
+Value Value::FromLobReference(
+    const DataTypes::LobReference& data,
+    const DataType type,
+    const column_index_t index
+){
+    return Value(data, type, index);
+}
+
 Value Value::Null(const column_index_t columnIndex){
     return Value(columnIndex);
 }
@@ -228,19 +249,13 @@ bool Value::IsInline() const{
     return Value::IsInline(this->_type);
 }
 
-block_size_t Value::Size() const{ return this->_size; }
+value_size_t Value::Size() const{ return this->_size; }
 
 const object_t* Value::Data() const{
     return this->IsInline()
         ? reinterpret_cast<const object_t*>(&this->_data)
         : this->_data._external;
 }
-
-bool Value::IsNull() const { return this->_isNull; }
-
-column_index_t Value::GetColumnIndex() const { return this->_columnIndex;}
-
-DataType Value::GetType() const{ return this->_type; }
 
 bool Value::AsBool() const {
     return DataTypes::Coercions::ToBool(*this);
@@ -292,12 +307,13 @@ DataTypes::JsonBinary Value::AsJson(const ::Memory::IAllocator* allocator) const
     return DataTypes::Coercions::ToJsonBinary(allocator, *this);
 }
 
-page_id_t Value::AsLargeObjectPointer() const{
-    return *reinterpret_cast<const page_id_t*>(&this->_data);
+DataTypes::LobReference Value::AsLobReference() const{
+    return this->_data._lob;
 }
 
 bool Value::IsIntegral() const{
-    return this->_type >= DataType::TinyInt && this->_type <= DataType::BigInt;
+    return this->_type >= DataType::TinyInt
+        && this->_type <= DataType::BigInt;
 }
 
 // std::ostream & operator<<(std::ostream& os, const Value &field){

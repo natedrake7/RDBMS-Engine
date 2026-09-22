@@ -6,7 +6,7 @@
 #include "../../Server/include/Security/Security.h"
 #include "../../CoreEngine/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
-#include "../../CoreEngine/include/DataStorage/SerializedRow.h"
+#include "../../CoreEngine/include/DataStorage/Row/SerializedRow.h"
 
 namespace CoreEngine{
     class SystemCatalog;

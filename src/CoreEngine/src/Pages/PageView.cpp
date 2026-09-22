@@ -6,7 +6,7 @@
 #include "DataStorage/Table.h"
 #include "Pages/Additional/Frame.h"
 #include "Pages/Additional/RawRowReference.h"
-#include "DataStorage/Row.h"
+#include "../../include/DataStorage/Row/Row.h"
 #include "DataTypes/StringValue.h"
 #include "SystemDatabases/VersionDatabase.h"
 

@@ -7,7 +7,7 @@
 #include "../Memory/Allocator.h"
 #include "../../Systemic/include/DataStructures/Dictionary.h"
 #include "../BufferPool/FileKey.h"
-#include "../DataStorage/Row.h"
+#include "../DataStorage/Row/Row.h"
 
 class BoundVariable;
 

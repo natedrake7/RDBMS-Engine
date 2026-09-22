@@ -1,11 +1,9 @@
-#include "../../include/DataStorage/SerializedRow.h"
-
-#include <cmath>
+#include "../../include/DataStorage/Row/SerializedRow.h"
 
 #include "Converter.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStorage/Column.h"
-#include "DataStorage/Row.h"
+#include "DataStorage/Row/Row.h"
 #include "Pages/Additional/RawRowReference.h"
 
 namespace CoreEngine::StorageTypes{

@@ -45,23 +45,34 @@ namespace CoreEngine::StorageTypes {
         return this->header;
     }
 
-    BigInt IdentityManager::Generate(const ::Memory::IAllocator* allocator){
+    template <DataTypes::IsInteger T>
+    T IdentityManager::Generate(const ::Memory::IAllocator* allocator){
         const auto value = this->counter.fetch_add(this->header.increment, std::memory_order_relaxed);
 
         if (value >= this->reservedUpTo.load(std::memory_order_relaxed))
             this->ReserveBlock(allocator, value);
 
-        return value;
+        return static_cast<T>(value);
     }
 
-    bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value){
+    template TinyInt IdentityManager::Generate<TinyInt>(const ::Memory::IAllocator* allocator);
+    template SmallInt IdentityManager::Generate<SmallInt>(const ::Memory::IAllocator* allocator);
+    template Int IdentityManager::Generate<Int>(const ::Memory::IAllocator* allocator);
+    template BigInt IdentityManager::Generate<BigInt>(const ::Memory::IAllocator* allocator);
+
+    template <DataTypes::IsInteger T>
+    bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, T& value){
         if (this->header.columnId == INVALID_COLUMN_ID)
             return false;
 
-        value = this->Generate(allocator);
-
+        value = this->Generate<T>(allocator);
         return true;
     }
+
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, TinyInt& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, SmallInt& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
 
     void IdentityManager::UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const{
         if (this->header.columnId == INVALID_COLUMN_ID)

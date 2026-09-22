@@ -1,5 +1,5 @@
 ﻿#include "../../include/Pages/IndexPageView.h"
-#include "DataStorage/SerializedRow.h"
+#include "../../include/DataStorage/Row/SerializedRow.h"
 #include "Pages/Additional/Frame.h"
 
 namespace Pages{

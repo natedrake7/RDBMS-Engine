@@ -1,6 +1,6 @@
 ﻿#include "../../include/Indexing/BTree.h"
 #include <algorithm>
-#include "../../include/DataStorage/Row.h"
+#include "../../include/DataStorage/Row/Row.h"
 #include "../../include/DataStorage/Column.h"
 #include "../../include/DataStorage/Table.h"
 #include "../../include/BufferPool/StorageManager.h"
@@ -427,14 +427,15 @@ namespace Indexing{
         const Int nonClusteredId
     )const{
         if(treeType == Constants::TreeType::Clustered){
-            auto rowSize = otherTable->GetMaximumRowSize();
-            Int calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2);
+            const auto tupleCost = this->keySize + otherTable->WorstCaseRowSize() + Pages::SlotDirectory::SIZE;
 
-            while(calculatedDegree < 2){
-                rowSize = otherTable->ReduceMaximumRowSize();
-
-                calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2);
-            }
+            const Int calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
+            assert(calculatedDegree <= MIN_TREE_DEGREE && "BTree::CalculateTreeDegree: Tree Degree out of bounds");
+            // while(calculatedDegree < 2){
+            //     rowSize = otherTable->ReduceMaximumRowSize();
+            //
+            //     calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2);
+            // }
 
             return calculatedDegree;
         }
@@ -449,7 +450,7 @@ namespace Indexing{
             computedKeySize += column->Size();
         }
 
-        return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE) * 2));
+        return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
     }
 
     void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex) {

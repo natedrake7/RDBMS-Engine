@@ -167,7 +167,7 @@ namespace CoreEngine::StorageTypes{
         this->_length += length;
     }
 
-    LobReference LobWriter::Finish(){
+    DataTypes::LobReference LobWriter::Finish(){
         assert(!this->_finished);
 
         this->_rootView.Initialize(this->_length);
@@ -190,10 +190,10 @@ namespace CoreEngine::StorageTypes{
 
         this->_finished = true;
         this->ReleaseMemory();
-        return LobReference(this->_rootPageId, this->_length);
+        return DataTypes::LobReference(this->_rootPageId, this->_length);
     }
 
-    LobReference LobWriter::Write(
+    DataTypes::LobReference LobWriter::Write(
         const ::Memory::IAllocator* allocator,
         const Table* table,
         const object_t* data,

@@ -2,7 +2,7 @@
 #include "../../../../Systemic/include/DataTypes/Value.h"
 #include "../../../../Systemic/include/DataStructures/BitMap.h"
 #include "../../../include/DataStorage/Column.h"
-#include "../../../include/DataStorage/Row.h"
+#include "../../../include/DataStorage/Row/Row.h"
 #include "../../../include/DataStorage/Table.h"
 
 #include <cassert>
@@ -16,6 +16,8 @@
 #include "../../../../QueryPipeline/include/Statements.h"
 #include "../../../include/Database.h"
 #include "Contexts/ExecutionContext.h"
+#include "DataStorage/LargeObjects/LobWriter.h"
+#include "DataStorage/Row/RowSerializationContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
 #include "Memory/PersistentAllocator.h"
@@ -253,7 +255,7 @@ namespace CoreEngine::StorageTypes {
         auto* allocator = executionContext.GetAllocator();
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
-        rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+        rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
 
         for (Int i = 0;i < input.Size(); i++){
             Errors::RuntimeStatus status;
@@ -307,7 +309,7 @@ namespace CoreEngine::StorageTypes {
       auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
 
       RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
-      rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+      rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
 
       auto payload = this->SerializeRow(
           status,
@@ -353,7 +355,7 @@ namespace CoreEngine::StorageTypes {
         auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
 
         RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
-        rowContext.header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+        rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
 
         auto payload = this->SerializeRow(
             status,
@@ -779,8 +781,8 @@ namespace CoreEngine::StorageTypes {
         auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
-        rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
-        rowContext.header._versionRID = versionRid;
+        rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
+        rowContext._header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
@@ -832,8 +834,8 @@ namespace CoreEngine::StorageTypes {
         auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
-        rowContext.header._createdTransactionId = context.GetCurrentTransactionId();
-        rowContext.header._versionRID = versionRid;
+        rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
+        rowContext._header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
@@ -881,8 +883,8 @@ namespace CoreEngine::StorageTypes {
         auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(payloadCapacity));
 
         RowSerializationContext rowContext(allocator, payloadCapacity);
-        rowContext.header._createdTransactionId = FIRST_TRANSACTION_ID;
-        rowContext.header._versionRID = versionRid;
+        rowContext._header._createdTransactionId = FIRST_TRANSACTION_ID;
+        rowContext._header._versionRID = versionRid;
 
         const auto newPayload = this->SerializeRow(
             status,
@@ -1078,7 +1080,7 @@ namespace CoreEngine::StorageTypes {
 
         for (const auto &column : this->_columns)
             maximumRowSize += column->isColumnLOB()
-                                  ? Constants::LOB_REFERENCE_SIZE
+                                  ? LOB_REFERENCE_SIZE
                                   : column->Size();
 
         return maximumRowSize;
@@ -1102,13 +1104,13 @@ namespace CoreEngine::StorageTypes {
             if (column->isColumnOverflowed())
                 maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
             else if (column->isColumnLOB())
-                maximumRowSize += Constants::LOB_REFERENCE_SIZE;
+                maximumRowSize += LOB_REFERENCE_SIZE;
             else
                 maximumRowSize += columnSize;
 
             if(columnSize <= largestVariableLengthColumnSize
                 || column->isColumnOverflowed()
-                || columnSize >= Constants::LOB_REFERENCE_SIZE
+                || columnSize >= LOB_REFERENCE_SIZE
                 || clusteredColumns.Contains(column->OrdinalPosition())
             ) continue;
 

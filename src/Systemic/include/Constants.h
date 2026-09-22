@@ -26,6 +26,8 @@ static constexpr extent_id_t INVALID_EXTENT_ID = std::numeric_limits<extent_id_t
 static constexpr UnsignedSmallInt INVALID_PAGE_INDEX_ID = std::numeric_limits<UnsignedSmallInt>::max();
 static constexpr size_t ROW_ID_SIZE = sizeof(page_id_t) + sizeof(Int);
 
+static constexpr size_t LOB_REFERENCE_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
+
 static constexpr transaction_id_t FIRST_TRANSACTION_ID = 0;
 
 static constexpr DataTypes::StringView WILDCARD = "*";

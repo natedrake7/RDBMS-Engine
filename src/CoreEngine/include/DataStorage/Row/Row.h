@@ -82,21 +82,21 @@ namespace CoreEngine::StorageTypes{
             return this->_offset;
         }
 
-        static UnsignedSmallInt EncodeMeta(const EntryType type, const UnsignedSmallInt size){
+        static inline constexpr UnsignedSmallInt EncodeMeta(const EntryType type, const UnsignedSmallInt size){
             UnsignedSmallInt meta = 0;
             PackedWord<UnsignedSmallInt>::SetBits<0, SIZE_MASK>(&meta, size);
             PackedWord<UnsignedSmallInt>::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(&meta, type);
             return meta;
         }
 
-        static bool IsNull(const EntryType type){
+        static inline constexpr bool IsNull(const EntryType type){
             return type == EntryType::NULLVAL;
         }
 
-        static bool IsOverflow(const EntryType type){
+        static inline constexpr bool IsOverflow(const EntryType type){
             return type == EntryType::OVERFLOWVAL;
         }
-        static bool IsLOB(const EntryType type){
+        static inline constexpr bool IsLOB(const EntryType type){
             return type == EntryType::LOB;
         }
 

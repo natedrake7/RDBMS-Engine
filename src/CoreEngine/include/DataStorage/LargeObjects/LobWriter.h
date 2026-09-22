@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <array>
-#include "../LobReference.h"
+#include "../../../../Systemic/include/DataTypes/LobReference.h"
 #include "../ExtentReservation.h"
 #include "../../Pages/LargeObjects/LobRootView.h"
 #include "../../Pages/LargeObjects/LobIndexView.h"
@@ -74,13 +74,13 @@ namespace CoreEngine::StorageTypes{
                 UnsignedInt length
             );
 
-            [[nodiscard]] LobReference Finish();
+            [[nodiscard]] DataTypes::LobReference Finish();
 
             [[nodiscard]] UnsignedBigInt Length()const{
                 return this->_length;
             }
 
-            [[nodiscard]] static LobReference Write(
+            [[nodiscard]] static DataTypes::LobReference Write(
                 const ::Memory::IAllocator* allocator,
                 const Table* table,
                 const object_t* data,

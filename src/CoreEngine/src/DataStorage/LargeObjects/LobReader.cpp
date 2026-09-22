@@ -88,7 +88,7 @@ namespace CoreEngine::StorageTypes{
         return dataView;
     }
 
-    LobReader::LobReader(const Storage::FileKey& fileKey, const LobReference& reference)
+    LobReader::LobReader(const Storage::FileKey& fileKey, const DataTypes::LobReference& reference)
         :   _fileKey(fileKey), _reference(reference),
             _indexRootSlot(std::numeric_limits<UnsignedInt>::max()), _length(0),
             _position(0), _level(0), _status(LobReadStatus::Ok){

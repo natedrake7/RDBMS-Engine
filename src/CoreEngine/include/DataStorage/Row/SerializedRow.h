@@ -1,10 +1,7 @@
 ﻿#pragma once
 #include "Row.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../../Systemic/include/DataTypes/DateTime.h"
-#include "../../../Systemic/include/DataTypes/Decimal.h"
-#include "../../../Systemic/include/DataTypes/Guid.h"
-#include "../../../Systemic/include/DataTypes/JsonBinary.h"
+#include "../../../../Systemic/include/DataTypes/DataTypes.h"
+#include "DataStructures/PolymorphicArray.h"
 
 namespace Errors{
     struct RuntimeStatus;
@@ -68,16 +65,16 @@ namespace CoreEngine::StorageTypes {
         InsertPlan& operator=(InsertPlan&& other) noexcept = default;
     };
 
-    struct RowSerializationContext{
-        RowHeader header;
-        const ::Memory::IAllocator* allocator;
-        row_size_t capacity;
-
-        RowSerializationContext(
-            const ::Memory::IAllocator* allocator,
-            const row_size_t capacity
-        ):allocator(allocator), capacity(capacity) {}
-    };
+    // struct RowSerializationContext{
+    //     RowHeader _header;
+    //     const ::Memory::IAllocator* _allocator;
+    //     row_size_t capacity;
+    //
+    //     RowSerializationContext(
+    //         const ::Memory::IAllocator* allocator,
+    //         const row_size_t capacity
+    //     ):_allocator(allocator), capacity(capacity) {}
+    // };
 
     class SerializedRow final{
         object_t* _data;

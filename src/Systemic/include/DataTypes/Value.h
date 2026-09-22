@@ -8,6 +8,7 @@
 #include "Decimal.h"
 #include "JsonBinary.h"
 #include "Guid.h"
+#include "LobReference.h"
 #include "../../../Server/include/ConnectionManager.h"
 #include "../Serialization/JsonParser.h"
 
@@ -27,14 +28,16 @@ class Value{
         DataTypes::Decimal _decimal;
 
         const object_t* _external;
+        DataTypes::LobReference _lob;
     };
 
     Storage _data{};
 
-    block_size_t _size = 0;
+    value_size_t _size = 0;
     column_index_t _columnIndex = 0;
     DataType _type = DataType::Null;
     bool _isNull = true;
+    bool _isLob = false;
 
     static_assert(std::is_trivially_destructible_v<DataTypes::Decimal>);
     static_assert(std::is_trivially_destructible_v<DataTypes::Guid>);
@@ -73,12 +76,14 @@ class Value{
         this->_isNull = false;
     }
 
+    Value(const DataTypes::LobReference& data, DataType type, column_index_t index = 0);
+
     public:
         [[nodiscard]] static constexpr bool IsInline(const DataType type){
             return type != DataType::String && type != DataType::Json;
         }
 
-        Value(column_index_t index = 0);
+        explicit Value(column_index_t index = 0);
 
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::StringView& data, const Memory::IAllocator* allocator, column_index_t index = 0);
@@ -125,6 +130,12 @@ class Value{
             column_index_t index = 0
         );
 
+        static Value FromLobReference(
+            const DataTypes::LobReference& data,
+            DataType type,
+            column_index_t index = 0
+        );
+
         static Value Null(column_index_t columnIndex = 0);
 
         void SetColumnIndex(column_index_t otherIndex);
@@ -164,9 +175,8 @@ class Value{
         }
 
         [[nodiscard]] bool IsInline() const;
-        [[nodiscard]] block_size_t Size() const;
+        [[nodiscard]] value_size_t Size() const;
         [[nodiscard]] const object_t* Data() const;
-
 
         template<DataTypes::Primitive T>
         [[nodiscard]] T Data() const{
@@ -178,9 +188,21 @@ class Value{
             return *reinterpret_cast<const T*>(&this->_data);
         }
 
-        [[nodiscard]] bool IsNull() const;
-        [[nodiscard]] column_index_t GetColumnIndex() const;
-        [[nodiscard]] DataType GetType() const;
+        [[nodiscard]] bool IsNull() const{
+            return this->_isNull;
+        }
+
+        [[nodiscard]] column_index_t GetColumnIndex() const{
+            return this->_columnIndex;
+        }
+
+        [[nodiscard]] DataType GetType() const{
+            return this->_type;
+        }
+
+        [[nodiscard]] bool IsLob() const{
+            return this->_isLob;
+        }
 
         [[nodiscard]] bool AsBool()const;
         [[nodiscard]] TinyInt AsTinyInt()const;
@@ -195,7 +217,7 @@ class Value{
         [[nodiscard]] time_t AsUnixTimeStamp() const;
         [[nodiscard]] DataTypes::Guid AsGuid()const;
         [[nodiscard]] DataTypes::JsonBinary AsJson(const ::Memory::IAllocator* allocator)const;
-        [[nodiscard]] page_id_t AsLargeObjectPointer() const;
+        [[nodiscard]] DataTypes::LobReference AsLobReference() const;
 
         [[nodiscard]] bool IsIntegral()const;
         // friend std::ostream& operator<<(std::ostream& os, const Value& field);

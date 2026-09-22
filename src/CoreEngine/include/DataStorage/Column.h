@@ -1,5 +1,4 @@
 ﻿#pragma once
-#include "../DatabaseConstants.h"
 #include "../../../Systemic/include/Headers.h"
 #include "../Managers/IdentityManager.h"
 #include "../Memory/Allocator.h"
@@ -59,6 +58,8 @@ namespace CoreEngine::StorageTypes{
 
         [[nodiscard]] const DataTypes::String& GetColumnName() const;
 
+        [[nodiscard]] DataTypes::StringView GetColumnNameView() const;
+
         void SetColumnName(const DataTypes::StringView& otherName);
 
         [[nodiscard]] DataType Type() const;
@@ -95,7 +96,12 @@ namespace CoreEngine::StorageTypes{
 
         void SetIsLob(bool isLob);
 
-        [[nodiscard]] BigInt GenerateIdentityValue(const ::Memory::IAllocator* allocator);
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] T GenerateIdentityValue(const ::Memory::IAllocator* allocator){
+            return this->_identityManager.Generate<T>(allocator);
+        }
+
+       [[nodiscard]] Value GenerateIdentityValue(const ::Memory::IAllocator* allocator);
 
         void UpdateMetadata(const ::Memory::IAllocator* allocator)const;
 

@@ -12,7 +12,7 @@
 #include "Optimizer.h"
 #include "Parser.h"
 #include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "../../CoreEngine/include/DataStorage/SerializedRow.h"
+#include "../../CoreEngine/include/DataStorage/Row/SerializedRow.h"
 
 namespace QueryPipeline::Statements {
     Statement::Statement()

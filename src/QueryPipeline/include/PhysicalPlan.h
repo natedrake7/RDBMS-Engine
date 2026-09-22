@@ -2,7 +2,7 @@
 #include "Statements.h"
 #include "../../CoreEngine/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
-#include "../../CoreEngine/include/DataStorage/Row.h"
+#include "../../CoreEngine/include/DataStorage/Row/Row.h"
 #include "../../CoreEngine/include/ScanState.h"
 #include "../../Systemic/include/DataStructures/PriorityQueue.h"
 #include "../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"

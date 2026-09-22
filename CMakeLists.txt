@@ -148,6 +148,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/LargeObjects/LobIndexView.cpp
         src/CoreEngine/src/DataStorage/LargeObjects/LobReader.cpp
         src/CoreEngine/src/DataStorage/LargeObjects/LobWriter.cpp
+        src/CoreEngine/src/DataStorage/Table/Table.Utilities.cpp
 )
 
 target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)

@@ -5,7 +5,7 @@
 #include "../../../../Systemic/include/RowIdentifier.h"
 #include "../../../../Systemic/include/QueryResult.h"
 #include "../../../include/DataStorage/Column.h"
-#include "../../../include/DataStorage/Row.h"
+#include "../../DataStorage/Row/Row.h"
 #include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
 
 namespace CoreEngine{

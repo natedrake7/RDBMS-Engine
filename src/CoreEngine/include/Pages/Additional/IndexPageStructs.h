@@ -2,7 +2,7 @@
 #include "../../DatabaseConstants.h"
 #include "../../Indexing/Key.h"
 #include "../../Systemic/include/RowIdentifier.h"
-#include "../../DataStorage/Row.h"
+#include "../../DataStorage/Row/Row.h"
 #include "../../../../Systemic/include/DataTypes/PackedWord.h"
 
 namespace CoreEngine::StorageTypes{

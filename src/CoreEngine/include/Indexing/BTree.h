@@ -5,11 +5,10 @@
 
 #include "../DatabaseConstants.h"
 #include "../Errors.h"
-#include "../DataStorage/Row.h"
+#include "../DataStorage/Row/Row.h"
 #include "../Pages/IndexPageView.h"
 
-namespace Expressions
-{
+namespace Expressions{
     class Expression;
 }
 
@@ -213,6 +212,8 @@ namespace Indexing{
         void UpdatePfsPageNoLock(const Pages::IndexPageView& page)const;
 
     public:
+        static inline constexpr Int MIN_TREE_DEGREE = 2;
+
         explicit BTree(
             CoreEngine::StorageTypes::Table *table,
             page_id_t indexPageId,

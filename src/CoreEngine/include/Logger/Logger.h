@@ -1,6 +1,6 @@
 #pragma once
 #include "../DatabaseConstants.h"
-#include "../DataStorage/Row.h"
+#include "../DataStorage/Row/Row.h"
 #include "Logger.Structures.h"
 #include "../../../Systemic/include/DataStructures/HashSet.h"
 #include "../../../Systemic/include/DataStructures/Dictionary.h"

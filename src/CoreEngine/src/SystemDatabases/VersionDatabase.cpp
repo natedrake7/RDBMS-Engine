@@ -10,7 +10,7 @@
 
 #include "Contexts/ExecutionContext.h"
 #include "../../include/Extensions/StringExtensions.h"
-#include "DataStorage/SerializedRow.h"
+#include "../../include/DataStorage/Row/SerializedRow.h"
 
 namespace CoreEngine {
     VersionDatabase& VersionDatabase::Get(){

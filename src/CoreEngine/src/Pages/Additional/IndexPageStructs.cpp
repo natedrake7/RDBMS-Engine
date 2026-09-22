@@ -1,5 +1,5 @@
 ﻿#include "../../../include/Pages/Additional/IndexPageStructs.h"
-#include "DataStorage/Row.h"
+#include "../../../include/DataStorage/Row/Row.h"
 
 namespace Pages{
     IndexInsertTuple::IndexInsertTuple(){
