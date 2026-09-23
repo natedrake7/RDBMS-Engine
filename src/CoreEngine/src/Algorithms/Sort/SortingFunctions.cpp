@@ -49,12 +49,12 @@ MergeElement& MergeElement::operator=(MergeElement&& other) noexcept {
     return *this;
 }
 
-MergeElement::MergeElement(const QueryResult& value, const Int batchId){
+MergeElement::MergeElement(const MaterializedRow& value, const Int batchId){
     this->value = value;
     this->batchId = batchId;
 }
 
-MergeElement::MergeElement(QueryResult& value, const Int batchId, const DataTypes::RowIdentifier& rowId)
+MergeElement::MergeElement(MaterializedRow& value, const Int batchId, const DataTypes::RowIdentifier& rowId)
     : value(std::move(value)), rowId(rowId), batchId(batchId) {}
 
 MergeElement::MergeElement(const MergeElement& other){
@@ -71,8 +71,8 @@ MergeElement::MergeElement(MergeElement&& other) noexcept {
 
 bool SortingFunctions::CompareRows(
      const CoreEngine::ExecutionContext& context,
-    const QueryResult& firstRow,
-    const QueryResult& secondRow,
+    const MaterializedRow& firstRow,
+    const MaterializedRow& secondRow,
     const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*> &sortConditions
 ){
     Expressions::EvaluationContext evaluationContext(
@@ -110,7 +110,7 @@ bool SortingFunctions::CompareRows(
 
 void SortingFunctions::OrderBy(
      const CoreEngine::ExecutionContext& context,
-    DataStructures::PolymorphicArray<QueryResult> &rows,
+    DataStructures::PolymorphicArray<MaterializedRow> &rows,
     const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*> &conditions
 ){
     if(rows.Empty())

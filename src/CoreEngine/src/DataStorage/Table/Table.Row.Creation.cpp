@@ -3,9 +3,10 @@
 #include "DataStorage/Column.h"
 #include "../../../include/DataStorage/Row/SerializedRow.h"
 #include "DataStorage/LargeObjects/LobWriter.h"
-#include "DataStorage/Row/RowSerializationContext.h"
+#include "DataStorage/Row/Row.SerializationContext.h"
 #include "Evaluators/Expression.h"
-#include "../../../include/ValidationMessages.h"
+#include "../../../include/Messages.h"
+#include "DataStorage/Row/Row.InsertPlan.h"
 
 namespace CoreEngine::StorageTypes{
     template <typename ValueProvider>
@@ -43,6 +44,7 @@ namespace CoreEngine::StorageTypes{
 
             if (value->IsLob()){
                 placement->_kind = ColumnPlacement::Kind::ExistingLob;
+                placement->_size = LOB_REFERENCE_SIZE;
                 rowSize += LOB_REFERENCE_SIZE;
                 continue;
             }
@@ -54,8 +56,11 @@ namespace CoreEngine::StorageTypes{
                 );
             }
 
+            const auto valueSize = value->Size();
+
             placement->_kind = ColumnPlacement::Kind::Inline;
-            placement->_size = value->Size();
+            placement->_size = valueSize;
+            rowSize += valueSize;
         }
 
         const auto limit = this->MaxInlineRowSize();

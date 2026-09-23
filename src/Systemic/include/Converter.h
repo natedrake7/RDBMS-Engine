@@ -122,7 +122,7 @@ public:
         const DataTypes::Decimal &input,
         const UnsignedInt size
     ){
-        return input.RawSize() <= size;
+        return input.Size() <= size;
     }
 
     // static bool AssertOverflow(const T leftValue, const T rightValue){

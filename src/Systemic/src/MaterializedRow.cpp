@@ -1,38 +1,38 @@
-#include "../include/QueryResult.h"
+#include "../include/MaterializedRow.h"
 
 #include <iostream>
 
 #include "../include/DataTypes/DateTime.h"
 #include "../include/DataTypes/Decimal.h"
 
-QueryResult::QueryResult(const ::Memory::IAllocator* allocator)
+MaterializedRow::MaterializedRow(const ::Memory::IAllocator* allocator)
     : data(allocator) {}
 
-QueryResult::QueryResult(const QueryResult& other) {
+MaterializedRow::MaterializedRow(const MaterializedRow& other) {
     this->data = other.data;
 }
 
-QueryResult::QueryResult(QueryResult&& other) noexcept {
+MaterializedRow::MaterializedRow(MaterializedRow&& other) noexcept {
     this->data = std::move(other.data);
 }
 
-void QueryResult::AddColumn(Value &field) {
+void MaterializedRow::AddColumn(Value &field) {
     this->data.Push(std::move(field));
 }
 
-void QueryResult::AddColumn(Value&& field) {
+void MaterializedRow::AddColumn(Value&& field) {
     this->data.Push(std::move(field));
 }
 
-void QueryResult::AddColumn(const Value& field) {
+void MaterializedRow::AddColumn(const Value& field) {
     this->data.Push(field);
 }
 
-void QueryResult::AddColumn(const Value& field, const column_index_t columnIndex) {
+void MaterializedRow::AddColumn(const Value& field, const column_index_t columnIndex) {
     this->data.Insert(field, columnIndex);
 }
 
-void QueryResult::Print() const {
+void MaterializedRow::Print() const {
     for (int i = 0; i < this->data.Size(); ++i) {
         const auto& column = this->data[i];
 
@@ -80,23 +80,23 @@ void QueryResult::Print() const {
     }
 }
 
-const DataStructures::PolymorphicArray<Value>& QueryResult::Data() const { return this->data; }
+const DataStructures::PolymorphicArray<Value>& MaterializedRow::Data() const { return this->data; }
 
-DataStructures::PolymorphicArray<Value>& QueryResult::Data() {
+DataStructures::PolymorphicArray<Value>& MaterializedRow::Data() {
     return this->data;
 }
 
-Value QueryResult::GetColumnAt(const Int columnPos) const {
+Value MaterializedRow::GetColumnAt(const Int columnPos) const {
     return this->data[columnPos];
 }
 
-const Value& QueryResult::GetColumnReferenceAt(const Int columnPos) const {
+const Value& MaterializedRow::GetColumnReferenceAt(const Int columnPos) const {
     return this->data[columnPos];
 }
 
-int QueryResult::GetSize() const { return this->data.Size(); }
+int MaterializedRow::GetSize() const { return this->data.Size(); }
 
-Int QueryResult::GetByteSize() const {
+Int MaterializedRow::GetByteSize() const {
     Int totalSize = 0;
     for (const auto& value : this->data) {
         totalSize += sizeof(block_size_t); // size of block
@@ -106,7 +106,7 @@ Int QueryResult::GetByteSize() const {
     return totalSize;
 }
 
-Int QueryResult::GetPageByteSize() const {
+Int MaterializedRow::GetPageByteSize() const {
     Int totalSize = 0;
     for (const auto& value : this->data) {
         totalSize += sizeof(block_size_t); // size of block
@@ -115,14 +115,14 @@ Int QueryResult::GetPageByteSize() const {
     return totalSize;
 }
 
-void QueryResult::SetColumnIndex(const Int columnPos, const column_index_t columnIndex) {
+void MaterializedRow::SetColumnIndex(const Int columnPos, const column_index_t columnIndex) {
     if (columnPos >= this->data.Size())
         return;
 
     this->data[columnPos].SetColumnIndex(columnIndex);
 }
 
-int64_t QueryResult::ComputeHash() const {
+int64_t MaterializedRow::ComputeHash() const {
     std::hash<std::string> strHash;
     size_t seed = 0;
     // for (const auto& value : this->data) {
@@ -132,26 +132,26 @@ int64_t QueryResult::ComputeHash() const {
     return static_cast<int64_t>(seed);
 }
 
-void QueryResult::Update(DataStructures::PolymorphicArray<Value>& updates) {
+void MaterializedRow::Update(DataStructures::PolymorphicArray<Value>& updates) {
     for (auto& value : updates) {
         auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = std::move(value);
     }
 }
 
-void QueryResult::Update(const DataStructures::PolymorphicArray<Value>& updates) {
+void MaterializedRow::Update(const DataStructures::PolymorphicArray<Value>& updates) {
     for (auto& value : updates) {
         auto& otherValue = this->data[value.GetColumnIndex()];
         otherValue = value;
     }
 }
 
-void QueryResult::Update(Value& update) {
+void MaterializedRow::Update(Value& update) {
     const auto index = update.GetColumnIndex();
     this->data[index] = std::move(update);
 }
 
-QueryResult& QueryResult::operator=(const QueryResult& other) {
+MaterializedRow& MaterializedRow::operator=(const MaterializedRow& other) {
     if (this == &other)
         return *this;
 
@@ -159,7 +159,7 @@ QueryResult& QueryResult::operator=(const QueryResult& other) {
     return *this;
 }
 
-QueryResult& QueryResult::operator=(QueryResult&& other) noexcept {
+MaterializedRow& MaterializedRow::operator=(MaterializedRow&& other) noexcept {
     if (this == &other)
         return *this;
 
@@ -167,7 +167,7 @@ QueryResult& QueryResult::operator=(QueryResult&& other) noexcept {
     return *this;
 }
 
-bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
+bool operator==(const MaterializedRow& lhs, const MaterializedRow& rhs) {
     if (lhs.GetSize() != rhs.GetSize())
         return false;
 
@@ -179,7 +179,7 @@ bool operator==(const QueryResult& lhs, const QueryResult& rhs) {
     return true;
 }
 
-std::ostream& operator<<(std::ostream& os, const QueryResult& result) {
+std::ostream& operator<<(std::ostream& os, const MaterializedRow& result) {
     for (int i = 0; i < result.data.Size(); ++i) {
         const auto& column = result.data[i];
 

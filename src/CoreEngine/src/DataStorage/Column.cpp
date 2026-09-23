@@ -18,8 +18,6 @@ namespace CoreEngine::StorageTypes {
         this->_header.columnType = type;
         this->_header.columnIndex = index;
         this->_table = nullptr;
-        this->_isOverflowed = false;
-        this->_isLob = false;
     }
 
     Column::Column(
@@ -39,7 +37,6 @@ namespace CoreEngine::StorageTypes {
         this->_header.recordSize = size == 0 ? header.size : size;
         this->_header.columnIndex = ordinalPosition;
         this->_table = table;
-        this->_isOverflowed = false;
     }
 
     Column::Column(const Headers::ColumnHeader& masterDbHeader, const Table* table){
@@ -50,15 +47,10 @@ namespace CoreEngine::StorageTypes {
         this->_header.recordSize = masterDbHeader.recordSize;
         this->_header.columnIndex = masterDbHeader.ordinalPosition;
         this->_table = table;
-        this->_isOverflowed = false;
     }
 
     void Column::Destroy() const{
          this->_allocator.Release();
-    }
-
-    Column::~Column(){
-        // this->_allocator.Reset();
     }
 
     const DataTypes::String& Column::GetColumnName() const{ return this->_name; }
@@ -81,10 +73,6 @@ namespace CoreEngine::StorageTypes {
 
     const ColumnHeader& Column::GetColumnHeader() const { return this->_header; }
 
-    bool Column::isColumnLOB() const { return this->_isLob; }
-
-    bool Column::isColumnOverflowed() const{ return this->_isOverflowed; }
-
     Int Column::GetColumnId() const{ return this->_header._id; }
 
     void Column::SetColumnId(const Int columnId){ this->_header._id = columnId; }
@@ -98,12 +86,6 @@ namespace CoreEngine::StorageTypes {
     void Column::SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue){ this->_header.defaultValue = defaultValue; }
 
     const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->_header.defaultValue; }
-
-    void Column::SetIsOverflowed(const bool isOverflow){ this->_isOverflowed = isOverflow; }
-
-    void Column::SetIsLob(const bool isLob){
-        this->_isLob = isLob;
-    }
 
     Value Column::GenerateIdentityValue(const ::Memory::IAllocator* allocator){
         switch (this->_header.columnType){

@@ -4,16 +4,16 @@
 
 #include "DataStructures/PolymorphicArray.h"
 
-class QueryResult {
-  DataStructures::PolymorphicArray<Value> data;
+class MaterializedRow {
+    DataStructures::PolymorphicArray<Value> data;
 
 public:
     //TODO: to be removed later...
-    QueryResult() = default;
+    MaterializedRow() = default;
 
-    explicit QueryResult(const ::Memory::IAllocator* allocator);
-    QueryResult(const QueryResult& other);
-    QueryResult(QueryResult&& other) noexcept;
+    explicit MaterializedRow(const ::Memory::IAllocator* allocator);
+    MaterializedRow(const MaterializedRow& other);
+    MaterializedRow(MaterializedRow&& other) noexcept;
 
     void AddColumn(Value& field);
     void AddColumn(Value&& field);
@@ -34,9 +34,9 @@ public:
     void Update(const DataStructures::PolymorphicArray<Value>& updates);
     void Update(Value& update);
 
-    QueryResult& operator=(const QueryResult& other);
-    QueryResult& operator=(QueryResult&& other) noexcept;
+    MaterializedRow& operator=(const MaterializedRow& other);
+    MaterializedRow& operator=(MaterializedRow&& other) noexcept;
 
-    friend bool operator==(const QueryResult& lhs, const QueryResult& rhs);
-    friend std::ostream& operator<<(std::ostream& os, const QueryResult& result);
+    friend bool operator==(const MaterializedRow& lhs, const MaterializedRow& rhs);
+    friend std::ostream& operator<<(std::ostream& os, const MaterializedRow& result);
 };

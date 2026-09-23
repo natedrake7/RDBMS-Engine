@@ -29,8 +29,6 @@ namespace CoreEngine::StorageTypes{
 
         const Table* _table;
         bool _allowNulls;
-        bool _isLob;
-        bool _isOverflowed;
 
     public:
         Column(
@@ -54,8 +52,6 @@ namespace CoreEngine::StorageTypes{
 
         void Destroy()const;
 
-        ~Column();
-
         [[nodiscard]] const DataTypes::String& GetColumnName() const;
 
         [[nodiscard]] DataTypes::StringView GetColumnNameView() const;
@@ -74,10 +70,6 @@ namespace CoreEngine::StorageTypes{
 
         [[nodiscard]] const ColumnHeader& GetColumnHeader() const;
 
-        [[nodiscard]] bool isColumnLOB() const;
-
-        [[nodiscard]] bool isColumnOverflowed() const;
-
         [[nodiscard]] Int GetColumnId() const;
 
         void SetColumnId(Int columnId);
@@ -91,10 +83,6 @@ namespace CoreEngine::StorageTypes{
         void SetDefaultValue(const Headers::DefaultValuesHeader &defaultValue);
 
         [[nodiscard]] const Headers::DefaultValuesHeader &GetDefaultValue() const;
-
-        void SetIsOverflowed(bool isOverflow);
-
-        void SetIsLob(bool isLob);
 
         template<DataTypes::IsInteger T>
         [[nodiscard]] T GenerateIdentityValue(const ::Memory::IAllocator* allocator){

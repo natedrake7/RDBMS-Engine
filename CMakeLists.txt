@@ -46,7 +46,7 @@ add_library(Systemic SHARED
         src/Systemic/src/DataTypes/StringValue.cpp
         src/Systemic/src/Network/Header.cpp
         src/Systemic/src/Network/Transport.cpp
-        src/Systemic/src/QueryResult.cpp
+        src/Systemic/src/MaterializedRow.cpp
 )
 
 target_link_libraries(Systemic PUBLIC $<$<PLATFORM_ID:Windows>:ws2_32>)

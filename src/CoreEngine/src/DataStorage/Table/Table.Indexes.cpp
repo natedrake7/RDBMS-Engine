@@ -427,17 +427,4 @@ namespace CoreEngine::StorageTypes {
 
         return keySize;
     }
-
-    row_size_t Table::CalculateInsertPayloadSize()const{
-        row_size_t size = sizeof(RowHeader);
-        for (const auto* column : this->_columns){
-            const auto columnSize =
-                column->isColumnLOB()
-                    ? sizeof(page_id_t)
-                    : column->Size();
-
-            size += columnSize + sizeof(RowEntry);
-        }
-        return size;
-    }
 }

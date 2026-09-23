@@ -381,7 +381,6 @@ namespace QueryPipeline::PhysicalPlan {
         if (primaryKeyColumnIdsArray.Empty()) {
             tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
             tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
-            tablePtr->CalculateInsertPayloadSize();
             return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
         }
 
@@ -435,7 +434,6 @@ namespace QueryPipeline::PhysicalPlan {
         tablePtr->RetrieveIndexesFromCatalog(allocator);
         tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
         tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
-        tablePtr->CalculateInsertPayloadSize();
 
         return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
     }
@@ -784,7 +782,7 @@ namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalDistinct::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
-        DataStructures::PolymorphicArray<QueryResult> results;
+        DataStructures::PolymorphicArray<MaterializedRow> results;
 
         HashSet<int64_t> computedHashes;
 
@@ -919,24 +917,27 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::ExecutionContext& context
     )const{
         Int rowCount = 0;
+        const auto* allocator = context.GetAllocator();
         while (true){
             auto result = this->child->Execute(context);
 
-            // result.status = tablePtr->BatchInsert(context, result.results);
+            if (result.dataChunk._numberOfRows > 0){
+                result.status = tablePtr->ChunkInsert(context, &result.dataChunk, this->insertPlan);
 
-            if (!result.status.IsOk())
-                return result;
+                if (!result.status.IsOk())
+                    return result;
+            }
+
+            rowCount += result.dataChunk._numberOfRows;
+            allocator->Reset();
 
             if (!result.canFetchMore)
                 break;
-
-            rowCount += result.dataChunk._numberOfRows;
-            context.ResetAllocator();
         }
 
         return ExecutionResult(
             Errors::RuntimeError::Ok,
-            Messages::INSERT_ROWS_FROM_CHILD_QUERY(rowCount, context.GetAllocator())
+            Messages::INSERT_ROWS_FROM_CHILD_QUERY(rowCount, allocator)
         );
     }
 

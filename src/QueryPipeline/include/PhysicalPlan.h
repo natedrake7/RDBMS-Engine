@@ -397,8 +397,11 @@ namespace QueryPipeline::PhysicalPlan {
 
         static bool SortInsertsAscending(const Value& lhs, const Value& rhs);
 
-        ExecutionResult InsertFromChild(CoreEngine::StorageTypes::Table* tablePtr, CoreEngine::ExecutionContext& context) const;
-        ExecutionResult InsertFromValues(
+        [[nodiscard]] ExecutionResult InsertFromChild(
+            CoreEngine::StorageTypes::Table* tablePtr,
+            CoreEngine::ExecutionContext& context
+        ) const;
+        [[nodiscard]] ExecutionResult InsertFromValues(
             CoreEngine::StorageTypes::Table* tablePtr,
             const CoreEngine::ExecutionContext& context
         ) const;

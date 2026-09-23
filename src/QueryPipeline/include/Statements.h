@@ -2,11 +2,11 @@
 #include "../../CoreEngine/include/DatabaseConstants.h"
 #include "../../CoreEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
-#include "../../Systemic/include/DataTypes/Guid.h"
 #include "../../Server/include/Security/Security.h"
 #include "../../CoreEngine/include/Errors.h"
 #include "../../Systemic/include/Headers.h"
 #include "../../CoreEngine/include/DataStorage/Row/SerializedRow.h"
+#include "../../CoreEngine/include/DataStorage/Row/Row.InsertPlan.h"
 
 namespace CoreEngine{
     class SystemCatalog;

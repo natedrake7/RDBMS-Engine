@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "../DatabaseConstants.h"
-#include "../../Systemic/include/QueryResult.h"
+#include "../../Systemic/include/MaterializedRow.h"
 #include "../DataStorage/Row/Row.h"
 #include "Additional/Frame.h"
 #include "Additional/RawRowReference.h"
@@ -141,7 +141,7 @@ namespace Pages{
             CoreEngine::StorageTypes::RID* outRID
         ) const;
 
-        QueryResult MaterializeRow(
+        MaterializedRow MaterializeRow(
             const Memory::IAllocator* allocator,
             const CoreEngine::StorageTypes::Table* tablePtr,
             Int indexPosition
@@ -164,19 +164,6 @@ namespace Pages{
         [[nodiscard]] bool IsValid()const;
 
         [[nodiscard]] Constants::PageType GetPageType() const;
-
-        static bool Filter(
-            const Frame* frame,
-            const CoreEngine::StorageTypes::RID* rowId,
-            Int columnIndex
-        );
-
-        Value GetColumnAt(
-            const ::Memory::IAllocator* allocator,
-            const CoreEngine::StorageTypes::RID* row,
-            const CoreEngine::StorageTypes::Table* table,
-            Int columnIndex
-        ) const;
 
         template<typename T>
         [[nodiscard]] T GetColumnAt(

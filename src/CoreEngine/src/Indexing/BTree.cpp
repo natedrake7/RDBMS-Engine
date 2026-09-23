@@ -428,15 +428,8 @@ namespace Indexing{
     )const{
         if(treeType == Constants::TreeType::Clustered){
             const auto tupleCost = this->keySize + otherTable->WorstCaseRowSize() + Pages::SlotDirectory::SIZE;
-
             const Int calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
-            assert(calculatedDegree <= MIN_TREE_DEGREE && "BTree::CalculateTreeDegree: Tree Degree out of bounds");
-            // while(calculatedDegree < 2){
-            //     rowSize = otherTable->ReduceMaximumRowSize();
-            //
-            //     calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + rowSize) * 2);
-            // }
-
+            assert(calculatedDegree >= MIN_TREE_DEGREE && "BTree::CalculateTreeDegree: Tree Degree out of bounds");
             return calculatedDegree;
         }
 

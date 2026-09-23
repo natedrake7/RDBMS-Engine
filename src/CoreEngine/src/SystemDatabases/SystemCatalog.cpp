@@ -144,7 +144,6 @@ namespace CoreEngine {
             if (counter == 0)
                 throw std::runtime_error("All tables in masterDb must have a primary key");
             table->SetPrimaryKeyIndexedColumns(primaryKeyIndexes, counter);
-            table->CalculateInsertPayloadSize();
         }
     }
 
@@ -888,7 +887,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysDatabases::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted database: "<< dbName << " to master db" << std::endl;
         return result;
@@ -916,7 +915,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysSchemas::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted schema: "<< schemaName << " to master db" << std::endl;
 
@@ -952,7 +951,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysTables::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted table: "<< tableName << " to master db" << std::endl;
 
@@ -1004,7 +1003,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysColumns::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted column: "<< columnName << " to master db" << std::endl;
         return result;
@@ -1036,7 +1035,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysIndexes::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted index: "<< indexName << " to master db" << std::endl;
 
@@ -1064,7 +1063,7 @@ namespace CoreEngine {
         Value::Null(static_cast<column_index_t>(SysIndexColumns::DeletedAt))
     );
 
-    auto result = table->InsertRow(executionContext, fields);
+    auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted index column to master db" << std::endl;
 
@@ -1105,7 +1104,7 @@ namespace CoreEngine {
         Value::Null(static_cast<column_index_t>(SysConstraints::DeletedAt))
     );
 
-    auto result = table->InsertRow(executionContext, fields);
+    auto result = table->SystemInsertRow(executionContext, fields);
 
     std::cout << "Inserted constraint: "<< constraintName <<" to master db" << std::endl;
 
@@ -1133,7 +1132,7 @@ namespace CoreEngine {
         Value::Null(static_cast<column_index_t>(SysConstraintColumns::DeletedAt))
     );
 
-    auto result = table->InsertRow(executionContext, fields);
+    auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted constraint column to master db" << std::endl;
 
@@ -1169,7 +1168,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysIdentityColumns::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted identity column to master db" << std::endl;
         return result;
@@ -1198,7 +1197,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysDefaultValues::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted default value " << value.AsString(executionContext.GetAllocator()) << " to master db" << std::endl;
         return result;
@@ -1221,7 +1220,7 @@ namespace CoreEngine {
             Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted table stats for table with id: " << tableId << std::endl;
         return result;
@@ -1243,7 +1242,7 @@ namespace CoreEngine {
             Value(nullCount, static_cast<column_index_t>(SysColumnStats::NullCount))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted column stats for column with id: " << columnId << std::endl;
         return result;
@@ -1272,7 +1271,7 @@ namespace CoreEngine {
             Value(distinctCount, static_cast<column_index_t>(SysColumnHistograms::DistinctCount))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
         std::cout << "Inserted histogram Bucket for column: " << columnId << std::endl;
         return result;
     }
@@ -1296,7 +1295,7 @@ namespace CoreEngine {
             Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted index statistics for index: " << indexId << std::endl;
         return result;
@@ -1327,7 +1326,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysRoles::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
         std::cout << "Inserted Role " << roleName << std::endl;
         return result;
     }
@@ -1360,7 +1359,7 @@ namespace CoreEngine {
             Value::Null(static_cast<column_index_t>(SysUsers::DeletedAt))
         );
 
-        auto result = table->InsertRow(executionContext, fields);
+        auto result = table->SystemInsertRow(executionContext, fields);
 
         std::cout << "Inserted User " << username << std::endl;
         return result;

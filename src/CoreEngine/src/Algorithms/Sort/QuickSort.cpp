@@ -3,7 +3,7 @@
 
 #include "../../../include/DataStorage/Row/Row.h"
 
-void QuickSort::Sort(std::vector<QueryResult> &rows, const Int low, const Int high, const std::vector<SortCondition>& sortConditions)
+void QuickSort::Sort(std::vector<MaterializedRow> &rows, const Int low, const Int high, const std::vector<SortCondition>& sortConditions)
 {
     if (low >= high)
         return;
@@ -14,7 +14,7 @@ void QuickSort::Sort(std::vector<QueryResult> &rows, const Int low, const Int hi
     QuickSort::Sort(rows, pi + 1, high, sortConditions);
 }
 
-int QuickSort::Partition(std::vector<QueryResult> &rows, const Int low, const Int high, const std::vector<SortCondition>& sortConditions)
+int QuickSort::Partition(std::vector<MaterializedRow> &rows, const Int low, const Int high, const std::vector<SortCondition>& sortConditions)
 {
     const auto& pivot = rows[high];
   

@@ -115,7 +115,7 @@ namespace Serialization {
         case JsonType::Bool:
             return 1;
         case JsonType::Number:
-            return this->_data._number.RawSize();
+            return this->_data._number.Size();
         case JsonType::String:
         case JsonType::Array:
         case JsonType::Object:
@@ -130,7 +130,7 @@ namespace Serialization {
         case JsonType::Bool:
             return &this->_data._bool;
         case JsonType::Number:
-            return this->_data._number.Data().Data();
+            return this->_data._number.GetDataBuffer().Data();
         case JsonType::String:
         case JsonType::Array:
         case JsonType::Object:

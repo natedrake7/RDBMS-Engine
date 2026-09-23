@@ -251,7 +251,8 @@ namespace CoreEngine{
     }
 
     void Database::LogCheckPoint(Logging::CheckPoint &checkPoint) {
-        Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
+        static const auto& logger = Logging::WriteAheadLogger::Get();
+        logger.LogCheckPoint(checkPoint);
     }
 
     Logging::CheckPoint Database::LogRowInsert(

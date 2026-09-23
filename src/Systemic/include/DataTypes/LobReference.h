@@ -10,6 +10,10 @@ namespace DataTypes{
         [[nodiscard]] bool IsValid() const{
             return this->_rootPageId != INVALID_PAGE_ID;
         }
+
+        LobReference() = default;
+        LobReference(const page_id_t rootPageId, const UnsignedInt totalLength)
+            : _rootPageId(rootPageId), _totalLength(totalLength) {}
     };
 
     static_assert(sizeof(LobReference) == 8);

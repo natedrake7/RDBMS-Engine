@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <algorithm>
+#include <assert.h>
 #include <functional>
 #include <stdexcept>
 #include <cstring>
@@ -138,8 +139,7 @@ namespace DataStructures{
         }
 
         void Insert(const T& value, const Int index){
-            if (index != 0 && index > this->_size)
-                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+            assert(!(index != 0 && index > this->_size) && "PolymorphicArray Insert: Index is out of range.");
 
             if (this->_size >= this->_capacity){
                 auto newCapacity = (this->_capacity == 0)
@@ -156,8 +156,7 @@ namespace DataStructures{
         }
 
         void Insert(const T& value, const Int index, const Int count){
-            if (index != 0 && index > this->_size)
-                throw std::runtime_error("PolymorphicArray Insert: Index is out of range.");
+            assert(!(index != 0 && index > this->_size) && "PolymorphicArray Insert: Index is out of range.");
 
             if (this->_size + count >= this->_capacity){
                 if (this->_capacity == 0)
@@ -218,9 +217,7 @@ namespace DataStructures{
         }
 
         void Remove(Int index){
-            if (index < 0 || index >= this->_size)
-                throw std::out_of_range("PolymorphicArray: Index out of range.");
-
+            assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::Remove: Index out of range.");
             // Shift elements to the left to fill the gap
             for (Int i = index; i < this->_size - 1; i++)
                 this->_data[i] = std::move(this->_data[i + 1]);
@@ -229,9 +226,7 @@ namespace DataStructures{
         }
 
         void RemoveFrom(Int index){
-            if (index < 0 || index >= this->_size)
-                throw std::out_of_range("PolymorphicArray: Index out of range.");
-
+            assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::RemoveFrom: Index out of range.");
             this->_size = index;
         }
 
@@ -244,23 +239,17 @@ namespace DataStructures{
         }
 
         T& Start(){
-            if (this->_size == 0)
-                throw std::runtime_error("Array is empty.");
-
+            assert(!(this->_size == 0) && "PolymorphicArray::Start: Array is empty.");
             return this->_data[0];
         }
 
         [[nodiscard]] T& operator[](Int index){
-            if (index < 0 || index >= this->_size)
-                throw std::out_of_range("PolymorphicArray: Index out of range.");
-
+            assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]: Index out of range.");
             return this->_data[index];
         }
 
         [[nodiscard]] const T& operator[](Int index) const{
-            if (index < 0 || index >= this->_size)
-                throw std::out_of_range("PolymorphicArray: Index out of range.");
-
+            assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]const: Index out of range.");
             return this->_data[index];
         }
 
@@ -323,9 +312,7 @@ namespace DataStructures{
         const_iterator cend() const { return this->_data + this->_size; }
 
         iterator erase(iterator pos){
-            if (pos < this->begin() || pos >= this->end())
-                throw std::out_of_range("DataStructures:PolymorphicArray:erase: Iterator out of range.");
-
+            assert(!(pos < this->begin() || pos >= this->end()) && "DataStructures:PolymorphicArray:erase: Iterator out of range.");
             Int index = pos - this->begin();
             this->Remove(index);
             return this->begin() + index;

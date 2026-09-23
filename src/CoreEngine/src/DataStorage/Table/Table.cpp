@@ -6,7 +6,7 @@
 #include "../../../include/DataStorage/Table.h"
 
 #include <cassert>
-#include "ValidationMessages.h"
+#include "Messages.h"
 #include "../../../include/SystemDatabases/SystemCatalog.h"
 #include "../../../include/BufferPool/StorageManager.h"
 #include "../../../include/Indexing/BTree.h"
@@ -17,7 +17,7 @@
 #include "../../../include/Database.h"
 #include "Contexts/ExecutionContext.h"
 #include "DataStorage/LargeObjects/LobWriter.h"
-#include "DataStorage/Row/RowSerializationContext.h"
+#include "DataStorage/Row/Row.SerializationContext.h"
 #include "DataStructures/PolymorphicArray.h"
 #include "Logger/WriteAheadLogger.h"
 #include "Memory/PersistentAllocator.h"
@@ -233,49 +233,39 @@ namespace CoreEngine::StorageTypes {
         this->_allocator.Release();
     }
 
-    Errors::RuntimeStatus Table::BatchInsert(
+    Errors::RuntimeStatus Table::ChunkInsert(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<QueryResult> &input
+        const DataChunk* chunk,
+        const InsertPlan& plan
     ) {
-        if (input.Empty())
-            return Errors::RuntimeStatus(
-                Errors::RuntimeError::Ok,
-                Messages::NO_ROWS_TO_INSERT,
-                executionContext.GetAllocator()
-            );
-
-
-        DataStructures::PolymorphicArray<SerializedRow> rows(executionContext.GetAllocator(), input.Size());
-
         Int rowSize = 0;
         DataStructures::PolymorphicArray<char> buffer;
 
-        const auto payloadCapacity = this->CalculateInsertPayloadSize();
-        auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(input.Size() * payloadCapacity));
-        auto* allocator = executionContext.GetAllocator();
+        const auto* allocator = executionContext.GetAllocator();
 
-        RowSerializationContext rowContext(allocator, payloadCapacity);
-        rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        const auto transactionId = executionContext.GetCurrentTransactionId();
 
-        for (Int i = 0;i < input.Size(); i++){
-            Errors::RuntimeStatus status;
-            auto payload = this->SerializeRow(
-                status,
-                rowContext,
-                payloadBuffer + i * payloadCapacity,
-                input[i].Data()
-            );
+        rowContext._header._createdTransactionId = transactionId;
 
-            if (!status.IsOk())
-                return status;
-
-            rowSize += static_cast<Int>(payload.Size());
-            rows.Push(std::move(payload));
-        }
+        // for (Int i = 0;i < input.Size(); i++){
+        //     Errors::RuntimeStatus status;
+        //     auto payload = this->SerializeRow(
+        //         status,
+        //         rowContext,
+        //         input[i].Data()
+        //     );
+        //
+        //     if (!status.IsOk())
+        //         return status;
+        //
+        //     rowSize += static_cast<Int>(payload.Size());
+        //     rows.Push(std::move(payload));
+        // }
 
         auto checkPoint = Database::LogRowBatchInsert(
             buffer,
-            executionContext.GetCurrentTransactionId(),
+            transactionId,
             this->_ordinalPosition
         );
 
@@ -288,54 +278,50 @@ namespace CoreEngine::StorageTypes {
         auto extentReservation = this->ReserveExtents(allocator, pagesNeeded);
 
         Errors::RuntimeStatus result;
-        for (auto& payload: rows){
-            result = this->InsertRowPayload(executionContext, extentReservation, payload);
-            if (!result.IsOk())
-                return result;
-        }
+        // for (auto& payload: rows){
+        //     result = this->InsertRowPayload(executionContext, extentReservation, payload);
+        //     if (!result.IsOk())
+        //         return result;
+        // }
 
         Database::LogCheckPoint(checkPoint);
         return result;
     }
 
-  Errors::RuntimeStatus Table::InsertRow(
-      const ExecutionContext& executionContext,
-      const DataStructures::PolymorphicArray<Value> &inputData
-  ){
-      Logging::CheckPoint checkPoint;
-      Errors::RuntimeStatus status;
+    Errors::RuntimeStatus Table::SystemInsertRow(
+        const ExecutionContext& executionContext,
+        const DataStructures::PolymorphicArray<Value> &inputData
+    ){
+        Logging::CheckPoint checkPoint;
+        Errors::RuntimeStatus status;
 
-      const auto payloadCapacity = this->CalculateInsertPayloadSize();
-      auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
+        const auto* allocator = executionContext.GetAllocator();
 
-      RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
-      rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        const auto transactionId = executionContext.GetCurrentTransactionId();
+        rowContext._header._createdTransactionId = transactionId;
 
-      auto payload = this->SerializeRow(
-          status,
-          rowContext,
-          payloadBuffer,
-          inputData
-      );
+        auto payload = this->SerializeRow(
+            status,
+            rowContext,
+            inputData
+        );
 
-      checkPoint.transactionId = executionContext.GetCurrentTransactionId();
-      Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
+        checkPoint.transactionId = transactionId;
+        Database::LogCheckPoint(checkPoint);
 
+        if (!status.IsOk())
+            return status;
 
-      if (!status.IsOk())
-          return status;
+        auto extentReservation = this->LazyReservation(allocator);
+        status = this->InsertRowPayload(executionContext, extentReservation, payload);
 
-      auto extentReservation = this->LazyReservation(executionContext.GetAllocator());
-      status = this->InsertRowPayload(executionContext, extentReservation, payload);
+        if (!status.IsOk())
+            return status;
 
-      if (!status.IsOk())
-          return status;
-
-      Database::LogCheckPoint(checkPoint);
-
-      status.message = DataTypes::String(static_cast<const char*>("Rows affected: 1"), executionContext.GetAllocator());
-      return status;
-  }
+        status.message = Messages::NUMBER_OF_ROWS_AFFECTED(allocator, 1);
+        return status;
+    }
 
     Errors::RuntimeStatus Table::InsertRow(
         const ExecutionContext& executionContext,
@@ -343,7 +329,6 @@ namespace CoreEngine::StorageTypes {
         const InsertPlan& insertPlan
     ){
         Logging::CheckPoint checkPoint;
-
         Errors::RuntimeStatus status;
 
         const Expressions::EvaluationContext evaluationContext(
@@ -351,36 +336,33 @@ namespace CoreEngine::StorageTypes {
             &executionContext
         );
 
-        const auto payloadCapacity = this->CalculateInsertPayloadSize();
-        auto* payloadBuffer = static_cast<object_t*>(executionContext.Allocate(payloadCapacity));
+        const auto* allocator = executionContext.GetAllocator();
+        const auto transactionId = executionContext.GetCurrentTransactionId();
 
-        RowSerializationContext rowContext(executionContext.GetAllocator(), payloadCapacity);
-        rowContext._header._createdTransactionId = executionContext.GetCurrentTransactionId();;
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        rowContext._header._createdTransactionId = transactionId;
 
         auto payload = this->SerializeRow(
             status,
             rowContext,
-            payloadBuffer,
             inputData,
             insertPlan,
             evaluationContext
         );
 
-        checkPoint.transactionId = executionContext.GetCurrentTransactionId();
-        Logging::WriteAheadLogger::Get().LogCheckPoint(checkPoint);
+        checkPoint.transactionId = transactionId;
+        Database::LogCheckPoint(checkPoint);
 
         if (!status.IsOk())
             return status;
 
-        auto extentReservation = this->LazyReservation(executionContext.GetAllocator());
+        auto extentReservation = this->LazyReservation(allocator);
         status = this->InsertRowPayload(executionContext, extentReservation, payload);
 
         if (!status.IsOk())
             return status;
 
-        Database::LogCheckPoint(checkPoint);
-
-        status.message = DataTypes::String(static_cast<const char*>("Rows affected: 1"), executionContext.GetAllocator());
+        status.message = Messages::NUMBER_OF_ROWS_AFFECTED(allocator, 1);
         return status;
     }
 
@@ -770,24 +752,20 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto* allocator = context.GetAllocator();
-        const auto versionRid = this->InsertToVersionDatabase(allocator, page->RawRowData(rid->_index));
+        const auto versionRid = Table::InsertToVersionDatabase(allocator, page->RawRowData(rid->_index));
 
         auto materializedRow = page->MaterializeRow(allocator, this, rid->_index);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
 
-        const auto payloadCapacity = this->CalculateInsertPayloadSize();
-        auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
-
-        RowSerializationContext rowContext(allocator, payloadCapacity);
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
         rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
         rowContext._header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
             rowContext,
-            buffer,
             materializedRow.Data()
         );
 
@@ -830,17 +808,13 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        const auto payloadCapacity = this->CalculateInsertPayloadSize();
-        auto* buffer = static_cast<object_t*>(context.Allocate(payloadCapacity));
-
-        RowSerializationContext rowContext(allocator, payloadCapacity);
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
         rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
         rowContext._header._versionRID = versionRid;
 
         auto newPayload = this->SerializeRow(
             status,
             rowContext,
-            buffer,
             materializedRow.Data()
         );
 
@@ -873,23 +847,19 @@ namespace CoreEngine::StorageTypes {
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto rowRawData = page->RawRowData(row->_index);
-        const auto versionRid = this->InsertToVersionDatabase(allocator, rowRawData);
+        const auto versionRid = CoreEngine::StorageTypes::Table::InsertToVersionDatabase(allocator, rowRawData);
 
         auto materializedRow = page->MaterializeRow(allocator, this, row->_index);
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        const auto payloadCapacity = this->CalculateInsertPayloadSize();
-        auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(payloadCapacity));
-
-        RowSerializationContext rowContext(allocator, payloadCapacity);
+        RowSerializationContext rowContext(allocator, this->_columns.Size());
         rowContext._header._createdTransactionId = FIRST_TRANSACTION_ID;
         rowContext._header._versionRID = versionRid;
 
         const auto newPayload = this->SerializeRow(
             status,
             rowContext,
-            buffer,
             materializedRow.Data()
         );
 
@@ -956,20 +926,7 @@ namespace CoreEngine::StorageTypes {
         // }
     }
 
-    Value Table::MaterializeColumn(
-        const ::Memory::IAllocator* allocator,
-        const RID* rid,
-        const column_index_t columnIndex
-    ) const{
-        const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-            this->_db->DataFileKey(),
-            rid->_pageId
-        );
-
-        return page.GetColumnAt(allocator, rid, this, columnIndex);
-    }
-
-    QueryResult Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
+    MaterializedRow Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
         const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
             this->_db->DataFileKey(),
             row->_pageId
@@ -1073,57 +1030,6 @@ namespace CoreEngine::StorageTypes {
     void Table::Truncate()
     {
         this->_db->TruncateTable(this->_id);
-    }
-
-    row_size_t Table::GetMaximumRowSize() const{
-        row_size_t maximumRowSize = 0;
-
-        for (const auto &column : this->_columns)
-            maximumRowSize += column->isColumnLOB()
-                                  ? LOB_REFERENCE_SIZE
-                                  : column->Size();
-
-        return maximumRowSize;
-    }
-
-    row_size_t Table::ReduceMaximumRowSize() const {
-        row_size_t maximumRowSize = 0;
-
-        row_size_t largestVariableLengthColumnSize = 0;
-
-        Column* largestColumn = nullptr;
-
-        HashSet<column_index_t> clusteredColumns;
-
-        for(const auto& column : this->clusteredHeader.columns)
-            clusteredColumns.Add(column);
-
-        for (auto &column : this->_columns) {
-            const auto& columnSize = column->Size();
-
-            if (column->isColumnOverflowed())
-                maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
-            else if (column->isColumnLOB())
-                maximumRowSize += LOB_REFERENCE_SIZE;
-            else
-                maximumRowSize += columnSize;
-
-            if(columnSize <= largestVariableLengthColumnSize
-                || column->isColumnOverflowed()
-                || columnSize >= LOB_REFERENCE_SIZE
-                || clusteredColumns.Contains(column->OrdinalPosition())
-            ) continue;
-
-            largestVariableLengthColumnSize = columnSize;
-            largestColumn = column;
-        }
-
-        maximumRowSize -= largestVariableLengthColumnSize;
-        maximumRowSize += Constants::OVERFLOW_POINTER_SIZE;
-
-        if (largestColumn != nullptr)
-            largestColumn->SetIsOverflowed(true);
-        return maximumRowSize;
     }
 
     Database* Table::GetDatabase() const { return this->_db; }
@@ -1373,7 +1279,7 @@ namespace CoreEngine::StorageTypes {
         delete removedColumn;
     }
 
-    void Table::HandleRemoveColumn(Pages::PageView* page, QueryResult& row, const column_index_t index){
+    void Table::HandleRemoveColumn(Pages::PageView* page, MaterializedRow& row, const column_index_t index){
         // auto& data = row->GetData();
 
         // data.erase(data.begin() + index);

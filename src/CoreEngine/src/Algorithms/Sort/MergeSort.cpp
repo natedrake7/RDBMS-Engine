@@ -7,7 +7,7 @@ void MergeSort::Merge(const MergeSortParameters& parameters){
     const Int n1 = parameters.mid - parameters.left + 1;
     const Int n2 = parameters.right - parameters.mid;
 
-    std::vector<QueryResult> leftVec, rightVec;
+    std::vector<MaterializedRow> leftVec, rightVec;
 
     for (i = 0; i < n1; i++)
         leftVec.push_back(std::move((*parameters.rows)[parameters.left + i]));

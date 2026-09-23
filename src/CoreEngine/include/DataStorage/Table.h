@@ -19,6 +19,7 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct InsertPlan;
     struct RowSerializationContext;
     class SerializedRow;
 }
@@ -170,11 +171,12 @@ namespace CoreEngine::StorageTypes{
         * Functions to insert rows into the table.
         * @{
         */
-            Errors::RuntimeStatus BatchInsert(
+            Errors::RuntimeStatus ChunkInsert(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<QueryResult> &input
+                const DataChunk* chunk,
+                const InsertPlan& plan
             );
-            Errors::RuntimeStatus InsertRow(
+            Errors::RuntimeStatus SystemInsertRow(
                 const ExecutionContext& executionContext,
                 const DataStructures::PolymorphicArray<Value> &inputData
             );
@@ -419,8 +421,7 @@ namespace CoreEngine::StorageTypes{
         * @name Materialization Functions
         * @{
         */
-            Value MaterializeColumn(const ::Memory::IAllocator* allocator, const RID* rid, column_index_t columnIndex) const;
-            QueryResult MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
+            MaterializedRow MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
 
             template<typename T>
             static void MaterializeColumnFromPage(
@@ -480,12 +481,8 @@ namespace CoreEngine::StorageTypes{
 
             void Truncate();
 
-            [[nodiscard]] row_size_t GetMaximumRowSize() const;
-            [[nodiscard]] row_size_t ReduceMaximumRowSize() const;
-
             [[nodiscard]] key_size_t CalculateIndexKeySize(Int indexPos = -1) const;
             [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
-            [[nodiscard]] row_size_t CalculateInsertPayloadSize()const;
             [[nodiscard]] Database* GetDatabase() const;
 
             [[nodiscard]] SmallInt GetOrdinalPosition() const;
@@ -522,7 +519,7 @@ namespace CoreEngine::StorageTypes{
             ) const;
             void UpdateColumnName(column_index_t index, const DataTypes::String& name)const;
             void RemoveColumn(const ExecutionContext& context, column_index_t index);
-            static void HandleRemoveColumn(Pages::PageView* page, QueryResult& row, column_index_t index);
+            static void HandleRemoveColumn(Pages::PageView* page, MaterializedRow& row, column_index_t index);
             void HandleRemoveColumn(column_index_t index);
 
         /** @} End of System Catalog Integration Functions */

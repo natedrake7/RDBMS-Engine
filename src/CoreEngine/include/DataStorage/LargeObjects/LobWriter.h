@@ -44,7 +44,7 @@ namespace CoreEngine::StorageTypes{
         bool _finished;
 
         const ::Memory::IAllocator* _allocator;
-        Memory::AllocationStep _allocationStep;
+        ::Memory::AllocationStep _allocationStep;
 
         void InitializeRootView();
         void OpenDataPage();

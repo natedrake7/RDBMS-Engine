@@ -198,10 +198,10 @@ namespace DataTypes {
         [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator) const;
         [[nodiscard]] constexpr StringBuffer ToBufferString() const;
 
-        [[nodiscard]] constexpr const byte_t* RawData() const;
-        [[nodiscard]] constexpr Int RawSize() const;
+        [[nodiscard]] constexpr const byte_t* Data() const;
+        [[nodiscard]] constexpr Int Size() const;
 
-        [[nodiscard]] constexpr const DataBuffer& Data() const;
+        [[nodiscard]] constexpr const DataBuffer& GetDataBuffer() const;
         [[nodiscard]] static constexpr Int Size(Int precision);
 
         [[nodiscard]] double ToDouble() const;
@@ -499,8 +499,8 @@ constexpr Decimal operator+(const Decimal &left, const Decimal &right){
 
     const auto fractionIndex = Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
 
-    auto leftCopy = left.Data();
-    auto rightCopy = right.Data();
+    auto leftCopy = left.GetDataBuffer();
+    auto rightCopy = right.GetDataBuffer();
 
     Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
     Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
@@ -530,8 +530,8 @@ constexpr Decimal operator-(const Decimal &left, const Decimal &right){
 
     const auto fractionIndex = Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
 
-    auto leftCopy = left.Data();
-    auto rightCopy = right.Data();
+    auto leftCopy = left.GetDataBuffer();
+    auto rightCopy = right.GetDataBuffer();
 
     Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
     Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
@@ -552,8 +552,8 @@ constexpr Decimal operator-(const Decimal &left, const Decimal &right){
 
 constexpr Decimal operator*(const Decimal &left, const Decimal &right){
     return Decimal::Multiply(
-        left.Data(),
-        right.Data(),
+        left.GetDataBuffer(),
+        right.GetDataBuffer(),
         left.GetFractionIndex() + right.GetFractionIndex(),
         left.IsPositive() == right.IsPositive()
     );
@@ -561,8 +561,8 @@ constexpr Decimal operator*(const Decimal &left, const Decimal &right){
 
 constexpr Decimal operator/(const Decimal& left, const Decimal& right){
     return Decimal::Divide<DecimalRoundingMode::HalfUp>(
-        left.Data(),
-        right.Data(),
+        left.GetDataBuffer(),
+        right.GetDataBuffer(),
         left.IsPositive() == right.IsPositive()
     );
 }
@@ -570,8 +570,8 @@ constexpr Decimal operator/(const Decimal& left, const Decimal& right){
 //TODO use modulo
 constexpr Decimal operator%(const Decimal& left, const Decimal& right){
     return Decimal::Divide<DecimalRoundingMode::HalfUp>(
-        left.Data(),
-        right.Data(),
+        left.GetDataBuffer(),
+        right.GetDataBuffer(),
         left.IsPositive() == right.IsPositive()
     );
 }
@@ -604,11 +604,11 @@ constexpr bool Decimal::IsPositive() const { return ( this->_data[DECIMAL_HEADER
 
 constexpr fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->_data[DECIMAL_HEADER_INDEX] & 0x7F); }
 
-constexpr const byte_t* Decimal::RawData() const { return this->_data.Data(); }
+constexpr const byte_t* Decimal::Data() const { return this->_data.Data(); }
 
-constexpr Int Decimal::RawSize() const { return this->_data.Size(); }
+constexpr Int Decimal::Size() const { return this->_data.Size(); }
 
-constexpr const DataBuffer& Decimal::Data() const { return this->_data; }
+constexpr const DataBuffer& Decimal::GetDataBuffer() const { return this->_data; }
 
 constexpr StringBuffer Decimal::ToBufferString() const{
     const auto isPositive = this->IsPositive();
@@ -650,8 +650,8 @@ constexpr Comparators::Comparator Decimal::Compare(const Decimal& lhs, const Dec
     if (leftFractionIndex != rightFractionIndex)
         return Comparators::Compare<fraction_index_t>(leftFractionIndex, rightFractionIndex);
 
-    const auto& leftData = lhs.Data();
-    const auto& rightData = rhs.Data();
+    const auto& leftData = lhs.GetDataBuffer();
+    const auto& rightData = rhs.GetDataBuffer();
 
     const auto commonSize = Math::Min<Int>(leftData.Size(), rightData.Size()) - 1;
     const auto result = Decimal::CompareMagnitude(leftData, rightData, commonSize);
@@ -1034,7 +1034,8 @@ constexpr std::ostream & operator<<(std::ostream &os, const Decimal &decimal){
 }
 }
 
-template<> struct std::numeric_limits<DataTypes::Decimal> {
+template<>
+class std::numeric_limits<DataTypes::Decimal> {
     static constexpr bool is_specialized = true;
 
     static constexpr DataTypes::Decimal min() noexcept {

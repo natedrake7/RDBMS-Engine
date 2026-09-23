@@ -1,6 +1,6 @@
 ﻿#include "../../../include/DataStorage/Table.h"
 #include "../../../include/DataStorage/Column.h"
-#include "../../../include/ValidationMessages.h"
+#include "../../../include/Messages.h"
 
 namespace CoreEngine::StorageTypes{
 

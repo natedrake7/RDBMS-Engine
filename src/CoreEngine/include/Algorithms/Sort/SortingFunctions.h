@@ -3,7 +3,7 @@
 #include <vector>
 
 #include "../../../../Systemic/include/RowIdentifier.h"
-#include "../../../../Systemic/include/QueryResult.h"
+#include "../../../../Systemic/include/MaterializedRow.h"
 #include "../../../include/DataStorage/Column.h"
 #include "../../DataStorage/Row/Row.h"
 #include "../../../../Systemic/include/DataStructures/PolymorphicArray.h"
@@ -30,12 +30,12 @@ typedef struct AggregateResults {
 } AggregateResults;
 
 struct MergeElement{
-    QueryResult value;
+    MaterializedRow value;
     DataTypes::RowIdentifier rowId;
     Int batchId;
 
-    MergeElement(const QueryResult& value, Int batchId);
-    MergeElement(QueryResult& value, Int batchId, const DataTypes::RowIdentifier& rowId);
+    MergeElement(const MaterializedRow& value, Int batchId);
+    MergeElement(MaterializedRow& value, Int batchId, const DataTypes::RowIdentifier& rowId);
     MergeElement(const MergeElement& other);
     MergeElement(MergeElement&& other) noexcept;
     MergeElement& operator=(const MergeElement& other);
@@ -55,8 +55,8 @@ class SortingFunctions{
     public:
          [[nodiscard]] static bool CompareRows(
             const CoreEngine::ExecutionContext& context,
-            const QueryResult& firstRow,
-            const QueryResult& secondRow,
+            const MaterializedRow& firstRow,
+            const MaterializedRow& secondRow,
             const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& sortConditions
           );
          [[nodiscard]] static bool CompareRowsAscending(
@@ -73,7 +73,7 @@ class SortingFunctions{
           );
          static void OrderBy(
             const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<QueryResult>& rows,
+            DataStructures::PolymorphicArray<MaterializedRow>& rows,
             const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>& conditions
           );
          [[nodiscard]] static std::unordered_map<std::string, AggregateResults> GroupBy(

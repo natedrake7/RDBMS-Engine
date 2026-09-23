@@ -421,7 +421,7 @@ namespace Pages{
         return this->RetrieveVisibleRow(snapshot, indexPosition, outRID);
     }
 
-    QueryResult PageView::MaterializeRow(
+    MaterializedRow PageView::MaterializeRow(
         const Memory::IAllocator* allocator,
         const CoreEngine::StorageTypes::Table* tablePtr,
         const Int indexPosition
@@ -431,28 +431,40 @@ namespace Pages{
         const auto& columns = tablePtr->GetColumns();
         const auto columnsSize = columns.Size();
 
-        auto result = QueryResult(allocator);
+        MaterializedRow result(allocator);
 
         const auto dataOffset = slot.AbsoluteDataOffset();
         const auto entryTableOffset = dataOffset + sizeof(CoreEngine::StorageTypes::RowHeader);
         const auto* rowDataPtr = this->_frame->_data + dataOffset;
-        auto* entries = reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(this->_frame->_data + entryTableOffset);
+        auto* __restrict__ entries = reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(this->_frame->_data + entryTableOffset);
 
         for (int i = 0;i < columnsSize; i++){
-            const auto type = entries[i].Type();
-            if (CoreEngine::StorageTypes::RowEntry::IsNull(type)){
-                auto value = Value::Null();
+            const auto* __restrict__ entry = entries + i;
+            switch (entry->Type()){
+            case CoreEngine::StorageTypes::RowEntry::INLINE:{
+                auto value = Value::FromExternalStorage(
+                    rowDataPtr + entries[i].Offset(),
+                    entries[i].Size(),
+                    columns[i]->Type(),
+                    allocator
+                );
                 result.AddColumn(value);
-                continue;
+                break;
+            }
+            case CoreEngine::StorageTypes::RowEntry::NULLVAL:
+                result.AddColumn(Value::Null());
+                break;
+            case CoreEngine::StorageTypes::RowEntry::LOB:{
+                DataTypes::LobReference reference;
+                std::memcpy(&reference, rowDataPtr + entry->Offset(), sizeof(reference));
+                result.AddColumn(Value::FromLobReference(reference, columns[i]->Type()));
+                break;
+            }
+            default:
+            case CoreEngine::StorageTypes::RowEntry::OVERFLOWVAL:
+                break;
             }
 
-            auto value = Value::FromExternalStorage(
-                rowDataPtr + entries[i].Offset(),
-                entries[i].Size(),
-                columns[i]->Type(),
-                allocator
-            );
-            result.AddColumn(value);
         }
 
         return result;
@@ -497,33 +509,6 @@ namespace Pages{
 
     Constants::PageType PageView::GetPageType() const{
         return this->_frame->Header()->Type();
-    }
-
-    bool PageView::Filter(const Frame* frame, const CoreEngine::StorageTypes::RID* rowId, Int columnIndex){
-    }
-
-    Value PageView::GetColumnAt(
-        const ::Memory::IAllocator* allocator,
-        const CoreEngine::StorageTypes::RID* row,
-        const CoreEngine::StorageTypes::Table* table,
-        const Int columnIndex
-    ) const{
-        const auto slot = this->GetSlotDirectory(row->_index);
-        const auto* rowDataPtr = this->_frame->_data + slot.AbsoluteDataOffset();
-
-        const auto rowEntry = *reinterpret_cast<const CoreEngine::StorageTypes::RowEntry*>(
-            rowDataPtr + sizeof(CoreEngine::StorageTypes::RowHeader) + columnIndex * sizeof(CoreEngine::StorageTypes::RowEntry)
-        );
-
-        if (rowEntry.IsNull())
-            return Value::Null();
-
-        return Value::FromExternalStorage(
-            rowDataPtr + rowEntry._offset,
-            rowEntry.Size(),
-            table->GetColumn(columnIndex)->Type(),
-            allocator
-        );
     }
 
     template <typename T>

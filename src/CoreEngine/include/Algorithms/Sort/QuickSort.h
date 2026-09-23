@@ -2,7 +2,7 @@
 #include <vector>
 
 #include "DataTypes/DataTypes.h"
-class QueryResult;
+class MaterializedRow;
 class SortCondition;
 
 namespace CoreEngine::StorageTypes {
@@ -10,8 +10,8 @@ namespace CoreEngine::StorageTypes {
 }
 
 class QuickSort {
-        static int Partition(std::vector<QueryResult> &rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
+        static int Partition(std::vector<MaterializedRow> &rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
     public:
-        static void Sort(std::vector<QueryResult>& rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
+        static void Sort(std::vector<MaterializedRow>& rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
     
 };

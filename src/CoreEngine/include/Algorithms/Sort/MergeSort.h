@@ -15,7 +15,7 @@ namespace Expressions {
   class Expression;
 }
 
-class QueryResult;
+class MaterializedRow;
 
 namespace CoreEngine::StorageTypes {
     class Row;
@@ -23,7 +23,7 @@ namespace CoreEngine::StorageTypes {
 
 struct MergeSortParameters{
     const CoreEngine::ExecutionContext* properties;
-    DataStructures::PolymorphicArray<QueryResult>* rows;
+    DataStructures::PolymorphicArray<MaterializedRow>* rows;
     const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions;
     Int left;
     Int right;
