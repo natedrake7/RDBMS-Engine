@@ -65,19 +65,20 @@ namespace CoreEngine::StorageTypes{
         case DataVectorKind::Flat:{
             for (UnsignedInt i = 0; i < rowCount; i++)
                 body(vector, i);
-            break;
+            return;
         }
         case DataVectorKind::Constant:{
             const auto* __restrict__ selection = vector->_selection;
             for (UnsignedInt i = 0; i < rowCount; i++)
                 body(vector, *(selection + i));
-            break;
+            return;
         }
         case DataVectorKind::Dictionary:
             for (UnsignedInt i = 0; i < rowCount; i++)
                 body(vector, 0u);
-            break;
+            return;
         }
 
+        std::unreachable();
     }
 }

@@ -183,6 +183,85 @@ namespace CoreEngine::StorageTypes {
         return versionDatabase.InsertRow(allocator, rowRef);
     }
 
+    void Table::PrepareChunkSources(
+        const ExecutionContext& context,
+        const InsertPlan& plan,
+        ChunkInsertState& state
+    ) const{
+        const auto* allocator = context.GetAllocator();
+
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            &context
+        );
+
+        const auto vectorSourceFunc = [&](
+            const column_index_t stateIndex,
+            const column_index_t chunkSlotIndex
+        ){
+            state._vectors[stateIndex] = state._chunk->_columns[chunkSlotIndex];
+        };
+
+        const auto defaultSourceFunc = [&](
+            const column_index_t stateIndex,
+            const column_index_t defaultIndex,
+            const DataType type
+        ){
+            const auto* expression = plan._sharedDefaults[defaultIndex];
+            const DataVector* vector = nullptr;
+
+            const auto evaluateExpression = [&](const Int i){
+                bool isNull = false;
+                Expressions::EvaluateExpression(expression, evaluationContext, vector->SlotAt(i), &isNull);
+                vector->SetNullValue(i, isNull);
+            };
+
+            if (expression->IsConstant()){
+                vector = DataVector::ConstantVector(allocator, false, type);
+                evaluateExpression(0);
+            }
+            else{
+                vector = DataVector::FlatVector(allocator, type, state._rowCount);
+                for (Int i = 0;i < state._rowCount; i++)
+                    evaluateExpression(i);
+            }
+
+            state._vectors[stateIndex] = vector;
+        };
+
+        const auto nullSourceFunc = [&](const column_index_t stateIndex, const DataType type){
+            const auto* vector = DataVector::ConstantVector(allocator, true, type);
+            state._vectors[stateIndex] = vector;
+        };
+
+        //TODO add identity source.
+        const auto identitySourceFunc = [&](const column_index_t slotIndex, const DataType type){
+
+        };
+
+        const auto prepareChunk = [&](const Int index, const InsertColumPlan& columnPlan){
+            switch (columnPlan._source) {
+            case InsertColumnSource::Vector:
+                vectorSourceFunc(index, columnPlan._slot);
+                break;
+            case InsertColumnSource::Default:
+                defaultSourceFunc(index, columnPlan._slot, columnPlan._type);
+                break;
+            case InsertColumnSource::Null:
+                nullSourceFunc(index, columnPlan._type);
+                break;
+            case InsertColumnSource::Identity:
+                break;
+            case InsertColumnSource::Computed:
+            default:
+                std::unreachable();
+            }
+        };
+
+        for (auto i = 0;i < state._columnCount; i++)
+            prepareChunk(i, plan._columnsPlans[i]);
+    }
+
     Table::Table(
         const table_id_t tableId,
         const SmallInt ordinalPosition,

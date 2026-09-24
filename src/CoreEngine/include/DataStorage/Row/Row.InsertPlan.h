@@ -7,6 +7,8 @@ namespace Expressions{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct ColumnPlacement;
+
     struct InsertSlot{
         enum class SlotKind: UnsignedTinyInt{
             Value = 0,
@@ -82,5 +84,38 @@ namespace CoreEngine::StorageTypes{
 
         InsertPlan(InsertPlan&&) noexcept = default;
         InsertPlan& operator=(InsertPlan&&) noexcept = default;
+    };
+
+    struct ChunkInsertState{
+        const DataChunk* _chunk;
+
+        UnsignedInt _rowCount;
+        UnsignedInt _columnCount;
+
+        const DataVector** _vectors;
+
+        UnsignedInt* _rowSizes;
+        UnsignedInt* _rowStart;
+        UnsignedSmallInt* _cursor;
+        UnsignedBigInt* _slowRows;
+        Int _slowCount;
+
+        object_t* _buffer;
+        SerializedRow* _rows;
+
+        ColumnPlacement* _slowPlacements;
+        UnsignedInt* _slowIndex;
+
+        [[nodiscard]] bool IsSlowRow(const UnsignedInt index)const{
+            return EngineBitmap::GetBitmapBit(this->_slowRows, index);
+        }
+
+        void MarkSlowRow(const UnsignedInt index){
+            if (this->IsSlowRow(index))
+                return;
+
+            EngineBitmap::SetBitmapBit(this->_slowRows, index, true);
+            this->_slowCount++;
+        }
     };
 }

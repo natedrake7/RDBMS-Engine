@@ -19,6 +19,7 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct ChunkInsertState;
     struct InsertPlan;
     struct RowSerializationContext;
     class SerializedRow;
@@ -117,6 +118,18 @@ namespace CoreEngine::StorageTypes{
                 const ::Memory::IAllocator* allocator,
                 const Pages::RawRowReference& rowRef
             );
+
+            /**
+            * @name Row Insert Functions
+            * @{
+            */
+            void PrepareChunkSources(
+                const ExecutionContext& context,
+                const InsertPlan& plan,
+                ChunkInsertState& state
+            )const;
+
+            /** @} End of: Row Insert Functions*/
 
         public:
             template<typename ValueProvider>
