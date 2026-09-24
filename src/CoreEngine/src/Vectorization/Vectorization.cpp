@@ -14,9 +14,6 @@ namespace CoreEngine{
             _kind(DataVectorKind::Flat),
             _dataEntrySize(0){}
 
-    object_t* DataVector::SlotAt(const UnsignedInt index) const{
-        return this->_data + this->_dataEntrySize * index;
-    }
 
     void DataVector::SetNullValue(const UnsignedInt index, const bool value) const{
         EngineBitmap::SetBitmapBit(this->_validity, index, value);

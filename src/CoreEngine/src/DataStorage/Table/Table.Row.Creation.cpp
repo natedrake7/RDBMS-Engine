@@ -179,31 +179,4 @@ namespace CoreEngine::StorageTypes{
             return values[ordinalPosition - autoComputedColumns];
         });
     }
-
-    SerializedRow Table::SerializeRow(
-        Errors::RuntimeStatus& status,
-        RowSerializationContext& rowContext,
-        const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
-        const InsertPlan& insertPlan,
-        const Expressions::EvaluationContext& evaluationContext
-    ) const{
-        Value value;
-        return this->SerializeRowGeneric(status, rowContext,
-            [&](const Int ordinalPosition, const Int _) -> const Value&{
-                const auto& slot = insertPlan._slotMap[ordinalPosition];
-                switch (slot._kind){
-                    case InsertSlot::SlotKind::Value:
-                        value = Expressions::EvaluateExpression(expressions[slot._slot], evaluationContext);
-                        break;
-                    case InsertSlot::SlotKind::Default:
-                        value = Expressions::EvaluateExpression(insertPlan._sharedDefaults[slot._slot], evaluationContext);
-                        break;
-                    case InsertSlot::SlotKind::Null:
-                        value = Value::Null();
-                        break;
-                }
-                return value;
-            }
-        );
-    }
 }

@@ -1018,11 +1018,13 @@ namespace QueryPipeline::Statements {
         }
 
         if (expression->IsConstant()) {
-            const auto* constantExpr = expression->AsConstant();
+            auto* constantExpr = expression->AsConstant();
 
             if (constantExpr->value.IsNull()) {
-                if (columnHeader.isNullable)
+                if (columnHeader.isNullable){
+                    constantExpr->value.SetType(columnType);
                     return Errors::ValidationStatus::Ok();
+                }
 
                 return Errors::ValidationStatus::Error(
             Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
@@ -1053,17 +1055,17 @@ namespace QueryPipeline::Statements {
         if (this->selectStatement == nullptr)
             return Errors::ValidationStatus::Ok();
 
-        if (this->selectStatement->_projections.Size() != this->columns.Size())
-            return Errors::ValidationStatus::Error(
-                Messages::INSERT_STATEMENT_INVALID_NUMBER_OF_ARGUMENTS_ON_SUB_SELECT,
-                context.GetAllocator()
-            );
-
         this->selectStatement->databaseId = this->databaseId;
 
         auto selectStatus = this->selectStatement->CompileDerived(context);
         if (!selectStatus.IsOk())
             return selectStatus;
+
+        if (this->selectStatement->_projections.Size() != this->columns.Size())
+            return Errors::ValidationStatus::Error(
+                Messages::INSERT_STATEMENT_INVALID_NUMBER_OF_ARGUMENTS_ON_SUB_SELECT,
+                context.GetAllocator()
+            );
 
         for (Int i = 0;i < this->selectStatement->_projections.Size();i++) {
             auto returnTypeStatus = this->ValidateReturnType(
@@ -1108,7 +1110,7 @@ namespace QueryPipeline::Statements {
                 context.GetAllocator()
             );
 
-        auto& catalog = CoreEngine::SystemCatalog::Get();
+        static auto& catalog = CoreEngine::SystemCatalog::Get();
 
         auto tableStatus = this->table->Compile(context, this->databaseId, this->_slotCount);
         if (!tableStatus.IsOk())
@@ -1120,16 +1122,23 @@ namespace QueryPipeline::Statements {
             this->table->_tableId
         );
 
+        const auto* allocator = context.GetAllocator();
+        const auto columnCount = static_cast<Int>(columnsDict.size());
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertSlot> insertSlots(
-            context.GetAllocator(),
-            static_cast<Int>(columnsDict.size())
+            allocator,
+            columnCount
         );
-        insertSlots.AlignSize();
-        DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(context.GetAllocator());
+        DataStructures::PolymorphicArray<DataType> columnTypes(
+            allocator,
+            this->columns.Size()
+        );
 
+        insertSlots.AlignSize();
+
+        DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(allocator);
         const auto identityColumns =
             catalog.SelectIdentityColumnsByTableIdToDictionary(
-                context.GetAllocator(),
+                allocator,
                 this->table->_tableId
             );
 
@@ -1143,7 +1152,7 @@ namespace QueryPipeline::Statements {
             if (!columnsDict.TryGetValue(column.name.ToLower(), header)) {
                 return Errors::ValidationStatus::Error(
                     Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
-                        context.GetAllocator(),
+                        allocator,
                         this->table->GetAlias(context),
                         column.name
                     )
@@ -1154,10 +1163,11 @@ namespace QueryPipeline::Statements {
             if (identityColumns.Contains(header.id)) {
                 return Errors::ValidationStatus::Error(
                     Messages::IDENTITY_COLUMN_ON_INSERT,
-                    context.GetAllocator()
+                    allocator
                 );
             }
 
+            this->valueTypes.Push(static_cast<DataType>(header.dataType));
             insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::ValueSlot(i);
             statementColumns.Add(header.id);
         }
@@ -1174,23 +1184,24 @@ namespace QueryPipeline::Statements {
                 continue;
             }
 
-            auto defaultValue = catalog.SelectDefaultValueByColumnId(context.GetAllocator(), header.id);
+            auto defaultValue = catalog.SelectDefaultValueByColumnId(allocator, header.id);
 
             if (defaultValue.columnId == INVALID_COLUMN_ID) {
                 return Errors::ValidationStatus::Error(
                     Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
-                        context.GetAllocator(),
+                        allocator,
                         header.name
                     )
                 );
             }
 
-            const auto slotIndex = InsertStatement::InsertDefaultValue(context.GetAllocator(), defaultExpressions, header, defaultValue);
+            const auto slotIndex = InsertStatement::InsertDefaultValue(allocator, defaultExpressions, header, defaultValue);
             insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::DefaultSlot(slotIndex);
         }
 
         this->insertPlan._slotMap = std::move(insertSlots);
         this->insertPlan._sharedDefaults = std::move(defaultExpressions);
+        this->valueTypes = std::move(columnTypes);
 
         validationScope._tableColumnsArray[this->table->_slotIndex] = std::move(columnsDict);
 
@@ -1204,14 +1215,16 @@ namespace QueryPipeline::Statements {
     }
 
     LogicalPlan* InsertStatement::ToLogical(QueryContext& context) {
-        auto* logicalSelect = this->HasSelectStatement()
-            ? this->selectStatement->ToLogical(context)
-            : nullptr;
+        auto* child =  (this->HasSelectStatement())
+                ? this->selectStatement->ToLogical(context)
+                : context._compileContext.Allocate<LogicalValues>(
+                    this->values,
+                    this->valueTypes
+                  );
 
         return context._compileContext.Allocate<LogicalInsert>(
             this->table,
-            this->values,
-            logicalSelect,
+            child,
             this->insertPlan
         );
     }

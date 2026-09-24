@@ -7,7 +7,6 @@ namespace Expressions{
 }
 
 namespace CoreEngine::StorageTypes{
-
     struct InsertSlot{
         enum class SlotKind: UnsignedTinyInt{
             Value = 0,
@@ -36,21 +35,52 @@ namespace CoreEngine::StorageTypes{
         }
     };
 
+    enum class InsertColumnLayout: UnsignedTinyInt{
+        Fixed = 0,
+        Variable = 1
+    };
+
+    enum class InsertColumnSource: UnsignedTinyInt{
+        Vector = 0,
+        Default = 1,
+        Null = 2,
+        Identity = 3,
+        Computed = 4
+    };
+
+    struct InsertColumPlan{
+        UnsignedSmallInt _width;
+        InsertColumnLayout _layout;
+        InsertColumnSource _source;
+        DataType _type;
+        column_index_t _slot;
+        bool _nullable;
+
+        InsertColumPlan() = default;
+    };
+
+    static inline constexpr bool IsVariableLayout(const DataType type){
+        return type == DataType::String || type == DataType::Json || type == DataType::Decimal;
+    }
+
     struct InsertPlan{
         DataStructures::PolymorphicArray<InsertSlot> _slotMap;
         DataStructures::PolymorphicArray<Expressions::Expression*> _sharedDefaults;
+        DataStructures::PolymorphicArray<InsertColumPlan> _columnsPlans;
 
         InsertPlan() = default;
         InsertPlan(
             DataStructures::PolymorphicArray<InsertSlot>&& slotMap,
-            DataStructures::PolymorphicArray<Expressions::Expression*>&& sharedDefaults
+            DataStructures::PolymorphicArray<Expressions::Expression*>&& sharedDefaults,
+            DataStructures::PolymorphicArray<InsertColumPlan>&& columnsPlans
         ) : _slotMap(std::move(slotMap)),
-            _sharedDefaults(std::move(sharedDefaults)) {}
+            _sharedDefaults(std::move(sharedDefaults)),
+            _columnsPlans(std::move(columnsPlans)){}
 
         InsertPlan(const InsertPlan&) = delete;
         InsertPlan& operator=(const InsertPlan&) = delete;
 
-        InsertPlan(InsertPlan&& other) noexcept = default;
-        InsertPlan& operator=(InsertPlan&& other) noexcept = default;
+        InsertPlan(InsertPlan&&) noexcept = default;
+        InsertPlan& operator=(InsertPlan&&) noexcept = default;
     };
 }

@@ -25,15 +25,17 @@ namespace QueryPipeline::PhysicalPlan {
           columns(context.GetAllocator()),
           selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
 
-    ExecutionResult::ExecutionResult(const Errors::RuntimeError &code, const DataTypes::String& message)
-        : status(code, message), selectionVector(nullptr),
-          canFetchMore(false) {}
+    ExecutionResult::ExecutionResult(
+        const Errors::RuntimeError &code,
+        const DataTypes::String& message
+    ):  status(code, message), selectionVector(nullptr),
+        canFetchMore(false) {}
 
     ExecutionResult::ExecutionResult(
         const Errors::RuntimeError& code,
         const DataTypes::StringView& message,
         const ::Memory::IAllocator* allocator
-    ) : status(code, DataTypes::String(message, allocator)),
+    ):  status(code, DataTypes::String(message, allocator)),
         selectionVector(nullptr), canFetchMore(false) {}
 
     ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
@@ -908,18 +910,24 @@ namespace QueryPipeline::PhysicalPlan {
         this->child->UpdateScanState(rid);
     }
 
-    bool PhysicalInsert::SortInsertsAscending(const Value& lhs, const Value& rhs){
-        return lhs.GetColumnIndex() < rhs.GetColumnIndex();
-    }
+    PhysicalInsert::PhysicalInsert(
+        Statements::DataSource* table,
+        PlanNode* child,
+        CoreEngine::StorageTypes::InsertPlan& insertPlan
+    ): insertPlan(std::move(insertPlan)), table(table), child(child) {}
 
-    ExecutionResult PhysicalInsert::InsertFromChild(
-        CoreEngine::StorageTypes::Table* tablePtr,
-        CoreEngine::ExecutionContext& context
-    )const{
+    ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
+        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
+        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+
         Int rowCount = 0;
         const auto* allocator = context.GetAllocator();
         while (true){
+            auto allocationStep = allocator->RecordAllocationStart();
             auto result = this->child->Execute(context);
+
+            if (!result.IsOk())
+                return result;
 
             if (result.dataChunk._numberOfRows > 0){
                 result.status = tablePtr->ChunkInsert(context, &result.dataChunk, this->insertPlan);
@@ -929,7 +937,7 @@ namespace QueryPipeline::PhysicalPlan {
             }
 
             rowCount += result.dataChunk._numberOfRows;
-            allocator->Reset();
+            allocator->ReleaseFromAllocationStep(allocationStep);
 
             if (!result.canFetchMore)
                 break;
@@ -941,39 +949,50 @@ namespace QueryPipeline::PhysicalPlan {
         );
     }
 
-    ExecutionResult PhysicalInsert::InsertFromValues(
-        CoreEngine::StorageTypes::Table* tablePtr,
-        const CoreEngine::ExecutionContext& context
-    ) const{
-        auto result = ExecutionResult(context);
+    PhysicalValues::PhysicalValues(
+        DataStructures::PolymorphicArray<Statements::Inserts>& values,
+        DataStructures::PolymorphicArray<DataType> valueTypes
+    ):  _values(std::move(values)),
+        _valueTypes(std::move(valueTypes)) {}
 
-        for (Int i = 0;i < this->fields.Size(); i++){
-            result.status = tablePtr->InsertRow(context, this->fields[i].values, this->insertPlan);
-            if (!result.status.IsOk())
-                return result;
+    ExecutionResult PhysicalValues::Execute(CoreEngine::ExecutionContext& context){
+        ExecutionResult result(context);
+
+        const auto* allocator = context.GetAllocator();
+
+        const auto rowCount = this->_values.Size();
+        const auto columnCount = this->_valueTypes.Size();
+
+        result.dataChunk.AllocateColumns(
+            allocator,
+            rowCount,
+            columnCount
+        );
+
+        const Expressions::EvaluationContext evaluationContext(
+            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+            &context
+        );
+
+        for (Int i = 0;i < columnCount; i++){
+            auto* __restrict__ vector = CoreEngine::DataVector::FlatVector(allocator, this->_valueTypes[i], rowCount);
+
+            for (Int j = 0;j < rowCount; j++){
+                const auto* __restrict__ expression = this->_values[j].values[i];
+                assert(
+                    this->_valueTypes[i] == Expressions::GetExpressionReturnType(expression)
+                    && "PhysicalValues::Execute: Mismatched expression and column dataTypes"
+                );
+
+                bool isNull = false;
+                Expressions::EvaluateExpression(expression, evaluationContext, vector->SlotAt(j), &isNull);
+                vector->SetNullValue(j, isNull);
+            }
+
+            result.dataChunk.SetColumn(vector, i);
         }
 
-        result.status = Errors::RuntimeStatus(
-            Errors::RuntimeError::Ok,
-            Messages::INSERT_ROWS_FROM_FIELDS(this->fields.Size(), context.GetAllocator())
-        );
         return result;
-    }
-
-    PhysicalInsert::PhysicalInsert(
-        Statements::DataSource* table,
-        DataStructures::PolymorphicArray<Statements::Inserts> &fields,
-        PlanNode* child,
-        CoreEngine::StorageTypes::InsertPlan& insertPlan
-    ): insertPlan(std::move(insertPlan)), fields(std::move(fields)), table(table), child(child) {}
-
-    ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
-        const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
-
-        return (this->child != nullptr)
-                   ? this->InsertFromChild(tablePtr, context)
-                   : this->InsertFromValues(tablePtr, context);
     }
 
     PhysicalHeapUpdate::PhysicalHeapUpdate(

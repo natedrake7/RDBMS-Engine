@@ -38,7 +38,10 @@ namespace CoreEngine{
 
         explicit DataVector(DataType type);
 
-        [[nodiscard]] object_t* SlotAt(UnsignedInt index) const;
+        [[nodiscard]] inline object_t* SlotAt(const UnsignedInt index) const{
+            return this->_data + this->_dataEntrySize * index;
+        }
+
         void SetNullValue(UnsignedInt index, bool value) const;
 
         [[nodiscard]] UnsignedInt PhysicalIndex(UnsignedInt logicalIndex) const;

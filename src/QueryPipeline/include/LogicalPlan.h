@@ -5,6 +5,12 @@ namespace QueryPipeline {
     struct JoinAlgorithmAnalysisResult;
 
     class LogicalPlan {
+    protected:
+        [[nodiscard]] static const CoreEngine::OutputSchema* BuildSchema(
+            QueryContext& context,
+            const DataStructures::PolymorphicArray<Expressions::Expression*>& array,
+            const CoreEngine::OutputSchema* childSchema
+        );
     public:
         session_id_t sessionId;
         Int databaseId;
@@ -25,7 +31,7 @@ namespace QueryPipeline {
             LogicalPlan* child,
             UnsignedSmallInt slotIndex
         );
-        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
+        [[nodiscard]] [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
     class LogicalDeclareVariable final : public LogicalPlan {
@@ -34,7 +40,7 @@ namespace QueryPipeline {
         Expressions::Expression* expression;
 
         LogicalDeclareVariable(session_id_t sessionId, Variable& variable, Expressions::Expression* expression);
-        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
     class LogicalCreateUser final : public LogicalPlan {
@@ -49,7 +55,7 @@ namespace QueryPipeline {
             DataTypes::String& password,
             DataTypes::String& role
         );
-        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
     class LogicalGrantRole final: public LogicalPlan {
@@ -59,14 +65,14 @@ namespace QueryPipeline {
 
         explicit LogicalGrantRole(session_id_t sessionId, DataTypes::String & username, DataTypes::String & role);
         ~LogicalGrantRole()override = default;
-        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
     class LogicalCreateDatabase final : public LogicalPlan {
     public:
         DataTypes::String dbName;
         explicit LogicalCreateDatabase(session_id_t sessionId, DataTypes::String& dbName);
-        PhysicalPlan::PhysicalCreateDatabase* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalUseDatabase final : public LogicalPlan {
@@ -75,7 +81,7 @@ namespace QueryPipeline {
         session_id_t sessionId;
 
         explicit LogicalUseDatabase(session_id_t sessionId, Int databaseId);
-        PhysicalPlan::PhysicalUseDatabase* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalProject final: public LogicalPlan {
@@ -89,7 +95,7 @@ namespace QueryPipeline {
             DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
             UnsignedSmallInt slotCount
         );
-        PhysicalPlan::PhysicalProject* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalTableScan final : public LogicalPlan {
@@ -107,7 +113,7 @@ namespace QueryPipeline {
             Statements::DataSource* table,
             Expressions::Expression* expression
         );
-        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
 
   class LogicalJoin final : public LogicalPlan {
@@ -153,7 +159,7 @@ namespace QueryPipeline {
         Int rightTableId
     );
 
-    PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
+    [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
     class LogicalFilter final : public LogicalPlan {
@@ -175,7 +181,7 @@ namespace QueryPipeline {
             LogicalPlan* child,
             DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions
         );
-        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
   };
 
   class LogicalTop final : public LogicalPlan {
@@ -198,35 +204,45 @@ namespace QueryPipeline {
     class LogicalInsert final : public LogicalPlan {
     public:
         CoreEngine::StorageTypes::InsertPlan insertPlan;
-        DataStructures::PolymorphicArray<Statements::Inserts> fields;
-
         Statements::DataSource* table;
         LogicalPlan* child;
 
         explicit LogicalInsert(
             Statements::DataSource* table,
-            DataStructures::PolymorphicArray<Statements::Inserts>& fields,
             LogicalPlan* child,
             CoreEngine::StorageTypes::InsertPlan& insertPlan
         );
-        PhysicalPlan::PhysicalInsert* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
-  class LogicalSchemaCreate final : public LogicalPlan {
+    class LogicalValues final : public LogicalPlan{
     public:
-      DataTypes::String schemaName;
-      Int databaseId;
-      explicit LogicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
-      PhysicalPlan::PhysicalSchemaCreate* ToPhysical(QueryContext& context)override;
-  };
+        DataStructures::PolymorphicArray<Statements::Inserts> _values;
+        DataStructures::PolymorphicArray<DataType> _valueTypes;
 
-  class LogicalDelete final : public LogicalPlan {
-  public:
-    Statements::DataSource* table;
-    Expressions::Expression* expression;
-    explicit LogicalDelete(Statements::DataSource* table, Expressions::Expression* expression);
-    PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
-  };
+        explicit LogicalValues(
+            DataStructures::PolymorphicArray<Statements::Inserts>& values,
+            DataStructures::PolymorphicArray<DataType>& valueTypes
+        );
+
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
+    };
+
+    class LogicalSchemaCreate final : public LogicalPlan {
+    public:
+        DataTypes::String schemaName;
+        Int databaseId;
+        explicit LogicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
+        PhysicalPlan::PhysicalSchemaCreate* ToPhysical(QueryContext& context)override;
+    };
+
+    class LogicalDelete final : public LogicalPlan {
+    public:
+        Statements::DataSource* table;
+        Expressions::Expression* expression;
+        explicit LogicalDelete(Statements::DataSource* table, Expressions::Expression* expression);
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
+    };
 
     class LogicalUpdate final : public LogicalPlan {
     public:
@@ -239,7 +255,7 @@ namespace QueryPipeline {
           DataStructures::PolymorphicArray<Expressions::Expression*>& updates,
           Expressions::Expression* expression
         );
-        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
+        [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
     class LogicalTableCreate final : public LogicalPlan {
@@ -259,61 +275,61 @@ namespace QueryPipeline {
         PhysicalPlan::PhysicalTableCreate* ToPhysical(QueryContext& context)override;
     };
 
-  class LogicalIndexCreate final : public LogicalPlan {
+    class LogicalIndexCreate final : public LogicalPlan {
     public:
-    Statements::DataSource* table;
-    DataTypes::String constraintName;
-    DataStructures::PolymorphicArray<column_index_t> columns;
-    explicit LogicalIndexCreate(
-      session_id_t sessionId,
-      Statements::DataSource* table,
-      DataTypes::String& constraintName,
-      DataStructures::PolymorphicArray<column_index_t>& columns
-    );
-    PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
-  };
+        Statements::DataSource* table;
+        DataTypes::String constraintName;
+        DataStructures::PolymorphicArray<column_index_t> columns;
+        explicit LogicalIndexCreate(
+            session_id_t sessionId,
+            Statements::DataSource* table,
+            DataTypes::String& constraintName,
+            DataStructures::PolymorphicArray<column_index_t>& columns
+        );
+        PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
+    };
 
-  class LogicalAlterTable final : public LogicalPlan {
+    class LogicalAlterTable final : public LogicalPlan {
     public:
-      Statements::DataSource* table;
-      Constants::AlterTableType type;
+        Statements::DataSource* table;
+        Constants::AlterTableType type;
 
-      union {
-        Statements::NewColumn* addColumn;
-        Statements::AlterColumn* alterColumn;
-        Statements::RenameColumn* renameColumn;
-        Statements::DropColumn* dropColumn;
-      } column;
+        union {
+            Statements::NewColumn* addColumn;
+            Statements::AlterColumn* alterColumn;
+            Statements::RenameColumn* renameColumn;
+            Statements::DropColumn* dropColumn;
+        } column;
 
-      explicit LogicalAlterTable(
-        session_id_t sessionId,
-        Statements::DataSource* table,
-        const Constants::AlterTableType& type,
-        Statements::NewColumn* column
-      );
+        explicit LogicalAlterTable(
+            session_id_t sessionId,
+            Statements::DataSource* table,
+            const Constants::AlterTableType& type,
+            Statements::NewColumn* column
+        );
 
-      explicit LogicalAlterTable(
-        session_id_t sessionId,
-        Statements::DataSource* table,
-        const Constants::AlterTableType& type,
-        Statements::AlterColumn* column
-      );
+        explicit LogicalAlterTable(
+            session_id_t sessionId,
+            Statements::DataSource* table,
+            const Constants::AlterTableType& type,
+            Statements::AlterColumn* column
+        );
 
-      explicit LogicalAlterTable(
-        session_id_t sessionId,
-        Statements::DataSource* table,
-        const Constants::AlterTableType& type,
-        Statements::RenameColumn* column
-      );
+        explicit LogicalAlterTable(
+            session_id_t sessionId,
+            Statements::DataSource* table,
+            const Constants::AlterTableType& type,
+            Statements::RenameColumn* column
+        );
 
-      explicit LogicalAlterTable(
-        session_id_t sessionId,
-        Statements::DataSource* table,
-        const Constants::AlterTableType& type,
-        Statements::DropColumn* column
-      );
+        explicit LogicalAlterTable(
+            session_id_t sessionId,
+            Statements::DataSource* table,
+            const Constants::AlterTableType& type,
+            Statements::DropColumn* column
+        );
 
-      PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
-  };
+        PhysicalPlan::PlanNode * ToPhysical(QueryContext& context) override;
+    };
 }
 

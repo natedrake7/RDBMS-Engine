@@ -30,6 +30,14 @@ namespace Memory {
 
             virtual AllocationStep RecordAllocationStart() const = 0;
             virtual void ReleaseFromAllocationStep(AllocationStep& step) const = 0;
+
+            template<typename Function>
+            void ScopedExecution(Function&& func) const{
+                auto allocationStep = RecordAllocationStart();
+                func();
+                ReleaseFromAllocationStep(allocationStep);
+            }
+
     };
 
     template <typename Entity, typename... Args>

@@ -140,14 +140,6 @@ namespace CoreEngine::StorageTypes{
                 RowSerializationContext& rowContext,
                 const DataStructures::PolymorphicArray<Value>& values
             ) const;
-
-            SerializedRow SerializeRow(
-                Errors::RuntimeStatus& status,
-                RowSerializationContext& rowContext,
-                const DataStructures::PolymorphicArray<Expressions::Expression*>& expressions,
-                const InsertPlan& insertPlan,
-                const Expressions::EvaluationContext& evaluationContext
-            ) const;
         /**
         * @name Class Constructors and Destructors
         * Functions to create and destroy Table objects.
@@ -179,11 +171,6 @@ namespace CoreEngine::StorageTypes{
             Errors::RuntimeStatus SystemInsertRow(
                 const ExecutionContext& executionContext,
                 const DataStructures::PolymorphicArray<Value> &inputData
-            );
-            Errors::RuntimeStatus InsertRow(
-                const ExecutionContext& executionContext,
-                const DataStructures::PolymorphicArray<Expressions::Expression*> &inputData,
-                const InsertPlan& insertPlan
             );
             Errors::RuntimeStatus InsertRowPayload(
                 const ExecutionContext& executionContext,

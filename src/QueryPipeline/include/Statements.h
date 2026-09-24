@@ -363,6 +363,7 @@ namespace QueryPipeline::Statements {
     struct InsertStatement final: Statement {
         DataStructures::PolymorphicArray<ColumnName> columns;
         DataStructures::PolymorphicArray<Inserts> values;
+        DataStructures::PolymorphicArray<DataType> valueTypes;
 
         CoreEngine::StorageTypes::InsertPlan insertPlan;
 

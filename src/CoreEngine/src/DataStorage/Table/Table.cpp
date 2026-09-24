@@ -323,49 +323,6 @@ namespace CoreEngine::StorageTypes {
         return status;
     }
 
-    Errors::RuntimeStatus Table::InsertRow(
-        const ExecutionContext& executionContext,
-        const DataStructures::PolymorphicArray<Expressions::Expression*>& inputData,
-        const InsertPlan& insertPlan
-    ){
-        Logging::CheckPoint checkPoint;
-        Errors::RuntimeStatus status;
-
-        const Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            &executionContext
-        );
-
-        const auto* allocator = executionContext.GetAllocator();
-        const auto transactionId = executionContext.GetCurrentTransactionId();
-
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
-        rowContext._header._createdTransactionId = transactionId;
-
-        auto payload = this->SerializeRow(
-            status,
-            rowContext,
-            inputData,
-            insertPlan,
-            evaluationContext
-        );
-
-        checkPoint.transactionId = transactionId;
-        Database::LogCheckPoint(checkPoint);
-
-        if (!status.IsOk())
-            return status;
-
-        auto extentReservation = this->LazyReservation(allocator);
-        status = this->InsertRowPayload(executionContext, extentReservation, payload);
-
-        if (!status.IsOk())
-            return status;
-
-        status.message = Messages::NUMBER_OF_ROWS_AFFECTED(allocator, 1);
-        return status;
-    }
-
     Errors::RuntimeStatus Table::InsertRowPayload(
         const ExecutionContext& executionContext,
         ExtentReservation& extentReservation,

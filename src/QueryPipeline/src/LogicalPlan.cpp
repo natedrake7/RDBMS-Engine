@@ -15,6 +15,42 @@
 
 
 namespace QueryPipeline {
+    const CoreEngine::OutputSchema* LogicalPlan::BuildSchema(
+        QueryContext& context,
+        const DataStructures::PolymorphicArray<Expressions::Expression*>& array,
+        const CoreEngine::OutputSchema* childSchema
+    ){
+        const auto* allocator = context._compileContext.GetAllocator();
+
+        auto* outputSchema = allocator->Allocate<CoreEngine::OutputSchema>(allocator, array.Size());
+
+        for (auto* expression : array){
+            Expressions::BindAndResolveExpressionKernel(expression, childSchema);
+
+            if (expression->IsColumn()){
+                const auto* columnExpression = expression->AsColumn();
+                outputSchema->_columns.Push(
+                CoreEngine::SchemaColumn::Base(
+                        columnExpression->_slotIndex,
+                        columnExpression->ordinalPosition,
+                        columnExpression->returnType
+                    )
+                );
+
+                continue;
+            }
+
+            outputSchema->_columns.Push(
+            CoreEngine::SchemaColumn::Computed(
+                    context.NextVirtualId(),
+                    Expressions::GetExpressionReturnType(expression)
+                )
+            );
+        }
+
+        return outputSchema;
+    }
+
     LogicalPlan::LogicalPlan(const session_id_t sessionId, const Int databaseId)
         : sessionId(sessionId), databaseId(databaseId) {}
 
@@ -84,14 +120,14 @@ namespace QueryPipeline {
     LogicalCreateDatabase::LogicalCreateDatabase(const session_id_t sessionId, DataTypes::String& dbName)
         : LogicalPlan(sessionId), dbName(std::move(dbName)) {}
 
-    PhysicalPlan::PhysicalCreateDatabase* LogicalCreateDatabase::ToPhysical(QueryContext& context){
+    PhysicalPlan::PlanNode* LogicalCreateDatabase::ToPhysical(QueryContext& context){
         return context._compileContext.Allocate<PhysicalPlan::PhysicalCreateDatabase>(this->sessionId, this->dbName);
     }
 
     LogicalUseDatabase::LogicalUseDatabase(const session_id_t sessionId, const Int databaseId)
         : databaseId(databaseId), sessionId(sessionId) {}
 
-    PhysicalPlan::PhysicalUseDatabase* LogicalUseDatabase::ToPhysical(QueryContext& context){
+    PhysicalPlan::PlanNode* LogicalUseDatabase::ToPhysical(QueryContext& context){
         return context._compileContext.Allocate<PhysicalPlan::PhysicalUseDatabase>(this->sessionId, this->databaseId);
     }
 
@@ -102,7 +138,7 @@ namespace QueryPipeline {
     ):   child(child), _projections(std::move(projections)),
         _slotCount(slotCount) {}
 
-    PhysicalPlan::PhysicalProject* LogicalProject::ToPhysical(QueryContext& context){
+    PhysicalPlan::PlanNode* LogicalProject::ToPhysical(QueryContext& context){
         auto* childPhysical = this->child != nullptr
             ? this->child->ToPhysical(context)
             : nullptr;
@@ -111,34 +147,7 @@ namespace QueryPipeline {
             ? childPhysical->GetSchema()
             : nullptr;
 
-        auto* outputSchema = context._compileContext.GetAllocator()->Allocate<CoreEngine::OutputSchema>(
-            context._compileContext.GetAllocator(),
-            this->_projections.Size()
-        );
-
-        for (auto* expression : this->_projections){
-            Expressions::BindAndResolveExpressionKernel(expression, childSchema);
-
-            if (expression->IsColumn()){
-                const auto* columnExpression = expression->AsColumn();
-                outputSchema->_columns.Push(
-                CoreEngine::SchemaColumn::Base(
-                        columnExpression->_slotIndex,
-                        columnExpression->ordinalPosition,
-                        columnExpression->returnType
-                    )
-                );
-
-                continue;
-            }
-
-            outputSchema->_columns.Push(
-            CoreEngine::SchemaColumn::Computed(
-                    context.NextVirtualId(),
-                    Expressions::GetExpressionReturnType(expression)
-                )
-            );
-        }
+        auto* outputSchema = LogicalPlan::BuildSchema(context, this->_projections, childSchema);
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalProject>(
             childPhysical,
@@ -498,22 +507,34 @@ namespace QueryPipeline {
 
     LogicalInsert::LogicalInsert(
         Statements::DataSource* table,
-        DataStructures::PolymorphicArray<Statements::Inserts> &fields,
         LogicalPlan* child,
         CoreEngine::StorageTypes::InsertPlan& insertPlan
-    ) : table(table), fields(std::move(fields)), child(child), insertPlan(std::move(insertPlan)) {}
+    ):  insertPlan(std::move(insertPlan)),
+        table(table),
+        child(child) {}
 
-    PhysicalPlan::PhysicalInsert* LogicalInsert::ToPhysical(QueryContext& context){
-        auto* physicalSelect = this->child != nullptr
-            ? this->child->ToPhysical(context)
-            : nullptr;
+    PhysicalPlan::PlanNode* LogicalInsert::ToPhysical(QueryContext& context){
+        auto* childPhysical = this->child->ToPhysical(context);
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(
+            this->table,
+            childPhysical,
+            this->insertPlan
+        );
+    }
 
-        for (auto& [values] : this->fields){
-            for (const auto& expression : values)
+    LogicalValues::LogicalValues(
+        DataStructures::PolymorphicArray<Statements::Inserts>& values,
+        DataStructures::PolymorphicArray<DataType>& valueTypes
+    ):  _values(std::move(values)),
+        _valueTypes(std::move(valueTypes)){}
+
+    PhysicalPlan::PlanNode* LogicalValues::ToPhysical(QueryContext& context){
+        for (auto& [values] : this->_values){
+            for (auto* expression : values)
                 Expressions::BindExpressionRowKernel(expression);
         }
 
-        return context._compileContext.Allocate<PhysicalPlan::PhysicalInsert>(this->table, this->fields, physicalSelect, this->insertPlan);
+        return context._compileContext.Allocate<PhysicalPlan::PhysicalValues>(this->_values, this->_valueTypes);
     }
 
     LogicalSchemaCreate::LogicalSchemaCreate(const session_id_t sessionId, const Int databaseId, DataTypes::String& schemaName)
