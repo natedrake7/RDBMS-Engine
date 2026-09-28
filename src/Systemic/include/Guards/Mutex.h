@@ -6,7 +6,7 @@
 #include <thread>
 
 #if defined(__x86_64__) || defined(_M_X64)
-#include <immintrin.h>
+    #include <immintrin.h>
 #endif
 
 namespace MultiThreading {
@@ -15,11 +15,9 @@ namespace MultiThreading {
         //  0  -> unlocked
         // >0  -> reader count
         // -1  -> writer active
-        std::mutex waitMutex;
-        std::condition_variable readersCV;
-        std::condition_variable writersCV;
-
         std::atomic<int> state;
+
+        std::atomic<int> epoch;
 
         std::atomic<int> waitingReaders;
         std::atomic<int> waitingWriters;
@@ -41,9 +39,16 @@ namespace MultiThreading {
         bool TryUniqueFast();
         bool TryPromoteLock();
 
+        void WakeWaiters();
+
     public:
         Mutex();
-        ~Mutex() = default;
+
+        Mutex(const Mutex&&) = delete;
+        Mutex& operator=(const Mutex&&) = delete;
+
+        Mutex(const Mutex&) = delete;
+        Mutex& operator=(const Mutex&) = delete;
 
         void SharedLock();
         void SharedUnlock();
