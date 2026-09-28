@@ -59,7 +59,7 @@ namespace CoreEngine::RowKernels{
         else if constexpr (DataTypes::IsJson<T>)
             *static_cast<T*>(outVal) = std::move(DataTypes::JsonBinary(context._allocator, value.Data(), value.Size()));
         else if constexpr (DataTypes::IsDecimal<T>)
-            *static_cast<T*>(outVal) = std::move(DataTypes::Decimal(value.Data(), value.Size()));
+            *static_cast<T*>(outVal) = std::move(value.AsDecimal());
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
     }

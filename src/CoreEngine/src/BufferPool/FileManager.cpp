@@ -55,7 +55,7 @@ namespace Storage{
             ::close(file._fd);
     }
 
-    void FileManager::CreateFile(
+    void FileManager::CreateFile_(
         const FileKey key,
         const DataTypes::StringView& filename,
         const DataTypes::StringView& extension

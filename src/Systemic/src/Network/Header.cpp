@@ -1,4 +1,9 @@
 ﻿#include "../../include/Network/Header.h"
+#include "../../Systemic/include/Macros.h"
+
+#if IS_GCC
+    #include <cstring>
+#endif
 
 namespace Network{
     Header::Header()

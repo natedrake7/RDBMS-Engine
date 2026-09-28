@@ -683,15 +683,16 @@ namespace CoreEngine {
     bool SystemCatalog::Initialize(
             const ExecutionContext& baseContext,
             const DataTypes::StringView& configPath
-    ) {
-        const auto [sysDbName, sysDbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
+    ){
+        const auto* allocator = baseContext.GetAllocator();
+        const auto [sysDbName, sysDbPath] = this->ReadConfiguration(allocator, configPath);
 
         if (SystemCatalog::CatalogExists(DataTypes::StringView::ViewOf(sysDbName))){
-            this->UseCatalogDatabase(baseContext.GetAllocator(), sysDbName);
+            this->UseCatalogDatabase(allocator, sysDbName);
             return false;
         }
 
-        this->CreateCatalogDatabase(baseContext.GetAllocator(), sysDbName);
+        this->CreateCatalogDatabase(allocator, sysDbName);
         this->StoreSystemTablesToCatalog(baseContext, DataTypes::StringView::ViewOf(sysDbName), DataTypes::StringView::ViewOf(sysDbPath));
 
         return true;

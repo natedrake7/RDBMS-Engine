@@ -446,7 +446,6 @@ namespace DataTypes {
             return Decimal(value.Data<BigInt>());
         case DataType::Decimal:
             return value.Data<Decimal>();
-            return Decimal(value.Data(), value.Size());
         case DataType::String:
             return Decimal(value.AsStringView());
         case DataType::Bool:

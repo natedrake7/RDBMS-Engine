@@ -22,6 +22,12 @@
 #include "Logger/WriteAheadLogger.h"
 #include "Memory/PersistentAllocator.h"
 
+#include "../../Systemic/include/Macros.h"
+
+#ifdef IS_GCC
+    #include <cmath>
+#endif
+
 namespace CoreEngine::StorageTypes {
     TableHeader::TableHeader()
         :   _allocationPageId(INVALID_PAGE_ID), _clusteredIndexPageId(INVALID_PAGE_ID){}
@@ -236,7 +242,11 @@ namespace CoreEngine::StorageTypes {
 
         //TODO add identity source.
         const auto identitySourceFunc = [&](const column_index_t slotIndex, const DataType type){
+            auto* column = this->_columns[slotIndex];
+            assert(column->OrdinalPosition() == slotIndex && "Table::PrepareChunkSources: Invalid slot index");
 
+            // const auto* vector = column->CreateVector(allocator, type);
+            // state._vectors[slotIndex] = vector;
         };
 
         const auto prepareChunk = [&](const Int index, const InsertColumPlan& columnPlan){
@@ -251,6 +261,7 @@ namespace CoreEngine::StorageTypes {
                 nullSourceFunc(index, columnPlan._type);
                 break;
             case InsertColumnSource::Identity:
+                identitySourceFunc(index, columnPlan._type);
                 break;
             case InsertColumnSource::Computed:
             default:

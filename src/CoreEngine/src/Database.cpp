@@ -16,6 +16,11 @@
 #include "Managers/GlobalMemoryManager.h"
 #include "Memory/Allocator.h"
 #include "Memory/PersistentAllocator.h"
+#include "../../Systemic/include/Macros.h"
+
+#if IS_GCC
+    #include <cmath>
+#endif
 
 namespace CoreEngine{
     void Database::WriteHeaderToFile() const{
@@ -623,13 +628,13 @@ namespace CoreEngine{
         const auto path = dbName.ConcatInPlace("/", dbName);
         const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
 
-        storageManager.CreateFile(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);
+        storageManager.CreateFile_(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);
 
 
         const auto sysDbName = DataTypes::String::Concat(path.GetAllocator(), path, Constants::SYS_EXTENSION);
         const auto sysKey = Storage::FileKey::Create(databaseId, Storage::FileType::System);
 
-        storageManager.CreateFile(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
+        storageManager.CreateFile_(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
 
         static constexpr page_id_t FIRST_PFS_PAGE_ID = 1;
         static constexpr page_id_t FIRST_GAM_PAGE_ID = 2;
@@ -641,4 +646,3 @@ namespace CoreEngine{
         headerPage.SetDatabaseHeader(DatabaseHeader(0, FIRST_PFS_PAGE_ID, FIRST_GAM_PAGE_ID));
     }
 }
-

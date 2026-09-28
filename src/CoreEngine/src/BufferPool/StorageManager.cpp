@@ -178,12 +178,12 @@ StorageManager::~StorageManager(){
     }
 }
 
-void StorageManager::CreateFile(
+void StorageManager::CreateFile_(
     const FileKey key,
     const DataTypes::StringView& filename,
     const DataTypes::StringView& extension
 ){
-    this->fileManager.CreateFile(key, filename, extension);
+    this->fileManager.CreateFile_(key, filename, extension);
 }
 
 void StorageManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){

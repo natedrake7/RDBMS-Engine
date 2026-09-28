@@ -4,21 +4,26 @@
 #include "DataTypes.h"
 #include "../Memory/IAllocator.h"
 #include "../Comparators.h"
+#include "../../Systemic/include/Macros.h"
+
+#if IS_GCC
+    #include <cstring>
+#endif
 
 namespace DataTypes{
     class StringValue{
-        static constexpr Int PREFIX_SIZE = 4;
-        static constexpr Int INLINE_SIZE = 12;
+        static constexpr UnsignedInt PREFIX_SIZE = 4;
+        static constexpr UnsignedInt INLINE_SIZE = 12;
 
         union{
             struct{
-                Int _size;
+                UnsignedInt _size;
                 char _prefix[PREFIX_SIZE];
                 const char* _data;
             } _external;
 
             struct{
-                Int _size;
+                UnsignedInt _size;
                 char _data[INLINE_SIZE];
             } _inlineVal;
         } _value;

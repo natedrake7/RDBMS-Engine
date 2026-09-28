@@ -1,5 +1,6 @@
 ﻿#include "BufferPool/BufferPoolMemoryManager.h"
 #include <cstring>
+#include <memory>
 
 #include "Managers/GlobalMemoryManager.h"
 #include "Pages/Additional/Frame.h"
@@ -14,6 +15,9 @@ namespace CoreEngine{
     }
 
     BufferPoolMemoryManager::~BufferPoolMemoryManager(){
+        // Frames are intentionally not destroyed: this singleton only dies at process exit, and
+        // destroying ~500k winpthreads mutexes/condvars is one CloseHandle round-trip each
+        // (~0.25 s normally, ~50 s with a debugger attached). The OS reclaims the handles.
 #ifdef _WIN32
         _aligned_free(this->_data);
         _aligned_free(this->_framesData);
@@ -54,6 +58,9 @@ namespace CoreEngine{
 #else
         this->_framesData = static_cast<Pages::Frame*>(std::aligned_alloc(alignof(Pages::Frame), this->_capacity * sizeof(Pages::Frame)));
 #endif
+        // Raw memory is not a Frame: the latch (std::mutex + condition_variables) must be constructed.
+        // libstdc++/winpthreads mutexes are invalid when zero-filled (PTHREAD_MUTEX_INITIALIZER is -1).
+        std::uninitialized_default_construct_n(this->_framesData, this->_capacity);
     }
 
     void BufferPoolMemoryManager::AllocateFreeStack(){

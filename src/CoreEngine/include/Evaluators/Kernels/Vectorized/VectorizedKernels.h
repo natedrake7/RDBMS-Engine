@@ -43,7 +43,7 @@ namespace CoreEngine::VectorizedKernels{
         else if constexpr (DataTypes::IsJson<T>)
             *outData = DataTypes::JsonBinary(allocator, value.Data(), value.Size());
         else if constexpr (DataTypes::IsDecimal<T>)
-            *outData = DataTypes::Decimal(value.Data(), value.Size());
+            *outData = value.AsDecimal();
         else
             static_assert(DataTypes::AlwaysFalse<T>, "ConstantScanKernel: unsupported type");
 

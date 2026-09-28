@@ -18,6 +18,13 @@
 #include "SystemDatabases/VersionDatabase.h"
 #include "Vectorization/Vectorization.h"
 
+#include "../../Systemic/include/Macros.h"
+
+#if IS_GCC
+    #include <cmath>
+#endif
+
+
 namespace Indexing{
     bool BTree::ShouldSplit(const Pages::IndexPageView& node) const{
         return node.Keys() == 2 * this->degree - 1;

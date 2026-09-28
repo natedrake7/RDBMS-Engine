@@ -28,7 +28,7 @@ namespace DataTypes{
     class JsonBinary final{
         const object_t* _data;
         const ::Memory::IAllocator* _allocator;
-        Int _size;
+        UnsignedInt _size;
 
         [[nodiscard]] bool KeyEquals(
             const Serialization::JsonEntry& entry,

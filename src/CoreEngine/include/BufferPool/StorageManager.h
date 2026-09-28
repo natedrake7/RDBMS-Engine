@@ -109,7 +109,7 @@ namespace Storage {
     public:
         static StorageManager& Get();
         ~StorageManager();
-        void CreateFile(
+        void CreateFile_(
             FileKey key,
             const DataTypes::StringView& filename,
             const DataTypes::StringView& extension

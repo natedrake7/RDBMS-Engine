@@ -33,7 +33,7 @@ namespace Storage{
             explicit FileManager();
             FileManager(const FileManager& other) = delete;
             ~FileManager();
-            void CreateFile(
+            void CreateFile_(
                 FileKey key,
                 const DataTypes::StringView& filename,
                 const DataTypes::StringView& extension
