@@ -60,7 +60,10 @@ namespace DataTypes{
              * @param size The size of the string view in bytes (not including null terminator, if any).
              * The string view can contain null characters within it and is not required to be null-terminated.
         */
-        StringView(const char* data, Int size);
+       constexpr StringView(const char* data, const Int size){
+            this->_data = data;
+            this->_size = size;
+        }
 
         constexpr StringView(const StringView& other)noexcept{
             this->_data = other._data;
@@ -240,21 +243,21 @@ namespace DataTypes{
         [[nodiscard]] bool Compare(const TOther& other) const{
             const auto otherView = StringView::ViewOf(other);
             if constexpr (Type == StringComparisonType::Equals)
-                return this->Equals(*this, otherView);
+                return StringView::Equals(*this, otherView);
             else if constexpr (Type == StringComparisonType::EqualsIgnoreCase)
-                return this->EqualsIgnoreCase(*this, otherView);
+                return StringView::EqualsIgnoreCase(*this, otherView);
             else if constexpr (Type == StringComparisonType::StartsWith)
-                return this->StartsWith(*this, otherView);
+                return StringView::StartsWith(*this, otherView);
             else if constexpr (Type == StringComparisonType::StartsWithIgnoreCase)
-                return this->StartsWithIgnoreCase(*this, otherView);
+                return StringView::StartsWithIgnoreCase(*this, otherView);
             else if constexpr (Type == StringComparisonType::EndsWith)
-                return this->EndsWith(*this, otherView);
+                return StringView::EndsWith(*this, otherView);
             else if constexpr (Type == StringComparisonType::EndsWithIgnoreCase)
-                return this->EndsWithIgnoreCase(*this, otherView);
+                return StringView::EndsWithIgnoreCase(*this, otherView);
             else if constexpr (Type == StringComparisonType::Contains)
-                return this->Contains(*this, otherView);
+                return StringView::Contains(*this, otherView);
             else if constexpr (Type == StringComparisonType::ContainsIgnoreCase)
-                return this->ContainsIgnoreCase(*this, otherView);
+                return StringView::ContainsIgnoreCase(*this, otherView);
             else
                 static_assert(AlwaysFalse<TOther>, "Compare: unsupported StringComparisonType");
 
@@ -290,7 +293,7 @@ namespace DataTypes{
         }
 
         template <IsStringLike T>
-        static StringView ViewOf(const T& str){
+        static constexpr StringView ViewOf(const T& str){
             if constexpr (
                 std::is_same_v<std::decay_t<T>, StringView>
                 || std::is_same_v<std::decay_t<T>, String>

@@ -1,8 +1,9 @@
 #pragma once
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <type_traits>
+
+#include "../Reflection/Enum.h"
 
 typedef uint16_t protocol_version_t;
 
@@ -76,7 +77,6 @@ typedef uint16_t large_page_index_t;
 typedef uint32_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
-static constexpr Int DATATYPE_COUNT = 12;
 
 enum class DataType: UnsignedTinyInt {
     String = 0,
@@ -93,12 +93,14 @@ enum class DataType: UnsignedTinyInt {
     RowIdentifier = 11
 };
 
+static constexpr Int DATATYPE_COUNT = Reflection::EnumCount<DataType>;
+
 inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
     return lhs > rhs ? lhs : rhs;
 }
 
-static_assert(static_cast<UnsignedTinyInt>(DataType::RowIdentifier) == DATATYPE_COUNT - 1,
-    "DataType must be 0-based and contiguous so it can index tables of size DATATYPE_COUNT"
+static_assert(Reflection::IsContiguous<DataType>(),
+    "Datatypes are not contiguous. Consider making them contiguous for better performance"
 );
 
 enum class StringComparisonType: UnsignedTinyInt{

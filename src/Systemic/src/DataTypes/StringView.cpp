@@ -5,11 +5,6 @@
 #include "DataTypes/String.h"
 
 namespace DataTypes{
-    StringView::StringView(const char* data, const Int size){
-        this->_data = data;
-        this->_size = size;
-    }
-
     StringView::StringView(const std::string& other)
         : _data(other.data()), _size(static_cast<Int>(other.size())){}
 
@@ -29,11 +24,11 @@ namespace DataTypes{
     }
 
     StringView::operator std::string_view() const{
-        return std::string_view(this->_data, this->_size);
+        return {this->_data, this->_size};
     }
 
     StringView::operator std::span<const char>() const{
-        return std::span(this->_data, this->_size);
+        return {this->_data, this->_size};
     }
 
     StringView StringView::Substring(const Int startIndex, const Int length) const{
@@ -43,7 +38,7 @@ namespace DataTypes{
         if (length < 0 || startIndex + length > this->_size)
             throw std::out_of_range("Length out of range.");
 
-        return StringView(this->_data + startIndex, length);
+        return {this->_data + startIndex, length};
     }
 
     Int StringView::IndexOf(const char c) const{
