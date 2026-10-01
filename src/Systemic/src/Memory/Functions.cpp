@@ -16,37 +16,21 @@ namespace Memory{
     }
 
     void OSMemoryInfo::Log(std::ostream& os, const MemoryLogLevel level) const{
-        switch (level){
-            case MemoryLogLevel::Bytes:{
-                os << "Total Physical Memory: " << this->totalPhysicalBytes << " Bytes\n";
-                os << "Available Physical Memory: " << this->availablePhysicalBytes << " Bytes\n";
-                os << "Total Virtual Memory: " << this->totalVirtualBytes << " Bytes\n";
-                os << "Available Virtual Memory: " << this->availableVirtualBytes << " Bytes\n";
-                break;
-            }
-            case MemoryLogLevel::KiloBytes:{
-                os << "Total Physical Memory: " << (this->totalPhysicalBytes / BYTES_TO_KB) << " KiloBytes\n";
-                os << "Available Physical Memory: " << (this->availablePhysicalBytes / BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Virtual Memory: " << (this->totalVirtualBytes / BYTES_TO_KB) << " KiloBytes\n";
-                os << "Available Virtual Memory: " << (this->availableVirtualBytes / BYTES_TO_KB) << " KiloBytes\n";
-                break;
-            }
-            case MemoryLogLevel::MegaBytes:{
-                os << "Total Physical Memory: " << (this->totalPhysicalBytes / BYTES_TO_MB) << " MegaBytes\n";
-                os << "Available Physical Memory: " << (this->availablePhysicalBytes / BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Virtual Memory: " << (this->totalVirtualBytes / BYTES_TO_MB) << " MegaBytes\n";
-                os << "Available Virtual Memory: " << (this->availableVirtualBytes / BYTES_TO_MB) << " MegaBytes\n";
-                break;
-            }
-            case MemoryLogLevel::GigaBytes:{
-                os << "Total Physical Memory: " << (this->totalPhysicalBytes / BYTES_TO_GB) << " GigaBytes\n";
-                os << "Available Physical Memory: " << (this->availablePhysicalBytes / BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Virtual Memory: " << (this->totalVirtualBytes / BYTES_TO_GB) << " GigaBytes\n";
-                os << "Available Virtual Memory: " << (this->availableVirtualBytes / BYTES_TO_GB) << " GigaBytes\n";
-                break;
-            }
-            default: break;
-        }
+        // The enumerator names double as unit labels ("Bytes", "KiloBytes", ...)
+        // and every level is one more factor of 1024.
+        const auto unit = Reflection::EnumIdentifier(level);
+        if (unit.empty())
+            return;
+
+        const auto shift = 10 * static_cast<UnsignedInt>(level);
+        const auto print = [&](const char* label, const UnsignedBigInt bytes){
+            os << label << (bytes >> shift) << ' ' << unit << '\n';
+        };
+
+        print("Total Physical Memory: ", this->totalPhysicalBytes);
+        print("Available Physical Memory: ", this->availablePhysicalBytes);
+        print("Total Virtual Memory: ", this->totalVirtualBytes);
+        print("Available Virtual Memory: ", this->availableVirtualBytes);
     }
 
     OSMemoryInfo GetOSMemoryInfo()

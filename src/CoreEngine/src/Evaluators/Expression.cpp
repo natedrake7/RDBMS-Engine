@@ -259,7 +259,6 @@ namespace Expressions{
             columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::JsonBinary>;
             break;
         case DataType::Null:
-        case DataType::RowIdentifier:
             break;
         }
     }
@@ -401,7 +400,6 @@ namespace Expressions{
             return true;
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             return false;
@@ -423,7 +421,6 @@ namespace Expressions{
         case DataType::String:
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             return false;
@@ -445,7 +442,6 @@ namespace Expressions{
         case DataType::String:
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             return false;
@@ -467,7 +463,6 @@ namespace Expressions{
         case DataType::String:
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             return false;
@@ -489,7 +484,6 @@ namespace Expressions{
         case DataType::String:
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             return false;
@@ -676,122 +670,122 @@ namespace Expressions{
     }
 
     Value FunctionExpression::Concat(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        Value value(DataTypes::String::Null(), context._allocator, 0);
-
-        // for (const auto& argument : arguments)
-        //     value += Value(argument.AsString(), context.allocator, 0);
-
-        return value;
+        // Value value( DataTypes::StringValue::Empty(), context._allocator, 0);
+        //
+        // // for (const auto& argument : arguments)
+        // //     value += Value(argument.AsString(), context.allocator, 0);
+        //
+        // return value;
     }
 
     Value FunctionExpression::Length(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Length(field.AsStringView()));
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Length(field.AsStringView()));
     }
 
     Value FunctionExpression::TrimLeft(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::TrimLeft(field.AsStringView()), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::TrimLeft(field.AsStringView()), context._allocator, 0);
     }
 
     Value FunctionExpression::TrimRight(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::TrimRight(field.AsStringView()), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::TrimRight(field.AsStringView()), context._allocator, 0);
     }
 
     Value FunctionExpression::Trim(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Trim(field.AsStringView()), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Trim(field.AsStringView()), context._allocator, 0);
     }
 
     Value FunctionExpression::AsciiValue(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Ascii(field.AsStringView()));
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Ascii(field.AsStringView()));
     }
 
     Value FunctionExpression::Char(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Char(field.AsInt(), context._allocator), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Char(field.AsInt(), context._allocator), context._allocator, 0);
     }
 
     Value FunctionExpression::CharIndex(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& subStr = arguments[0].AsStringView();
-
-        const auto& str = arguments[1].AsStringView();
-
-        const int pos = (arguments.Size() > 2)
-                            ? arguments[2].AsInt()
-                            : 0;
-
-        return Value(DataTypes::String::CharIndex(subStr, str, pos));
+        // const auto& subStr = arguments[0].AsStringView();
+        //
+        // const auto& str = arguments[1].AsStringView();
+        //
+        // const int pos = (arguments.Size() > 2)
+        //                     ? arguments[2].AsInt()
+        //                     : 0;
+        //
+        // return Value(DataTypes::String::CharIndex(subStr, str, pos));
     }
 
     Value FunctionExpression::Lower(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Lower(field.AsStringView(), context._allocator), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Lower(field.AsStringView(), context._allocator), context._allocator, 0);
     }
 
     Value FunctionExpression::Upper(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0];
-        return Value(DataTypes::String::Upper(field.AsStringView(), context._allocator), context._allocator, 0);
+        // const auto& field = arguments[0];
+        // return Value(DataTypes::String::Upper(field.AsStringView(), context._allocator), context._allocator, 0);
     }
 
     Value FunctionExpression::Replace(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& str = arguments[0].AsStringView();
-        const auto& subStr = arguments[1].AsStringView();
-        const auto& replaceStr = arguments[2].AsStringView();
-
-        return Value(DataTypes::String::Replace(str, subStr, replaceStr, context._allocator), context._allocator, 0);
+        // const auto& str = arguments[0].AsStringView();
+        // const auto& subStr = arguments[1].AsStringView();
+        // const auto& replaceStr = arguments[2].AsStringView();
+        //
+        // return Value(DataTypes::String::Replace(str, subStr, replaceStr, context._allocator), context._allocator, 0);
     }
 
     Value FunctionExpression::Substr(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString(context._allocator);
-        const auto& startPos = arguments[1].AsInt();
-        const auto& endPos = arguments[2].AsInt();
-
-        return Value(DataTypes::String::SubString(field, startPos, endPos), context._allocator, 0);
+        // const auto& field = arguments[0].AsString(context._allocator);
+        // const auto& startPos = arguments[1].AsInt();
+        // const auto& endPos = arguments[2].AsInt();
+        //
+        // return Value(DataTypes::String::SubString(field, startPos, endPos), context._allocator, 0);
     }
 
     Value FunctionExpression::Left(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString(context._allocator);
-        const auto& startPos = arguments[1].AsInt();
-
-        return Value(DataTypes::String::Left(field, startPos), context._allocator, 0);
+        // const auto& field = arguments[0].AsString(context._allocator);
+        // const auto& startPos = arguments[1].AsInt();
+        //
+        // return Value(DataTypes::String::Left(field, startPos), context._allocator, 0);
     }
 
     Value FunctionExpression::Right(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& field = arguments[0].AsString(context._allocator);
-        const auto& startPos = arguments[1].AsInt();
-
-        return Value(DataTypes::String::Right(field, startPos), context._allocator, 0);
+        // const auto& field = arguments[0].AsString(context._allocator);
+        // const auto& startPos = arguments[1].AsInt();
+        //
+        // return Value(DataTypes::String::Right(field, startPos), context._allocator, 0);
     }
 
     Value FunctionExpression::Reverse(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto str = arguments[0].AsString(context._allocator);
-        return Value(DataTypes::String::Reverse(str, str.GetAllocator()), context._allocator, 0);
+        // const auto str = arguments[0].AsString(context._allocator);
+        // return Value(DataTypes::String::Reverse(str, str.GetAllocator()), context._allocator, 0);
     }
 
     Value FunctionExpression::Space(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        const auto& size = arguments[0].AsInt();
-
-        return Value(DataTypes::String::Space(size, context._allocator), context._allocator, 0);
+        // const auto& size = arguments[0].AsInt();
+        //
+        // return Value(DataTypes::String::Space(size, context._allocator), context._allocator, 0);
     }
 
     Value FunctionExpression::GetDate(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::DateTime::Now());
+        // return Value(DataTypes::DateTime::Now());
     }
 
     Value FunctionExpression::NewGuid(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments){
-        return Value(DataTypes::Guid::NewGuid());
+        // return Value(DataTypes::Guid::NewGuid());
     }
 
     Value FunctionExpression::NullIf(const EvaluationContext& context, const DataStructures::PolymorphicArray<Value>& arguments) {
-        auto& firstArg = arguments[0];
-        const auto& secondArg = arguments[1];
-
-        return firstArg == secondArg
-                   ? Value::Null()
-                   : firstArg;
+        // auto& firstArg = arguments[0];
+        // const auto& secondArg = arguments[1];
+        //
+        // return firstArg == secondArg
+        //            ? Value::Null()
+        //            : firstArg;
     }
 
     bool FunctionExpression::ValidateNullIf(
@@ -982,15 +976,15 @@ namespace Expressions{
         const auto jsonBinary = columnValue.AsJson(context._allocator);
         auto jsonValue = jsonBinary.Navigate(this->pathSegments);
 
-        const auto jsonType = jsonValue.Type();
-        if (jsonType == Serialization::JsonType::Array
-            || jsonType == Serialization::JsonType::Object
-        ){
-            const auto str = DataTypes::JsonBinary::JsonObjectToString(jsonValue, context._allocator);
-            return Value(str, context._allocator);
-        }
-
-        return Value(jsonValue, context._allocator);
+        // const auto jsonType = jsonValue.Type();
+        // if (jsonType == Serialization::JsonType::Array
+        //     || jsonType == Serialization::JsonType::Object
+        // ){
+        //     const auto str = DataTypes::JsonBinary::JsonObjectToString(jsonValue, context._allocator);
+        //     return Value(str, context._allocator);
+        // }
+        //
+        // return Value(jsonValue, context._allocator);
     }
 
     JsonExpression::JsonExpression(ColumnExpression* columnPtr, const Memory::IAllocator* allocator)

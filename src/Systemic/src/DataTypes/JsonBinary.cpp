@@ -69,7 +69,7 @@ namespace DataTypes{
     bool JsonBinary::KeyEquals(
         const Serialization::JsonEntry& entry,
         const StringView& key,
-        const Int headerOffSet
+        const data_size_t headerOffSet
     ) const{
         const auto* keyData = reinterpret_cast<const char*>(this->_data + headerOffSet + entry._keyOffset);
         return Comparators::CompareIgnoreOrdinalCase(keyData, key.Data(), entry._keySize) == Comparators::Comparator::Equal;
@@ -77,15 +77,15 @@ namespace DataTypes{
 
     const Serialization::JsonEntry* JsonBinary::FindEntry(
         const StringView& key,
-        const Int headerOffSet
+        const data_size_t headerOffSet
     ) const{
         const auto* header = reinterpret_cast<const Serialization::JsonHeader*>(this->_data + headerOffSet);
         const auto* entries = reinterpret_cast<const Serialization::JsonEntry*>(this->_data + headerOffSet + header->_entryTablePosition);
 
         const auto hash = std::hash<StringView>{}(key);
 
-        Int left = 0;
-        Int right = static_cast<Int>(header->_size - 1);
+        data_size_t left = 0;
+        data_size_t right = header->_size - 1;
 
         while (left <= right) {
             const Int mid = left + (right - left) / 2;
@@ -100,11 +100,15 @@ namespace DataTypes{
                 continue;
             }
 
-            auto i = mid;
+            data_size_t i = mid;
 
-            while (i >= 0 && entries[i]._keyHash == hash) {
+            while (entries[i]._keyHash == hash) {
                 if (this->KeyEquals(entries[i], key, headerOffSet))
                     return &entries[i];
+
+                if (i == 0)
+                    break;
+
                 --i;
             }
 
@@ -121,7 +125,7 @@ namespace DataTypes{
         return nullptr; // Not found
     }
 
-    void JsonBinary::SerializeNode(String& str, const Int headerOffset)const{
+    void JsonBinary::SerializeNode(String& str, const data_size_t headerOffset)const{
         auto* header = reinterpret_cast<const Serialization::JsonHeader*>(this->_data + headerOffset);
         auto* entries = reinterpret_cast<const Serialization::JsonEntry*>(this->_data + headerOffset + header->_entryTablePosition);
 
@@ -159,7 +163,7 @@ namespace DataTypes{
 
     void JsonBinary::SerializeValue(
         String& result,
-        const Int headerOffset,
+        const data_size_t headerOffset,
         const Serialization::JsonEntry& entry
     ) const{
         const auto type = static_cast<Serialization::JsonType>(entry._type);
@@ -229,19 +233,19 @@ namespace DataTypes{
         return this->_data;
     }
 
-    Int JsonBinary::Size() const{
+    data_size_t JsonBinary::Size() const{
         return this->_size;
     }
 
-    void JsonBinary::SetData(const object_t* data, const Int size){
+    void JsonBinary::SetData(const object_t* data, const data_size_t size){
         this->_data = data;
         this->_size = size;
     }
 
     Serialization::JsonValue JsonBinary::operator[](const StringView& key) const{
         auto dataType = Serialization::JsonType::Object;
-        auto delimiterIndexSearch = 0;
-        auto headerOffSet = 0;
+        data_size_t delimiterIndexSearch = 0;
+        data_size_t headerOffSet = 0;
 
         const Serialization::JsonEntry* entry = nullptr;
         while (true) {

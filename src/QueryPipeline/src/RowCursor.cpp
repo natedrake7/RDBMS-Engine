@@ -70,7 +70,6 @@ namespace QueryPipeline{
         }
         default:
         case DataType::Null:
-        case DataType::RowIdentifier:
             break;
         }
 

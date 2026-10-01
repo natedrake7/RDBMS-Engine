@@ -58,7 +58,7 @@ namespace Comparators{
         return BranchlessCompare(cmp < 0, cmp > 0);
     }
 
-    Comparator Compare(const DataTypes::String& lhs, const char* rhs, const Int size){
+    Comparator Compare(const DataTypes::String& lhs, const char* rhs, const data_size_t size){
         const auto minSize = std::min(lhs.Size(), size);
 
         const auto cmp = std::memcmp(lhs.Data(), rhs, minSize);
@@ -91,7 +91,7 @@ namespace Comparators{
     //     return Compare(lhs.Data(), rhs.Data(), lhs.Size());
     // }
 
-    Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, const Int size){
+    Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, const data_size_t size){
         const auto cmp = strncasecmp(lhs, rhs, size);
         return static_cast<Comparator>(
             (cmp > 0) - (cmp < 0)
@@ -99,7 +99,8 @@ namespace Comparators{
     }
 
     Comparator Compare(const Value& lhs, const Value& rhs){
-        switch (PromoteType(lhs.GetType(), rhs.GetType())) {
+        const auto type = PromoteType(lhs.GetType(), rhs.GetType());
+        switch (type) {
         case DataType::String:
             return Compare(lhs.AsStringView(), rhs.AsStringView());
         case DataType::Bool:
@@ -118,9 +119,8 @@ namespace Comparators{
         case DataType::Null:
             return Compare(lhs.IsNull(), rhs.IsNull());
         case DataType::Json:
-        case DataType::RowIdentifier:
         default:
-            throw std::runtime_error("RowIdentifier cannot be compared");
+            throw std::runtime_error(std::string(Reflection::EnumIdentifier(type)) + " cannot be compared");
         }
     }
 }

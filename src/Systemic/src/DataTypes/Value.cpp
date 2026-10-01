@@ -208,7 +208,7 @@ Value::Value(
 
 Value Value::FromExternalStorage(
     const object_t* data,
-    const Int size, const DataType type,
+    const data_size_t size, const DataType type,
     const Memory::IAllocator* allocator,
     const column_index_t index
 ){
@@ -217,7 +217,7 @@ Value Value::FromExternalStorage(
 
 Value Value::SessionValue(
     const object_t* data,
-    const Int size,
+    const data_size_t size,
     const DataType type,
     const column_index_t index
 ){
@@ -249,7 +249,7 @@ bool Value::IsInline() const{
     return Value::IsInline(this->_type);
 }
 
-value_size_t Value::Size() const{ return this->_size; }
+data_size_t Value::Size() const{ return this->_size; }
 
 const object_t* Value::Data() const{
     return this->IsInline()
@@ -358,17 +358,7 @@ bool Value::IsIntegral() const{
 // }
 
 bool Value::ParseAsBoolFromString() const{
-    const auto strView = this->AsStringView();
-
-    for (const auto& str: TrueStrings)
-        if (DataTypes::StringView::Compare<StringComparisonType::EqualsIgnoreCase>(str, strView))
-            return true;
-
-    for (const auto& str: FalseStrings)
-        if (DataTypes::StringView::Compare<StringComparisonType::EqualsIgnoreCase>(str, strView))
-            return false;
-
-    return false;
+    return DataTypes::ParseBool(this->AsStringView()).value_or(false);
 }
 
 
@@ -392,7 +382,6 @@ long double Value::Interpolate() const{
         return this->AsDateTime().UnixTimeStamp();
     case DataType::Guid:
         return this->AsGuid().Interpolate();
-    case DataType::RowIdentifier:
     case DataType::Null:
     default:
         throw std::runtime_error("Value::Interpolate() called with unknown type");

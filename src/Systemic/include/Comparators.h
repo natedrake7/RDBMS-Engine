@@ -38,12 +38,12 @@ namespace Comparators{
     [[nodiscard]] Comparator Compare(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs);
     [[nodiscard]] Comparator CompareIgnoreCase(const DataTypes::StringValue& lhs, const DataTypes::StringValue& rhs);
 
-    [[nodiscard]] Comparator Compare(const DataTypes::String& lhs, const char* rhs, Int size);
+    [[nodiscard]] Comparator Compare(const DataTypes::String& lhs, const char* rhs, data_size_t size);
 
     [[nodiscard]] Comparator Compare(const DataTypes::StringView& lhs, const DataTypes::StringView& rhs);
     // [[nodiscard]] Comparator Compare(const DataTypes::JsonBinary& lhs, const DataTypes::JsonBinary& rhs);
 
-    [[nodiscard]] Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, Int size);
+    [[nodiscard]] Comparator CompareIgnoreOrdinalCase(const char* lhs, const char* rhs, data_size_t size);
 
     [[nodiscard]] Comparator Compare(const Value& lhs, const Value& rhs);
 }

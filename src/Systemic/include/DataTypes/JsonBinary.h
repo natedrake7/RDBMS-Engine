@@ -28,22 +28,22 @@ namespace DataTypes{
     class JsonBinary final{
         const object_t* _data;
         const ::Memory::IAllocator* _allocator;
-        UnsignedInt _size;
+        data_size_t _size;
 
         [[nodiscard]] bool KeyEquals(
             const Serialization::JsonEntry& entry,
             const StringView& key,
-            Int headerOffSet
+            data_size_t headerOffSet
         ) const;
         [[nodiscard]] const Serialization::JsonEntry* FindEntry(
             const StringView& key,
-            Int headerOffSet
+            data_size_t headerOffSet
         ) const;
 
-        void SerializeNode(String& str, Int headerOffset)const;
+        void SerializeNode(String& str, data_size_t headerOffset)const;
         void SerializeValue(
             String& result,
-            Int headerOffset,
+            data_size_t headerOffset,
             const Serialization::JsonEntry& entry
         )const;
 
@@ -56,9 +56,9 @@ namespace DataTypes{
         JsonBinary& operator=(JsonBinary&& other) noexcept;
 
         [[nodiscard]] const object_t* Data() const;
-        [[nodiscard]] Int Size() const;
+        [[nodiscard]] data_size_t Size() const;
 
-        void SetData(const object_t* data, Int size);
+        void SetData(const object_t* data, data_size_t size);
 
         Serialization::JsonValue operator[](const StringView& key) const;
         [[nodiscard]] Serialization::JsonValue Navigate(const DataStructures::PolymorphicArray<JsonPathStep>& pathSegments) const;

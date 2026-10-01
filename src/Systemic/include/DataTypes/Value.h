@@ -33,7 +33,7 @@ class Value{
 
     Storage _data{};
 
-    value_size_t _size = 0;
+    data_size_t _size = 0;
     column_index_t _columnIndex = 0;
     DataType _type = DataType::Null;
     bool _isNull = true;
@@ -117,7 +117,7 @@ class Value{
 
         static Value FromExternalStorage(
             const object_t* data,
-            Int size,
+            data_size_t size,
             DataType type,
             const Memory::IAllocator* allocator,
             column_index_t index = 0
@@ -125,7 +125,7 @@ class Value{
 
         static Value SessionValue(
             const object_t* data,
-            Int size,
+            data_size_t size,
             DataType type,
             column_index_t index = 0
         );
@@ -175,7 +175,7 @@ class Value{
         }
 
         [[nodiscard]] bool IsInline() const;
-        [[nodiscard]] value_size_t Size() const;
+        [[nodiscard]] data_size_t Size() const;
         [[nodiscard]] const object_t* Data() const;
 
         template<DataTypes::Primitive T>

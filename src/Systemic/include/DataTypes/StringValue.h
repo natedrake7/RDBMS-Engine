@@ -12,18 +12,18 @@
 
 namespace DataTypes{
     class StringValue{
-        static constexpr UnsignedInt PREFIX_SIZE = 4;
-        static constexpr UnsignedInt INLINE_SIZE = 12;
+        static constexpr data_size_t PREFIX_SIZE = 4;
+        static constexpr data_size_t INLINE_SIZE = 12;
 
         union{
             struct{
-                UnsignedInt _size;
+                data_size_t _size;
                 char _prefix[PREFIX_SIZE];
                 const char* _data;
             } _external;
 
             struct{
-                UnsignedInt _size;
+                data_size_t _size;
                 char _data[INLINE_SIZE];
             } _inlineVal;
         } _value;
@@ -45,7 +45,7 @@ namespace DataTypes{
                 return *this;
             }
 
-            StringValue(const ::Memory::IAllocator* allocator, const char* data, const Int size){
+            StringValue(const ::Memory::IAllocator* allocator, const char* data, const data_size_t size){
                 this->_value._inlineVal._size = size;
 
                 auto* copy = static_cast<char*>(allocator->AllocateRaw(size));
@@ -55,7 +55,7 @@ namespace DataTypes{
                 std::memcpy(this->_value._external._prefix, copy, PREFIX_SIZE);
             }
 
-            StringValue(const char* data, const Int size){
+            StringValue(const char* data, const data_size_t size){
                 this->_value._inlineVal._size = size;
                 std::memcpy(this->_value._inlineVal._data, data, size);
                 std::memset(this->_value._inlineVal._data + size, 0, INLINE_SIZE - size);
@@ -63,7 +63,7 @@ namespace DataTypes{
 
             explicit StringValue(String& str);
 
-            static StringValue Create(const ::Memory::IAllocator* allocator, const char* data, const Int size){
+            static StringValue Create(const ::Memory::IAllocator* allocator, const char* data, const data_size_t size){
                 return (size <= INLINE_SIZE)
                     ? StringValue(data, size)
                     : StringValue(allocator, data, size);
@@ -77,7 +77,7 @@ namespace DataTypes{
 
             static StringValue MoveFromString(String& str);
 
-            [[nodiscard]] Int Size()const { return  this->_value._inlineVal._size;}
+            [[nodiscard]] data_size_t Size()const { return  this->_value._inlineVal._size;}
             [[nodiscard]] bool IsInline()const { return this->Size() <= INLINE_SIZE; }
             [[nodiscard]] const char* Data()const{
                 return this->IsInline()
@@ -113,8 +113,8 @@ namespace DataTypes{
                 return Comparators::Compare(lhs, rhs) <= Comparators::Comparator::Equal;
             }
 
-            [[nodiscard]] static inline constexpr Int PrefixSize() { return PREFIX_SIZE; }
-            [[nodiscard]] static inline constexpr Int InlineSize() { return INLINE_SIZE; }
+            [[nodiscard]] static inline constexpr data_size_t PrefixSize() { return PREFIX_SIZE; }
+            [[nodiscard]] static inline constexpr data_size_t InlineSize() { return INLINE_SIZE; }
 
             friend std::ostream& operator<<(std::ostream& os, const StringValue& value){
                 os.write(value.Data(), value.Size());

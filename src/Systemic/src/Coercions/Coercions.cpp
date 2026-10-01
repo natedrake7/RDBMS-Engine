@@ -9,41 +9,21 @@ namespace DataTypes {
     void Coercions::ThrowException(const DataType type, const DataType toType) {
         if (type == DataType::Null)
             throw std::invalid_argument("Invalid Field Type");
-
-        const auto& typeName = SQL_TYPES_NAMES[static_cast<Int>(type)];
-        const auto& toTypeName = SQL_TYPES_NAMES[static_cast<Int>(toType)];
         throw std::invalid_argument(
-            "Field type " + std::string(typeName.Data(), typeName.Size())
-            + " cannot be coerced to " + std::string(toTypeName.Data(), toTypeName.Size())
+            "Field type " + std::string(Reflection::EnumIdentifier(type))
+            + " cannot be coerced to " + std::string(Reflection::EnumIdentifier(toType))
         );
     }
 
     bool Coercions::ParseAsBoolFromString(const Value& value) {
-        const auto strView = value.AsStringView();
-
-        if (TrueStrings.Contains(strView))
-            return true;
-
-        if (FalseStrings.Contains(strView))
-            return false;
-
-        return false;
+        return DataTypes::ParseBool(value.AsStringView()).value_or(false);
     }
 
     bool Coercions::ParseAsBoolFromString(const Value& value, bool& outVal) {
-        const auto strView = value.AsStringView();
-
-        if (TrueStrings.Contains(strView)) {
-            outVal = true;
-            return true;
-        }
-
-        if (FalseStrings.Contains(strView)) {
-            outVal = false;
-            return true;
-        }
-
-        return false;
+        const auto parsed = ParseBool(value.AsStringView());
+        if (parsed)
+            outVal = *parsed;
+        return parsed.has_value();
     }
 
     bool Coercions::CanGetTinyInt(const Value& value) {
@@ -371,7 +351,6 @@ namespace DataTypes {
             return value.Data<DateTime>().ToString(allocator);
         case DataType::Guid:
             return value.Data<Guid>().ToString(allocator);
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             Coercions::ThrowException(valueType, DataType::String);
@@ -397,7 +376,6 @@ namespace DataTypes {
         case DataType::Bool:
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         default:
             Coercions::ThrowException(valueType, DataType::String);
         }
@@ -452,7 +430,6 @@ namespace DataTypes {
             return Decimal(value.AsBool());
         case DataType::DateTime:
         case DataType::Guid:
-        case DataType::RowIdentifier:
         case DataType::Null:
         default:
             Coercions::ThrowException(valueType, DataType::Decimal);

@@ -22,7 +22,7 @@ namespace Reflection{
                 return false;
         }
         return true;
-    };
+    }
 
     template<typename E> requires std::is_enum_v<E> && (IsContiguous<E>())
     inline constexpr auto EnumIdentifiers (){
@@ -46,5 +46,10 @@ namespace Reflection{
             }
             return {};
         }
+    }
+
+    template<typename E>
+    [[nodiscard]] inline constexpr bool HasAnnotation(const std::meta::info item){
+        return !std::meta::annotations_of_with_type(item, ^^E).empty();
     }
 }

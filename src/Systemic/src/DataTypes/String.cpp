@@ -4,10 +4,9 @@
 #include <ostream>
 
 #include "Comparators.h"
-#include "DataTypes/StringValue.h"
 
 namespace DataTypes{
-    void String::CalculateCapacity(const Int size){
+    void String::CalculateCapacity(const data_size_t size){
         if (this->_capacity == 0)
             this->_capacity = 1;
 
@@ -15,7 +14,7 @@ namespace DataTypes{
             this->_capacity *= 2;
     }
 
-    bool String::CanFit(const Int size) const{
+    bool String::CanFit(const data_size_t size) const{
         return this->_capacity >= size;
     }
 
@@ -52,7 +51,7 @@ namespace DataTypes{
     String::String(const Memory::IAllocator* allocator)
         : _allocator(allocator), _data(nullptr), _size(0), _capacity(0) {}
 
-    String::String(const Memory::IAllocator* allocator, const Int size){
+    String::String(const Memory::IAllocator* allocator, const data_size_t size){
         this->_allocator = allocator;
 
         this->_size = 0;
@@ -61,7 +60,7 @@ namespace DataTypes{
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
     }
 
-    String::String(const object_t* str, const Int size, const Memory::IAllocator* allocator){
+    String::String(const object_t* str, const data_size_t size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
 
@@ -70,14 +69,14 @@ namespace DataTypes{
         this->_capacity = size;
     }
 
-    String::String(object_t* str, const Int size, const ::Memory::IAllocator* allocator){
+    String::String(object_t* str, const data_size_t size, const ::Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = reinterpret_cast<char*>(str);
         this->_size = size;
         this->_capacity = size;
     }
 
-    String::String(const char* str, const Int size, const Memory::IAllocator* allocator){
+    String::String(const char* str, const data_size_t size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
         this->_data = static_cast<char*>(allocator->AllocateRaw(size));
 
@@ -87,7 +86,7 @@ namespace DataTypes{
         this->_capacity = size;
     }
 
-    String::String(char* str, const Int size, const Memory::IAllocator* allocator){
+    String::String(char* str, const data_size_t size, const Memory::IAllocator* allocator){
         this->_allocator = allocator;
 
         this->_data = str;
@@ -173,7 +172,7 @@ namespace DataTypes{
         return this->_allocator;
     }
 
-    void String::Reserve(const Int size){
+    void String::Reserve(const data_size_t size){
         if (this->_capacity >= size)
             return;
 
@@ -188,7 +187,7 @@ namespace DataTypes{
         this->_capacity = newCapacity;
     }
 
-    void String::Resize(const Int size){
+    void String::Resize(const data_size_t size){
         if (this->_size == size)
             return;
 
@@ -203,9 +202,9 @@ namespace DataTypes{
         return os;
     }
 
-    char String::operator[](const Int index) const{ return this->_data[index];}
+    char String::operator[](const data_size_t index) const{ return this->_data[index];}
 
-    char& String::operator[](const Int index){
+    char& String::operator[](const data_size_t index){
         return this->_data[index];
     }
 
@@ -253,7 +252,7 @@ namespace DataTypes{
         return String(str.Data(), str.Size(), allocator);
     }
 
-    void String::Insert(const Int pos, const char* data, const Int size){
+    void String::Insert(const data_size_t pos, const char* data, const data_size_t size){
         if (pos < 0 || pos > this->_size)
             throw std::out_of_range("String::Insert: Position out of range.");
 
@@ -272,15 +271,16 @@ namespace DataTypes{
         this->_data = newStr;
     }
 
-    Int String::Size() const{
+    data_size_t String::Size() const{
         return this->_size;
     }
 
-    Int String::IndexOf(const char c) const{
-        for (Int i = 0; i < this->_size; i++)
+    data_size_t String::IndexOf(const char c) const{
+        for (data_size_t i = 0; i < this->_size; i++)
             if (this->_data[i] == c)
                 return i;
-        return -1;
+
+        return INVALID_SIZE;
     }
 
     bool String::Empty() const{
@@ -289,25 +289,25 @@ namespace DataTypes{
 
     String String::ToLower() const{
         auto* buf = static_cast<char*>(this->_allocator->AllocateRaw(this->_size));
-        for (Int i = 0; i < this->_size; i++)
+        for (data_size_t i = 0; i < this->_size; i++)
             buf[i] = static_cast<char>(std::tolower(this->_data[i]));
         return String(buf, this->_size, this->_allocator);
     }
 
     String String::ToUpper() const{
         auto* buf = static_cast<char*>(this->_allocator->AllocateRaw(this->_size));
-        for (Int i = 0; i < this->_size; i++)
+        for (data_size_t i = 0; i < this->_size; i++)
             buf[i] = static_cast<char>(std::toupper(this->_data[i]));
         return String(buf, this->_size, this->_allocator);
     }
 
     void String::ToLowerInPlace() const{
-        for (Int i = 0; i < this->_size; i++)
+        for (data_size_t i = 0; i < this->_size; i++)
             this->_data[i] = static_cast<char>(std::tolower(this->_data[i]));
     }
 
     void String::ToUpperInPlace() const{
-        for (Int i = 0; i < this->_size; i++)
+        for (data_size_t i = 0; i < this->_size; i++)
             this->_data[i] = static_cast<char>(std::toupper(this->_data[i]));
     }
 
@@ -316,8 +316,8 @@ namespace DataTypes{
         const auto* data = str.Data();
 
         auto* newStr = static_cast<char*>(allocator->AllocateRaw(size));
-        for (Int i = 0; i < size; i++)
-            newStr[i] = std::tolower(data[i]);
+        for (data_size_t i = 0; i < size; i++)
+            newStr[i] = static_cast<char>(std::tolower(data[i]));
 
         return String(newStr, size, allocator);
     }
@@ -327,16 +327,16 @@ namespace DataTypes{
         const auto* data = str.Data();
 
         auto* newStr = static_cast<char*>(allocator->AllocateRaw(size));
-        for (Int i = 0; i < size; i++)
-            newStr[i] = std::tolower(data[i]);
+        for (data_size_t i = 0; i < size; i++)
+            newStr[i] = static_cast<char>(std::tolower(data[i]));
         return String(newStr, size, allocator);
     }
 
     String String::Upper(const StringView& str, const Memory::IAllocator* allocator){
         const auto size = str.Size();
         auto* newStr = static_cast<char*>(allocator->AllocateRaw(size));
-        for (Int i = 0; i < size; i++)
-            newStr[i] = std::toupper(str[i]);
+        for (data_size_t i = 0; i < size; i++)
+            newStr[i] = static_cast<char>(std::toupper(str[i]));
         return String(newStr, size, allocator);
     }
 
@@ -347,27 +347,30 @@ namespace DataTypes{
         if (size == 0)
             return StringView(data, 0);
 
-        int firstIndex = 0;
-        int lastIndex = size - 1;
+        data_size_t firstIndex = 0;
+        data_size_t lastIndex = size - 1;
 
-        for (Int i = 0; i < size; i++){
+        for (data_size_t i = 0; i < size; i++){
             if (!::isspace(data[i])){
                 firstIndex = i;
                 break;
             }
         }
 
-        for (Int i = size - 1; i >= 0; i--){
+        data_size_t i = size - 1;
+        do{
             if (!::isspace(data[i])){
                 lastIndex = i;
                 break;
             }
-        }
+
+            i--;
+        }while (i != 0);
 
         return StringView(data + firstIndex, size - lastIndex);
     }
 
-    Int String::Ascii(const StringView& str){
+    data_size_t String::Ascii(const StringView& str){
         return str.Empty() ? 0 : str[0];
     }
 
@@ -396,15 +399,19 @@ namespace DataTypes{
         if (size == 0)
             return StringView(data, 0);
 
-        int lastIndex = size - 1;
-        for(int i = size - 1; i >= 0; i--)
+        data_size_t lastIndex = size - 1;
+        data_size_t i = size - 1;
+        do{
             if(!isspace(data[i]))
             {
                 lastIndex = i;
                 break;
             }
 
-        return StringView(data, lastIndex + 1);
+            i--;
+        }while (i != 0);
+
+        return StringView(data, ++lastIndex);
     }
 
     String String::Replace(
@@ -422,11 +429,11 @@ namespace DataTypes{
             return String(strCopy, size, allocator);
         }
 
-        Int count = 0;
+        data_size_t count = 0;
         const auto subStrSize = subStr.Size();
         const auto* subStrData = subStr.Data();
 
-        for (Int i = 0; i <= size - subStrSize; ){
+        for (data_size_t i = 0; i <= size - subStrSize; ){
             if (std::memcmp(data + i, subStrData, subStrSize) == 0){
                 count += 1;
                 i += subStrSize;
@@ -444,7 +451,7 @@ namespace DataTypes{
         const auto newSize = size - subStrSize * count + newStr.Size() * count;
         auto* newStrCopy = static_cast<char*>(allocator->AllocateRaw(newSize));
 
-        Int i = 0, j = 0;
+        data_size_t i = 0, j = 0;
         const auto newStrSize = newStr.Size();
         const auto* newStrData = newStr.Data();
         while (j < size && i < newSize){
@@ -460,7 +467,7 @@ namespace DataTypes{
         return String(newStrCopy, newSize, allocator);
     }
 
-    StringView String::SubString(const StringView& str, const Int start, const Int end){
+    StringView String::SubString(const StringView& str, const data_size_t start, const data_size_t end){
         const auto size = str.Size();
 
         if (start < 0 || start >= size)
@@ -479,7 +486,7 @@ namespace DataTypes{
             return String::Empty(allocator);
 
         auto* newStr = static_cast<char*>(allocator->AllocateRaw(size));
-        for (Int i = 0; i < size / 2; i++){
+        for (data_size_t i = 0; i < size / 2; i++){
             newStr[i] = data[size - i - 1];
             newStr[size - i - 1] = data[i];
         }
@@ -488,7 +495,7 @@ namespace DataTypes{
         return String(newStr, size, allocator);
     }
 
-    StringView String::Left(const StringView& str, const Int count){
+    StringView String::Left(const StringView& str, const data_size_t count){
         const auto size = str.Size();
 
         if (size == 0)
@@ -500,7 +507,7 @@ namespace DataTypes{
         return StringView(str.Data(), count);
     }
 
-    StringView String::Right(const StringView& str, const Int count){
+    StringView String::Right(const StringView& str, const data_size_t count){
         const auto size = str.Size();
 
         if (size == 0)
@@ -512,13 +519,13 @@ namespace DataTypes{
         return StringView(str.Data() + (size - count), count);
     }
 
-    String String::Char(const Int AsciiCode, const Memory::IAllocator* allocator){
+    String String::Char(const data_size_t AsciiCode, const Memory::IAllocator* allocator){
         auto* buf = static_cast<char*>(allocator->AllocateRaw(1));
         buf[0] = static_cast<char>(AsciiCode);
         return String(buf, 1, allocator);
     }
 
-    Int String::CharIndex(const StringView& subStr, const StringView& str, const Int start){
+    data_size_t String::CharIndex(const StringView& subStr, const StringView& str, const data_size_t start){
         if(subStr.Empty()
             || str.Empty()
             || start < 0
@@ -535,7 +542,7 @@ namespace DataTypes{
 
     String String::Repeat(
         const StringView& str,
-        const Int count,
+        const data_size_t count,
         const Memory::IAllocator* allocator
     ){
         const auto size = str.Size();
@@ -546,12 +553,12 @@ namespace DataTypes{
             return String::Empty(allocator);
 
         auto* newStr = static_cast<char*>(allocator->AllocateRaw(totalSize));
-        for (Int i = 0; i < count; i++)
+        for (data_size_t i = 0; i < count; i++)
             std::memcpy(newStr + i * size, data, size);
         return String(newStr, totalSize, allocator);
     }
 
-    String String::Space(const Int count, const Memory::IAllocator* allocator){
+    String String::Space(const data_size_t count, const Memory::IAllocator* allocator){
         auto* buf = static_cast<char*>(allocator->AllocateRaw(count));
         std::memset(buf, ' ', count);
         return String(buf, count, allocator);
@@ -559,7 +566,7 @@ namespace DataTypes{
 
     StringView String::Split(
         const StringView& str,
-        const Int startIndex,
+        const data_size_t startIndex,
         const char delimiter
     ){
         const auto size = str.Size();
@@ -604,7 +611,7 @@ namespace DataTypes{
         return this->_data[this->_size - 1];
     }
 
-    void String::Insert(const Int index, const char c){
+    void String::Insert(const data_size_t index, const char c){
         if (index < 0 || index > this->_size)
             throw std::out_of_range("Index out of range.");
 

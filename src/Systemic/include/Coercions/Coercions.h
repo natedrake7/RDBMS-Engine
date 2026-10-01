@@ -21,22 +21,6 @@ namespace DataTypes{
     };
 
     class Coercions {
-    static constexpr ConstexprHashSet<StringView, 5> TrueStrings = {
-        StringView("true"),
-        StringView("1"),
-        StringView("yes"),
-        StringView("y"),
-        StringView("on")
-    };
-
-    static constexpr ConstexprHashSet<StringView, 5> FalseStrings = {
-        StringView("false"),
-        StringView("0"),
-        StringView("no"),
-        StringView("n"),
-        StringView("off")
-    };
-
     static inline void ThrowException(DataType type, DataType toType);
 
     [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
@@ -188,13 +172,7 @@ namespace DataTypes{
             return StringValue::Create(allocator, input ? TRUE_STRING : FALSE_STRING);
 
         else if constexpr (IsStringValue<TFrom> && std::is_same_v<TTo, bool>) {            // String -> Bool
-            const auto view = StringView::ViewOf(input);
-            if (TrueStrings.Contains(view))
-                return true;
-            if (FalseStrings.Contains(view))
-                return false;
-
-            return false;
+            return ParseBool(StringView::ViewOf(input)).value_or(false);
         }
 
         // --- numeric ladder ---

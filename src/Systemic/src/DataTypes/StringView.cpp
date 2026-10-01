@@ -6,7 +6,7 @@
 
 namespace DataTypes{
     StringView::StringView(const std::string& other)
-        : _data(other.data()), _size(static_cast<Int>(other.size())){}
+        : _data(other.data()), _size(static_cast<data_size_t>(other.size())){}
 
     StringView& StringView::operator=(StringView&& other) noexcept{
         if (this == &other)
@@ -24,14 +24,14 @@ namespace DataTypes{
     }
 
     StringView::operator std::string_view() const{
-        return {this->_data, this->_size};
+        return {this->_data, static_cast<std::size_t>(this->_size)};
     }
 
     StringView::operator std::span<const char>() const{
-        return {this->_data, this->_size};
+        return {this->_data, static_cast<std::size_t>(this->_size)};
     }
 
-    StringView StringView::Substring(const Int startIndex, const Int length) const{
+    StringView StringView::Substring(const data_size_t startIndex, const data_size_t length) const{
         if (startIndex < 0 || startIndex >= this->_size)
             throw std::out_of_range("Index out of range.");
 
@@ -41,8 +41,8 @@ namespace DataTypes{
         return {this->_data + startIndex, length};
     }
 
-    Int StringView::IndexOf(const char c) const{
-        for (Int i = 0; i < this->_size; i++)
+    data_size_t StringView::IndexOf(const char c) const{
+        for (data_size_t i = 0; i < this->_size; i++)
             if (this->_data[i] == c)
                 return i;
         return -1;
@@ -51,21 +51,21 @@ namespace DataTypes{
     bool StringView::Compare(const StringView& other, const StringComparisonType type) const{
         switch (type) {
         case StringComparisonType::Equals:
-            return this->Equals(*this, other);
+            return StringView::Equals(*this, other);
         case StringComparisonType::EqualsIgnoreCase:
-            return this->EqualsIgnoreCase(*this, other);
+            return StringView::EqualsIgnoreCase(*this, other);
         case StringComparisonType::StartsWith:
-            return this->StartsWith(*this, other);
+            return StringView::StartsWith(*this, other);
         case StringComparisonType::StartsWithIgnoreCase:
-            return this->StartsWithIgnoreCase(*this, other);
+            return StringView::StartsWithIgnoreCase(*this, other);
         case StringComparisonType::EndsWith:
-            return this->EndsWith(*this, other);
+            return StringView::EndsWith(*this, other);
         case StringComparisonType::EndsWithIgnoreCase:
-            return this->EndsWithIgnoreCase(*this, other);
+            return StringView::EndsWithIgnoreCase(*this, other);
         case StringComparisonType::Contains:
-            return this->Contains(*this, other);
+            return StringView::Contains(*this, other);
         case StringComparisonType::ContainsIgnoreCase:
-            return this->ContainsIgnoreCase(*this, other);
+            return StringView::ContainsIgnoreCase(*this, other);
         default:
             throw std::invalid_argument("Invalid StringComparisonType.");
         }

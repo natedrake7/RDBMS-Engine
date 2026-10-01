@@ -176,14 +176,13 @@ target_include_directories(Server PUBLIC src/Server/include)
 target_link_libraries(Server PRIVATE QueryPipeline PRIVATE unofficial::argon2::libargon2)
 
 add_executable(Client
-        src/Client/src/client.cpp
-         src/Client/src/ClientManager.cpp
-        src/Client/src/Decoding/ResultDecoder.cpp
+    src/Client/src/client.cpp
+    src/Client/src/ClientManager.cpp
+    src/Client/src/Decoding/ResultDecoder.cpp
 )
 
 target_include_directories(Client PUBLIC src/Client/include)
 
 target_link_libraries(Client PRIVATE Systemic)
-
 
 target_link_libraries(Database PRIVATE Server)

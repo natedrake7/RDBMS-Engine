@@ -5,6 +5,10 @@
 
 #include "../Reflection/Enum.h"
 
+typedef uint32_t data_size_t;
+
+inline constexpr auto INVALID_SIZE = std::numeric_limits<data_size_t>::max();
+
 typedef uint16_t protocol_version_t;
 
 typedef uint32_t request_id_t;
@@ -89,11 +93,10 @@ enum class DataType: UnsignedTinyInt {
     DateTime = 7,
     Guid = 8,
     Json = 9,
-    Null = 10,
-    RowIdentifier = 11
+    Null = 10
 };
 
-static constexpr Int DATATYPE_COUNT = Reflection::EnumCount<DataType>;
+static constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
 
 inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
     return lhs > rhs ? lhs : rhs;
@@ -175,33 +178,59 @@ namespace DataTypes{
     template <typename T>
     concept IsDecimal = std::is_same_v<T, Decimal>;
 
+    template<typename ...Ts>
+    struct TypeList{
+        static constexpr std::size_t SIZE = sizeof...(Ts);
+
+        template<std::size_t I>
+        using At = Ts...[I];
+
+        template<typename T>
+        static constexpr std::size_t IndexOf(){
+            constexpr bool matches[]{
+                std::is_same_v<T, Ts>...
+            };
+
+            for (std::size_t i = 0;i < SIZE; i++)
+                if (matches[i])
+                    return i;
+
+            return SIZE;
+        }
+    };
+
+    using DataTypeStorage = TypeList<
+        StringValue,
+        bool,
+        TinyInt,
+        SmallInt,
+        Int,
+        BigInt,
+        Decimal,
+        DateTime,
+        Guid,
+        JsonBinary,
+        void
+    >;
+
+    static_assert(DataTypeStorage::SIZE == DATATYPE_COUNT, "DataTypeStorage needs exactly one entry per DataType");
+
+    template<DataType TYPE>
+    using StorageOf = DataTypeStorage::At<static_cast<std::size_t>(TYPE)>;
+
     template <typename T>
     constexpr static DataType DataTypeOf(){
-        if constexpr (std::is_same_v<T, bool>)
-            return DataType::Bool;
-        else if constexpr (std::is_same_v<T, TinyInt>)
-            return DataType::TinyInt;
-        else if constexpr (std::is_same_v<T, SmallInt>)
-            return DataType::SmallInt;
-        else if constexpr (std::is_same_v<T, Int>)
-            return DataType::Int;
-        else if constexpr (std::is_same_v<T, BigInt>)
-            return DataType::BigInt;
-        else if constexpr (std::is_same_v<T, Decimal>)
-            return DataType::Decimal;
-        else if constexpr (std::is_same_v<T, String>)
+        if constexpr (std::is_same_v<T, DataTypes::String>)
             return DataType::String;
-        // The in-vector representation of a String column: both map to DataType::String.
-        else if constexpr (std::is_same_v<T, StringValue>)
-            return DataType::String;
-        else if constexpr (std::is_same_v<T, DateTime>)
-            return DataType::DateTime;
-        else if constexpr (std::is_same_v<T, Guid>)
-            return DataType::Guid;
-        else if constexpr (std::is_same_v<T, JsonBinary>)
-            return DataType::Json;
-        else
-            static_assert(DataTypes::AlwaysFalse<T>, "DataTypeOf: unmapped cast type");
+        else{
+            constexpr auto index = DataTypeStorage::IndexOf<T>();
+            static_assert(
+                index < DataTypeStorage::SIZE && !std::is_void_v<T>,
+                "DataTypeStorage index out of range or invalid type"
+            );
+
+            return static_cast<DataType>(index);
+        }
 
         return DataType::Null;
     }

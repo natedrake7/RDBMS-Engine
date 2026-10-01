@@ -13,20 +13,20 @@ namespace DataTypes{
 
     class StringView{
         const char* _data;
-        Int _size;
+        data_size_t _size;
 
         template <bool IgnoreCase>
         [[nodiscard]] static constexpr bool MatchesAt(
             const char* haystack,
             const char* needle,
-            const Int count
+            const data_size_t count
         ) noexcept{
                     if !consteval{
                         if constexpr (!IgnoreCase)
                             return std::memcmp(haystack, needle, count) == 0;
                     }
 
-                    for (Int i = 0; i < count; i++) {
+                    for (data_size_t i = 0; i < count; i++) {
                         if (IgnoreCase) {
                             if (Lower(haystack[i]) != Lower(needle[i]))
                                 return false;
@@ -47,7 +47,7 @@ namespace DataTypes{
             if (lhs._size < rhs._size)
                 return false;
 
-            for (Int i = 0; i <= lhs._size - rhs._size; i++)
+            for (data_size_t i = 0; i <= lhs._size - rhs._size; i++)
                 if (MatchesAt<IgnoreCase>(lhs._data + i, rhs._data, rhs._size)) return true;
 
             return false;
@@ -60,7 +60,7 @@ namespace DataTypes{
              * @param size The size of the string view in bytes (not including null terminator, if any).
              * The string view can contain null characters within it and is not required to be null-terminated.
         */
-       constexpr StringView(const char* data, const Int size){
+       constexpr StringView(const char* data, const data_size_t size){
             this->_data = data;
             this->_size = size;
         }
@@ -97,7 +97,7 @@ namespace DataTypes{
 
         //operators
         friend std::ostream& operator<<(std::ostream& os, const StringView& sv);
-        [[nodiscard]] constexpr char operator[](const Int index) const{
+        [[nodiscard]] constexpr char operator[](const data_size_t index) const{
             return this->_data[index];
         }
 
@@ -138,7 +138,7 @@ namespace DataTypes{
         }
 
         [[nodiscard]] constexpr bool operator<(const std::string& other) const {
-            const auto otherSize = static_cast<Int>(other.size());
+            const auto otherSize = static_cast<data_size_t>(other.size());
             const auto size = std::min(this->_size, otherSize);
             const auto cmp = std::memcmp(this->_data, other.data(), size);
             if (cmp != 0) return cmp < 0;
@@ -147,7 +147,7 @@ namespace DataTypes{
         }
 
         [[nodiscard]] constexpr bool operator<(const std::string_view& other) const {
-            const auto otherSize = static_cast<Int>(other.size());
+            const auto otherSize = static_cast<data_size_t>(other.size());
             const auto size = std::min(this->_size, otherSize);
             const auto cmp = std::memcmp(this->_data, other.data(), size);
             if (cmp != 0) return cmp < 0;
@@ -190,7 +190,7 @@ namespace DataTypes{
         }
 
         [[nodiscard]] constexpr bool operator>(const std::string& other) const {
-            const auto otherSize = static_cast<Int>(other.size());
+            const auto otherSize = static_cast<data_size_t>(other.size());
             const auto size = std::min(this->_size, otherSize);
             const auto cmp = std::memcmp(this->_data, other.data(), size);
             if (cmp != 0) return cmp > 0;
@@ -199,7 +199,7 @@ namespace DataTypes{
         }
 
         [[nodiscard]] constexpr bool operator>(const std::string_view& other) const {
-            const auto otherSize = static_cast<Int>(other.size());
+            const auto otherSize = static_cast<data_size_t>(other.size());
             const auto size = std::min(this->_size, otherSize);
             const auto cmp = std::memcmp(this->_data, other.data(), size);
             if (cmp != 0) return cmp > 0;
@@ -227,11 +227,11 @@ namespace DataTypes{
         operator std::span<const char>() const;
 
         //functions
-        [[nodiscard]] StringView Substring(Int startIndex, Int length) const;
+        [[nodiscard]] StringView Substring(data_size_t startIndex, data_size_t length) const;
 
-        [[nodiscard]] constexpr Int Size()const{ return this->_size; }
+        [[nodiscard]] constexpr data_size_t Size()const{ return this->_size; }
 
-        [[nodiscard]] Int IndexOf(char c) const;
+        [[nodiscard]] data_size_t IndexOf(char c) const;
 
         [[nodiscard]] bool Compare(const StringView& other, StringComparisonType type) const;
         template<IsStringLike TOther>
@@ -284,10 +284,10 @@ namespace DataTypes{
             return this->_data + this->_size;
         }
 
-        static constexpr Int CalculateSize(const char* str){
+        static constexpr data_size_t CalculateSize(const char* str){
             if (!str) return 0;
 
-            Int size = 0;
+            data_size_t size = 0;
             while (str[size] != '\0') size++;
             return size;
         }
@@ -306,12 +306,12 @@ namespace DataTypes{
                 std::is_same_v<std::decay_t<T>, std::string>
                 || std::is_same_v<std::decay_t<T>, std::string_view>
             ){
-                return StringView(str.data(), static_cast<Int>(str.size()));
+                return StringView(str.data(), static_cast<data_size_t>(str.size()));
             }
             else if constexpr (std::is_same_v<std::decay_t<T>, char*> ||
                                std::is_same_v<std::decay_t<T>, const char*>
             ){
-                return StringView(str, static_cast<Int>(std::strlen(str)));
+                return StringView(str, static_cast<data_size_t>(std::strlen(str)));
             }
             else if constexpr (
                 std::is_same_v<std::decay_t<T>, const char>
@@ -325,7 +325,7 @@ namespace DataTypes{
             return StringView();
         }
 
-        static StringView ViewOf(const char* str, const Int size){
+        static StringView ViewOf(const char* str, const data_size_t size){
             return StringView(str, size);
         }
 
