@@ -77,7 +77,7 @@ namespace QueryPipeline::Parsing{
         bool Expect(TokenType type);
 
         //Returns nullptr so an expression rule can bail out with `return this->Fail(...)`.
-        std::nullptr_t Fail(const DataTypes::StringView& message) const;
+        [[nodiscard]] std::nullptr_t Fail(const DataTypes::StringView& message) const;
 
         //Precedence cascade
         [[nodiscard]] Expressions::Expression* ParseOr();
@@ -150,12 +150,7 @@ namespace QueryPipeline::Parsing{
         [[nodiscard]] bool ParseOptionalAlias(DataTypes::String& alias);
         [[nodiscard]] bool ParseLiteralValue(Value& value);
 
-        /**
-         * Keywords that open a clause and so must not be swallowed as a bare alias.
-         * They are all non reserved, which is exactly why the check has to be positional:
-         * `FROM orders JOIN ...` must not read JOIN as the alias of orders.
-         */
-        [[nodiscard]] static bool IsClauseKeyword(TokenType type);
+        [[nodiscard]] static std::optional<DataType> DataTypeOfToken(TokenType type);
 
         public:
             SqlParser(

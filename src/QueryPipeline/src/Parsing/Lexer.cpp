@@ -50,8 +50,8 @@ namespace QueryPipeline::Parsing{
         Token token{};
 
         token.type = type;
-        token.text = textBegin;
-        token.length = textLength;
+        token._text = textBegin;
+        token._length = textLength;
         token.line = this->_tokenLine;
         token.column = this->_tokenColumn;
 
@@ -301,7 +301,7 @@ namespace QueryPipeline::Parsing{
                 //inspects the tokens afterwards can still walk them safely.
                 Token terminator = token;
                 terminator.type = TokenType::EndOfFile;
-                terminator.length = 0;
+                terminator._length = 0;
 
                 tokens.Push(terminator);
                 return false;

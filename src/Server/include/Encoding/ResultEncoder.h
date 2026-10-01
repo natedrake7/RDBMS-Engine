@@ -53,6 +53,14 @@ namespace Network{
             const ::Memory::IAllocator* allocator
         );
 
+        static void PutColumnData(
+            std::vector<char>* buffer,
+            const CoreEngine::DataVector* column,
+            Int rowOffset,
+            Int rowCount,
+            const ::Memory::IAllocator* allocator
+        );
+
         public:
         /**
              * Encodes the result schema(column names etc) for the given running query

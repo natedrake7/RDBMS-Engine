@@ -51,5 +51,10 @@ namespace Network{
 
         [[nodiscard]] bool IsPayloadLengthValid() const;
 
+        [[nodiscard]] bool IsValid()const{
+            return this->_payloadLength <= MAX_PAYLOAD_LENGTH
+                && Reflection::IsEnumerator(this->_messageType)
+                && this->_messageType != MessageType::Invalid;
+        }
     };
 }

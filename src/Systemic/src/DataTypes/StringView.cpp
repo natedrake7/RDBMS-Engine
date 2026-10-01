@@ -8,16 +8,6 @@ namespace DataTypes{
     StringView::StringView(const std::string& other)
         : _data(other.data()), _size(static_cast<data_size_t>(other.size())){}
 
-    StringView& StringView::operator=(StringView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        this->_data = other._data;
-        this->_size = other._size;
-        other._data = nullptr;
-        return *this;
-    }
-
     std::ostream& operator<<(std::ostream& os, const StringView& sv){
         os.write(sv._data, sv._size);
         return os;

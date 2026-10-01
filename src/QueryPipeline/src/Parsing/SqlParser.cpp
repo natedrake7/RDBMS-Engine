@@ -405,7 +405,7 @@ namespace QueryPipeline::Parsing{
             return true;
         }
 
-        if (token.length + 1 > MAX_DECIMAL_LITERAL_LENGTH){
+        if (token._length + 1 > MAX_DECIMAL_LITERAL_LENGTH){
             this->Fail("decimal literal is too long");
             return false;
         }
@@ -417,8 +417,8 @@ namespace QueryPipeline::Parsing{
         if (negated)
             buffer[length++] = '-';
 
-        std::memcpy(buffer + length, token.text, token.length);
-        length += token.length;
+        std::memcpy(buffer + length, token._text, token._length);
+        length += token._length;
 
         const auto decimal = DataTypes::Decimal(DataTypes::StringView(buffer, length));
         value = Value(decimal, 0);
@@ -622,35 +622,38 @@ namespace QueryPipeline::Parsing{
         return true;
     }
 
+    static constexpr auto TOKEN_DATA_TYPES = []{
+        std::array<std::optional<DataType>, TOKEN_TYPE_COUNT> table{};
+        template for (constexpr auto token: Reflection::Enumerators<TokenType>){
+            template for (constexpr auto type: Reflection::Enumerators<DataType>){
+                if constexpr (
+                    !Detail::IsAlias(token) && IsKeyword([:token:])
+                    && [:type:] != DataType::Null
+                    && std::meta::identifier_of(token) == std::meta::identifier_of(type)
+                ){
+                    table[static_cast<std::size_t>([:token:])] = [:type:];
+                }
+            }
+        }
+        return table;
+    }();
+
+    std::optional<DataType> SqlParser::DataTypeOfToken(TokenType type){
+        const auto index = static_cast<std::size_t>(type);
+        return index < TOKEN_DATA_TYPES.size() ? TOKEN_DATA_TYPES[index] : std::nullopt;
+    }
+
     bool SqlParser::ParseDataType(ParsedDataType& result){
-        switch (this->Current().type){
-            case TokenType::Bool:
-                result.type = DataType::Bool;
-                break;
-            case TokenType::TinyInt:
-                result.type = DataType::TinyInt;
-                break;
-            case TokenType::SmallInt:
-                result.type = DataType::SmallInt;
-                break;
-            case TokenType::Int:
-                result.type = DataType::Int;
-                break;
-            case TokenType::BigInt:
-                result.type = DataType::BigInt;
-                break;
-            case TokenType::DateTime:
-                result.type = DataType::DateTime;
-                break;
-            case TokenType::Guid:
-                result.type = DataType::Guid;
-                break;
-            case TokenType::Json:
-                result.type = DataType::Json;
-                break;
-            case TokenType::String: {
+        const auto type = SqlParser::DataTypeOfToken(this->Current().type);
+        if (!type.has_value()){
+            this->Fail("expected a data type");
+            return false;
+        }
+
+        result.type = *type;
+        switch (*type){
+            case DataType::String: {
                 this->Advance();
-                result.type = DataType::String;
 
                 if (!this->Expect(TokenType::LeftParen))
                     return false;
@@ -675,10 +678,8 @@ namespace QueryPipeline::Parsing{
                 return this->Expect(TokenType::RightParen);
             }
 
-            case TokenType::Decimal: {
+            case DataType::Decimal: {
                 this->Advance();
-                result.type = DataType::Decimal;
-
                 if (!this->Expect(TokenType::LeftParen))
                     return false;
 
@@ -703,10 +704,8 @@ namespace QueryPipeline::Parsing{
 
                 return this->Expect(TokenType::RightParen);
             }
-
             default:
-                this->Fail("expected a data type");
-                return false;
+                break;
         }
 
         this->Advance();

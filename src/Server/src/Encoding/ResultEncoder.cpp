@@ -146,6 +146,29 @@ namespace Network{
         ResultEncoder::EndFrame(buffer, MessageType::RowDescription, requestId, statementOrdinal);
     }
 
+    void ResultEncoder::PutColumnData(
+        std::vector<char>* buffer,
+        const CoreEngine::DataVector* column,
+        const Int rowOffset,
+        const Int rowCount,
+        const ::Memory::IAllocator* allocator
+    ){
+        template for (constexpr auto e : Reflection::Enumerators<DataType>){
+            if (column->_type == [:e:]){
+                constexpr auto wire = Network::WIRE_TYPES[static_cast<std::size_t>([:e:])];
+
+                if constexpr (wire == Network::WireType::Invalid)
+                    throw std::runtime_error("Unsupported type in ResultEncoder::EncodeDataBatch");
+                else if constexpr (Network::IsVariableLength(wire))
+                    ResultEncoder::PutVariableSizeData<DataTypes::StorageOf<([:e:])>>(buffer, column, rowOffset, rowCount, allocator);
+                else
+                    ResultEncoder::PutFixedSizeData(buffer, column, rowOffset, rowCount);
+                return;
+            }
+        }
+        throw std::runtime_error("Unsupported type in ResultEncoder::EncodeDataBatch");
+    }
+
     void ResultEncoder::EncodeDataBatch(
         std::vector<char>* buffer,
         const request_id_t requestId,
@@ -176,29 +199,7 @@ namespace Network{
             ResultEncoder::Put<UnsignedInt>(buffer, encodedRows);
             ResultEncoder::PutValidity(buffer, column, encodedOffset, encodedRows);
 
-            switch (column->_type) {
-            case DataType::String:
-                ResultEncoder::PutVariableSizeData<DataTypes::StringValue>(buffer, column, encodedOffset, encodedRows, allocator);
-                break;
-            case DataType::Decimal:
-                ResultEncoder::PutVariableSizeData<DataTypes::Decimal>(buffer, column, encodedOffset, encodedRows, allocator);
-                break;
-            case DataType::Json:
-                ResultEncoder::PutVariableSizeData<DataTypes::JsonBinary>(buffer, column, encodedOffset, encodedRows, allocator);
-                break;
-            case DataType::Bool:
-            case DataType::TinyInt:
-            case DataType::SmallInt:
-            case DataType::Int:
-            case DataType::BigInt:
-            case DataType::DateTime:
-            case DataType::Guid:
-            case DataType::Null:
-                ResultEncoder::PutFixedSizeData(buffer, column, encodedOffset, encodedRows);
-                break;
-            default:
-                throw std::runtime_error("Unsupported type in ResultEncoder::EncodeDataBatch");
-            }
+            ResultEncoder::PutColumnData(buffer, column, encodedOffset, encodedRows, allocator);
         }
 
         ResultEncoder::EndFrame(buffer, MessageType::DataBatch, requestId, statementOrdinal);

@@ -3,73 +3,11 @@
 
 #include "../../../CoreEngine/include/Evaluators/Expression.h"
 #include "../../../Systemic/include/Converter.h"
+#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
 #include "../../../Systemic/include/DataTypes/Value.h"
 #include "../../../Systemic/include/Memory/IAllocator.h"
 
 namespace QueryPipeline::Parsing{
-
-    /**
-     * Lower cased type names, matching the keys of COLUMN_TYPENAMES_TO_ENUMS.
-     * Statements::ColumnType stores the type by name rather than by enum, so the two
-     * have to agree.
-     */
-    static DataTypes::StringView DataTypeName(const DataType type){
-        switch (type){
-            case DataType::String:   return DataTypes::StringView("string");
-            case DataType::Bool:     return DataTypes::StringView("bool");
-            case DataType::TinyInt:  return DataTypes::StringView("tinyint");
-            case DataType::SmallInt: return DataTypes::StringView("smallint");
-            case DataType::Int:      return DataTypes::StringView("int");
-            case DataType::BigInt:   return DataTypes::StringView("bigint");
-            case DataType::Decimal:  return DataTypes::StringView("decimal");
-            case DataType::DateTime: return DataTypes::StringView("datetime");
-            case DataType::Guid:     return DataTypes::StringView("guid");
-            case DataType::Json:     return DataTypes::StringView("json");
-            default:                 return DataTypes::StringView();
-        }
-    }
-
-    static bool IsDataTypeToken(const TokenType type){
-        switch (type){
-            case TokenType::Bool:
-            case TokenType::TinyInt:
-            case TokenType::SmallInt:
-            case TokenType::Int:
-            case TokenType::BigInt:
-            case TokenType::Decimal:
-            case TokenType::DateTime:
-            case TokenType::Guid:
-            case TokenType::Json:
-            case TokenType::String:
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    bool SqlParser::IsClauseKeyword(const TokenType type){
-        switch (type){
-            case TokenType::From:
-            case TokenType::Where:
-            case TokenType::Order:
-            case TokenType::By:
-            case TokenType::Join:
-            case TokenType::Inner:
-            case TokenType::Left:
-            case TokenType::Right:
-            case TokenType::Full:
-            case TokenType::Outer:
-            case TokenType::On:
-            case TokenType::Set:
-            case TokenType::Values:
-            case TokenType::Into:
-            case TokenType::To:
-                return true;
-            default:
-                return false;
-        }
-    }
-
     /**
      * @name Entry points
      * @{
@@ -827,7 +765,7 @@ namespace QueryPipeline::Parsing{
         auto declaredType = DataType::Null;
         bool hasDeclaredType = false;
 
-        if (IsDataTypeToken(this->Current().type)){
+        if (SqlParser::DataTypeOfToken(this->Current().type)){
             ParsedDataType parsed;
             if (!this->ParseDataType(parsed))
                 return nullptr;
@@ -909,7 +847,7 @@ namespace QueryPipeline::Parsing{
         if (!this->ParseDataType(parsed))
             return false;
 
-        auto name = DataTypes::String(DataTypeName(parsed.type), this->_allocator);
+        auto name = DataTypes::String(Reflection::EnumName<DataType>(parsed.type), this->_allocator);
 
         if (parsed.type == DataType::Decimal)
             columnType = Statements::ColumnType(name, Statements::DecimalType(parsed.precision, parsed.scale));
@@ -936,7 +874,7 @@ namespace QueryPipeline::Parsing{
         if (this->Match(TokenType::As))
             return this->ParseIdentifier(alias);
 
-        if (!CanBeIdentifier(this->Current().type) || SqlParser::IsClauseKeyword(this->Current().type))
+        if (!CanBeIdentifier(this->Current().type) || Parsing::IsClauseKeyword(this->Current().type))
             return true;
 
         alias = this->MakeString(this->Advance());
@@ -981,6 +919,5 @@ namespace QueryPipeline::Parsing{
                 return false;
         }
     }
-
     /** @} */
 }

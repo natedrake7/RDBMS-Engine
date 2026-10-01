@@ -29,9 +29,23 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        if (!context._session->user->role->HasPermission(this->RequiredPermissions())) {
+        const auto* user = context._session->user;
+        const auto requiredPermissions = this->RequiredPermissions();
+        if (!user->role->HasPermission(requiredPermissions)) {
+            DataTypes::String missing(context.GetAllocator());
+
+            Reflection::ForEachSetFlag(requiredPermissions & ~user->role->permission, [&](const std::string_view name){
+                if (!missing.Empty())
+                    missing.Append(',');
+                missing.Append(name);
+            });
+
             validationStatus.code = Errors::ValidationError::Error;
-            validationStatus.message = DataTypes::String::Concat(context.GetAllocator(), "User", context._session->user->name, " is not authorized to perform this action.");
+            validationStatus.message = DataTypes::String::Concat(
+                context.GetAllocator(),
+                "User ", user->name, " is not authorized, missing permission(s): ",
+                DataTypes::StringView::ViewOf(missing)
+            );
         }
 
         return validationStatus;

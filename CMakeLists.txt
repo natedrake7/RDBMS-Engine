@@ -66,7 +66,6 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/CostEstimator.cpp
         src/QueryPipeline/src/Contexts/CompileContext.cpp
         src/QueryPipeline/src/RowCursor.cpp
-        src/QueryPipeline/src/Parsing/Token.cpp
         src/QueryPipeline/src/Parsing/Lexer.cpp
         src/QueryPipeline/src/Parsing/SqlParser.cpp
         src/QueryPipeline/src/Parsing/SqlParser.Statements.cpp

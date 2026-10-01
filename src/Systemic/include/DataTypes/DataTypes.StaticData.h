@@ -12,8 +12,6 @@ static constexpr auto TRUE_STRING = DataTypes::StringView("TRUE");
 static constexpr auto FALSE_STRING = DataTypes::StringView("FALSE");
 static constexpr auto NULL_STRING = DataTypes::StringView("NULL");
 
-
-
 template<std::size_t N>
 struct CaseInsensitiveStringSet{
     DataTypes::StringView values[N];

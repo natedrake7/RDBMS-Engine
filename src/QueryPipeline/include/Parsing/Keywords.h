@@ -4,104 +4,37 @@
 
 namespace QueryPipeline::Parsing{
 
+    inline constexpr  std::size_t FIRST_KEYWORD = static_cast<std::size_t>(TokenType::FirstKeyword);
+    inline constexpr  std::size_t LAST_KEYWORD = static_cast<std::size_t>(TokenType::LastKeyword);
+    inline constexpr std::size_t KEYWORD_COUNT = TOKEN_TYPE_COUNT - FIRST_KEYWORD;
+
     /**
-     * Every SQL keyword, keyed by its lower cased spelling. The dictionary hashes and
-     * compares case insensitively, so the lexer can probe it with a view straight over
-     * the query buffer without lower casing anything first.
-     */
-    static constexpr ConstexprDictionary KEYWORDS{
-        Pair(DataTypes::StringView("select"),     TokenType::Select),
-        Pair(DataTypes::StringView("from"),       TokenType::From),
-        Pair(DataTypes::StringView("where"),      TokenType::Where),
-        Pair(DataTypes::StringView("order"),      TokenType::Order),
-        Pair(DataTypes::StringView("by"),         TokenType::By),
-        Pair(DataTypes::StringView("values"),     TokenType::Values),
-        Pair(DataTypes::StringView("into"),       TokenType::Into),
-        Pair(DataTypes::StringView("database"),   TokenType::Database),
-        Pair(DataTypes::StringView("use"),        TokenType::Use),
-        Pair(DataTypes::StringView("create"),     TokenType::Create),
-        Pair(DataTypes::StringView("drop"),       TokenType::Drop),
-        Pair(DataTypes::StringView("insert"),     TokenType::Insert),
-        Pair(DataTypes::StringView("delete"),     TokenType::Delete),
-        Pair(DataTypes::StringView("update"),     TokenType::Update),
-        Pair(DataTypes::StringView("on"),         TokenType::On),
-        Pair(DataTypes::StringView("table"),      TokenType::Table),
-        Pair(DataTypes::StringView("default"),    TokenType::Default),
-        Pair(DataTypes::StringView("to"),         TokenType::To),
-        Pair(DataTypes::StringView("top"),        TokenType::Top),
-        Pair(DataTypes::StringView("distinct"),   TokenType::Distinct),
-        Pair(DataTypes::StringView("with"),       TokenType::With),
-        Pair(DataTypes::StringView("password"),   TokenType::Password),
-        Pair(DataTypes::StringView("role"),       TokenType::Role),
-        Pair(DataTypes::StringView("grant"),      TokenType::Grant),
-        Pair(DataTypes::StringView("user"),       TokenType::User),
-        Pair(DataTypes::StringView("schema"),     TokenType::Schema),
+    * Every SQL keyword, generated from the TokenType keyword block. The dictionary hashes
+    * and compares case insensitively, so keys keep the enumerator's casing ("Select") and
+    * the lexer can probe it with a view straight over the query buffer.
+    */
 
-        Pair(DataTypes::StringView("declare"),    TokenType::Declare),
-        Pair(DataTypes::StringView("set"),        TokenType::Set),
+    static constexpr auto KEYWORDS = []<std::size_t... I>(std::index_sequence<I...>){
+        return ConstexprDictionary<DataTypes::StringView, TokenType, KEYWORD_COUNT>{
+            Pair(TokenSourceText(static_cast<TokenType>(FIRST_KEYWORD + I)),
+                static_cast<TokenType>(FIRST_KEYWORD + I)
+            )...
+        };
+    }(std::make_index_sequence<KEYWORD_COUNT>{});
 
-        Pair(DataTypes::StringView("alter"),      TokenType::Alter),
-        Pair(DataTypes::StringView("rename"),     TokenType::Rename),
-        Pair(DataTypes::StringView("add"),        TokenType::Add),
-        Pair(DataTypes::StringView("column"),     TokenType::Column),
+    static constexpr data_size_t MIN_KEYWORD_LENGTH = []{
+        auto length = std::numeric_limits<data_size_t>::max();
+        for (auto i = FIRST_KEYWORD; i < TOKEN_TYPE_COUNT; ++i)
+            length = std::min(length, TokenSourceText(static_cast<TokenType>(i)).Size());
+        return length;
+    }();
 
-        Pair(DataTypes::StringView("unique"),     TokenType::Unique),
-        Pair(DataTypes::StringView("index"),      TokenType::Index),
-        Pair(DataTypes::StringView("primary"),    TokenType::Primary),
-        Pair(DataTypes::StringView("key"),        TokenType::Key),
-        Pair(DataTypes::StringView("identity"),   TokenType::Identity),
-        Pair(DataTypes::StringView("constraint"), TokenType::Constraint),
-
-        Pair(DataTypes::StringView("count"),      TokenType::Count),
-        Pair(DataTypes::StringView("sum"),        TokenType::Sum),
-        Pair(DataTypes::StringView("avg"),        TokenType::Avg),
-        Pair(DataTypes::StringView("min"),        TokenType::Min),
-        Pair(DataTypes::StringView("max"),        TokenType::Max),
-
-        Pair(DataTypes::StringView("not"),        TokenType::Not),
-        Pair(DataTypes::StringView("null"),       TokenType::Null),
-
-        Pair(DataTypes::StringView("desc"),       TokenType::Desc),
-        Pair(DataTypes::StringView("asc"),        TokenType::Asc),
-
-        Pair(DataTypes::StringView("left"),       TokenType::Left),
-        Pair(DataTypes::StringView("right"),      TokenType::Right),
-        Pair(DataTypes::StringView("full"),       TokenType::Full),
-        Pair(DataTypes::StringView("inner"),      TokenType::Inner),
-        Pair(DataTypes::StringView("outer"),      TokenType::Outer),
-        Pair(DataTypes::StringView("join"),       TokenType::Join),
-
-        Pair(DataTypes::StringView("as"),         TokenType::As),
-
-        Pair(DataTypes::StringView("and"),        TokenType::And),
-        Pair(DataTypes::StringView("or"),         TokenType::Or),
-
-        Pair(DataTypes::StringView("switch"),     TokenType::Switch),
-        Pair(DataTypes::StringView("case"),       TokenType::Case),
-        Pair(DataTypes::StringView("when"),       TokenType::When),
-        Pair(DataTypes::StringView("then"),       TokenType::Then),
-        Pair(DataTypes::StringView("iif"),        TokenType::Iif),
-
-        Pair(DataTypes::StringView("cast"),       TokenType::Cast),
-        Pair(DataTypes::StringView("try_cast"),   TokenType::TryCast),
-
-        Pair(DataTypes::StringView("true"),       TokenType::True),
-        Pair(DataTypes::StringView("false"),      TokenType::False),
-
-        Pair(DataTypes::StringView("bool"),       TokenType::Bool),
-        Pair(DataTypes::StringView("tinyint"),    TokenType::TinyInt),
-        Pair(DataTypes::StringView("smallint"),   TokenType::SmallInt),
-        Pair(DataTypes::StringView("int"),        TokenType::Int),
-        Pair(DataTypes::StringView("bigint"),     TokenType::BigInt),
-        Pair(DataTypes::StringView("decimal"),    TokenType::Decimal),
-        Pair(DataTypes::StringView("datetime"),   TokenType::DateTime),
-        Pair(DataTypes::StringView("guid"),       TokenType::Guid),
-        Pair(DataTypes::StringView("json"),       TokenType::Json),
-        Pair(DataTypes::StringView("string"),     TokenType::String),
-    };
-
-    static constexpr Int MIN_KEYWORD_LENGTH = 2;  //"as", "by", "on", "or", "to"
-    static constexpr Int MAX_KEYWORD_LENGTH = 10; //"constraint"
+    static constexpr data_size_t MAX_KEYWORD_LENGTH = []{
+        data_size_t length = 0;
+        for (auto i = FIRST_KEYWORD; i < TOKEN_TYPE_COUNT; ++i)
+            length = std::max(length, TokenSourceText(static_cast<TokenType>(i)).Size());
+        return length;
+    }();
 
     /**
      * Classifies an identifier shaped lexeme. Returns TokenType::Identifier when the

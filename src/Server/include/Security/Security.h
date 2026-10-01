@@ -1,4 +1,6 @@
 #pragma once
+#include <utility>
+
 #include "../../Systemic/include/DataTypes/DataTypes.h"
 #include "../../Systemic/include/DataTypes/String.h"
 
@@ -86,34 +88,13 @@ namespace Security {
             const bool isSystem
         ): id(id), name(std::move(name)), permission(permission), isSystem(isSystem) {}
 
-        Role(const Role& role) {
-            this->id = role.id;
-            this->name = role.name;
-            this->permission = role.permission;
-            this->isSystem = role.isSystem;
-        }
+        Role(const Role&) = default;
 
-        Role(Role&& role) noexcept{
-            this->id = std::move(role.id);
-            this->name = std::move(role.name);
-            this->permission = std::move(role.permission);
-            this->isSystem = std::move(role.isSystem);
-        }
-
-        Role& operator=(Role&& role) noexcept{
-            if (this == &role)
-                return *this;
-
-            this->id = std::move(role.id);
-            this->name = std::move(role.name);
-            this->permission = std::move(role.permission);
-            this->isSystem = std::move(role.isSystem);
-            return *this;
-        }
+        Role(Role&&) noexcept = default;
+        Role& operator=(Role&&) noexcept = default;
 
         [[nodiscard]] bool HasPermission(const Permission permissions) const {
-            return permissions == Permission::NONE
-                || (this->permission & permissions) != Permission::NONE;
+            return (this->permission & permissions) == permissions;
         }
     };
 

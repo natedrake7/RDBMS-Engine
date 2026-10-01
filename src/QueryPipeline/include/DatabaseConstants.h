@@ -27,13 +27,6 @@ namespace QueryPipeline::PipelineConstants {
         CrossJoin = 3
     };
 
-    static constexpr ConstexprDictionary JoinTypeDictionary{
-        Pair(DataTypes::StringView("inner"), JoinType::Inner),
-        Pair(DataTypes::StringView("left"), JoinType::Left),
-        Pair(DataTypes::StringView("right"), JoinType::Right),
-        Pair(DataTypes::StringView("full"), JoinType::Full)
-    };
-
     static constexpr ConstexprHashSet<DataType, 4> ValidTableIntegerConversions{
         DataType::TinyInt,
         DataType::SmallInt,

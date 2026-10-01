@@ -72,8 +72,22 @@ namespace DataTypes{
 
         constexpr StringView(StringView&& other) noexcept
             : _data(other._data), _size(other._size){
-                other._data = nullptr;
+            other._data = nullptr;
+            other._size = 0;
         }
+
+        constexpr StringView& operator=(StringView&& other) noexcept{
+            if (this == &other)
+                return *this;
+
+           this->_data = other._data;
+           this->_size = other._size;
+
+           other._data = nullptr;
+           other._size = 0;
+
+           return *this;
+       }
 
         constexpr StringView()
             : _data(nullptr), _size(0){}
@@ -89,7 +103,6 @@ namespace DataTypes{
 
         explicit StringView(const std::string& other);
 
-        StringView& operator=(StringView&& other) noexcept;
         constexpr StringView& operator=(const StringView& other)= default;
         constexpr ~StringView() = default;
 

@@ -57,7 +57,7 @@ namespace Network::Transport{
 
         header.Decode(this->_buffer.data() + this->_consumed);
 
-        if (!header.IsPayloadLengthValid())
+        if (!header.IsValid())
             return HeaderStatus::Malformed;
 
         const auto requestSize = Header::SIZE + header._payloadLength;

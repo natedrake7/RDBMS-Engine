@@ -21,7 +21,7 @@ namespace DataTypes{
     String& String::Append(const StringView& other){
         const auto otherSize = other.Size();
 
-        const Int newSize = this->_size + otherSize;
+        const data_size_t newSize = this->_size + otherSize;
 
         if (this->CanFit(newSize)){
             std::memcpy(this->_data + this->_size, other.Data(), otherSize);
@@ -533,7 +533,7 @@ namespace DataTypes{
             || subStr.Size() > str.Size()
         ) return 0;
 
-        for (int i = start; i < str.Size() - subStr.Size() + 1; i++) {
+        for (data_size_t i = start; i < str.Size() - subStr.Size() + 1; i++) {
             if (std::strncmp(str.Data() + i, subStr.Data(), subStr.Size()) == 0)
                 return i;
         }
@@ -575,7 +575,7 @@ namespace DataTypes{
         if (size == 0)
             return StringView(data, 0);
 
-        for (int i = startIndex; i < size; i++){
+        for (data_size_t i = startIndex; i < size; i++){
             if (strncasecmp(&data[i], &delimiter, 1) == 0)
                 return StringView(data + startIndex, i - startIndex);
         }

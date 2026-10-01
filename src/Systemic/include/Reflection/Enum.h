@@ -3,6 +3,7 @@
 #include <meta>
 #include <array>
 #include <string_view>
+#include <bit>
 
 namespace Reflection{
     template<typename...>
@@ -12,7 +13,7 @@ namespace Reflection{
     inline constexpr auto Enumerators = std::define_static_array(std::meta::enumerators_of(^^E));
 
     template<typename E> requires std::is_enum_v<E>
-    inline constexpr auto EnumCount = static_cast<int>(Enumerators<E>.size());
+    inline constexpr auto EnumCount = static_cast<std::size_t>(Enumerators<E>.size());
 
     template<typename E> requires std::is_enum_v<E>
     inline constexpr bool IsContiguous(){
@@ -49,7 +50,35 @@ namespace Reflection{
     }
 
     template<typename E>
-    [[nodiscard]] inline constexpr bool HasAnnotation(const std::meta::info item){
+    [[nodiscard]] inline consteval bool HasAnnotation(const std::meta::info item){
         return !std::meta::annotations_of_with_type(item, ^^E).empty();
+    }
+
+
+    // Calls onFlag(name) for every single-bit enumerator set in value.
+    // Skips NONE (0) and composites such as ALL, so it works on any flag enum.
+    template<typename E, typename F> requires std::is_enum_v<E>
+    constexpr void ForEachSetFlag(const E value, F&& onFlag){
+        using U = std::make_unsigned_t<std::underlying_type_t<E>>;
+        template for (constexpr auto e : Enumerators<E>){
+            constexpr auto bit = static_cast<U>([:e:]);
+            if constexpr (std::has_single_bit(bit)){
+                if ((static_cast<U>(value) & bit) != 0)
+                    onFlag(std::meta::identifier_of(e));
+            }
+        }
+    }
+
+    template<typename E> requires std::is_enum_v<E>
+    constexpr bool IsEnumerator(const E value){
+        if constexpr (IsContiguous<E>())
+            return static_cast<std::size_t>(value) < EnumCount<E>;
+        else{
+            template for (constexpr auto e : Enumerators<E>){
+                if (value == [:e:])
+                    return true;
+            }
+            return false;
+        }
     }
 }
