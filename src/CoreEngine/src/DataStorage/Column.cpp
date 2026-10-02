@@ -87,6 +87,8 @@ namespace CoreEngine::StorageTypes {
 
     const Headers::DefaultValuesHeader & Column::GetDefaultValue() const{ return this->_header.defaultValue; }
 
+    Int Column::GetIncrement() const{ return this->_identityManager.GetIncrement(); }
+
     Value Column::GenerateIdentityValue(const ::Memory::IAllocator* allocator){
         switch (this->_header.columnType){
             case DataType::TinyInt:

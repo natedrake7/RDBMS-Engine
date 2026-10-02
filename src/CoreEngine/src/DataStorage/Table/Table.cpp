@@ -23,6 +23,7 @@
 #include "Memory/PersistentAllocator.h"
 
 #include "../../Systemic/include/Macros.h"
+#include "DataStorage/Row/Row.InsertPlan.Templates.h"
 
 #ifdef IS_GCC
     #include <cmath>
@@ -192,7 +193,7 @@ namespace CoreEngine::StorageTypes {
     void Table::PrepareChunkSources(
         const ExecutionContext& context,
         const InsertPlan& plan,
-        ChunkInsertState& state
+        const ChunkInsertState& state
     ) const{
         const auto* allocator = context.GetAllocator();
 
@@ -245,11 +246,25 @@ namespace CoreEngine::StorageTypes {
             auto* column = this->_columns[slotIndex];
             assert(column->OrdinalPosition() == slotIndex && "Table::PrepareChunkSources: Invalid slot index");
 
-            // const auto* vector = column->CreateVector(allocator, type);
-            // state._vectors[slotIndex] = vector;
+            auto* vector = DataVector::FlatVector(allocator, type, state._rowCount);
+
+            const auto base = column->ReserveIdentityRange<BigInt>(allocator, state._rowCount);
+            const auto increment = column->GetIncrement();
+
+            VisitStorageType(type, [&]<typename T>(){
+                if constexpr (DataTypes::IsInteger<T>){
+                    auto* __restrict__ data = vector->DataAs<T>();
+                    for (auto i = 0; i < state._rowCount; i++)
+                        data[i] = static_cast<T>(base + i * increment);
+                }
+                else
+                    std::unreachable();
+            });
+
+            state._vectors[slotIndex] = vector;
         };
 
-        const auto prepareChunk = [&](const Int index, const InsertColumPlan& columnPlan){
+        const auto prepareChunk = [&](const Int index, const InsertColumnPlan& columnPlan){
             switch (columnPlan._source) {
             case InsertColumnSource::Vector:
                 vectorSourceFunc(index, columnPlan._slot);
@@ -264,7 +279,6 @@ namespace CoreEngine::StorageTypes {
                 identitySourceFunc(index, columnPlan._type);
                 break;
             case InsertColumnSource::Computed:
-            default:
                 std::unreachable();
             }
         };

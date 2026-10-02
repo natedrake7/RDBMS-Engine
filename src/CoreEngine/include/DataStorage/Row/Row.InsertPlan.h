@@ -37,11 +37,6 @@ namespace CoreEngine::StorageTypes{
         }
     };
 
-    enum class InsertColumnLayout: UnsignedTinyInt{
-        Fixed = 0,
-        Variable = 1
-    };
-
     enum class InsertColumnSource: UnsignedTinyInt{
         Vector = 0,
         Default = 1,
@@ -50,31 +45,25 @@ namespace CoreEngine::StorageTypes{
         Computed = 4
     };
 
-    struct InsertColumPlan{
-        UnsignedSmallInt _width;
-        InsertColumnLayout _layout;
+    struct InsertColumnPlan{
         InsertColumnSource _source;
         DataType _type;
         column_index_t _slot;
         bool _nullable;
 
-        InsertColumPlan() = default;
+        InsertColumnPlan() = default;
     };
-
-    static inline constexpr bool IsVariableLayout(const DataType type){
-        return type == DataType::String || type == DataType::Json || type == DataType::Decimal;
-    }
 
     struct InsertPlan{
         DataStructures::PolymorphicArray<InsertSlot> _slotMap;
         DataStructures::PolymorphicArray<Expressions::Expression*> _sharedDefaults;
-        DataStructures::PolymorphicArray<InsertColumPlan> _columnsPlans;
+        DataStructures::PolymorphicArray<InsertColumnPlan> _columnsPlans;
 
         InsertPlan() = default;
         InsertPlan(
             DataStructures::PolymorphicArray<InsertSlot>&& slotMap,
             DataStructures::PolymorphicArray<Expressions::Expression*>&& sharedDefaults,
-            DataStructures::PolymorphicArray<InsertColumPlan>&& columnsPlans
+            DataStructures::PolymorphicArray<InsertColumnPlan>&& columnsPlans
         ) : _slotMap(std::move(slotMap)),
             _sharedDefaults(std::move(sharedDefaults)),
             _columnsPlans(std::move(columnsPlans)){}

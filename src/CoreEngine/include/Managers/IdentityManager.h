@@ -27,9 +27,14 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] T Generate(const ::Memory::IAllocator* allocator);
 
         template<DataTypes::IsInteger T>
+        [[nodiscard]] T ReserveRange(const ::Memory::IAllocator* allocator, T range);
+
+        template<DataTypes::IsInteger T>
         [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, T& value);
         void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
         [[nodiscard]] bool IsValid()const;
+
+        [[nodiscard]] Int GetIncrement() const;
     };
 }

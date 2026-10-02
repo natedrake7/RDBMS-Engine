@@ -126,7 +126,7 @@ namespace CoreEngine::StorageTypes{
             void PrepareChunkSources(
                 const ExecutionContext& context,
                 const InsertPlan& plan,
-                ChunkInsertState& state
+                const ChunkInsertState& state
             )const;
 
             /** @} End of: Row Insert Functions*/

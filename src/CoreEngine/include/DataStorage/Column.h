@@ -89,6 +89,13 @@ namespace CoreEngine::StorageTypes{
             return this->_identityManager.Generate<T>(allocator);
         }
 
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] T ReserveIdentityRange(const ::Memory::IAllocator* allocator, const T rowCount){
+            return this->_identityManager.ReserveRange<T>(allocator, rowCount);
+        }
+
+        [[nodiscard]] Int GetIncrement() const;
+
        [[nodiscard]] Value GenerateIdentityValue(const ::Memory::IAllocator* allocator);
 
         void UpdateMetadata(const ::Memory::IAllocator* allocator)const;

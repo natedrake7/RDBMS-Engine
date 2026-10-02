@@ -1144,10 +1144,16 @@ namespace QueryPipeline::Statements {
         );
         DataStructures::PolymorphicArray<DataType> columnTypes(
             allocator,
-            this->columns.Size()
+            columnCount
+        );
+        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertColumnPlan> columnPlans(
+            allocator,
+            columnCount
         );
 
         insertSlots.AlignSize();
+        columnTypes.AlignSize();
+        columnPlans.AlignSize();
 
         DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(allocator);
         const auto identityColumns =
@@ -1181,25 +1187,38 @@ namespace QueryPipeline::Statements {
                 );
             }
 
-            this->valueTypes.Push(static_cast<DataType>(header.dataType));
+            columnTypes[header.ordinalPosition] = static_cast<DataType>(header.dataType);
             insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::ValueSlot(i);
+
+            auto& columnPlan = columnPlans[header.ordinalPosition];
+            columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Vector;
+            columnPlan._slot = i;
+
             statementColumns.Add(header.id);
         }
 
         for (const auto& header: columnsDict | std::views::values) {
+            auto& columnPlan = columnPlans[header.ordinalPosition];
+            columnPlan._type = static_cast<DataType>(header.dataType);
+            columnPlan._nullable = header.isNullable;
+
             if (header.isSystem
-                || identityColumns.Contains(header.id)
                 || statementColumns.Contains(header.id)
             ) continue;
+
+            if (identityColumns.Contains(header.id)){
+                columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Identity;
+                continue;
+            }
 
             //Insert the null value
             if (header.isNullable) {
                 insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::NullSlot();
+                columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Null;
                 continue;
             }
 
             auto defaultValue = catalog.SelectDefaultValueByColumnId(allocator, header.id);
-
             if (defaultValue.columnId == INVALID_COLUMN_ID) {
                 return Errors::ValidationStatus::Error(
                     Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
@@ -1211,10 +1230,14 @@ namespace QueryPipeline::Statements {
 
             const auto slotIndex = InsertStatement::InsertDefaultValue(allocator, defaultExpressions, header, defaultValue);
             insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::DefaultSlot(slotIndex);
+
+            columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Default;
+            columnPlan._slot = slotIndex;
         }
 
         this->insertPlan._slotMap = std::move(insertSlots);
         this->insertPlan._sharedDefaults = std::move(defaultExpressions);
+        this->insertPlan._columnsPlans = std::move(columnPlans);
         this->valueTypes = std::move(columnTypes);
 
         validationScope._tableColumnsArray[this->table->_slotIndex] = std::move(columnsDict);

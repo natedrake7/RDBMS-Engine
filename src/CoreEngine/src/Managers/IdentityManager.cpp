@@ -55,10 +55,25 @@ namespace CoreEngine::StorageTypes {
         return static_cast<T>(value);
     }
 
-    template TinyInt IdentityManager::Generate<TinyInt>(const ::Memory::IAllocator* allocator);
-    template SmallInt IdentityManager::Generate<SmallInt>(const ::Memory::IAllocator* allocator);
-    template Int IdentityManager::Generate<Int>(const ::Memory::IAllocator* allocator);
-    template BigInt IdentityManager::Generate<BigInt>(const ::Memory::IAllocator* allocator);
+    template TinyInt IdentityManager::Generate<TinyInt>(const ::Memory::IAllocator*);
+    template SmallInt IdentityManager::Generate<SmallInt>(const ::Memory::IAllocator*);
+    template Int IdentityManager::Generate<Int>(const ::Memory::IAllocator*);
+    template BigInt IdentityManager::Generate<BigInt>(const ::Memory::IAllocator*);
+
+    template <DataTypes::IsInteger T>
+    T IdentityManager::ReserveRange(const ::Memory::IAllocator* allocator, T range){
+        const auto value = this->counter.fetch_add(range * this->header.increment, std::memory_order_relaxed);
+
+        if (value >= this->reservedUpTo.load(std::memory_order_relaxed))
+            this->ReserveBlock(allocator, value);
+
+        return static_cast<T>(value);
+    }
+
+    template TinyInt IdentityManager::ReserveRange<TinyInt>(const ::Memory::IAllocator*, TinyInt);
+    template SmallInt IdentityManager::ReserveRange<SmallInt>(const ::Memory::IAllocator*, SmallInt);
+    template Int IdentityManager::ReserveRange<Int>(const ::Memory::IAllocator*, Int);
+    template BigInt IdentityManager::ReserveRange<BigInt>(const ::Memory::IAllocator*, BigInt);
 
     template <DataTypes::IsInteger T>
     bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, T& value){
@@ -89,4 +104,6 @@ namespace CoreEngine::StorageTypes {
     }
 
     bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
+
+    Int IdentityManager::GetIncrement() const{ return this->header.increment; }
 }
