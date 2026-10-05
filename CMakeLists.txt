@@ -143,7 +143,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Evaluators/Kernels/Row/RowKernels.Cast.cpp
         src/CoreEngine/src/DataStorage/ExtentReservation.cpp
         src/CoreEngine/src/Database.Templates.cpp
-        src/CoreEngine/src/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.cpp
         src/CoreEngine/src/Pages/LargeObjects/LobRootView.cpp
         src/CoreEngine/src/Pages/LargeObjects/LobIndexView.cpp
         src/CoreEngine/src/DataStorage/LargeObjects/LobReader.cpp

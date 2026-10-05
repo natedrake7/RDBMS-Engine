@@ -10,28 +10,53 @@
 namespace Expressions {
     class Expression;
 
-    static constexpr Int LOGICAL_TYPE_COUNT = 3;
     enum class LogicalType {
         And = 0,
         Or = 1,
         Not = 2,
         Invalid = 3
-      };
-
-    enum class BinaryOperator {
-        Equal = 0,
-        NotEqual = 1,
-        Greater = 2,
-        GreaterEqual = 3,
-        Less = 4,
-        LessEqual = 5,
-        Add = 6,
-        Subtract = 7,
-        Multiply = 8,
-        Divide = 9,
-        Modulo = 10,
-        EqualIgnoreOrdinalCase = 11
     };
+    static inline constexpr Int LOGICAL_TYPE_COUNT = Reflection::EnumCount<LogicalType>;
+
+    enum class BinaryOperator : UnsignedTinyInt{
+        Equal                  [[= DataTypes::Traits::Comparison{}]] = 0,
+        NotEqual               [[= DataTypes::Traits::Comparison{}]] = 1,
+        Greater                [[= DataTypes::Traits::Comparison{}]] = 2,
+        GreaterEqual           [[= DataTypes::Traits::Comparison{}]] = 3,
+        Less                   [[= DataTypes::Traits::Comparison{}]] = 4,
+        LessEqual              [[= DataTypes::Traits::Comparison{}]] = 5,
+        Add                    [[= DataTypes::Traits::Arithmetic{}, = DataTypes::Traits::Concatenation{}]] = 6,
+        Subtract               [[= DataTypes::Traits::Arithmetic{}]] = 7,
+        Multiply               [[= DataTypes::Traits::Arithmetic{}]] = 8,
+        Divide                 [[= DataTypes::Traits::Arithmetic{}]] = 9,
+        Modulo                 [[= DataTypes::Traits::Arithmetic{}]] = 10,
+        EqualIgnoreOrdinalCase [[= DataTypes::Traits::CaseInsensitiveComparison{}]] = 11
+    };
+
+    static inline constexpr Int BINARY_OPERATORS_COUNT = Reflection::EnumCount<BinaryOperator>;
+
+    struct DivideTag{};
+    struct ModuloTag{};
+
+    using BinaryOperatorFunctors = DataTypes::TypeList<
+        std::equal_to<>,
+        std::not_equal_to<>,
+        std::greater<>,
+        std::greater_equal<>,
+        std::less<>,
+        std::less_equal<>,
+        std::plus<>,
+        std::minus<>,
+        std::multiplies<>,
+        DivideTag,
+        ModuloTag,
+        DataTypes::StringEqualsIgnoreCase
+    >;
+
+    static_assert(
+        BinaryOperatorFunctors::SIZE == BINARY_OPERATORS_COUNT,
+        "Invalid Count of binary operator functors"
+    );
 
     enum class BranchType {
         Switch = 0,
@@ -50,6 +75,8 @@ namespace Expressions {
         Json = 8,
         Cast = 9
     };
+
+    static inline constexpr Int EXPRESSION_TYPE_COUNT = Reflection::EnumCount<ExpressionType>;
 
     static constexpr ConstexprDictionary EXPRESSION_OPERATORS_DICT{
         Pair(DataTypes::StringView("="), BinaryOperator::Equal),

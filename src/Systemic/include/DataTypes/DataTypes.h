@@ -3,6 +3,7 @@
 #include <string>
 #include <type_traits>
 
+#include "DataTypes.Traits.h"
 #include "../Reflection/Enum.h"
 
 typedef uint32_t data_size_t;
@@ -82,17 +83,21 @@ typedef uint32_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
 
-enum class DataType: UnsignedTinyInt {
-    String = 0,
-    Bool = 1,
-    TinyInt = 2,
-    SmallInt = 3,
-    Int = 4,
-    BigInt = 5,
-    Decimal = 6,
-    DateTime = 7,
-    Guid = 8,
-    Json = 9,
+enum class DataType : UnsignedTinyInt{
+    String   [[
+        = DataTypes::Traits::Comparison{},
+        = DataTypes::Traits::Concatenation{},
+        = DataTypes::Traits::CaseInsensitiveComparison{}
+    ]] = 0,
+    Bool     [[= DataTypes::Traits::Comparison{}]] = 1,
+    TinyInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 2,
+    SmallInt [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 3,
+    Int      [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 4,
+    BigInt   [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 5,
+    Decimal  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 6,
+    DateTime [[= DataTypes::Traits::Comparison{}]] = 7,
+    Guid     [[= DataTypes::Traits::Comparison{}]] = 8,
+    Json  = 9,
     Null = 10
 };
 

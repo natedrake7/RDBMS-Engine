@@ -201,7 +201,7 @@ namespace DataTypes{
     JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator)
         : _data(nullptr), _allocator(allocator), _size(0){}
 
-    JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, const Int size)
+    JsonBinary::JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, const data_size_t size)
         : _data(data), _allocator(allocator), _size(size){}
 
     JsonBinary& JsonBinary::operator=(const JsonBinary& other){

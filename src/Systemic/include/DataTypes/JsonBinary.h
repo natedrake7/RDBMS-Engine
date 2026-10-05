@@ -50,7 +50,7 @@ namespace DataTypes{
     public:
         JsonBinary();
         explicit JsonBinary(const ::Memory::IAllocator* allocator);
-        explicit JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, Int size);
+        explicit JsonBinary(const ::Memory::IAllocator* allocator, const object_t* data, data_size_t size);
 
         JsonBinary& operator=(const JsonBinary& other);
         JsonBinary& operator=(JsonBinary&& other) noexcept;
