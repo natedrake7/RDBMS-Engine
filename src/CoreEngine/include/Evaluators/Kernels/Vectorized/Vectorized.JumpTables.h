@@ -47,7 +47,7 @@ namespace CoreEngine::VectorizedKernels{
 
         using BinaryKernelTable = DataStructures::StaticArray<
             DataStructures::StaticArray<Expressions::VectorizedKernelFunction, DATATYPE_COUNT>,
-            DATATYPE_COUNT
+            Expressions::BINARY_OPERATORS_COUNT
         >;
 
         template <Expressions::BinaryOperator OP>
