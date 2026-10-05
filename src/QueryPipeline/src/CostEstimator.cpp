@@ -32,13 +32,13 @@ namespace QueryPipeline{
             case Expressions::ExpressionType::Variable:
                 return CostEstimator::CONSTANT_EXPRESSION_COMPLEXITY;
             case Expressions::ExpressionType::Binary:
-                return CostEstimator::EstimateBinaryExpressionComplexity(expression->AsBinary());
+                return CostEstimator::EstimateBinaryExpressionComplexity(expression->As<Expressions::BinaryExpression>());
             case Expressions::ExpressionType::Logical:
-                return CostEstimator::EstimateLogicalExpressionComplexity(expression->AsLogical());
+                return CostEstimator::EstimateLogicalExpressionComplexity(expression->As<Expressions::LogicalExpression>());
             case Expressions::ExpressionType::Branch:
-                return CostEstimator::EstimateBranchExpressionComplexity(expression->AsBranch());
+                return CostEstimator::EstimateBranchExpressionComplexity(expression->As<Expressions::BranchExpression>());
             case Expressions::ExpressionType::Function:
-                return CostEstimator::EstimateFunctionExpressionComplexity(expression->AsFunction());
+                return CostEstimator::EstimateFunctionExpressionComplexity(expression->As<Expressions::FunctionExpression>());
             default:
                 return 0;
         }

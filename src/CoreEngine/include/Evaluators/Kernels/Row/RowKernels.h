@@ -13,7 +13,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* columnExpr = self->AsColumn();
+        const auto* columnExpr = self->As<Expressions::ColumnExpression>();
         if constexpr (DataTypes::NonPrimitiveType<T>){
             UnsignedSmallInt size = 0;
             auto* data = context._pages[columnExpr->_slotIndex].GetColumnAt(
@@ -48,7 +48,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto& value = self->AsConstant()->value;
+        const auto& value = self->As<Expressions::ConstantExpression>()->value;
         *outNull = value.IsNull();
         if (*outNull) return;
 
@@ -78,7 +78,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* variableExpr = self->AsVariable();
+        const auto* variableExpr = self->As<Expressions::VariableExpression>();
         const auto& value = context._executionContext->GetVariable(DataTypes::StringView::ViewOf(variableExpr->normalizedName))->GetValue();
         *outNull = value.IsNull();
         if (*outNull) return;

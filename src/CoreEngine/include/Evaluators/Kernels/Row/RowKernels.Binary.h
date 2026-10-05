@@ -12,7 +12,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
         bool leftNull = false, rightNull = false;
 
         T left, right;
@@ -47,7 +47,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
         bool leftNull = false, rightNull = false;
         T left, right;
 
@@ -75,7 +75,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
         bool leftNull = false, rightNull = false;
         T left, right;
 
@@ -100,7 +100,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
 
         T left, right;
         bool leftNull = false, rightNull = false;

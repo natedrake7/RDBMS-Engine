@@ -295,10 +295,10 @@ namespace QueryPipeline::Parsing{
             return expression;
 
         //JsonExpression is anchored on a column, so nothing else can carry a path.
-        if (!expression->IsColumn())
+        if (!expression->Is<Expressions::ColumnExpression>())
             return this->Fail("the -> and ->> accessors can only be applied to a column");
 
-        return this->ApplyJsonAccessors(expression->AsColumn());
+        return this->ApplyJsonAccessors(expression->As<Expressions::ColumnExpression>());
     }
 
     /** @} */

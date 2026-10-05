@@ -13,7 +13,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
 
         const auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
         const auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
@@ -134,7 +134,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
 
         auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
@@ -173,7 +173,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
 
         auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
         auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);
@@ -214,7 +214,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* binaryExpr = self->AsBinary();
+        const auto* binaryExpr = self->As<Expressions::BinaryExpression>();
 
         const auto* left = binaryExpr->left->vectorizedKernel(binaryExpr->left, context, chunk);
         const auto* right = binaryExpr->right->vectorizedKernel(binaryExpr->right, context, chunk);

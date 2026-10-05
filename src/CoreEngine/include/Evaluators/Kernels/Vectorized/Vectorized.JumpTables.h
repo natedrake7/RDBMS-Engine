@@ -96,8 +96,10 @@ namespace CoreEngine::VectorizedKernels{
                     table[index] = &LogicalOrKernel;
                 else if constexpr (type == LogicalType::Not)
                     table[index] = &LogicalNotKernel;
-                else if constexpr (type == LogicalType::Invalid) {}
-                else static_assert(DataTypes::AlwaysFalse<decltype(type)>, "LogicalType without a vectorized kernel");
+                else static_assert(
+                    DataTypes::AlwaysFalse<decltype(type)>,
+                    "LogicalType without a vectorized kernel"
+                );
             }
             return table;
         }

@@ -10,11 +10,25 @@
 namespace Expressions {
     class Expression;
 
+    enum class ExpressionType : uint8_t {
+        Expression = 0,
+        Column = 1,
+        Constant = 2,
+        Binary = 3,
+        Logical = 4,
+        Variable = 5,
+        Branch = 6,
+        Function = 7,
+        Json = 8,
+        Cast = 9
+    };
+
+    static inline constexpr Int EXPRESSION_TYPE_COUNT = Reflection::EnumCount<ExpressionType>;
+
     enum class LogicalType {
         And = 0,
         Or = 1,
-        Not = 2,
-        Invalid = 3
+        Not = 2
     };
     static inline constexpr Int LOGICAL_TYPE_COUNT = Reflection::EnumCount<LogicalType>;
 
@@ -62,21 +76,6 @@ namespace Expressions {
         Switch = 0,
         Ternary = 1,
     };
-
-    enum class ExpressionType : uint8_t {
-        Expression = 0,
-        Column = 1,
-        Constant = 2,
-        Binary = 3,
-        Logical = 4,
-        Variable = 5,
-        Branch = 6,
-        Function = 7,
-        Json = 8,
-        Cast = 9
-    };
-
-    static inline constexpr Int EXPRESSION_TYPE_COUNT = Reflection::EnumCount<ExpressionType>;
 
     static constexpr ConstexprDictionary EXPRESSION_OPERATORS_DICT{
         Pair(DataTypes::StringView("="), BinaryOperator::Equal),

@@ -83,12 +83,12 @@ namespace QueryPipeline {
     void Optimizer::SplitConjunctions(Expressions::Expression* expression, DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions){
         if (expression == nullptr) return;
 
-        if (!expression->IsLogical()){
+        if (!expression->Is<Expressions::LogicalExpression>()){
             conjunctions.Push(expression);
             return;
         }
 
-        auto* logicalExpr = expression->AsLogical();
+        auto* logicalExpr = expression->As<Expressions::LogicalExpression>();
         if (logicalExpr->IsAnd()){
             SplitConjunctions(logicalExpr->left, conjunctions);
             SplitConjunctions(logicalExpr->right, conjunctions);
@@ -109,25 +109,25 @@ namespace QueryPipeline {
 
         switch (expression->expressionType){
             case Expressions::ExpressionType::Binary:{
-                const auto* binaryExpr = expression->AsBinary();
+                const auto* binaryExpr = expression->As<Expressions::BinaryExpression>();
                 Optimizer::GetInvolvedTables(binaryExpr->left, involvedTables);
                 Optimizer::GetInvolvedTables(binaryExpr->right, involvedTables);
                 break;
             }
             case Expressions::ExpressionType::Logical:{
-                const auto* logicalExpr = expression->AsLogical();
+                const auto* logicalExpr = expression->As<Expressions::LogicalExpression>();
                 Optimizer::GetInvolvedTables(logicalExpr->left, involvedTables);
                 Optimizer::GetInvolvedTables(logicalExpr->right, involvedTables);
                 break;
             }
             case Expressions::ExpressionType::Column:{
-                const auto* columnExpr = expression->AsColumn();
+                const auto* columnExpr = expression->As<Expressions::ColumnExpression>();
                 involvedTables.Add(columnExpr->tableId);
                 break;
             }
             case Expressions::ExpressionType::Json:{
-                const auto* jsonExpr = expression->AsJson();
-                const auto* columnExpr = jsonExpr->columnPtr->AsColumn();
+                const auto* jsonExpr = expression->As<Expressions::JsonExpression>();
+                const auto* columnExpr = jsonExpr->columnPtr->As<Expressions::ColumnExpression>();
                 involvedTables.Add(columnExpr->_slotIndex);
                 break;
             }
@@ -190,18 +190,18 @@ namespace QueryPipeline {
         const Expressions::BinaryExpression* expression,
         Dictionary<column_id_t, DataStructures::PolymorphicArray<Expressions::Expression*>>& columnPredicatesDictionary
     ){
-        if (expression->left->IsColumn()
-            && (expression->right->IsConstant() || expression->right->IsVariable()))
+        if (expression->left->Is<Expressions::ColumnExpression>()
+            && (expression->right->Is<Expressions::ConstantExpression>() || expression->right->Is<Expressions::VariableExpression>()))
         {
-            const auto* columnExpr = expression->left->AsColumn();
+            const auto* columnExpr = expression->left->As<Expressions::ColumnExpression>();
             columnPredicatesDictionary[columnExpr->columnId].Push(baseExpression);
             return;
         }
 
-        if (expression->right->IsColumn()
-            && (expression->left->IsConstant() || expression->left->IsVariable()))
+        if (expression->right->Is<Expressions::ColumnExpression>()
+            && (expression->left->Is<Expressions::ConstantExpression>() || expression->left->Is<Expressions::VariableExpression>()))
         {
-            const auto* columnExpr = expression->right->AsColumn();
+            const auto* columnExpr = expression->right->As<Expressions::ColumnExpression>();
             columnPredicatesDictionary[columnExpr->columnId].Push(baseExpression);
         }
     }
@@ -285,8 +285,8 @@ namespace QueryPipeline {
         const Expressions::ColumnExpression* columnExpr,
         Expressions::Expression* otherExpression
     ){
-        if (otherExpression->IsConstant()){
-            const auto* constantExpr = otherExpression->AsConstant();
+        if (otherExpression->Is<Expressions::ConstantExpression>()){
+            const auto* constantExpr = otherExpression->As<Expressions::ConstantExpression>();
 
             Optimizer::DetermineSeekRange(
                 binaryExpr,
@@ -295,7 +295,7 @@ namespace QueryPipeline {
                 analyzeResult.canIndexSeek
             );
         }
-        else if (binaryExpr->right->IsVariable()){
+        else if (binaryExpr->right->Is<Expressions::VariableExpression>()){
             analyzeResult.expression = binaryExpr->right;
             analyzeResult.needsParameterBinding = true;
 
@@ -317,10 +317,10 @@ namespace QueryPipeline {
             columnPredicates.Add(column.columnId, {});
 
         for (auto& condition : conjunctions){
-            if (!condition->IsBinary())
+            if (!condition->Is<Expressions::BinaryExpression>())
                 continue;
 
-            Optimizer::AnalyzeTableScan(condition, condition->AsBinary(), columnPredicates);
+            Optimizer::AnalyzeTableScan(condition, condition->As<Expressions::BinaryExpression>(), columnPredicates);
         }
 
         for (const auto& column : index.columns) {
@@ -332,19 +332,19 @@ namespace QueryPipeline {
             analyzeResult.canIndexSeek = true;
 
             for (auto*& predicate : predicates) {
-                if (!predicate->IsBinary())
+                if (!predicate->Is<Expressions::BinaryExpression>())
                     continue;
 
                 Value value;
-                auto* binaryExpr = predicate->AsBinary();
+                auto* binaryExpr = predicate->As<Expressions::BinaryExpression>();
 
-                if (binaryExpr->left->IsColumn()){
-                    Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->left->AsColumn(), binaryExpr->right);
+                if (binaryExpr->left->Is<Expressions::ColumnExpression>()){
+                    Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->left->As<Expressions::ColumnExpression>(), binaryExpr->right);
                     continue;
                 }
 
-                if (binaryExpr->right->IsColumn())
-                    Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->right->AsColumn(), binaryExpr->left);
+                if (binaryExpr->right->Is<Expressions::ColumnExpression>())
+                    Optimizer::AnalyzeTableScan(analyzeResult, binaryExpr, binaryExpr->right->As<Expressions::ColumnExpression>(), binaryExpr->left);
             }
 
             if (!analyzeResult.canIndexSeek)
@@ -415,14 +415,14 @@ namespace QueryPipeline {
     ){
         switch (expression->expressionType){
         case Expressions::ExpressionType::Column:{
-                const auto* columnExpr = expression->AsColumn();
+                const auto* columnExpr = expression->As<Expressions::ColumnExpression>();
                 info.leftColumnId = columnExpr->columnId;
                 info.leftColumnIndex = columnExpr->ordinalPosition;
                 info.leftSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         case Expressions::ExpressionType::Json:{
-                const auto* columnExpr = expression->AsJson()->columnPtr;
+                const auto* columnExpr = expression->As<Expressions::JsonExpression>()->columnPtr;
                 info.leftColumnId = columnExpr->columnId;
                 info.leftColumnIndex = columnExpr->ordinalPosition;
                 info.leftSlotIndex = columnExpr->_slotIndex;
@@ -439,14 +439,14 @@ namespace QueryPipeline {
     ){
         switch (expression->expressionType){
         case Expressions::ExpressionType::Column:{
-                const auto* columnExpr = expression->AsColumn();
+                const auto* columnExpr = expression->As<Expressions::ColumnExpression>();
                 info.rightColumnId = columnExpr->columnId;
                 info.rightColumnIndex = columnExpr->ordinalPosition;
                 info.rightSlotIndex = columnExpr->_slotIndex;
                 break;
         }
         case Expressions::ExpressionType::Json:{
-                const auto* columnExpr = expression->AsJson()->columnPtr->AsColumn();
+                const auto* columnExpr = expression->As<Expressions::JsonExpression>()->columnPtr->As<Expressions::ColumnExpression>();
                 info.rightColumnId = columnExpr->columnId;
                 info.rightColumnIndex = columnExpr->ordinalPosition;
                 info.rightSlotIndex = columnExpr->_slotIndex;
@@ -462,11 +462,15 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
         bool& isEqualityJoin
     ){
-        if (!expression->IsBinary())
+        if (!expression->Is<Expressions::BinaryExpression>())
             return;
 
-        const auto* binaryExpr = expression->AsBinary();
-        if (!binaryExpr->left->IsColumnType() || !binaryExpr->right->IsColumnType())
+        const auto isColumnType = [](const Expressions::Expression* side){
+            return side->Is<Expressions::ColumnExpression>() || side->Is<Expressions::JsonExpression>();
+        };
+
+        const auto* binaryExpr = expression->As<Expressions::BinaryExpression>();
+        if (!isColumnType(binaryExpr->left) || !isColumnType(binaryExpr->right))
             return;
 
         JoinConditionInfo info;

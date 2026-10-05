@@ -17,7 +17,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
 
         auto left = false, leftNull = false;
         logicalExpr->left->rowKernel(logicalExpr->left, context, &left, &leftNull);
@@ -51,7 +51,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
 
         auto left = false, leftNull = false;
         logicalExpr->left->rowKernel(logicalExpr->left, context, &left, &leftNull);
@@ -86,7 +86,7 @@ namespace CoreEngine::RowKernels{
         bool* outNull
     ){
 
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
         auto value = false;
         logicalExpr->left->rowKernel(logicalExpr->left, context, &value, outNull);
         *static_cast<bool*>(outVal) = !outNull && !value;

@@ -84,99 +84,7 @@ namespace Expressions{
         _executionContext(executionContext), _allocator(executionContext->GetAllocator()),
         _type(EvaluationContextType::SingleRow){}
 
-    // EvaluationContext::EvaluationContext(
-    //     const QueryResult &row,
-    //     const CoreEngine::ExecutionContext* executionContext
-    // ) {
-    //     this->type = EvaluationContextType::MaterializedRow;
-    //     this->allocator = executionContext.GetAllocator();
-    //     this->table = executionContext.GetTable(0);
-    //     this->variables = executionContext.GetVariables();
-    //     this->materializedRow = row;
-    //     this->row = nullptr;
-    //     this->joinRow = nullptr;
-    // }
-    //
-    // EvaluationContext::EvaluationContext(
-    //     const CoreEngine::StorageTypes::RID* row,
-    //     const CoreEngine::StorageTypes::RID* joinRow,
-    //     const CoreEngine::ExecutionContext& executionContext
-    // ) :     row(row), joinRow(joinRow),
-    //         allocator(executionContext.GetAllocator()),
-    //         table(executionContext.GetTable(0)),
-    //         variables(executionContext.GetVariables()),
-    //         type(EvaluationContextType::Join){}
-    //
-    // EvaluationContext EvaluationContext::CreateJoinContext(
-    //     const CoreEngine::StorageTypes::RID* outerRow,
-    //     const CoreEngine::StorageTypes::RID* innerRow,
-    //     const CoreEngine::ExecutionContext& executionContext
-    // ){
-    //     return EvaluationContext(outerRow, innerRow, executionContext);
-    // }
-
-    Value Expression::EvaluateJoin(const EvaluationContext& context) const{
-        // auto previousColumns = context.row->numberOfColumns;
-        // if (this->columnIndex < previousColumns)
-        //     return context.row->PartialMaterialize(context.allocator, this->columnIndex);
-        //
-        // for (const auto& joinedRow : context.row->logicalState->joinedRows) {
-        //     const auto joinRowColumns = joinedRow->numberOfColumns;
-        //
-        //     if (this->columnIndex < previousColumns + joinRowColumns)
-        //         return joinedRow->PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
-        //
-        //     previousColumns += joinRowColumns;
-        // }
-        //
-        // if (this->columnIndex < previousColumns + context.joinRow->numberOfColumns)
-        //     return context.joinRow->PartialMaterialize(context.allocator, this->columnIndex - previousColumns);
-        //
-        // return Value::Null();
-    }
-
-    Expression::Expression()
-        : ordinalPosition(0), expressionType(ExpressionType::Expression) {}
-
-    bool Expression::IsBinary() const{ return this->expressionType == ExpressionType::Binary; }
-    bool Expression::IsLogical() const{ return this->expressionType == ExpressionType::Logical; }
-    bool Expression::IsConstant() const{ return this->expressionType == ExpressionType::Constant; }
-    bool Expression::IsVariable() const{ return this->expressionType == ExpressionType::Variable; }
-    bool Expression::IsColumn() const{ return this->expressionType == ExpressionType::Column; }
-    bool Expression::IsFunction() const{ return this->expressionType == ExpressionType::Function; }
-    bool Expression::IsBranch() const{ return this->expressionType == ExpressionType::Branch; }
-    bool Expression::IsJson() const{ return this->expressionType == ExpressionType::Json; }
-
-    BinaryExpression* Expression::AsBinary(){ return static_cast<BinaryExpression*>(this); }
-    LogicalExpression* Expression::AsLogical(){ return static_cast<LogicalExpression*>(this); }
-    ColumnExpression* Expression::AsColumn(){ return static_cast<ColumnExpression*>(this); }
-    VariableExpression* Expression::AsVariable(){ return static_cast<VariableExpression*>(this); }
-    ConstantExpression* Expression::AsConstant(){ return static_cast<ConstantExpression*>(this); }
-    BranchExpression* Expression::AsBranch(){ return static_cast<BranchExpression*>(this); }
-    FunctionExpression* Expression::AsFunction(){ return static_cast<FunctionExpression*>(this); }
-    JsonExpression* Expression::AsJson(){ return static_cast<JsonExpression*>(this); }
-    CastExpression* Expression::AsCast(){return static_cast<CastExpression*>(this);}
-
-    const BinaryExpression* Expression::AsBinary() const{ return static_cast<const BinaryExpression*>(this); }
-    const LogicalExpression* Expression::AsLogical() const{ return static_cast<const LogicalExpression*>(this); }
-    const ColumnExpression* Expression::AsColumn() const{ return static_cast<const ColumnExpression*>(this); }
-    const VariableExpression* Expression::AsVariable() const{ return static_cast<const VariableExpression*>(this); }
-    const ConstantExpression* Expression::AsConstant() const{ return static_cast<const ConstantExpression*>(this); }
-    const BranchExpression* Expression::AsBranch() const{ return static_cast<const BranchExpression*>(this); }
-    const FunctionExpression * Expression::AsFunction() const{ return static_cast<const FunctionExpression*>(this); }
-    const JsonExpression* Expression::AsJson() const{ return static_cast<const JsonExpression*>(this); }
-    const CastExpression* Expression::AsCast() const{ return static_cast<const CastExpression*>(this); }
-
-    bool Expression::IsColumnType() const{
-        return this->expressionType == ExpressionType::Column
-            || this->expressionType == ExpressionType::Json;
-    }
-
     void Expression::SetIndex(const column_index_t index){ this->ordinalPosition = index; }
-
-    void ColumnExpression::BindVectorizedKernel(ColumnExpression* self){
-        self->vectorizedKernel = CoreEngine::VectorizedKernels::ColumnScanKernel;
-    }
 
     void ColumnExpression::ResolveReference(ColumnExpression* self, const CoreEngine::OutputSchema* schema){
         const auto identity = CoreEngine::ColumnIdentity::Base(self->_slotIndex, self->ordinalPosition);
@@ -194,7 +102,7 @@ namespace Expressions{
         this->ordinalPosition = 0;
         this->size = 0;
         this->returnType = DataType::Null;
-        this->expressionType = ExpressionType::Column;
+        this->expressionType = ColumnExpression::TYPE;
     }
 
     ColumnExpression::ColumnExpression(DataTypes::String&& name, DataTypes::String&& tableAlias)
@@ -203,7 +111,7 @@ namespace Expressions{
             returnType(DataType::Null), size(0) {
         this->_slotIndex = DEFAULT_SLOT_INDEX;
         this->ordinalPosition = 0;
-        this->expressionType = ExpressionType::Column;
+        this->expressionType = ColumnExpression::TYPE;
     }
 
     ColumnExpression::ColumnExpression(const column_index_t index, const DataType dataType){
@@ -213,20 +121,17 @@ namespace Expressions{
         this->returnType = dataType;
         this->tableId = INVALID_TABLE_ID;
         this->columnId = INVALID_COLUMN_ID;
-        this->expressionType = ExpressionType::Column;
+        this->expressionType = ColumnExpression::TYPE;
     }
 
-    void ColumnExpression::BindAndResolveExpressionKernel(
-        Expression* expression,
-        const CoreEngine::OutputSchema* schema
-    ){
-        auto* columnExpression = expression->AsColumn();
-        BindVectorizedKernel(columnExpression);
-        ResolveReference(columnExpression, schema);
+    void ColumnExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* columnExpression = self->As<ColumnExpression>();
+        columnExpression->vectorizedKernel = CoreEngine::VectorizedKernels::ColumnScanKernel;
+        ColumnExpression::ResolveReference(columnExpression, schema);
     }
 
     void ColumnExpression::BindRowKernel(Expression* self){
-        auto* columnExpression = self->AsColumn();
+        auto* columnExpression = self->As<ColumnExpression>();
         switch (columnExpression->returnType){
         case DataType::String:
             columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::StringValue>;
@@ -269,26 +174,26 @@ namespace Expressions{
 
     ConstantExpression::ConstantExpression(const Value &value)
         : value(value){
-        this->expressionType = ExpressionType::Constant;
+        this->expressionType = ConstantExpression::TYPE;
     }
 
     ConstantExpression::ConstantExpression(Value &value)
         : value(std::move(value)){
-        this->expressionType = ExpressionType::Constant;
+        this->expressionType = ConstantExpression::TYPE;
     }
 
     ConstantExpression::ConstantExpression(Value&& value)
         : value(std::move(value)){
-        this->expressionType = ExpressionType::Constant;
+        this->expressionType = ConstantExpression::TYPE;
     }
 
-    void ConstantExpression::BindVectorizedKernel(Expression* self){
-        auto* constantExpression = self->AsConstant();
+    void ConstantExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* constantExpression = self->As<ConstantExpression>();
         constantExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetConstantKernel(constantExpression->value.GetType());
     }
 
     void ConstantExpression::BindRowKernel(Expression* self){
-        auto* constantExpression = self->AsConstant();
+        auto* constantExpression = self->As<ConstantExpression>();
         switch (constantExpression->value.GetType()){
         case DataType::Bool:
             constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<bool>;
@@ -338,14 +243,7 @@ namespace Expressions{
         this->logicalType = logicalType;
         this->left = leftExpression;
         this->right = RightExpression;
-        this->expressionType = ExpressionType::Logical;
-    }
-
-    LogicalExpression::LogicalExpression(){
-        this->logicalType = LogicalType::Invalid;
-        this->left = nullptr;
-        this->right = nullptr;
-        this->expressionType = ExpressionType::Logical;
+        this->expressionType = LogicalExpression::TYPE;
     }
 
     bool LogicalExpression::IsOr() const{ return this->logicalType == LogicalType::Or; }
@@ -355,10 +253,10 @@ namespace Expressions{
 
     bool LogicalExpression::IsNot() const{ return this->logicalType == LogicalType::Not; }
 
-    bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->IsConstant() || this->right->IsConstant(); }
+    bool LogicalExpression::HasAtLeastOneConstant() const{ return this->left->Is<ConstantExpression>() || this->right->Is<ConstantExpression>(); }
 
     void LogicalExpression::BindRowKernel(Expression* self){
-        auto* logicalExpression = self->AsLogical();
+        auto* logicalExpression = self->As<LogicalExpression>();
         Expressions::BindExpressionRowKernel(logicalExpression->left);
         Expressions::BindExpressionRowKernel(logicalExpression->right);
 
@@ -371,13 +269,12 @@ namespace Expressions{
             break;
         case LogicalType::Not:
             logicalExpression->rowKernel = &CoreEngine::RowKernels::LogicalNotKernel;
-        case LogicalType::Invalid:
             break;
         }
     }
 
     void LogicalExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
-        auto* logicalExpression = self->AsLogical();
+        auto* logicalExpression = self->As<LogicalExpression>();
         Expressions::BindAndResolveExpressionKernel(logicalExpression->left, schema);
         Expressions::BindAndResolveExpressionKernel(logicalExpression->right, schema);
         logicalExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetLogicalKernel(logicalExpression->logicalType);
@@ -494,7 +391,7 @@ namespace Expressions{
         this->left = left;
         this->right = right;
         this->operation = operation;
-        this->expressionType = ExpressionType::Binary;
+        this->expressionType = BinaryExpression::TYPE;
     }
 
     bool BinaryExpression::ValidateOperation() const {
@@ -523,7 +420,7 @@ namespace Expressions{
     }
 
     void BinaryExpression::BindRowKernel(Expression* self){
-        auto* binaryExpression = self->AsBinary();
+        auto* binaryExpression = self->As<BinaryExpression>();
 
         Expressions::BindExpressionRowKernel(binaryExpression->left);
         Expressions::BindExpressionRowKernel(binaryExpression->right);
@@ -535,7 +432,7 @@ namespace Expressions{
     }
 
     void BinaryExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
-        auto* binaryExpression = self->AsBinary();
+        auto* binaryExpression = self->As<BinaryExpression>();
         Expressions::BindAndResolveExpressionKernel(binaryExpression->left, schema);
         Expressions::BindAndResolveExpressionKernel(binaryExpression->right, schema);
 
@@ -650,7 +547,7 @@ namespace Expressions{
     ) {
         this->functionType = functionType;
         this->arguments = std::move(arguments);
-        this->expressionType = ExpressionType::Function;
+        this->expressionType = FunctionExpression::TYPE;
     }
 
     Value FunctionExpression::Evaluate(const EvaluationContext& context) const {
@@ -887,7 +784,7 @@ namespace Expressions{
         :   branchType(type), branches(allocator),
             results(allocator), arguments(allocator),
             baseCase(nullptr) {
-        this->expressionType = ExpressionType::Branch;
+        this->expressionType = BranchExpression::TYPE;
     }
 
     DataType BranchExpression::GetReturnType() const {
@@ -920,11 +817,11 @@ namespace Expressions{
         this->name = name;
         this->normalizedName = this->name.ToLower();
         this->dataType = DataType::Null;
-        this->expressionType = ExpressionType::Variable;
+        this->expressionType = VariableExpression::TYPE;
     }
 
     void VariableExpression::BindRowKernel(Expression* self){
-        auto* variableExpression = self->AsVariable();
+        auto* variableExpression = self->As<VariableExpression>();
         switch (variableExpression->dataType){
         case DataType::String:
             variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::StringValue>;
@@ -961,8 +858,8 @@ namespace Expressions{
         }
     }
 
-    void VariableExpression::BindVectorizedKernel(Expression* self){
-        auto* variableExpression = self->AsVariable();
+    void VariableExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
+        auto* variableExpression = self->As<VariableExpression>();
         variableExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetVariableKernel(variableExpression->dataType);
     }
 
@@ -989,7 +886,7 @@ namespace Expressions{
 
     JsonExpression::JsonExpression(ColumnExpression* columnPtr, const Memory::IAllocator* allocator)
         :columnPtr(columnPtr), pathSegments(allocator), type(DataType::Null){
-        this->expressionType = ExpressionType::Json;
+        this->expressionType = JsonExpression::TYPE;
     }
 
     DataType JsonExpression::GetReturnType() const{
@@ -1001,18 +898,18 @@ namespace Expressions{
         const DataType targetType,
         const bool isTryCast
     ): childExpr(expression), targetType(targetType), isTryCast(isTryCast) {
-        this->expressionType = ExpressionType::Cast;
+        this->expressionType = CastExpression::TYPE;
     }
 
     void CastExpression::BindRowKernel(Expression* self){
-        auto* castExpression = self->AsCast();
+        auto* castExpression = self->As<CastExpression>();
         Expressions::BindExpressionRowKernel(castExpression->childExpr);
         const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
         castExpression->rowKernel = CoreEngine::RowKernels::LookupCastKernel(childExprType, castExpression->targetType);
     }
 
     void CastExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
-        auto* castExpression = self->AsCast();
+        auto* castExpression = self->As<CastExpression>();
         Expressions::BindAndResolveExpressionKernel(castExpression->childExpr, schema);
         const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
         castExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetCastKernel(childExprType, castExpression->targetType);
@@ -1074,28 +971,9 @@ namespace Expressions{
     }
 
     DataType GetExpressionReturnType(const Expression* expression){
-        switch (expression->expressionType){
-        case ExpressionType::Column:
-            return expression->AsColumn()->GetReturnType();
-        case ExpressionType::Constant:
-            return expression->AsConstant()->GetReturnType();
-        case ExpressionType::Binary:
-            return expression->AsBinary()->GetReturnType();
-        case ExpressionType::Logical:
-            return LogicalExpression::GetReturnType();
-        case ExpressionType::Variable:
-            return expression->AsVariable()->GetReturnType();
-        case ExpressionType::Branch:
-            return expression->AsBranch()->GetReturnType();
-        case ExpressionType::Function:
-            return expression->AsFunction()->GetReturnType();
-        case ExpressionType::Json:
-            return expression->AsJson()->GetReturnType();
-        case ExpressionType::Cast:
-            return expression->AsCast()->GetReturnType();
-        default:
-            return DataType::Null;
-        }
+        return VisitNode(expression->expressionType, [&]<typename TNode>() -> DataType{
+            return expression->As<TNode>()->GetReturnType();
+        });
     }
 
     void BindExpressionRowKernel(Expression* expression){
@@ -1136,33 +1014,14 @@ namespace Expressions{
         if (expression == nullptr)
             return;
 
-        switch (expression->expressionType){
-        case ExpressionType::Column:
-            ColumnExpression::BindAndResolveExpressionKernel(expression, schema);
-            break;
-        case ExpressionType::Constant:
-            ConstantExpression::BindVectorizedKernel(expression);
-            break;
-        case ExpressionType::Binary:
-            BinaryExpression::BindVectorizedKernel(expression, schema);
-            break;
-        case ExpressionType::Logical:
-            LogicalExpression::BindVectorizedKernel(expression, schema);
-            break;
-        case ExpressionType::Variable:
-            VariableExpression::BindVectorizedKernel(expression);
-            break;
-        case ExpressionType::Branch:
-            break;
-        case ExpressionType::Function:
-            break;
-        case ExpressionType::Json:
-            break;
-        case ExpressionType::Cast:
-            CastExpression::BindVectorizedKernel(expression, schema);
-            break;
-        default:
-            break;
-        }
+        VisitNode(expression->expressionType, [&]<typename TNode>(){
+            if constexpr (VectorizedNode<TNode>)
+                TNode::BindVectorizedKernel(expression, schema);
+            else
+                throw std::runtime_error(std::format(
+                        "Expression '{}' is not supported in vectorized execution",
+                        Reflection::EnumIdentifier(TNode::TYPE))
+                );
+        });
     }
 }

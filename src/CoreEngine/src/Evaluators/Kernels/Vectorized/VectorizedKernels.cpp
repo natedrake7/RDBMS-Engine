@@ -8,7 +8,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext*,
         const DataChunk* chunk
     ){
-        const auto* columnExpression = self->AsColumn();
+        const auto* columnExpression = self->As<Expressions::ColumnExpression>();
         return chunk->_columns[columnExpression->_boundReference._position];
     }
 
@@ -17,7 +17,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* right = logicalExpr->right->vectorizedKernel(logicalExpr->right, context, chunk);
 
@@ -55,7 +55,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* right = logicalExpr->right->vectorizedKernel(logicalExpr->right, context, chunk);
 
@@ -93,7 +93,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* logicalExpr = self->AsLogical();
+        const auto* logicalExpr = self->As<Expressions::LogicalExpression>();
 
         const auto* left = logicalExpr->left->vectorizedKernel(logicalExpr->left, context, chunk);
         const auto* leftData = left->DataAs<bool>();

@@ -27,8 +27,8 @@ namespace QueryPipeline {
         for (auto* expression : array){
             Expressions::BindAndResolveExpressionKernel(expression, childSchema);
 
-            if (expression->IsColumn()){
-                const auto* columnExpression = expression->AsColumn();
+            if (expression->Is<Expressions::ColumnExpression>()){
+                const auto* columnExpression = expression->As<Expressions::ColumnExpression>();
                 outputSchema->_columns.Push(
                 CoreEngine::SchemaColumn::Base(
                         columnExpression->_slotIndex,

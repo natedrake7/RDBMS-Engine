@@ -30,7 +30,7 @@ namespace CoreEngine::VectorizedKernels{
         const DataChunk*
     ){
         const auto* allocator = context->GetAllocator();
-        const auto& value = self->AsConstant()->value;
+        const auto& value = self->As<Expressions::ConstantExpression>()->value;
 
         const auto isNull = value.IsNull();
         auto* outVector = DataVector::ConstantVector(allocator, isNull, DataTypes::DataTypeOf<T>());
@@ -58,7 +58,7 @@ namespace CoreEngine::VectorizedKernels{
     ){
         const auto* allocator = context->GetAllocator();
 
-        const auto* variableExpr = self->AsVariable();
+        const auto* variableExpr = self->As<Expressions::VariableExpression>();
         const auto& value = context->GetVariable(DataTypes::StringView::ViewOf(variableExpr->normalizedName))->GetValue();
 
         const auto isNull = value.IsNull();
@@ -103,7 +103,7 @@ namespace CoreEngine::VectorizedKernels{
         const ExecutionContext* context,
         const DataChunk* chunk
     ){
-        const auto* castExpr = self->AsCast();
+        const auto* castExpr = self->As<Expressions::CastExpression>();
         const auto* allocator = context->GetAllocator();
 
         const auto* childVector = castExpr->childExpr->vectorizedKernel(castExpr->childExpr, context, chunk);

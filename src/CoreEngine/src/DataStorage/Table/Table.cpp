@@ -223,7 +223,7 @@ namespace CoreEngine::StorageTypes {
                 vector->SetNullValue(i, isNull);
             };
 
-            if (expression->IsConstant()){
+            if (expression->Is<Expressions::ConstantExpression>()){
                 vector = DataVector::ConstantVector(allocator, false, type);
                 evaluateExpression(0);
             }

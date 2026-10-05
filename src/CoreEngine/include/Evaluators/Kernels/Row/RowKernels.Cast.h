@@ -10,7 +10,7 @@ namespace CoreEngine::RowKernels{
         void* outVal,
         bool* outNull
     ){
-        const auto* castExpr = self->AsCast();
+        const auto* castExpr = self->As<Expressions::CastExpression>();
         TFrom from;
         bool childNull = false;
         castExpr->childExpr->rowKernel(castExpr->childExpr, context, &from, &childNull);
