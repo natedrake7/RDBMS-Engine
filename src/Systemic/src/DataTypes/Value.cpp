@@ -317,47 +317,6 @@ bool Value::IsIntegral() const{
         && this->_type <= DataType::BigInt;
 }
 
-// std::ostream & operator<<(std::ostream& os, const Value &field){
-//     if (field.IsNull()) {
-//         os << "NULL";
-//         return os;
-//     }
-//
-//     switch (field._type){
-//     case DataType::TinyInt:
-//         os << field.AsTinyInt();
-//         break;
-//     case DataType::SmallInt:
-//         os << field.AsSmallInt();
-//         break;
-//     case DataType::Int:
-//         os << field.AsInt();
-//         break;
-//     case DataType::BigInt:
-//         os << field.AsBigInt();
-//         break;
-//     case DataType::Decimal:
-//         os << field.AsDecimal();
-//         break;
-//     case DataType::String:
-//         os << field.AsString();
-//         break;
-//     case DataType::Bool:
-//         os << field.AsBool();
-//         break;
-//     case DataType::DateTime:
-//         field.AsDateTime().Print(os);
-//         break;
-//     case DataType::Guid:
-//         os << field.AsGuid();
-//         break;
-//     default:
-//         break;
-//     }
-//
-//     return os;
-// }
-
 bool Value::ParseAsBoolFromString() const{
     return DataTypes::ParseBool(this->AsStringView()).value_or(false);
 }

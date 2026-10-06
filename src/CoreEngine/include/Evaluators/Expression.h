@@ -341,11 +341,10 @@ namespace Expressions{
 
         template <typename Self, typename F>
         void ForEachChild(this Self&& self, F&& f){
-            for (auto* argument : self.arguments)
+            for (auto& argument : self.arguments)
                 f(argument);
         }
     };
-
 
     class BranchExpression final : public Expression {
         [[nodiscard]] Value EvaluateSwitch(const EvaluationContext &context)const;
@@ -369,11 +368,11 @@ namespace Expressions{
 
         template <typename Self, typename F>
         void ForEachChild(this Self&& self, F&& f){
-            for (auto* argument : self.arguments)
+            for (auto& argument : self.arguments)
                 f(argument);
-            for (auto* branch : self.branches)
+            for (auto& branch : self.branches)
                 f(branch);
-            for (auto* result : self.results)
+            for (auto& result : self.results)
                 f(result);
             if (self.HasBaseCase())
                 f(self.baseCase);
@@ -471,7 +470,14 @@ namespace Expressions{
         const CoreEngine::ExecutionContext* context,
         const CoreEngine::DataChunk* chunk
     );
-    
+
+    Value EvaluateExpressionToValue(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext* context,
+        const CoreEngine::DataChunk* chunk,
+        const ::Memory::IAllocator* allocator
+    );
+
     void EvaluateExpression(
         const Expression* expression,
         const EvaluationContext& context,
@@ -495,13 +501,13 @@ namespace Expressions{
 
     void BindAndResolveExpressionKernel(Expression* expression, const CoreEngine::OutputSchema* schema);
 
-    template <typename TExpression, typename F>
-    requires std::same_as<std::remove_const_t<TExpression>, Expression>
-    void ForEachChild(TExpression* expression, F&& f){
-        VisitNode(expression->expressionType, [&]<typename TNode>(){
-            expression->template As<TNode>()->ForEachChild(f);
-        });
-    }
+    // template <typename TExpression, typename F>
+    // requires std::same_as<std::remove_const_t<TExpression>, Expression>
+    // void ForEachChild(TExpression* expression, F&& f){
+    //     VisitNode(expression->expressionType, [&]<typename TNode>(){
+    //         expression->template As<TNode>()->ForEachChild(f);
+    //     });
+    // }
 
     template <typename TExpression, typename TCallback>
     requires std::same_as<std::remove_const_t<TExpression>, Expression>
@@ -509,8 +515,15 @@ namespace Expressions{
         if (expression == nullptr)
             return;
 
-        if (expression->template Is<ColumnExpression>())
+        if (expression->template Is<ColumnExpression>()){
             visitor(expression->template As<ColumnExpression>());
-        else
-            ForEachChild(expression, [&](TExpression* child){ ForEachColumnReference(child, visitor); });
+            return;
+        }
+
+        VisitNode(expression->expressionType, [&]<typename TNode>(){
+            expression->template As<TNode>()->ForEachChild([&](auto* child){
+                // Json hands out a ColumnExpression*, convert back to the base pointer the requires clause expects
+                ForEachColumnReference(static_cast<TExpression*>(child), visitor);
+            });
+        });
     }}

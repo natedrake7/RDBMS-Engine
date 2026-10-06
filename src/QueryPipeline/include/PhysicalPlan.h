@@ -17,6 +17,7 @@ namespace CoreEngine {
     }
 
     struct SelectionVector;
+    struct OutputSchema;
     class ExecutionContext;
     class SystemCatalog;
 }
@@ -27,6 +28,10 @@ namespace Network {
 
 namespace QueryPipeline {
     class LogicalPlan;
+    namespace Statements{
+        struct DataSource;
+    }
+
 }
 
 namespace QueryPipeline::PhysicalPlan {

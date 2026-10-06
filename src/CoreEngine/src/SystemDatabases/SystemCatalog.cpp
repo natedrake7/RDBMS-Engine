@@ -10,6 +10,7 @@
 
 #include "Converter.h"
 #include "DataStorage/Table.h"
+#include "Evaluators/Expression.h"
 #include "DataTypes/DataTypes.StaticData.h"
 #include "Extensions/StringExtensions.h"
 

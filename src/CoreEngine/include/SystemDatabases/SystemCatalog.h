@@ -2,7 +2,8 @@
 #include <string>
 #include <vector>
 
-#include "../../../QueryPipeline/include/PhysicalPlan.h"
+#include "../Errors.h"
+#include "../../Systemic/include/Headers.h"
 #include "../Contexts/ExecutionContext.h"
 
 namespace QueryPipeline

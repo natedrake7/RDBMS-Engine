@@ -1,4 +1,6 @@
 #pragma once
+#include "Parser.h"
+#include "ValidationMessages.h"
 #include "../../CoreEngine/include/DatabaseConstants.h"
 #include "../../CoreEngine/include/Evaluators/Expression.h"
 #include "../../Systemic/include/DataTypes/Variable.h"
@@ -250,7 +252,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String role;
 
         Errors::CompilationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -258,7 +260,7 @@ namespace QueryPipeline::Statements {
         WhereClause where;
 
         Errors::CompilationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 
@@ -476,79 +478,54 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-     Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
+       QueryContext& context,
+       Expressions::Expression*& slot,
+       CompilationScope& compilationScope
+    );
+
+    // Fallback for nodes with nothing to bind. Taking the base pointer (a derived-to-base conversion)
+    // and the most-const parameters guarantees every node-specific overload outranks it.
+     Errors::CompilationStatus BindNode(
+        const QueryContext& context,
+        const Expressions::Expression* node,
+        const CompilationScope& compilationScope
+    );
+
+     Errors::CompilationStatus BindNode(
         QueryContext& context,
-        Expressions::Expression*& expression,
+        Expressions::BranchExpression* node,
         CompilationScope& compilationScope
     );
 
-     Errors::CompilationStatus CompileNode(
+     Errors::CompilationStatus BindNode(
         QueryContext& context,
-        Expressions::BinaryExpression* binaryExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    );
-
-     Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::LogicalExpression* logicalExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    );
-
-     Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        const Expressions::FunctionExpression* funcExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    );
-
-     Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::BranchExpression* branchExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    );
-
-     Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::ColumnExpression* columnExpr,
-        Expressions::Expression*&,
+        Expressions::ColumnExpression* node,
         const CompilationScope& statementValidationScope
     );
 
-     Errors::CompilationStatus CompileNode(
+     Errors::CompilationStatus BindNode(
         const QueryContext& context,
-        Expressions::VariableExpression* variableExpr,
-        Expressions::Expression*&,
+        Expressions::VariableExpression* node,
         const CompilationScope&
     );
 
-     Errors::CompilationStatus CompileNode(
+     Errors::CompilationStatus BindNode(
         const QueryContext& context,
         ColumnName& column,
         CompilationScope& statementValidationScope
     );
 
-     Errors::CompilationStatus CompileNode(
+     Errors::CompilationStatus BindNode(
         const QueryContext&,
-        Expressions::ConstantExpression* constantExpr,
-        Expressions::Expression*&,
+        Expressions::ConstantExpression* node,
         CompilationScope&
     );
 
-     Errors::CompilationStatus CompileNode(
+     Errors::CompilationStatus BindNode(
         QueryContext& context,
-        Expressions::JsonExpression* jsonExpr,
-        Expressions::Expression*&,
+        Expressions::JsonExpression* node,
         const CompilationScope& compilationScope
-    );
-
-     Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::CastExpression* castExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
     );
 
      Errors::CompilationStatus CompileColumnWhenTableAliasExists(
@@ -597,44 +574,41 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    template <typename TNode>
-    Errors::CompilationStatus TypeCheckNode(QueryContext&, TNode*, Expressions::Expression*&){
-        return Errors::CompilationStatus::Ok();
-    }
-
+    // Fallback, see BindNode
     Errors::CompilationStatus TypeCheckNode(
-        QueryContext& context,
-        Expressions::Expression*& expression
+        const QueryContext& context,
+        const Expressions::Expression* node,
+        Expressions::Expression*& slot
     );
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        Expressions::BinaryExpression* binaryExpression,
-        Expressions::Expression*& expression
+        Expressions::BinaryExpression* node,
+        Expressions::Expression*& slot
     );
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::LogicalExpression* logicalExpression,
+        const Expressions::LogicalExpression* node,
         Expressions::Expression*&
     );
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::CastExpression* castExpression,
-        Expressions::Expression*& expression
+        const Expressions::CastExpression* node,
+        Expressions::Expression*& slot
     );
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        Expressions::BranchExpression* branchExpression,
-        Expressions::Expression*& expression
+        Expressions::BranchExpression* node,
+        Expressions::Expression*& slot
     );
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::FunctionExpression* functionExpression,
-        Expressions::Expression*& expression
+        const Expressions::FunctionExpression* node,
+        Expressions::Expression*& slot
     );
 
     /** @} End of Type Checking Functions */
@@ -645,43 +619,40 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    void FoldNode(const QueryContext& context, Expressions::Expression*& expression);
-
-    template<typename TNode>
-    void FoldNode(const QueryContext&, TNode*, Expressions::Expression*&){}
-
-    void FoldNode(
+    // Fallback, see BindNode
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::BinaryExpression* binaryExpression,
-        Expressions::Expression*& expression
-    );
-    void FoldNode(
-        const QueryContext& context,
-        Expressions::LogicalExpression* logicalExpression,
-        Expressions::Expression*& expression
+        const Expressions::Expression* node,
+        Expressions::Expression*& slot
     );
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::BranchExpression* branchExpression,
-        Expressions::Expression*& expression
+        const Expressions::BinaryExpression* node,
+        Expressions::Expression*& slot
     );
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::FunctionExpression* functionExpression,
-        Expressions::Expression*& expression
+        Expressions::LogicalExpression* node,
+        Expressions::Expression*& slot
     );
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::CastExpression* castExpression,
-        Expressions::Expression*& expression
+        const Expressions::BranchExpression* node,
+        Expressions::Expression*& slot
+    );
+
+    Errors::CompilationStatus FoldNode(
+        const QueryContext& context,
+        const Expressions::CastExpression* node,
+        Expressions::Expression*& slot
     );
 
     void FoldToConstant(
         const QueryContext& context,
-        Expressions::Expression*& expression
+        Expressions::Expression*& slot
     );
 
     /** @} End of Folding-Optimization Functions */
@@ -762,13 +733,49 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    static Errors::CompilationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
+    Errors::CompilationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
 
-    static void InsertCastExpression(
+    void InsertCastExpression(
         const QueryContext& context,
         Expressions::Expression*& expression,
         DataType type
     );
+
+    bool IsNullConstant(const Expressions::Expression* expression);
+
+    Expressions::Expression* TypedNull(const QueryContext& context, DataType type);
+
+    template<typename Pass>
+    Errors::CompilationStatus WalkExpressionPostOrder(QueryContext& context, Expressions::Expression*& slot, Pass&& pass){
+        if (slot == nullptr)
+            return Errors::CompilationStatus::Ok();
+        if (slot->expressionType == Expressions::ExpressionType::Expression)
+            return Errors::CompilationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
+
+        return Expressions::VisitNode(slot->expressionType, [&]<typename TNode>(){
+            auto* node = slot->As<TNode>();
+            auto status = Errors::CompilationStatus::Ok();
+
+            node->ForEachChild([&]<typename TChildType>(TChildType& child){
+                if (!status.IsOk())
+                    return;
+
+                if constexpr (std::same_as<std::remove_cvref_t<TChildType>, Expressions::Expression*>)
+                    status = WalkExpressionPostOrder(context, child, pass);
+                else{
+                    // Json's columnPtr is a ColumnExpression*: it gets visited but can never be replaced
+                    Expressions::Expression* view = child;
+                    status = WalkExpressionPostOrder(context, view, pass);
+                    assert(view == child && "a pass replaced Json's anchored column");
+                }
+            });
+
+            if (!status.IsOk())
+                return status;
+
+            return pass(node, slot);
+        });
+    }
 
     /** @} End of Helper Functions */
 }

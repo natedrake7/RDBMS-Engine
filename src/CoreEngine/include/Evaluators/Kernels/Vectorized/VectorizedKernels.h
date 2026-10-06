@@ -179,7 +179,8 @@ namespace CoreEngine::VectorizedKernels{
     Value KernelToValue(
         const Expressions::Expression* self,
         const ExecutionContext* context,
-        const DataChunk* chunk
+        const DataChunk* chunk,
+        const ::Memory::IAllocator* allocator
     ){
         const auto* vector = self->vectorizedKernel(self, context, chunk);
 
@@ -193,6 +194,6 @@ namespace CoreEngine::VectorizedKernels{
         if constexpr(DataTypes::TriviallyCopiable<T>)
             return Value(*data);
         else
-            return Value(*data, context->GetAllocator());
+            return Value(*data, allocator);
     }
 }

@@ -72,7 +72,8 @@ namespace QueryPipeline::Statements {
             CompilationScope compilationScope;
             auto res = CompileNode(context, this->expression, compilationScope);
 
-            if (!res.IsOk()) return res;
+            if (!res.IsOk())
+                return res;
 
             if (variableType != DataType::Null && !ValidateExpressionCoercionTypes(variableType, this->expression)) {
                 validationStatus._code = Errors::CompilationError::Error;
@@ -687,7 +688,26 @@ namespace QueryPipeline::Statements {
 
         //start resolving aliases
         for (auto i = 0; i < this->_projections.Size(); i++) {
-            compilationScope._indexPos = &i;
+            auto* projection = this->_projections[i];
+
+            // wildcards resize _projections, so they are expanded here instead of inside CompileNode,
+            // which keeps a reference to the slot across its passes
+            if (projection->Is<Expressions::ColumnExpression>()
+                && DataTypes::StringView::ViewOf(projection->As<Expressions::ColumnExpression>()->alias) == WILDCARD
+            ){
+                const auto sizeBefore = this->_projections.Size();
+                auto position = i;
+                compilationScope._indexPos = &position;
+
+                auto wildcardStatus = CompileWildcard(context, projection->As<Expressions::ColumnExpression>(), compilationScope, this);
+                if (!wildcardStatus.IsOk())
+                    return wildcardStatus;
+
+                // the wildcard was replaced by (newSize - oldSize + 1) bound columns, continue after them
+                i += static_cast<Int>(this->_projections.Size() - sizeBefore);
+                continue;
+            }
+
             auto compileStatus = CompileNode(context, this->_projections[i], compilationScope);
             if (!compileStatus.IsOk())
                 return compileStatus;
@@ -1032,8 +1052,7 @@ namespace QueryPipeline::Statements {
             columnType
         )){
             InsertCastExpression(context, expression, columnType);
-            FoldNode(context, expression);
-            return Errors::CompilationStatus::Ok();
+            return FoldNode(context, expression->As<Expressions::CastExpression>(), expression);
         }
 
         if (expression->Is<Expressions::ConstantExpression>()) {
@@ -1350,7 +1369,7 @@ namespace QueryPipeline::Statements {
 
         //start resolving aliases
         for (const auto& update : this->updates) {
-            auto columnAliasStatus = CompileNode(context, update->name, compilationScope);
+            auto columnAliasStatus = BindNode(context, update->name, compilationScope);
             if (!columnAliasStatus.IsOk())
                 return columnAliasStatus;
 
@@ -1740,171 +1759,92 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus CompileNode(
         QueryContext& context,
-        Expressions::Expression*& expression,
+        Expressions::Expression*& slot,
         CompilationScope& compilationScope
     ){
-        if (expression == nullptr)
-            return Errors::CompilationStatus::Ok();
-        if (expression->expressionType == Expressions::ExpressionType::Expression)
-            return Errors::CompilationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
+        auto result = WalkExpressionPostOrder(context, slot, [&]<typename TNode>(TNode* node, Expressions::Expression*&)
+        {
+           return BindNode(context, node, compilationScope);
+        });
 
-        return Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
-            return CompileNode(context, expression->As<TNode>(), expression, compilationScope);
+        if (!result.IsOk())
+            return result;
+
+        result = WalkExpressionPostOrder(context, slot, [&]<typename TNode>(TNode* node, Expressions::Expression*& nodeSlot)
+        {
+           return TypeCheckNode(context, node,nodeSlot);
+        });
+
+        if (!result.IsOk())
+            return result;
+
+        return WalkExpressionPostOrder(context, slot, [&]<typename TNode>(TNode* node, Expressions::Expression*& nodeSlot)
+        {
+           return FoldNode(context, node, nodeSlot);
         });
     }
 
-    Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::BinaryExpression* binaryExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    ) {
-        auto result =
-            CompileNode(context, binaryExpr->left, compilationScope)
-            && CompileNode(context, binaryExpr->right, compilationScope);
-
-        if (!result.IsOk()) return result;
-
-        FoldNode(context, expression);
+    Errors::CompilationStatus BindNode(
+        const QueryContext&,
+        const Expressions::Expression*,
+        const CompilationScope&
+    ){
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::LogicalExpression* logicalExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    ) {
-        auto result =
-            CompileNode(context, logicalExpr->left, compilationScope)
-            && CompileNode(context, logicalExpr->right, compilationScope);
-
-        if (!result.IsOk())return result;
-
-        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
-        if (!logicalExpr->IsNot() && !ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
-
-        FoldNode(context, expression);
-        return Errors::CompilationStatus::Ok();
-    }
-
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         QueryContext &context,
-        const Expressions::FunctionExpression *funcExpr,
-        Expressions::Expression *&expression,
-        CompilationScope& compilationScope
+        Expressions::BranchExpression *node,
+        CompilationScope&
     ) {
-        //validate children expressions and assign return types and ids to column expressions
-        for (auto* childExpr : funcExpr->arguments) {
-            auto childExpressionResult = CompileNode(context, childExpr, compilationScope);
-            if (!childExpressionResult.IsOk())
-                return childExpressionResult;
-        }
-
-        FoldNode(context, expression);
-        return Errors::CompilationStatus::Ok();
-    }
-
-    Errors::CompilationStatus CompileNode(
-        QueryContext &context,
-        Expressions::BranchExpression *branchExpr,
-        Expressions::Expression *&expression,
-        CompilationScope& compilationScope
-    ) {
-        if (!branchExpr->ValidateNumberOfArguments())
+        // children are already bound by the walker; type checking and folding index results[i] by branch
+        if (!node->ValidateNumberOfArguments())
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION,
                 context.GetAllocator()
             );
 
-        for (auto& branch : branchExpr->branches) {
-            auto result = CompileNode(context, branch, compilationScope);
-            if (!result.IsOk())
-                return result;
-        }
-
-        for (auto& resultExpr : branchExpr->results) {
-            auto result = CompileNode(context, resultExpr, compilationScope);
-            if (!result.IsOk())
-                return result;
-        }
-
-        if (branchExpr->HasBaseCase()) {
-            auto result = CompileNode(context, branchExpr->baseCase, compilationScope);
-            if (!result.IsOk())
-                return result;
-        }
-
-        const auto returnType = branchExpr->GetReturnType();
-
-        for (const auto& resultExpr : branchExpr->results) {
-            if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
-                return Errors::CompilationStatus::Error(
-                    Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
-                    context.GetAllocator()
-                );
-        }
-
-        if (branchExpr->HasBaseCase()) {
-            if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
-                return Errors::CompilationStatus::Error(
-                    Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
-                    context.GetAllocator()
-                );
-        }
-
-        FoldNode(context, expression);
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         QueryContext& context,
-        Expressions::ColumnExpression* columnExpr,
-        Expressions::Expression*&,
+        Expressions::ColumnExpression* node,
         const CompilationScope& statementValidationScope
     ){
-        //if wildcard ensure statement is of select statement type
-        if (DataTypes::StringView::ViewOf(columnExpr->alias) == WILDCARD) {
-            auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope._statement);
+        // top level SELECT wildcards are expanded before compilation, any wildcard reaching here is misplaced
+        if (DataTypes::StringView::ViewOf(node->alias) == WILDCARD)
+            return Errors::CompilationStatus::Error(
+                Messages::WILDCARD_USED_ON_NON_SELECT,
+                context.GetAllocator()
+            );
 
-            if (selectStatement == nullptr)
-                return Errors::CompilationStatus::Error(
-                    Messages::WILDCARD_USED_ON_NON_SELECT,
-                    context.GetAllocator()
-                );
-
-            return CompileWildcard(context, columnExpr, statementValidationScope, selectStatement);
-        }
-
-        return columnExpr->HasTableAlias()
-                   ? CompileColumnWhenTableAliasExists(context, columnExpr, statementValidationScope)
-                   : CompileColumnWhenNoTableAliasExists(context, columnExpr, statementValidationScope);
+        return node->HasTableAlias()
+                   ? CompileColumnWhenTableAliasExists(context, node, statementValidationScope)
+                   : CompileColumnWhenNoTableAliasExists(context, node, statementValidationScope);
     }
 
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         const QueryContext &context,
-        Expressions::VariableExpression* variableExpr,
-        Expressions::Expression*&,
+        Expressions::VariableExpression* node,
         const CompilationScope&
     ){
         DataType outType;
-        const auto normalizedNameView = DataTypes::StringView::ViewOf(variableExpr->normalizedName);
+        const auto normalizedNameView = DataTypes::StringView::ViewOf(node->normalizedName);
         if (!context._scope.variables.TryGetValue(normalizedNameView, outType)) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_VARIABLE(
                     context.GetAllocator(),
-                    variableExpr->name
+                    node->name
                 )
             );
         }
 
-        variableExpr->dataType = outType;
+        node->dataType = outType;
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         const QueryContext &context,
         ColumnName &column,
         CompilationScope& statementValidationScope
@@ -1953,43 +1893,38 @@ namespace QueryPipeline::Statements {
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         const QueryContext&,
-        Expressions::ConstantExpression* constantExpr,
-        Expressions::Expression*&,
+        Expressions::ConstantExpression* node,
         CompilationScope&
     ){
-        DataTypes::Coercions::DeduceIntegerType(constantExpr->value);
+        DataTypes::Coercions::DeduceIntegerType(node->value);
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus CompileNode(
+    Errors::CompilationStatus BindNode(
         QueryContext& context,
-        Expressions::JsonExpression* jsonExpr,
-        Expressions::Expression*&,
-        const CompilationScope& compilationScope
+        Expressions::JsonExpression* node,
+        const CompilationScope&
     ){
-        Expressions::Expression* expression = nullptr;
-        auto result = CompileNode(context, jsonExpr->columnPtr, expression, compilationScope);
-        if (!result.IsOk()) return result;
-
-        if (jsonExpr->pathSegments.Empty())
+        // columnPtr is already bound by the walker
+        if (node->pathSegments.Empty())
             return Errors::CompilationStatus::Error(
                 Messages::EMPTY_JSON_PATH,
                 context.GetAllocator()
             );
 
-        for (auto i = 0; i < jsonExpr->pathSegments.Size(); i++){
-            const auto& segment = jsonExpr->pathSegments[i];
+        for (auto i = 0; i < node->pathSegments.Size(); i++){
+            const auto& segment = node->pathSegments[i];
             if (segment._accessorType == DataTypes::JsonAccessorType::Scalar
-                && i != jsonExpr->pathSegments.Size() - 1
+                && i != node->pathSegments.Size() - 1
             ) return Errors::CompilationStatus::Error(
                 Messages::INVALID_JSON_ACCESSOR_TYPE,
                 context.GetAllocator()
             );
         }
 
-        const auto& lastPathSegment = jsonExpr->pathSegments.Back();
+        const auto& lastPathSegment = node->pathSegments.Back();
         if (lastPathSegment->_accessorType != DataTypes::JsonAccessorType::Scalar)
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_JSON_PATH(
@@ -1999,20 +1934,6 @@ namespace QueryPipeline::Statements {
             );
 
         //verify json validity maybe
-
-        return Errors::CompilationStatus::Ok();
-    }
-
-    Errors::CompilationStatus CompileNode(
-        QueryContext& context,
-        Expressions::CastExpression* castExpr,
-        Expressions::Expression*& expression,
-        CompilationScope& compilationScope
-    ){
-        auto result = CompileNode(context, castExpr->childExpr, compilationScope);
-        if (!result.IsOk()) return result;
-
-        FoldNode(context, expression);
         return Errors::CompilationStatus::Ok();
     }
 
@@ -2252,30 +2173,27 @@ namespace QueryPipeline::Statements {
         }
     }
 
-    Errors::CompilationStatus TypeCheckNode(QueryContext& context, Expressions::Expression*& expression){
-        if (expression == nullptr)
-            return Errors::CompilationStatus::Ok();
-        if (expression->expressionType == Expressions::ExpressionType::Expression)
-            return Errors::CompilationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
-
-        return Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
-            return TypeCheckNode(context, expression->As<TNode>(), expression);
-        });
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext&,
+        const Expressions::Expression*,
+        Expressions::Expression*&
+    ){
+        return Errors::CompilationStatus::Ok();
     }
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        Expressions::BinaryExpression* binaryExpression,
-        Expressions::Expression*& expression
+        Expressions::BinaryExpression* node,
+        Expressions::Expression*& slot
     ){
-        const auto leftType = Expressions::GetExpressionReturnType(binaryExpression->left);
-        const auto rightType = Expressions::GetExpressionReturnType(binaryExpression->right);
+        const auto leftType = Expressions::GetExpressionReturnType(node->left);
+        const auto rightType = Expressions::GetExpressionReturnType(node->right);
         if (leftType == DataType::Null || rightType == DataType::Null){
-            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
+            slot = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
             return Errors::CompilationStatus::Ok();
         }
 
-        if (!ValidateExpressionCoercionTypes(binaryExpression->left, binaryExpression->right)) {
+        if (!ValidateExpressionCoercionTypes(node->left, node->right)) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
@@ -2285,7 +2203,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        if (!binaryExpression->ValidateOperation()) {
+        if (!node->ValidateOperation()) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_OPERATION_ON_DATATYPES(
                     context.GetAllocator(),
@@ -2298,43 +2216,43 @@ namespace QueryPipeline::Statements {
         const auto promotedType = PromoteType(leftType, rightType);
 
         if (leftType != promotedType)
-            InsertCastExpression(context, binaryExpression->left, promotedType);
+            InsertCastExpression(context, node->left, promotedType);
         if (rightType != promotedType)
-            InsertCastExpression(context, binaryExpression->right, promotedType);
+            InsertCastExpression(context, node->right, promotedType);
 
         return Errors::CompilationStatus::Ok();
     }
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::LogicalExpression* logicalExpression,
+        const Expressions::LogicalExpression* node,
         Expressions::Expression*&
     ){
-        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpression->left))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpression->left));
-        if (!logicalExpression->IsNot() && !ValidateExpressionCoercionTypes(DataType::Bool, logicalExpression->right))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpression->right));
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, node->left))
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(node->left));
+        if (!node->IsNot() && !ValidateExpressionCoercionTypes(DataType::Bool, node->right))
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(node->right));
 
         return Errors::CompilationStatus::Ok();
     }
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::CastExpression* castExpression,
-        Expressions::Expression*& expression
+        const Expressions::CastExpression* node,
+        Expressions::Expression*& slot
     ){
-        const auto childReturnType = Expressions::GetExpressionReturnType(castExpression->childExpr);
-        if (castExpression->targetType == childReturnType){
-            expression = castExpression->childExpr;
+        const auto childReturnType = Expressions::GetExpressionReturnType(node->childExpr);
+        if (node->targetType == childReturnType){
+            slot = node->childExpr;
             return Errors::CompilationStatus::Ok();
         }
 
-        if (!ValidateExpressionCoercionTypes(castExpression->targetType, castExpression->childExpr)){
+        if (!ValidateExpressionCoercionTypes(node->targetType, node->childExpr)){
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
                     childReturnType,
-                    castExpression->targetType
+                    node->targetType
                 )
             );
         }
@@ -2344,10 +2262,10 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        Expressions::BranchExpression* branchExpression,
+        Expressions::BranchExpression* node,
         Expressions::Expression*&
     ){
-        for (const auto* branch: branchExpression->branches){
+        for (const auto* branch: node->branches){
             if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
                 return Errors::CompilationStatus::Error(
                     Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
@@ -2357,29 +2275,27 @@ namespace QueryPipeline::Statements {
                 );
             }
         }
-        const auto promotedType = branchExpression->GetReturnType();
-        for (auto* resultExpr : branchExpression->results) {
+        const auto promotedType = node->GetReturnType();
+        for (auto& resultExpr : node->results) {
             if (!ValidateExpressionCoercionTypes(promotedType, resultExpr))
                 return Errors::CompilationStatus::Error(
                     Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
                     context.GetAllocator()
                 );
 
-            const auto resultExpressionType = Expressions::GetExpressionReturnType(resultExpr);
-            if (promotedType != resultExpressionType)
-                InsertCastExpression(context, resultExpr, resultExpressionType);
+            if (promotedType != Expressions::GetExpressionReturnType(resultExpr))
+                InsertCastExpression(context, resultExpr, promotedType);
         }
 
-        if (branchExpression->HasBaseCase()) {
-            if (!ValidateExpressionCoercionTypes(promotedType, branchExpression->baseCase))
+        if (node->HasBaseCase()) {
+            if (!ValidateExpressionCoercionTypes(promotedType, node->baseCase))
                 return Errors::CompilationStatus::Error(
                     Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
                     context.GetAllocator()
                 );
 
-            const auto resultExpressionType = Expressions::GetExpressionReturnType(branchExpression->baseCase);
-            if (promotedType != resultExpressionType)
-                InsertCastExpression(context, branchExpression->baseCase, resultExpressionType);
+            if (promotedType != Expressions::GetExpressionReturnType(node->baseCase))
+                InsertCastExpression(context, node->baseCase, promotedType);
         }
 
         return Errors::CompilationStatus::Ok();
@@ -2387,109 +2303,114 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus TypeCheckNode(
         const QueryContext& context,
-        const Expressions::FunctionExpression* functionExpression,
-        Expressions::Expression*& expression
+        const Expressions::FunctionExpression* node,
+        Expressions::Expression*& slot
     ){
         //validate number of arguments
         //TODO
         DataTypes::String errorMessage(context.GetAllocator());
-        if (!functionExpression->ValidateNumberOfArguments(errorMessage))
+        if (!node->ValidateNumberOfArguments(errorMessage))
             return Errors::CompilationStatus::Error(std::move(errorMessage));
 
         return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(const QueryContext& context, Expressions::Expression *&expression) {
-        if (expression == nullptr)
-            return;
-        Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
-            FoldNode(context, expression->As<TNode>(), expression);
-        });
+    // Function nodes fall here too: they have no vectorized kernels yet, and a zero argument call
+    // such as GETDATE() would otherwise count as "all arguments constant" and freeze at compile time
+    Errors::CompilationStatus FoldNode(
+        const QueryContext&,
+        const Expressions::Expression*,
+        Expressions::Expression*&
+    ){
+        return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::BinaryExpression* binaryExpression,
-        Expressions::Expression *&expression
+        const Expressions::BinaryExpression* node,
+        Expressions::Expression *&slot
     ){
-        FoldNode(context, binaryExpression->left);
-        FoldNode(context, binaryExpression->right);
+        if (IsNullConstant(node->left) || IsNullConstant(node->right))
+            slot = TypedNull(context, Expressions::GetExpressionReturnType(node));
+        else if (node->left->Is<Expressions::ConstantExpression>()
+            && node->right->Is<Expressions::ConstantExpression>()
+        ) FoldToConstant(context, slot);
 
-        if (!binaryExpression->left->Is<Expressions::ConstantExpression>()
-            || !binaryExpression->right->Is<Expressions::ConstantExpression>()
-        ) return;
-
-        EvaluateExpression(context, expression);
+        return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::LogicalExpression* logicalExpression,
-        Expressions::Expression *&expression
+        Expressions::LogicalExpression* node,
+        Expressions::Expression *&slot
     ){
-        FoldNode(context, logicalExpression->left);
-        FoldNode(context, logicalExpression->right);
+        // NOT has no right operand
+        if (node->IsNot()){
+            if (node->left->Is<Expressions::ConstantExpression>())
+                FoldToConstant(context, slot);
+            return Errors::CompilationStatus::Ok();
+        }
 
-        const auto dominantValue = logicalExpression->IsOr();
+        const auto dominantValue = node->IsOr();
+        if (
+            node->left->Is<Expressions::ConstantExpression>()
+            && TryPropagateChildExpression(slot, node->left, node->right, dominantValue)
+        ) return Errors::CompilationStatus::Ok();
 
-        if ((
-                logicalExpression->left->Is<Expressions::ConstantExpression>()
-                && TryPropagateChildExpression(expression, logicalExpression->left, logicalExpression->right, dominantValue)
-            ) || logicalExpression->IsNot()
-        ) return;
+        if (node->right->Is<Expressions::ConstantExpression>())
+            TryPropagateChildExpression(slot, node->right, node->left, dominantValue);
 
-        if (logicalExpression->right->Is<Expressions::ConstantExpression>())
-            TryPropagateChildExpression(expression, logicalExpression->right, logicalExpression->left, dominantValue);
+        return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::BranchExpression* branchExpression,
-        Expressions::Expression *&expression
+        const Expressions::BranchExpression* node,
+        Expressions::Expression *&slot
     ){
-        for (auto& branch : branchExpression->branches){
-            FoldNode(context, branch);
-            if (!branch->Is<Expressions::ConstantExpression>()) return;
+        for (Int i = 0;i < node->branches.Size(); i++){
+            const auto* branch = node->branches[i];
+            if (!branch->Is<Expressions::ConstantExpression>())
+                return Errors::CompilationStatus::Ok();
 
-            if (branch->As<Expressions::ConstantExpression>()->value.AsBool()) {
-                PropagateExpression(expression, branch);
-                FoldNode(context, expression);
-                return;
+            // a NULL condition counts as false
+            const auto& condition = branch->As<Expressions::ConstantExpression>()->value;
+            if (!condition.IsNull() && condition.AsBool()) {
+                slot = node->results[i];
+                return Errors::CompilationStatus::Ok();
             }
         }
+
+        // ternary keeps its else result in results[1], switch in baseCase
+        if (node->branchType == Expressions::BranchType::Ternary)
+            slot = node->results[1];
+        else
+            slot = node->HasBaseCase()
+                ? node->baseCase
+                : TypedNull(context, Expressions::GetExpressionReturnType(node));
+
+        return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(
+    Errors::CompilationStatus FoldNode(
         const QueryContext& context,
-        Expressions::FunctionExpression* functionExpression,
-        Expressions::Expression *&expression
+        const Expressions::CastExpression* node,
+        Expressions::Expression *&slot
     ){
-        for (auto& argument : functionExpression->arguments) {
-            FoldNode(context, argument);
-            if (!argument->Is<Expressions::ConstantExpression>())
-                return;
-        }
-        EvaluateExpression(context, expression);
+        if (node->childExpr->Is<Expressions::ConstantExpression>())
+            FoldToConstant(context, slot);
+
+        return Errors::CompilationStatus::Ok();
     }
 
-    void FoldNode(
-        const QueryContext& context,
-        Expressions::CastExpression* castExpression,
-        Expressions::Expression *&expression
-    ){
-        FoldNode(context, castExpression->childExpr);
-        if (castExpression->childExpr->Is<Expressions::ConstantExpression>())
-            EvaluateExpression(context, expression);
-    }
-
-    void FoldToConstant(const QueryContext& context, Expressions::Expression*& expression){
-        Expressions::BindAndResolveExpressionKernel(expression, nullptr);
+    void FoldToConstant(const QueryContext& context, Expressions::Expression*& slot){
+        Expressions::BindAndResolveExpressionKernel(slot, nullptr);
 
         const CoreEngine::DataChunk chunk;
         const auto executionContext = CoreEngine::ExecutionContext::BaseContext();
 
-        auto value = Expressions::EvaluateExpressionToValue(expression, &executionContext, &chunk);
-        expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
+        auto value = Expressions::EvaluateExpressionToValue(slot, &executionContext, &chunk, context.GetAllocator());
+        slot = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 
     void PropagateExpression(Expressions::Expression *&expression, Expressions::Expression *&childExpr) {
@@ -2613,6 +2534,18 @@ namespace QueryPipeline::Statements {
         DataType type
     ){
         expression = context._compileContext.Allocate<Expressions::CastExpression>(expression, type, false);
+    }
+
+    bool IsNullConstant(const Expressions::Expression* expression){
+        if (!expression->Is<Expressions::ConstantExpression>())
+            return false;
+        return expression->As<Expressions::ConstantExpression>()->value.IsNull();
+    }
+
+    Expressions::Expression* TypedNull(const QueryContext& context, const DataType type){
+        auto value = Value::Null();
+        value.SetType(type);
+        return context.GetAllocator()->Allocate<Expressions::ConstantExpression>(value);
     }
 
     bool TryPropagateChildExpression(

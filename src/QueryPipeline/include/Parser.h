@@ -1,7 +1,5 @@
 #pragma once
-#include <any>
 #include "../../Systemic/include/DataStructures/Dictionary.h"
-#include "../../Systemic/include/DataTypes/Variable.h"
 #include "../../CoreEngine/include/Errors.h"
 #include <string>
 
@@ -9,7 +7,10 @@
 #include "../../Systemic/include/DataStructures/PolymorphicArray.h"
 #include "CompileContext.h"
 #include "ReferencedColumns.h"
-#include "../../Server/include/SessionManager.h"
+
+namespace Network{
+    struct Session;
+}
 
 namespace QueryPipeline{
     namespace Statements {
