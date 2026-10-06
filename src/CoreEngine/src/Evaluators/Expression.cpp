@@ -925,6 +925,17 @@ namespace Expressions{
         return expression->vectorizedKernel(expression, context, chunk);
     }
 
+    Value EvaluateExpressionToValue(
+        const Expression* expression,
+        const CoreEngine::ExecutionContext* context,
+        const CoreEngine::DataChunk* chunk
+    ){
+        const auto dataType = Expressions::GetExpressionReturnType(expression);
+        return DataTypes::VisitDataType(dataType, [&]<typename TDataType>(){
+            return CoreEngine::VectorizedKernels::KernelToValue<TDataType>(expression, context, chunk);
+        });
+    }
+
     void EvaluateExpression(
         const Expression* expression,
         const EvaluationContext& context,

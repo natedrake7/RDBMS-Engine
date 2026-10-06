@@ -36,6 +36,7 @@ namespace Indexing{
 }
 
 namespace CoreEngine{
+    struct DataChunk;
     struct DataVector;
     struct ScanHandle;
     struct ScanState;

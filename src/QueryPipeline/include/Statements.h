@@ -46,20 +46,22 @@ namespace QueryPipeline::Statements {
         DataType returnType;
     };
 
-    struct StatementValidationScope {
+    struct CompilationScope {
         Dictionary<DataTypes::String, UnsignedSmallInt> _tableAliasesDict;
         DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>> _tableColumnsArray;
         int* _indexPos;
         Statement* _statement;
 
-        StatementValidationScope(const ::Memory::IAllocator* allocator, UnsignedSmallInt numberOfTables);
-        StatementValidationScope(
+        explicit CompilationScope()
+            : _indexPos(nullptr), _statement(nullptr){}
+        explicit CompilationScope(const ::Memory::IAllocator* allocator, UnsignedSmallInt numberOfTables);
+        explicit CompilationScope(
             Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
             DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>>& tableColumnsArray,
             Statement* statement,
             int* indexPos = nullptr
         );
-        StatementValidationScope(
+        explicit CompilationScope(
             Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
             Statement* statement,
             int* indexPos = nullptr
@@ -95,7 +97,7 @@ namespace QueryPipeline::Statements {
         SmallInt incrementFactor;
         BigInt cacheBlock;
 
-        [[nodiscard]] Errors::ValidationStatus Validate(const QueryContext& context) const;
+        [[nodiscard]] Errors::CompilationStatus Validate(const QueryContext& context) const;
     };
 
     struct NewColumn {
@@ -182,12 +184,12 @@ namespace QueryPipeline::Statements {
         explicit DataSource(const ::Memory::IAllocator* allocator);
         [[nodiscard]] DataTypes::String GetAlias(const QueryContext& context) const;
         [[nodiscard]] DataTypes::String GetFullName(const QueryContext& context) const;
-        [[nodiscard]] Errors::ValidationStatus Compile(
+        [[nodiscard]] Errors::CompilationStatus Compile(
             const QueryContext& context,
             Int databaseId,
             UnsignedSmallInt& outSlotCount
         );
-        [[nodiscard]] Errors::ValidationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
+        [[nodiscard]] Errors::CompilationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
     };
 
     struct Inserts {
@@ -202,10 +204,10 @@ namespace QueryPipeline::Statements {
         Statement();
         virtual ~Statement() = default;
 
-        virtual Errors::ValidationStatus CompileDerived(QueryContext& context) = 0;
+        virtual Errors::CompilationStatus CompileDerived(QueryContext& context) = 0;
         [[nodiscard]] virtual constexpr Security::Permission RequiredPermissions() const = 0;
-        [[nodiscard]] Errors::ValidationStatus CompileBase(const QueryContext& context) const;
-        [[nodiscard]] Errors::ValidationStatus Compile(QueryContext& context);
+        [[nodiscard]] Errors::CompilationStatus CompileBase(const QueryContext& context) const;
+        [[nodiscard]] Errors::CompilationStatus Compile(QueryContext& context);
         virtual LogicalPlan* ToLogical(QueryContext& context) = 0;
     };
 
@@ -216,7 +218,7 @@ namespace QueryPipeline::Statements {
 
         DeclareVariableStatement();
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -228,7 +230,7 @@ namespace QueryPipeline::Statements {
 
         SetVariableStatement();
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -238,7 +240,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String password;
         DataTypes::String role;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -247,7 +249,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String username;
         DataTypes::String role;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -255,7 +257,7 @@ namespace QueryPipeline::Statements {
     struct DeleteStatement final : Statement {
         WhereClause where;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -265,8 +267,8 @@ namespace QueryPipeline::Statements {
         JoinType type;
 
         JoinStatement();
-        [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
-        [[nodiscard]] Errors::ValidationStatus Compile(const QueryContext& context, Int databaseId, UnsignedSmallInt& slotCount);
+        [[nodiscard]] Errors::CompilationStatus CompileDerived(QueryContext& context) override;
+        [[nodiscard]] Errors::CompilationStatus Compile(const QueryContext& context, Int databaseId, UnsignedSmallInt& slotCount);
 
         [[nodiscard]] bool IsRightJoin() const;
         [[nodiscard]] bool IsInnerJoin() const;
@@ -283,15 +285,15 @@ namespace QueryPipeline::Statements {
 
         CreateTableStatement();
 
-        [[nodiscard]] Errors::ValidationStatus CompileSchema(const QueryContext& context) const;
-        [[nodiscard]] Errors::ValidationStatus CompileColumnExpression(
+        [[nodiscard]] Errors::CompilationStatus CompileSchema(const QueryContext& context) const;
+        [[nodiscard]] Errors::CompilationStatus CompileColumnExpression(
             const QueryContext& context,
             NewColumn*& column,
             Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
             bool& primaryKeyFound,
             column_index_t& index
         );
-        [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        [[nodiscard]] Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
     };
@@ -313,9 +315,9 @@ namespace QueryPipeline::Statements {
         [[nodiscard]] bool HasJoins() const;
         [[nodiscard]] bool HasWhere() const;
         [[nodiscard]] bool IsConstant() const;
-        [[nodiscard]] Errors::ValidationStatus CompileNoTableStatement(QueryContext& context);
-        [[nodiscard]] Errors::ValidationStatus Compile(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& aliasesDict);
-        [[nodiscard]] Errors::ValidationStatus CompileWhereClause(QueryContext& context, StatementValidationScope& validationScope);
+        [[nodiscard]] Errors::CompilationStatus CompileNoTableStatement(QueryContext& context);
+        [[nodiscard]] Errors::CompilationStatus Compile(QueryContext& context, Dictionary<DataTypes::String, table_id_t>& aliasesDict);
+        [[nodiscard]] Errors::CompilationStatus CompileWhereClause(QueryContext& context, CompilationScope& compilationScope);
         [[nodiscard]] static LogicalPlan* BuildTableScanPlan(
             const QueryContext& context,
             DataSource* table,
@@ -331,7 +333,7 @@ namespace QueryPipeline::Statements {
             LogicalPlan* current,
             const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
         ) const;
-        [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        [[nodiscard]] Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -339,7 +341,7 @@ namespace QueryPipeline::Statements {
     struct CreateDbStatement final : Statement {
         DataTypes::String name;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -347,7 +349,7 @@ namespace QueryPipeline::Statements {
     struct DropDbStatement final : Statement {
         DataTypes::String name;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -355,7 +357,7 @@ namespace QueryPipeline::Statements {
     struct UseDatabaseStatement final : Statement {
         DataTypes::String name;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -376,17 +378,17 @@ namespace QueryPipeline::Statements {
             Headers::DefaultValuesHeader& defaultValue
         );
         void InsertNullValues(const QueryContext& context, const Headers::ColumnHeader& header);
-        [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
+        [[nodiscard]] Errors::CompilationStatus ValidateReturnType(
             const QueryContext& context,
-            StatementValidationScope& validationScope,
+            CompilationScope& compilationScope,
             Expressions::Expression*& expression,
             const DataTypes::String& columnName
         ) const;
-        [[nodiscard]] Errors::ValidationStatus ValidateSelectStatement(QueryContext& context, StatementValidationScope& validationScope) const;
+        [[nodiscard]] Errors::CompilationStatus ValidateSelectStatement(QueryContext& context, CompilationScope& compilationScope) const;
         [[nodiscard]] bool HasSelectStatement() const;
 
-        [[nodiscard]] Errors::ValidationStatus ResolveAliases(QueryContext& context, StatementValidationScope& validationScope);
-        [[nodiscard]] Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        [[nodiscard]] Errors::CompilationStatus ResolveAliases(QueryContext& context, CompilationScope& compilationScope);
+        [[nodiscard]] Errors::CompilationStatus CompileDerived(QueryContext& context) override;
 
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         [[nodiscard]] LogicalPlan* ToLogical(QueryContext& context) override;
@@ -395,7 +397,7 @@ namespace QueryPipeline::Statements {
     struct CreateSchemaStatement final : Statement {
         DataTypes::String name;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -411,16 +413,16 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<UpdateColumn*> updates;
         WhereClause where;
 
-        [[nodiscard]] Errors::ValidationStatus ValidateReturnType(
+        [[nodiscard]] Errors::CompilationStatus ValidateReturnType(
             const QueryContext& context,
-            StatementValidationScope& validationScope,
+            CompilationScope& compilationScope,
             const UpdateColumn* update
         ) const;
-        Errors::ValidationStatus ResolveAliases(
+        Errors::CompilationStatus ResolveAliases(
             QueryContext& context,
-            StatementValidationScope& validationScope
+            CompilationScope& compilationScope
         );
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -431,7 +433,7 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<column_index_t> columnIndices;
         bool isUnique;
 
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -446,23 +448,23 @@ namespace QueryPipeline::Statements {
             RenameColumn* renameColumn;
         } column;
 
-        [[nodiscard]] Errors::ValidationStatus CompileAddColumn(
+        [[nodiscard]] Errors::CompilationStatus CompileAddColumn(
             const QueryContext& context,
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
         ) const;
-        [[nodiscard]] Errors::ValidationStatus CompileAlterColumn(
+        [[nodiscard]] Errors::CompilationStatus CompileAlterColumn(
             const QueryContext& context,
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
         ) const;
-        [[nodiscard]] Errors::ValidationStatus CompileDropColumn(
+        [[nodiscard]] Errors::CompilationStatus CompileDropColumn(
             const QueryContext& context,
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
         ) const;
-        [[nodiscard]] Errors::ValidationStatus CompileRenameColumn(
+        [[nodiscard]] Errors::CompilationStatus CompileRenameColumn(
             const QueryContext& context,
             const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
         ) const;
-        Errors::ValidationStatus CompileDerived(QueryContext& context) override;
+        Errors::CompilationStatus CompileDerived(QueryContext& context) override;
         [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
@@ -474,165 +476,168 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::BinaryExpression* binaryExpr,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::BinaryExpression* binaryExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::LogicalExpression* logicalExpr,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::LogicalExpression* logicalExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        const Expressions::FunctionExpression* funcExpr,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         const Expressions::FunctionExpression* funcExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::BranchExpression* branchExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::BranchExpression* branchExpr,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
-        const Expressions::ColumnExpression* columnExpr
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::ColumnExpression* columnExpr,
         Expressions::Expression*&,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         const QueryContext& context,
         Expressions::VariableExpression* variableExpr,
         Expressions::Expression*&,
-        const StatementValidationScope&
+        const CompilationScope&
     );
 
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         const QueryContext& context,
         ColumnName& column,
-        StatementValidationScope& statementValidationScope
+        CompilationScope& statementValidationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
+     Errors::CompilationStatus CompileNode(
+        const QueryContext&,
         Expressions::ConstantExpression* constantExpr,
-        Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        Expressions::Expression*&,
+        CompilationScope&
     );
 
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::JsonExpression* jsonExpr,
         Expressions::Expression*&,
-        StatementValidationScope& validationScope
+        const CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
-        const Expressions::JsonExpression* jsonExpr
-    );
-
-    static Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::CastExpression* castExpr,
-        Expressions::Expression*& expression
-    );
-
-    static Errors::ValidationStatus CompileNode(
+     Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::CastExpression* castExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     );
 
-    static Errors::ValidationStatus CompileColumnWhenTableAliasExists(
+     Errors::CompilationStatus CompileColumnWhenTableAliasExists(
         QueryContext& context,
         Expressions::ColumnExpression* column,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     );
 
-    static Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
+     Errors::CompilationStatus CompileColumnWhenNoTableAliasExists(
         QueryContext& context,
         Expressions::ColumnExpression* column,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     );
 
-    static bool ValidateExpressionCoercionTypes(
+     bool ValidateExpressionCoercionTypes(
         const Expressions::Expression* left,
         const Expressions::Expression* right
     );
 
-    static bool ValidateExpressionCoercionTypes(
+     bool ValidateExpressionCoercionTypes(
         DataType type,
         const Expressions::Expression* expression
     );
 
-    static Errors::ValidationStatus CompileWildcard(
+     Errors::CompilationStatus CompileWildcard(
         QueryContext& context,
         const Expressions::ColumnExpression* column,
-        const StatementValidationScope& validationScope,
+        const CompilationScope& compilationScope,
         SelectStatement* statement
     );
 
-    static void AssignColumnsFromWildCardExpression(
+     void AssignColumnsFromWildCardExpression(
         QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict,
         const DataTypes::String& tableAlias,
-        const StatementValidationScope& statementValidationScope,
+        const CompilationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,
         UnsignedSmallInt slotIndex
     );
 
     /** @} End of Expression Compilation Functions */
+
+    /**
+     * @name Type Checking Functions
+     * Functions to validate the types of each expression tree
+     * @{
+     */
+
+    template <typename TNode>
+    Errors::CompilationStatus TypeCheckNode(QueryContext&, TNode*, Expressions::Expression*&){
+        return Errors::CompilationStatus::Ok();
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        QueryContext& context,
+        Expressions::Expression*& expression
+    );
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        Expressions::BinaryExpression* binaryExpression,
+        Expressions::Expression*& expression
+    );
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::LogicalExpression* logicalExpression,
+        Expressions::Expression*&
+    );
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::CastExpression* castExpression,
+        Expressions::Expression*& expression
+    );
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        Expressions::BranchExpression* branchExpression,
+        Expressions::Expression*& expression
+    );
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::FunctionExpression* functionExpression,
+        Expressions::Expression*& expression
+    );
+
+    /** @} End of Type Checking Functions */
 
     /**
      * @name Folding-Optimization Functions
@@ -650,13 +655,6 @@ namespace QueryPipeline::Statements {
         Expressions::BinaryExpression* binaryExpression,
         Expressions::Expression*& expression
     );
-
-    void FoldNode(
-        const QueryContext& context,
-        Expressions::BinaryExpression* binaryExpression,
-        Expressions::Expression*& expression
-    );
-
     void FoldNode(
         const QueryContext& context,
         Expressions::LogicalExpression* logicalExpression,
@@ -678,6 +676,11 @@ namespace QueryPipeline::Statements {
     void FoldNode(
         const QueryContext& context,
         Expressions::CastExpression* castExpression,
+        Expressions::Expression*& expression
+    );
+
+    void FoldToConstant(
+        const QueryContext& context,
         Expressions::Expression*& expression
     );
 
@@ -731,7 +734,7 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    static Errors::ValidationStatus ResolveOrderByExpression(
+    static Errors::CompilationStatus ResolveOrderByExpression(
         const QueryContext& context,
         OrderColumn* column,
         const Dictionary<DataTypes::String, Int>& aliasesDictionary,
@@ -759,7 +762,7 @@ namespace QueryPipeline::Statements {
      * @{
      */
 
-    static Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
+    static Errors::CompilationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, DataType type);
 
     static void InsertCastExpression(
         const QueryContext& context,

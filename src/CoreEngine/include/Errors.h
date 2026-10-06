@@ -72,75 +72,74 @@ namespace Errors {
         [[nodiscard]] bool IsOk()const { return this->code == RuntimeError::Ok;}
     };
 
-    enum class ValidationError : uint8_t {
+    enum class CompilationError : uint8_t {
         Ok = 0,
         Error = 1
     };
 
-    struct ValidationStatus {
-        ValidationError code;
-        DataTypes::String message;
+    struct CompilationStatus {
+        DataTypes::String _message;
+        CompilationError _code;
 
-        ValidationStatus() {
-            this->code = ValidationError::Ok;
-        }
+        explicit CompilationStatus()
+            :   _code(CompilationError::Ok){}
 
-        explicit ValidationStatus(const ::Memory::IAllocator* allocator)
-            : code(ValidationError::Ok), message(DataTypes::String::Empty(allocator)){}
+        explicit CompilationStatus(const ::Memory::IAllocator* allocator)
+            : _message(DataTypes::String::Empty(allocator)), _code(CompilationError::Ok){}
 
-        ValidationStatus(const ValidationError code, const DataTypes::String& message)
-            : code(code), message(message){}
+        explicit CompilationStatus(const CompilationError code, const DataTypes::String& message)
+            : _message(message), _code(code){}
 
-        ValidationStatus(const ValidationError code, DataTypes::String&& message) noexcept
-            : code(code), message(std::move(message)){}
+        explicit CompilationStatus(const CompilationError code, DataTypes::String&& message) noexcept
+            : _message(std::move(message)), _code(code){}
 
-        ValidationStatus(
-            const ValidationError code,
+        explicit CompilationStatus(
+            const CompilationError code,
             const DataTypes::StringView& message,
             const ::Memory::IAllocator* allocator
-        )   : code(code), message(DataTypes::String(message, allocator)){}
+        )   : _message(DataTypes::String(message, allocator)), _code(code){}
 
-        static ValidationStatus Error(
+        inline static CompilationStatus Error(
             const DataTypes::StringView& message,
             const ::Memory::IAllocator* allocator
         ){
-            return ValidationStatus(ValidationError::Error, message, allocator);
+            return CompilationStatus(CompilationError::Error, message, allocator);
         }
 
-        static ValidationStatus Error(DataTypes::String&& message){
-            return ValidationStatus(ValidationError::Error, std::move(message));
+        inline static CompilationStatus Error(DataTypes::String&& message){
+            return CompilationStatus(CompilationError::Error, std::move(message));
         }
 
-        static ValidationStatus Ok(){
-            return ValidationStatus(ValidationError::Ok, DataTypes::String::Null());
+        inline static CompilationStatus Ok(){
+            return CompilationStatus(CompilationError::Ok, DataTypes::String::Null());
         }
 
-        [[nodiscard]] bool IsOk()const { return this->code == ValidationError::Ok; }
+        [[nodiscard]] inline bool IsOk()const { return this->_code == CompilationError::Ok; }
     };
 
-    inline ValidationStatus operator&&(ValidationStatus lhs, ValidationStatus rhs) {
+    inline CompilationStatus operator&&(CompilationStatus lhs, CompilationStatus rhs) {
         if (!lhs.IsOk()) return lhs;
         if (!rhs.IsOk()) return rhs;
         return lhs;
     }
 
-    struct Error {
+    struct ParserStatus {
         DataTypes::String message;
         bool hasError;
 
-        explicit Error()
+        explicit ParserStatus()
             : message(DataTypes::String::Null()), hasError(false) {}
 
-        explicit Error(const ::Memory::IAllocator* allocator)
+        explicit ParserStatus(const ::Memory::IAllocator* allocator)
             : message(DataTypes::String::Empty(allocator)), hasError(false) {}
 
-        Error(const bool hasError, const DataTypes::String& message)
+        explicit ParserStatus(const bool hasError, const DataTypes::String& message)
             : message(message), hasError(hasError) {}
 
-        Error(const bool hasError, DataTypes::String&& message) noexcept
+        explicit ParserStatus(const bool hasError, DataTypes::String&& message) noexcept
             : message(std::move(message)), hasError(hasError) {}
 
-        Error(const bool hasError, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator)
+        explicit ParserStatus(const bool hasError, const DataTypes::StringView& message, const ::Memory::IAllocator* allocator)
             : message(DataTypes::String(message, allocator)), hasError(hasError) {}
     };
 }

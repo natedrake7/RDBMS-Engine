@@ -43,7 +43,7 @@ namespace QueryPipeline{
         this->_compileContext.GetAllocator()->Release();
      }
 
-     QueryContext::QueryContext(Errors::Error& error)
+     QueryContext::QueryContext(Errors::ParserStatus& error)
          : _referencedColumns(), status(std::move(error)), _session(nullptr),
            _virtualId(0), hasMore(false)
      {
@@ -78,7 +78,7 @@ namespace QueryPipeline{
         const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView(query), tokens, diagnostic);
 
         if (!tokenizeStatus){
-            result.status = Errors::Error(true, diagnostic.message, result.GetAllocator());
+            result.status = Errors::ParserStatus(true, diagnostic.message, result.GetAllocator());
             return;
         }
 
@@ -87,20 +87,20 @@ namespace QueryPipeline{
 
         if (session == nullptr){
             static constexpr DataTypes::StringView ERROR_MESSAGE = "Session not found";
-            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
+            result.status = Errors::ParserStatus(true, ERROR_MESSAGE, result.GetAllocator());
             return;
         }
 
         Parsing::SqlParser parser(tokens, result.GetAllocator(), diagnostic);
         if (!parser.ParseStatements(result._compileContext.GetStatements(), session->databaseId)){
-            result.status = Errors::Error(true, diagnostic.message, result.GetAllocator());
+            result.status = Errors::ParserStatus(true, diagnostic.message, result.GetAllocator());
         }
      }
 
     LogicalPlan* Parser::BuildLogicalPlan(QueryContext& result, Statements::Statement* statement){
         auto validation = statement->Compile(result);
         if (!validation.IsOk()) {
-            result.status = Errors::Error(true, validation.message);
+            result.status = Errors::ParserStatus(true, validation._message);
             return nullptr;
         }
 
@@ -108,7 +108,7 @@ namespace QueryPipeline{
 
         if (logicalPlan == nullptr) {
             static constexpr DataTypes::StringView ERROR_MESSAGE = "Unexpected error occurred during plan build";
-            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
+            result.status = Errors::ParserStatus(true, ERROR_MESSAGE, result.GetAllocator());
             return nullptr;
         }
 
@@ -119,7 +119,7 @@ namespace QueryPipeline{
         auto* physicalPlan = logicalPlan->ToPhysical(result);
         if(physicalPlan == nullptr){
             static constexpr DataTypes::StringView ERROR_MESSAGE = "Unexpected error occurred during physical plan build";
-            result.status = Errors::Error(true, ERROR_MESSAGE, result.GetAllocator());
+            result.status = Errors::ParserStatus(true, ERROR_MESSAGE, result.GetAllocator());
             return nullptr;
         }
 

@@ -174,4 +174,25 @@ namespace CoreEngine::VectorizedKernels{
             return outVector;
         }
     }
+
+    template<typename T>
+    Value KernelToValue(
+        const Expressions::Expression* self,
+        const ExecutionContext* context,
+        const DataChunk* chunk
+    ){
+        const auto* vector = self->vectorizedKernel(self, context, chunk);
+
+        assert(vector->IsConstant() && "VectorizedKernels::KernelToValue Cannot convert to value multi row vector");
+
+        if (vector->GetNullValue(0))
+            return Value::Null();
+
+        const auto* data = vector->template DataAs<T>();
+
+        if constexpr(DataTypes::TriviallyCopiable<T>)
+            return Value(*data);
+        else
+            return Value(*data, context->GetAllocator());
+    }
 }

@@ -31,7 +31,7 @@ long double Value::InterpolateString() const{
 
 Value::Value(
     const object_t* data,
-    const Int size,
+    const data_size_t size,
     const DataType type,
     const ::Memory::IAllocator* allocator,
     const column_index_t index
@@ -82,7 +82,8 @@ Value::Value(
 
 Value::Value(
     const object_t* data,
-    const Int size, const DataType type,
+    const data_size_t size,
+    const DataType type,
     const column_index_t index
 ):  _size(size),
     _columnIndex(index), _type(type),

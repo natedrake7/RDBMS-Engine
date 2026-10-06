@@ -1,7 +1,9 @@
 #pragma once
+#include <cassert>
 #include <cstdint>
 #include <string>
 #include <type_traits>
+#include <utility>
 
 #include "DataTypes.Traits.h"
 #include "../Reflection/Enum.h"
@@ -238,5 +240,18 @@ namespace DataTypes{
         }
 
         return DataType::Null;
+    }
+
+    template<typename Visitor>
+    decltype(auto) VisitDataType(const DataType type, Visitor&& visitor){
+        template for (constexpr auto enumerator : Reflection::Enumerators<DataType>){
+            using TDataType = StorageOf<([:enumerator:])>;
+            if constexpr (!std::is_void_v<TDataType>){
+                if (type == [:enumerator:])
+                    return visitor.template operator()<TDataType>();
+            }
+        }
+        assert(false && "VisitDataType: base Expression or unknown type");
+        std::unreachable();
     }
 }

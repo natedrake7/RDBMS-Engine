@@ -18,15 +18,17 @@ namespace QueryPipeline::Statements {
     Statement::Statement()
         : table(nullptr), databaseId(Constants::SYSTEM_CATALOG_ID), _slotCount(DEFAULT_SLOT_INDEX){}
 
-    Errors::ValidationStatus Statement::CompileBase(const QueryContext& context)const{
-        Errors::ValidationStatus validationStatus(context.GetAllocator());
+    Errors::CompilationStatus Statement::CompileBase(const QueryContext& context)const{
+        Errors::CompilationStatus compilationStatus(context.GetAllocator());
 
         if (!context._session || !context._session->user || !context._session->user->role){
-            validationStatus.code = Errors::ValidationError::Error;
-            validationStatus.message = DataTypes::String::FromView(
+            compilationStatus._code = Errors::CompilationError::Error;
+            compilationStatus._message = DataTypes::String::FromView(
                 Messages::FAILED_TO_FETCH_USER_SESSION,
                 context.GetAllocator()
             );
+
+            return compilationStatus;
         }
 
         const auto* user = context._session->user;
@@ -40,18 +42,18 @@ namespace QueryPipeline::Statements {
                 missing.Append(name);
             });
 
-            validationStatus.code = Errors::ValidationError::Error;
-            validationStatus.message = DataTypes::String::Concat(
+            compilationStatus._code = Errors::CompilationError::Error;
+            compilationStatus._message = DataTypes::String::Concat(
                 context.GetAllocator(),
                 "User ", user->name, " is not authorized, missing permission(s): ",
                 DataTypes::StringView::ViewOf(missing)
             );
         }
 
-        return validationStatus;
+        return compilationStatus;
     }
 
-    Errors::ValidationStatus Statement::Compile(QueryContext& context){
+    Errors::CompilationStatus Statement::Compile(QueryContext& context){
         auto result = this->CompileBase(context);
         if (!result.IsOk())
             return result;
@@ -62,18 +64,19 @@ namespace QueryPipeline::Statements {
    DeclareVariableStatement::DeclareVariableStatement()
        : expression(nullptr), type(DataType::Null){}
 
-    Errors::ValidationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
+    Errors::CompilationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
         const auto variableType = this->variable.GetType();
 
-        auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
+        auto validationStatus = Errors::CompilationStatus(context.GetAllocator());
         if (this->expression) {
-            auto res = CompileNode(context, this->expression);
+            CompilationScope compilationScope;
+            auto res = CompileNode(context, this->expression, compilationScope);
 
             if (!res.IsOk()) return res;
 
             if (variableType != DataType::Null && !ValidateExpressionCoercionTypes(variableType, this->expression)) {
-                validationStatus.code = Errors::ValidationError::Error;
-                validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                validationStatus._code = Errors::CompilationError::Error;
+                validationStatus._message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
             Expressions::GetExpressionReturnType(this->expression),
             variableType
@@ -102,18 +105,19 @@ namespace QueryPipeline::Statements {
     SetVariableStatement::SetVariableStatement()
         : expression(nullptr), type(DataType::Null){}
 
-    Errors::ValidationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
+    Errors::CompilationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
         const auto datatype = this->variable.GetType();
 
-        auto validationStatus = Errors::ValidationStatus(context.GetAllocator());
+        auto validationStatus = Errors::CompilationStatus(context.GetAllocator());
         if (this->expression) {
-            auto res = CompileNode(context, this->expression);
+            CompilationScope compilationScope;
+            auto res = CompileNode(context, this->expression, compilationScope);
 
             if (!res.IsOk()) return res;
 
             if (datatype != DataType::Null && !ValidateExpressionCoercionTypes(datatype, this->expression)) {
-                validationStatus.code = Errors::ValidationError::Error;
-                validationStatus.message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                validationStatus._code = Errors::CompilationError::Error;
+                validationStatus._message = Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
                     context.GetAllocator(),
                     Expressions::GetExpressionReturnType(this->expression),
                     datatype
@@ -139,19 +143,19 @@ namespace QueryPipeline::Statements {
     return context._compileContext.Allocate<LogicalDeclareVariable>(context._session->sessionId, this->variable, this->expression);
   }
 
-  Errors::ValidationStatus CreateUserStatement::CompileDerived(QueryContext& context){
+  Errors::CompilationStatus CreateUserStatement::CompileDerived(QueryContext& context){
     if (this->username.Empty())
-        return Errors::ValidationStatus::Error(Messages::EMPTY_USERNAME, context.GetAllocator());
+        return Errors::CompilationStatus::Error(Messages::EMPTY_USERNAME, context.GetAllocator());
     if (this->password.Empty())
-        return Errors::ValidationStatus::Error(Messages::EMPTY_PASSWORD, context.GetAllocator());
+        return Errors::CompilationStatus::Error(Messages::EMPTY_PASSWORD, context.GetAllocator());
     if (this->role.Empty())
-        return Errors::ValidationStatus::Error(Messages::EMPTY_ROLE, context.GetAllocator());
+        return Errors::CompilationStatus::Error(Messages::EMPTY_ROLE, context.GetAllocator());
     if (Network::Server::Get().UserExists(this->username))
-        return Errors::ValidationStatus::Error(Messages::USER_ALREADY_EXISTS, context.GetAllocator());
+        return Errors::CompilationStatus::Error(Messages::USER_ALREADY_EXISTS, context.GetAllocator());
     if (!Network::Server::Get().RoleExists(this->role))
-        return Errors::ValidationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
+        return Errors::CompilationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
 
-    return Errors::ValidationStatus(context.GetAllocator());
+    return Errors::CompilationStatus(context.GetAllocator());
   }
 
   constexpr Security::Permission CreateUserStatement::RequiredPermissions() const{
@@ -162,12 +166,12 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalCreateUser>(context._session->sessionId, this->username, this->password, this->role);
     }
 
-    Errors::ValidationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus GrantRoleStatement::CompileDerived(QueryContext& context){
         if (!Network::Server::Get().UserExists(this->username))
-            return Errors::ValidationStatus::Error(Messages::USER_DOES_NOT_EXIST, context.GetAllocator());
+            return Errors::CompilationStatus::Error(Messages::USER_DOES_NOT_EXIST, context.GetAllocator());
         if (!Network::Server::Get().RoleExists(this->role))
-            return Errors::ValidationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
-        return Errors::ValidationStatus(context.GetAllocator());
+            return Errors::CompilationStatus::Error(Messages::FAILED_TO_FETCH_ROLE, context.GetAllocator());
+        return Errors::CompilationStatus(context.GetAllocator());
     }
 
     constexpr Security::Permission GrantRoleStatement::RequiredPermissions() const{
@@ -178,7 +182,7 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalGrantRole>(context._session->sessionId, this->username, this->role);
     }
 
-    Errors::ValidationStatus DeleteStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus DeleteStatement::CompileDerived(QueryContext& context){
         auto result = this->table->Compile(context, this->databaseId, this->_slotCount);
 
         if (!result.IsOk()) return result;
@@ -208,14 +212,14 @@ namespace QueryPipeline::Statements {
         this->expression = nullptr;
     }
 
-    Errors::ValidationStatus JoinStatement::CompileDerived(QueryContext& context){
-        return Errors::ValidationStatus(context.GetAllocator());
+    Errors::CompilationStatus JoinStatement::CompileDerived(QueryContext& context){
+        return Errors::CompilationStatus(context.GetAllocator());
     }
 
-    Errors::ValidationStatus JoinStatement::Compile(const QueryContext& context, const Int databaseId, UnsignedSmallInt& slotCount){
+    Errors::CompilationStatus JoinStatement::Compile(const QueryContext& context, const Int databaseId, UnsignedSmallInt& slotCount){
         this->databaseId = databaseId;
         if (this->table == nullptr)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::MISSING_TABLE_IN_JOIN,
                 context.GetAllocator()
             );
@@ -247,14 +251,14 @@ namespace QueryPipeline::Statements {
   //   return context._context.Allocate< LogicalJoin(this->table, this->joinType, this->table2, this->on.expression);
   // }
 
-    StatementValidationScope::StatementValidationScope(
+    CompilationScope::CompilationScope(
     const Memory::IAllocator* allocator,
     const UnsignedSmallInt numberOfTables
     ):  _tableColumnsArray(allocator, numberOfTables), _indexPos(nullptr), _statement(nullptr){
         _tableColumnsArray.AlignSize();
     }
 
-    StatementValidationScope::StatementValidationScope(
+    CompilationScope::CompilationScope(
         Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
         DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>>& tableColumnsArray,
         Statement *statement,
@@ -263,7 +267,7 @@ namespace QueryPipeline::Statements {
         _tableColumnsArray(std::move(tableColumnsArray)),
         _indexPos(indexPos), _statement(statement) {}
 
-    StatementValidationScope::StatementValidationScope(
+    CompilationScope::CompilationScope(
         Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
         Statement* statement,
         int* indexPos
@@ -325,13 +329,13 @@ namespace QueryPipeline::Statements {
         this->size = 0;
     }
 
-    Errors::ValidationStatus Identity::Validate(const QueryContext& context) const{
+    Errors::CompilationStatus Identity::Validate(const QueryContext& context) const{
         if (this->incrementFactor <= 0)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_INCREMENT_FACTOR,
                 context.GetAllocator()
             );
-        return Errors::ValidationStatus(context.GetAllocator());
+        return Errors::CompilationStatus(context.GetAllocator());
     }
 
     bool NewColumn::HasIdentity()const{ return this->identity != nullptr;}
@@ -405,7 +409,7 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus DataSource::Compile(
+    Errors::CompilationStatus DataSource::Compile(
         const QueryContext& context,
         const Int databaseId,
         UnsignedSmallInt& outSlotCount
@@ -424,7 +428,7 @@ namespace QueryPipeline::Statements {
             );
 
         if (tableHeader.id == INVALID_TABLE_ID){
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_TABLE(context.GetAllocator(), this->GetFullName(context))
             );
         }
@@ -434,10 +438,10 @@ namespace QueryPipeline::Statements {
         this->_databaseId = tableHeader.databaseId;
         this->_slotIndex = outSlotCount++;
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
+    Errors::CompilationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
         const auto tableHeader = (!this->database.Empty())
             ? CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
@@ -452,12 +456,12 @@ namespace QueryPipeline::Statements {
             );
 
         if (tableHeader.id != INVALID_TABLE_ID)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
             Messages::TABLE_ALREADY_EXISTS(context.GetAllocator(), this->GetFullName(context))
             );
 
         this->_databaseId = selectedDatabaseId;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     CreateTableStatement::CreateTableStatement(){
@@ -465,21 +469,21 @@ namespace QueryPipeline::Statements {
         this->constraint = nullptr;
     }
 
-    Errors::ValidationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
+    Errors::CompilationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
         const auto& schemasDict = CoreEngine::SystemCatalog::Get().SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
         Headers::SchemaHeader schemaHeader;
 
         this->table->schema.ToLowerInPlace();
         if (!schemasDict.TryGetValue(this->table->schema, schemaHeader))
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::SCHEMA_DOES_NOT_EXIST(context.GetAllocator(), this->table->schema)
             );
 
         this->table->_schemaId = schemaHeader.id;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CreateTableStatement::CompileColumnExpression(
+    Errors::CompilationStatus CreateTableStatement::CompileColumnExpression(
         const QueryContext& context,
         NewColumn*& column,
         Dictionary<DataTypes::String, column_index_t>& columnNamesToIndexes,
@@ -491,7 +495,7 @@ namespace QueryPipeline::Statements {
 
         column->type.name.ToLowerInPlace();
         if (!ColumnSizesByName::TryGetValue(DataTypes::StringView::ViewOf(column->type.name), columnSize)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type.name)
             );
         }
@@ -503,7 +507,7 @@ namespace QueryPipeline::Statements {
 
         if (dataType == DataType::Decimal) {
             if (!column->type.decimal.Validate()) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INVALID_DECIMAL_DECLARATION,
                     context.GetAllocator()
                 );
@@ -517,7 +521,7 @@ namespace QueryPipeline::Statements {
         columnNamesToIndexes.Add(column->name.name, column->index);
 
         if(column->isPrimaryKey && primaryKeyFound){
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::MULTIPLE_PRIMARY_KEYS,
                 context.GetAllocator()
             );
@@ -533,10 +537,10 @@ namespace QueryPipeline::Statements {
             primaryKeyFound = true;
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CreateTableStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus CreateTableStatement::CompileDerived(QueryContext& context){
         auto result = this->table->ValidateTableCreate(context, this->databaseId);
         if (!result.IsOk()) return result;
 
@@ -551,7 +555,7 @@ namespace QueryPipeline::Statements {
         Dictionary<DataTypes::String, column_index_t> columnNamesToIndexes;
 
         if (this->columns.Size() > Constants::MAX_TABLE_COLUMNS)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
             Messages::MAX_NUMBER_OF_COLUMNS_EXCEEDED,
                     context.GetAllocator()
             );
@@ -570,10 +574,10 @@ namespace QueryPipeline::Statements {
         }
 
         if (this->constraint == nullptr)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
         if (primaryKeyFound) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::PRIMARY_KEY_AND_CONSTRAINT_DECLARED,
                 context.GetAllocator()
             );
@@ -583,7 +587,7 @@ namespace QueryPipeline::Statements {
         for (const auto& column: this->constraint->columns)
             this->primaryKey.Push(columnNamesToIndexes[column.name]);
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     LogicalPlan * CreateTableStatement::ToLogical(QueryContext& context){
@@ -631,23 +635,24 @@ namespace QueryPipeline::Statements {
 
     bool SelectStatement::IsConstant() const{ return this->table == nullptr; }
 
-    Errors::ValidationStatus SelectStatement::CompileNoTableStatement(QueryContext& context){
+    Errors::CompilationStatus SelectStatement::CompileNoTableStatement(QueryContext& context){
+        CompilationScope compilationScope;
         for (auto& resultExpr : this->_projections){
-            auto exprResult = CompileNode(context, resultExpr);
+            auto exprResult = CompileNode(context, resultExpr, compilationScope);
 
             if (!exprResult.IsOk()) return exprResult;
         }
 
         if (this->HasJoins())
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
                 context.GetAllocator()
             );
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus SelectStatement::Compile(
+    Errors::CompilationStatus SelectStatement::Compile(
         QueryContext& context,
         Dictionary<DataTypes::String, table_id_t>& aliasesDict
     ){
@@ -674,7 +679,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        StatementValidationScope validationScope(
+        CompilationScope compilationScope(
             aliasesDict,
             tableColumnsArray,
             this
@@ -682,27 +687,27 @@ namespace QueryPipeline::Statements {
 
         //start resolving aliases
         for (auto i = 0; i < this->_projections.Size(); i++) {
-            validationScope._indexPos = &i;
-            auto compileStatus = CompileNode(context, this->_projections[i], validationScope);
+            compilationScope._indexPos = &i;
+            auto compileStatus = CompileNode(context, this->_projections[i], compilationScope);
             if (!compileStatus.IsOk())
                 return compileStatus;
         }
 
         this->_visibleProjectionCount = this->_projections.Size();
 
-        auto result = this->CompileWhereClause(context, validationScope);
+        auto result = this->CompileWhereClause(context, compilationScope);
         if (!result.IsOk()) return result;
 
         //validate join expressions
-        validationScope._indexPos = nullptr;
+        compilationScope._indexPos = nullptr;
         for (const auto& join: this->_joins) {
-            auto compileStatus = CompileNode(context, join->expression, validationScope);
+            auto compileStatus = CompileNode(context, join->expression, compilationScope);
             if (!compileStatus.IsOk())
                 return compileStatus;
         }
 
         if (this->orderBy == nullptr)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
         Dictionary<DataTypes::String, Int> aliasesDictionary;
         for (auto i = 0;i < this->_visibleProjectionCount; i++){
@@ -712,7 +717,7 @@ namespace QueryPipeline::Statements {
                 continue;
 
             if (aliasesDictionary.Contains(projectionExprName)) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::DUPLICATE_RESULT_COLUMN_NAMES,
                     context.GetAllocator()
                 );
@@ -732,28 +737,28 @@ namespace QueryPipeline::Statements {
                 return compileStatus;
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus SelectStatement::CompileWhereClause(
+    Errors::CompilationStatus SelectStatement::CompileWhereClause(
         QueryContext &context,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ) {
-        if (!this->HasWhere()) return Errors::ValidationStatus::Ok();
+        if (!this->HasWhere()) return Errors::CompilationStatus::Ok();
 
         if (!this->where.IsValid())
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_WHERE_CLAUSE,
                 context.GetAllocator()
             );
 
-        auto expressionResult = CompileNode(context, this->where.expression, validationScope);
+        auto expressionResult = CompileNode(context, this->where.expression, compilationScope);
         if (!expressionResult.IsOk()) return expressionResult;
 
         if (!ValidateExpressionCoercionTypes(DataType::Bool, this->where.expression))
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(this->where.expression));
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     LogicalPlan* SelectStatement::BuildTableScanPlan(
@@ -827,24 +832,24 @@ namespace QueryPipeline::Statements {
     // }
 
      LogicalPlan* SelectStatement::BuildOrderByStatement(
-        const QueryContext& context,
-        LogicalPlan* current,
-        const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
-    ) const{
-        if(this->orderBy == nullptr)
-            return nullptr;
+         const QueryContext& context,
+         LogicalPlan* current,
+         const Dictionary<DataTypes::String, column_index_t>& postProjectionIndicesDictionary
+     ) const{
+         if(this->orderBy == nullptr)
+             return nullptr;
 
-        for (const auto* column : this->orderBy->columns)
-            AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
+         for (const auto* column : this->orderBy->columns)
+             AssignPostProjectionIndicesToExpression(postProjectionIndicesDictionary, column->expression);
 
-        return context._compileContext.Allocate<LogicalOrder>(current, this->orderBy->columns);
-    }
+         return context._compileContext.Allocate<LogicalOrder>(current, this->orderBy->columns);
+     }
 
-    Errors::ValidationStatus SelectStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus SelectStatement::CompileDerived(QueryContext& context){
         if (!this->_joins.Empty() && this->table == nullptr) {
-            return Errors::ValidationStatus::Error(
-             Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
-             context.GetAllocator()
+            return Errors::CompilationStatus::Error(
+                Messages::JOIN_WITH_NO_BASE_TABLE_SELECT,
+                context.GetAllocator()
             );
         }
 
@@ -904,14 +909,14 @@ namespace QueryPipeline::Statements {
         return current;
     }
 
-    Errors::ValidationStatus CreateDbStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus CreateDbStatement::CompileDerived(QueryContext& context){
         if (CoreEngine::SystemCatalog::Get().DatabaseExists(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name))) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::DATABASE_ALREADY_EXISTS(context.GetAllocator(), this->name)
             );
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     constexpr Security::Permission CreateDbStatement::RequiredPermissions() const{
@@ -922,11 +927,11 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalCreateDatabase>(context._session->sessionId, this->name);
     }
 
-    Errors::ValidationStatus DropDbStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus DropDbStatement::CompileDerived(QueryContext& context){
         const auto database = CoreEngine::SystemCatalog::Get().SelectDatabase(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name));
 
         if (database.name.Empty()) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::DATABASE_DOES_NOT_EXIST_ON_DROP(
                     context.GetAllocator(),
                     DataTypes::StringView::ViewOf(this->name)
@@ -935,7 +940,7 @@ namespace QueryPipeline::Statements {
         }
 
         if (database.isSystem) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::CANNOT_DROP_SYSTEM_DATABASE(
                     context.GetAllocator(),
                     DataTypes::StringView::ViewOf(this->name)
@@ -943,7 +948,7 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     constexpr Security::Permission DropDbStatement::RequiredPermissions() const{
@@ -954,20 +959,20 @@ namespace QueryPipeline::Statements {
         return nullptr;
     }
 
-    Errors::ValidationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus UseDatabaseStatement::CompileDerived(QueryContext& context){
         const auto dbHeader = CoreEngine::SystemCatalog::Get().SelectDatabase(
             context.GetAllocator(),
             DataTypes::StringView::ViewOf(this->name)
         );
 
         if (dbHeader.id == INVALID_DATABASE_ID) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::DATABASE_DOES_NOT_EXIST_ON_USE(context.GetAllocator(), DataTypes::StringView::ViewOf(this->name))
             );
         }
 
         this->databaseId = dbHeader.id;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     constexpr Security::Permission UseDatabaseStatement::RequiredPermissions() const{
@@ -1004,15 +1009,15 @@ namespace QueryPipeline::Statements {
         }
     }
 
-    Errors::ValidationStatus InsertStatement::ValidateReturnType(
+    Errors::CompilationStatus InsertStatement::ValidateReturnType(
         const QueryContext& context,
-        StatementValidationScope& validationScope,
+        CompilationScope& compilationScope,
         Expressions::Expression*& expression,
         const DataTypes::String& columnName
     ) const{
         const auto valueType = Expressions::GetExpressionReturnType(expression);
 
-        const auto& columnsDict = validationScope._tableColumnsArray[this->table->_slotIndex];
+        const auto& columnsDict = compilationScope._tableColumnsArray[this->table->_slotIndex];
 
         const auto columnNameToLower = columnName.ToLower();
         const auto& columnHeader = columnsDict.Get(columnNameToLower);
@@ -1020,7 +1025,7 @@ namespace QueryPipeline::Statements {
         const auto columnType = static_cast<DataType>(columnHeader.dataType);
 
         if (valueType == columnType)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
         if (DataTypes::Coercions::IsCoercionAllowed(
             valueType,
@@ -1028,7 +1033,7 @@ namespace QueryPipeline::Statements {
         )){
             InsertCastExpression(context, expression, columnType);
             FoldNode(context, expression);
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
         }
 
         if (expression->Is<Expressions::ConstantExpression>()) {
@@ -1037,11 +1042,11 @@ namespace QueryPipeline::Statements {
             if (constantExpr->value.IsNull()) {
                 if (columnHeader.isNullable){
                     constantExpr->value.SetType(columnType);
-                    return Errors::ValidationStatus::Ok();
+                    return Errors::CompilationStatus::Ok();
                 }
 
-                return Errors::ValidationStatus::Error(
-            Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
+                return Errors::CompilationStatus::Error(
+                    Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
                         context.GetAllocator(),
                         columnHeader.name
                     )
@@ -1051,11 +1056,11 @@ namespace QueryPipeline::Statements {
             if (DataTypes::Coercions::CanBeParsedToType(columnType, constantExpr->value)){
                 InsertCastExpression(context, expression, columnType);
                 EvaluateExpression(context, expression);
-                return Errors::ValidationStatus::Ok();
+                return Errors::CompilationStatus::Ok();
             }
         }
 
-        return Errors::ValidationStatus::Error(
+        return Errors::CompilationStatus::Error(
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 columnName,
@@ -1065,9 +1070,9 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus InsertStatement::ValidateSelectStatement(QueryContext& context, StatementValidationScope& validationScope)const{
+    Errors::CompilationStatus InsertStatement::ValidateSelectStatement(QueryContext& context, CompilationScope& compilationScope)const{
         if (this->selectStatement == nullptr)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
         this->selectStatement->databaseId = this->databaseId;
 
@@ -1076,7 +1081,7 @@ namespace QueryPipeline::Statements {
             return selectStatus;
 
         if (this->selectStatement->_projections.Size() != this->columns.Size())
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INSERT_STATEMENT_INVALID_NUMBER_OF_ARGUMENTS_ON_SUB_SELECT,
                 context.GetAllocator()
             );
@@ -1084,7 +1089,7 @@ namespace QueryPipeline::Statements {
         for (Int i = 0;i < this->selectStatement->_projections.Size();i++) {
             auto returnTypeStatus = this->ValidateReturnType(
                 context,
-                validationScope,
+                compilationScope,
                 this->selectStatement->_projections[i],
                 this->columns[i].name
             );
@@ -1093,159 +1098,159 @@ namespace QueryPipeline::Statements {
                 return returnTypeStatus;
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     bool InsertStatement::HasSelectStatement() const { return this->selectStatement != nullptr; }
 
-    Errors::ValidationStatus InsertStatement::ResolveAliases(QueryContext& context, StatementValidationScope& validationScope){
-        validationScope._tableAliasesDict.Add(this->table->GetAlias(context), this->table->_tableId);
+    Errors::CompilationStatus InsertStatement::ResolveAliases(QueryContext& context, CompilationScope& compilationScope){
+        compilationScope._tableAliasesDict.Add(this->table->GetAlias(context), this->table->_tableId);
 
         for (auto& [insertColumns] : this->values) {
             for (Int i = 0;i < insertColumns.Size(); i++) {
                 auto& value = insertColumns[i];
 
-                auto expressionStatus = CompileNode(context, value, validationScope);
+                auto expressionStatus = CompileNode(context, value, compilationScope);
                 if (!expressionStatus.IsOk()) return expressionStatus;
 
-                auto returnTypeStatus = this->ValidateReturnType(context, validationScope, value, this->columns[i].name);
+                auto returnTypeStatus = this->ValidateReturnType(context, compilationScope, value, this->columns[i].name);
                 if (!returnTypeStatus.IsOk()) return returnTypeStatus;
             }
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
   //TODO validate length of columns to match max record_size from master DB
-    Errors::ValidationStatus InsertStatement::CompileDerived(QueryContext& context){
-        if (this->table == nullptr)
-            return Errors::ValidationStatus::Error(
-                Messages::NO_TABLE_SPECIFIED,
-                context.GetAllocator()
-            );
+  Errors::CompilationStatus InsertStatement::CompileDerived(QueryContext& context){
+      if (this->table == nullptr)
+          return Errors::CompilationStatus::Error(
+              Messages::NO_TABLE_SPECIFIED,
+              context.GetAllocator()
+          );
 
-        static auto& catalog = CoreEngine::SystemCatalog::Get();
+      static auto& catalog = CoreEngine::SystemCatalog::Get();
 
-        auto tableStatus = this->table->Compile(context, this->databaseId, this->_slotCount);
-        if (!tableStatus.IsOk())
-            return tableStatus;
+      auto tableStatus = this->table->Compile(context, this->databaseId, this->_slotCount);
+      if (!tableStatus.IsOk())
+          return tableStatus;
 
-        StatementValidationScope validationScope(context.GetAllocator(), this->_slotCount);
-        auto columnsDict = catalog.SelectColumnsToDictionary(
-            context.GetAllocator(),
-            this->table->_tableId
-        );
+      CompilationScope compilationScope(context.GetAllocator(), this->_slotCount);
+      auto columnsDict = catalog.SelectColumnsToDictionary(
+          context.GetAllocator(),
+          this->table->_tableId
+      );
 
-        const auto* allocator = context.GetAllocator();
-        const auto columnCount = static_cast<Int>(columnsDict.size());
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertSlot> insertSlots(
-            allocator,
-            columnCount
-        );
-        DataStructures::PolymorphicArray<DataType> columnTypes(
-            allocator,
-            columnCount
-        );
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertColumnPlan> columnPlans(
-            allocator,
-            columnCount
-        );
+      const auto* allocator = context.GetAllocator();
+      const auto columnCount = static_cast<Int>(columnsDict.size());
+      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertSlot> insertSlots(
+          allocator,
+          columnCount
+      );
+      DataStructures::PolymorphicArray<DataType> columnTypes(
+          allocator,
+          columnCount
+      );
+      DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertColumnPlan> columnPlans(
+          allocator,
+          columnCount
+      );
 
-        insertSlots.AlignSize();
-        columnTypes.AlignSize();
-        columnPlans.AlignSize();
+      insertSlots.AlignSize();
+      columnTypes.AlignSize();
+      columnPlans.AlignSize();
 
-        DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(allocator);
-        const auto identityColumns =
-            catalog.SelectIdentityColumnsByTableIdToDictionary(
-                allocator,
-                this->table->_tableId
-            );
+      DataStructures::PolymorphicArray<Expressions::Expression*> defaultExpressions(allocator);
+      const auto identityColumns =
+          catalog.SelectIdentityColumnsByTableIdToDictionary(
+              allocator,
+              this->table->_tableId
+          );
 
-        //validate insert columns existence
-        HashSet<Int> statementColumns;
-        for (Int i = 0;i < this->columns.Size(); i++){
-            const auto& column = this->columns[i];
-            Headers::ColumnHeader header;
+      //validate insert columns existence
+      HashSet<Int> statementColumns;
+      for (Int i = 0;i < this->columns.Size(); i++){
+          const auto& column = this->columns[i];
+          Headers::ColumnHeader header;
 
-            //check if columns exist on the table
-            if (!columnsDict.TryGetValue(column.name.ToLower(), header)) {
-                return Errors::ValidationStatus::Error(
-                    Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
-                        allocator,
-                        this->table->GetAlias(context),
-                        column.name
-                    )
-                );
-            }
+          //check if columns exist on the table
+          if (!columnsDict.TryGetValue(column.name.ToLower(), header)) {
+              return Errors::CompilationStatus::Error(
+                  Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                      allocator,
+                      this->table->GetAlias(context),
+                      column.name
+                  )
+              );
+          }
 
-            //check if the specified column is an identity column
-            if (identityColumns.Contains(header.id)) {
-                return Errors::ValidationStatus::Error(
-                    Messages::IDENTITY_COLUMN_ON_INSERT,
-                    allocator
-                );
-            }
+          //check if the specified column is an identity column
+          if (identityColumns.Contains(header.id)) {
+              return Errors::CompilationStatus::Error(
+                  Messages::IDENTITY_COLUMN_ON_INSERT,
+                  allocator
+              );
+          }
 
-            columnTypes[header.ordinalPosition] = static_cast<DataType>(header.dataType);
-            insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::ValueSlot(i);
+          columnTypes[header.ordinalPosition] = static_cast<DataType>(header.dataType);
+          insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::ValueSlot(i);
 
-            auto& columnPlan = columnPlans[header.ordinalPosition];
-            columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Vector;
-            columnPlan._slot = i;
+          auto& columnPlan = columnPlans[header.ordinalPosition];
+          columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Vector;
+          columnPlan._slot = i;
 
-            statementColumns.Add(header.id);
-        }
+          statementColumns.Add(header.id);
+      }
 
-        for (const auto& header: columnsDict | std::views::values) {
-            auto& columnPlan = columnPlans[header.ordinalPosition];
-            columnPlan._type = static_cast<DataType>(header.dataType);
-            columnPlan._nullable = header.isNullable;
+      for (const auto& header: columnsDict | std::views::values) {
+          auto& columnPlan = columnPlans[header.ordinalPosition];
+          columnPlan._type = static_cast<DataType>(header.dataType);
+          columnPlan._nullable = header.isNullable;
 
-            if (header.isSystem
-                || statementColumns.Contains(header.id)
-            ) continue;
+          if (header.isSystem
+              || statementColumns.Contains(header.id)
+          ) continue;
 
-            if (identityColumns.Contains(header.id)){
-                columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Identity;
-                continue;
-            }
+          if (identityColumns.Contains(header.id)){
+              columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Identity;
+              continue;
+          }
 
-            //Insert the null value
-            if (header.isNullable) {
-                insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::NullSlot();
-                columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Null;
-                continue;
-            }
+          //Insert the null value
+          if (header.isNullable) {
+              insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::NullSlot();
+              columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Null;
+              continue;
+          }
 
-            auto defaultValue = catalog.SelectDefaultValueByColumnId(allocator, header.id);
-            if (defaultValue.columnId == INVALID_COLUMN_ID) {
-                return Errors::ValidationStatus::Error(
-                    Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
-                        allocator,
-                        header.name
-                    )
-                );
-            }
+          auto defaultValue = catalog.SelectDefaultValueByColumnId(allocator, header.id);
+          if (defaultValue.columnId == INVALID_COLUMN_ID) {
+              return Errors::CompilationStatus::Error(
+                  Messages::COLUMN_DOES_NOT_ALLOW_NULLS(
+                      allocator,
+                      header.name
+                  )
+              );
+          }
 
-            const auto slotIndex = InsertStatement::InsertDefaultValue(allocator, defaultExpressions, header, defaultValue);
-            insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::DefaultSlot(slotIndex);
+          const auto slotIndex = InsertStatement::InsertDefaultValue(allocator, defaultExpressions, header, defaultValue);
+          insertSlots[header.ordinalPosition] = CoreEngine::StorageTypes::InsertSlot::DefaultSlot(slotIndex);
 
-            columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Default;
-            columnPlan._slot = slotIndex;
-        }
+          columnPlan._source = CoreEngine::StorageTypes::InsertColumnSource::Default;
+          columnPlan._slot = slotIndex;
+      }
 
-        this->insertPlan._slotMap = std::move(insertSlots);
-        this->insertPlan._sharedDefaults = std::move(defaultExpressions);
-        this->insertPlan._columnsPlans = std::move(columnPlans);
-        this->valueTypes = std::move(columnTypes);
+      this->insertPlan._slotMap = std::move(insertSlots);
+      this->insertPlan._sharedDefaults = std::move(defaultExpressions);
+      this->insertPlan._columnsPlans = std::move(columnPlans);
+      this->valueTypes = std::move(columnTypes);
 
-        validationScope._tableColumnsArray[this->table->_slotIndex] = std::move(columnsDict);
+      compilationScope._tableColumnsArray[this->table->_slotIndex] = std::move(columnsDict);
 
-        return this->HasSelectStatement()
-            ? this->ValidateSelectStatement(context, validationScope)
-            : this->ResolveAliases(context, validationScope);
-    }
+      return this->HasSelectStatement()
+                 ? this->ValidateSelectStatement(context, compilationScope)
+                 : this->ResolveAliases(context, compilationScope);
+  }
 
     constexpr Security::Permission InsertStatement::RequiredPermissions() const{
         return Constants::DB_WRITER_PERMISSIONS;
@@ -1253,11 +1258,11 @@ namespace QueryPipeline::Statements {
 
     LogicalPlan* InsertStatement::ToLogical(QueryContext& context) {
         auto* child =  (this->HasSelectStatement())
-                ? this->selectStatement->ToLogical(context)
-                : context._compileContext.Allocate<LogicalValues>(
-                    this->values,
-                    this->valueTypes
-                  );
+                           ? this->selectStatement->ToLogical(context)
+                           : context._compileContext.Allocate<LogicalValues>(
+                               this->values,
+                               this->valueTypes
+                           );
 
         return context._compileContext.Allocate<LogicalInsert>(
             this->table,
@@ -1266,14 +1271,14 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus CreateSchemaStatement::CompileDerived(QueryContext& context){
         if (CoreEngine::SystemCatalog::Get().SchemaExists(context.GetAllocator(), this->databaseId, DataTypes::StringView::ViewOf(this->name))) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::SCHEMA_ALREADY_EXISTS(context.GetAllocator(), this->name)
             );
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     constexpr Security::Permission CreateSchemaStatement::RequiredPermissions() const{
@@ -1291,37 +1296,37 @@ namespace QueryPipeline::Statements {
     UpdateColumn::UpdateColumn()
         : value(nullptr), name(DataTypes::String::Null()){}
 
-    Errors::ValidationStatus UpdateStatement::ValidateReturnType(
+    Errors::CompilationStatus UpdateStatement::ValidateReturnType(
         const QueryContext& context,
-        StatementValidationScope& validationScope,
+        CompilationScope& compilationScope,
         const UpdateColumn* update
     ) const{
         const auto valueType = Expressions::GetExpressionReturnType(update->value);
         if (
             DataTypes::Coercions::IsCoercionAllowed(
-            valueType,
-            update->name.returnType
+                valueType,
+                update->name.returnType
             )
-        ) return Errors::ValidationStatus::Ok();
+        ) return Errors::CompilationStatus::Ok();
 
         if (update->value->Is<Expressions::ConstantExpression>()) {
             const auto* constantExpr = update->value->As<Expressions::ConstantExpression>();
 
             if (constantExpr->value.IsNull()) {
-                const auto& columnsDict = validationScope._tableColumnsArray[this->table->_slotIndex];
+                const auto& columnsDict = compilationScope._tableColumnsArray[this->table->_slotIndex];
                 if (columnsDict.Get(update->name.name).isNullable)
-                    return Errors::ValidationStatus::Ok();
+                    return Errors::CompilationStatus::Ok();
 
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::COLUMN_DOES_NOT_ALLOW_NULLS(context.GetAllocator(), update->name.name)
                 );
             }
 
             if (DataTypes::Coercions::CanBeParsedToType(update->name.returnType, constantExpr->value))
-                return Errors::ValidationStatus::Ok();
+                return Errors::CompilationStatus::Ok();
         }
 
-        return Errors::ValidationStatus::Error(
+        return Errors::CompilationStatus::Error(
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 update->name.name,
@@ -1331,29 +1336,29 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus UpdateStatement::ResolveAliases(
+    Errors::CompilationStatus UpdateStatement::ResolveAliases(
         QueryContext& context,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ){
         //Add Base Table to the dictionaries
-        validationScope._tableAliasesDict.Add(this->table->GetAlias(context), this->table->_tableId);
+        compilationScope._tableAliasesDict.Add(this->table->GetAlias(context), this->table->_tableId);
 
-        validationScope._tableColumnsArray.SetAllocator(context.GetAllocator());
-        validationScope._tableColumnsArray.Resize(this->_slotCount);
-        validationScope._tableColumnsArray[this->table->_slotIndex] = CoreEngine::SystemCatalog::Get().SelectColumnsToDictionary(context.GetAllocator(), this->table->_tableId);
-        validationScope._statement = this;
+        compilationScope._tableColumnsArray.SetAllocator(context.GetAllocator());
+        compilationScope._tableColumnsArray.Resize(this->_slotCount);
+        compilationScope._tableColumnsArray[this->table->_slotIndex] = CoreEngine::SystemCatalog::Get().SelectColumnsToDictionary(context.GetAllocator(), this->table->_tableId);
+        compilationScope._statement = this;
 
         //start resolving aliases
         for (const auto& update : this->updates) {
-            auto columnAliasStatus = CompileNode(context, update->name, validationScope);
+            auto columnAliasStatus = CompileNode(context, update->name, compilationScope);
             if (!columnAliasStatus.IsOk())
                 return columnAliasStatus;
 
-            auto expressionStatus = CompileNode(context, update->value, validationScope);
+            auto expressionStatus = CompileNode(context, update->value, compilationScope);
             if (!expressionStatus.IsOk())
                 return expressionStatus;
 
-            auto returnTypeResult = this->ValidateReturnType(context, validationScope, update);
+            auto returnTypeResult = this->ValidateReturnType(context, compilationScope, update);
             if (!returnTypeResult.IsOk())
                 return returnTypeResult;
 
@@ -1361,21 +1366,21 @@ namespace QueryPipeline::Statements {
         }
 
         if (this->where.expression == nullptr)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
         if (!this->where.IsValid())
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_WHERE_CLAUSE,
                 context.GetAllocator()
             );
 
-        return CompileNode(context, this->where.expression, validationScope);
+        return CompileNode(context, this->where.expression, compilationScope);
     }
 
 
-    Errors::ValidationStatus UpdateStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus UpdateStatement::CompileDerived(QueryContext& context){
         if (this->table == nullptr)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::NO_TABLE_SPECIFIED,
                 context.GetAllocator()
             );
@@ -1383,8 +1388,8 @@ namespace QueryPipeline::Statements {
         auto tableStatus = this->table->Compile(context, this->databaseId, this->_slotCount);
         if (!tableStatus.IsOk()) return tableStatus;
 
-        StatementValidationScope validationScope(context.GetAllocator(), this->_slotCount);
-        return this->ResolveAliases(context, validationScope);
+        CompilationScope compilationScope(context.GetAllocator(), this->_slotCount);
+        return this->ResolveAliases(context, compilationScope);
     }
 
     constexpr Security::Permission UpdateStatement::RequiredPermissions() const{
@@ -1403,7 +1408,7 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus CreateIndexStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus CreateIndexStatement::CompileDerived(QueryContext& context){
         auto tableStatus = this->table->Compile(context, this->databaseId, this->_slotCount);
         if (!tableStatus.IsOk()) return tableStatus;
 
@@ -1421,8 +1426,8 @@ namespace QueryPipeline::Statements {
                 continue;
             }
 
-            return Errors::ValidationStatus::Error(
-        Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+            return Errors::CompilationStatus::Error(
+                Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
                     context.GetAllocator(),
                     column,
                     this->table->GetAlias(context)
@@ -1439,7 +1444,7 @@ namespace QueryPipeline::Statements {
             );
 
             if (index.name == this->name) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INDEX_EXISTS(
                         context.GetAllocator(),
                         this->name
@@ -1448,7 +1453,7 @@ namespace QueryPipeline::Statements {
             }
             //check if identical index exists (no need for a duplicate).
         }
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     constexpr Security::Permission CreateIndexStatement::RequiredPermissions() const{
@@ -1464,18 +1469,18 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    Errors::ValidationStatus AlterTableStatement::CompileAddColumn(
+    Errors::CompilationStatus AlterTableStatement::CompileAddColumn(
         const QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const{
         auto* newColumn = this->column.newColumn;
         const auto columnNameToLower = newColumn->name.name.ToLower();
         if (headers.Contains(columnNameToLower)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::COLUMN_ALREADY_EXISTS_ON_TABLE(
-                        context.GetAllocator(),
-                        this->table->GetAlias(context),
-                        newColumn->name.name
+                    context.GetAllocator(),
+                    this->table->GetAlias(context),
+                    newColumn->name.name
                 )
             );
         }
@@ -1483,7 +1488,7 @@ namespace QueryPipeline::Statements {
         if (!newColumn->isNullable
             && newColumn->defaultValue.IsNull()
         ) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::DEFAULT_VALUE_NULL_ON_NOT_NULL_COLUMN,
                 context.GetAllocator()
             );
@@ -1495,7 +1500,7 @@ namespace QueryPipeline::Statements {
         const auto columnTypeToLower = newColumn->type.name.ToLower();
         const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         if (!ColumnTypesByName::TryGetValue(columnTypeView, columnType)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
                     newColumn->type.name,
@@ -1511,7 +1516,7 @@ namespace QueryPipeline::Statements {
 
         if (columnType == DataType::Decimal) {
             if (!newColumn->type.decimal.Validate()) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INVALID_DECIMAL_DECLARATION,
                     context.GetAllocator()
                 );
@@ -1523,10 +1528,10 @@ namespace QueryPipeline::Statements {
         //TODO Check this
         // this->addColumn->defaultValue.Validate(columnType, this->addColumn->index);
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus AlterTableStatement::CompileAlterColumn(
+    Errors::CompilationStatus AlterTableStatement::CompileAlterColumn(
         const QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const{
@@ -1537,8 +1542,8 @@ namespace QueryPipeline::Statements {
 
         const auto columnNameToLower = alterColumn->name.name.ToLower();
         if (!headers.TryGetValue(columnNameToLower, header)) {
-            return Errors::ValidationStatus::Error(
-        Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+            return Errors::CompilationStatus::Error(
+                Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
                     context.GetAllocator(),
                     this->table->GetAlias(context),
                     alterColumn->name.name
@@ -1550,7 +1555,7 @@ namespace QueryPipeline::Statements {
         const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         DataType columnType;
         if (!ColumnTypesByName::TryGetValue(columnTypeView, columnType)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
                     alterColumn->type.name,
@@ -1569,19 +1574,19 @@ namespace QueryPipeline::Statements {
                 && !PipelineConstants::ValidTableIntegerConversions.Contains(static_cast<DataType>(header.dataType))
             )
         ){
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::CANNOT_ALTER_COLUMN_TO_TYPE(
-                        context.GetAllocator(),
-                        alterColumn->name.name,
-                        SQL_TYPES_NAMES[header.dataType],
-                        DataTypes::StringView::ViewOf(alterColumn->type.name)
+                    context.GetAllocator(),
+                    alterColumn->name.name,
+                    SQL_TYPES_NAMES[header.dataType],
+                    DataTypes::StringView::ViewOf(alterColumn->type.name)
                 )
             );
         }
 
         if (header.recordSize > alterColumn->type.size) {
 
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::CANNOT_ALTER_COLUMN_TO_NEW_SIZE(
                     context.GetAllocator(),
                     alterColumn->name.name,
@@ -1592,10 +1597,10 @@ namespace QueryPipeline::Statements {
         }
 
         alterColumn->columnId = header.id;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus AlterTableStatement::CompileDropColumn(
+    Errors::CompilationStatus AlterTableStatement::CompileDropColumn(
         const QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const{
@@ -1606,11 +1611,11 @@ namespace QueryPipeline::Statements {
         const auto columnNameView = DataTypes::StringView::ViewOf(columnNameToLower);
 
         if (!headers.TryGetValue(columnNameToLower, header)) {
-            return Errors::ValidationStatus::Error(
-            Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
-                        context.GetAllocator(),
-                        this->table->GetAlias(context),
-                        dropColumn->name.name
+            return Errors::CompilationStatus::Error(
+                Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                    context.GetAllocator(),
+                    this->table->GetAlias(context),
+                    dropColumn->name.name
                 )
             );
         }
@@ -1625,7 +1630,7 @@ namespace QueryPipeline::Statements {
             );
 
             if (columns.Contains(header.id)) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::CANNOT_DROP_COLUMN_HAS_CONSTRAINTS(
                         context.GetAllocator(),
                         dropColumn->name.name,
@@ -1636,10 +1641,10 @@ namespace QueryPipeline::Statements {
         }
 
         dropColumn->index = header.ordinalPosition;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus AlterTableStatement::CompileRenameColumn(
+    Errors::CompilationStatus AlterTableStatement::CompileRenameColumn(
         const QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
     )const{
@@ -1649,11 +1654,11 @@ namespace QueryPipeline::Statements {
         const auto columnNameToLower = renameColumn->oldName.name.ToLower();
 
         if (!headers.TryGetValue(columnNameToLower, header)) {
-            return Errors::ValidationStatus::Error(
-            Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
-                        context.GetAllocator(),
-                        this->table->GetAlias(context),
-                        renameColumn->oldName.name
+            return Errors::CompilationStatus::Error(
+                Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+                    context.GetAllocator(),
+                    this->table->GetAlias(context),
+                    renameColumn->oldName.name
                 )
             );
         }
@@ -1661,12 +1666,12 @@ namespace QueryPipeline::Statements {
         renameColumn->columnId = header.id;
         renameColumn->ordinalPosition = header.ordinalPosition;
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus AlterTableStatement::CompileDerived(QueryContext& context){
+    Errors::CompilationStatus AlterTableStatement::CompileDerived(QueryContext& context){
         if (this->table == nullptr)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::NO_TABLE_SPECIFIED,
                 context.GetAllocator()
             );
@@ -1678,19 +1683,19 @@ namespace QueryPipeline::Statements {
 
         //validate by type
         switch (this->type) {
-            case Constants::AlterTableType::AddColumn:
-                return this->CompileAddColumn(context, columnsDict);
-            case Constants::AlterTableType::AlterColumn:
-                return this->CompileAlterColumn(context, columnsDict);
-            case Constants::AlterTableType::DropColumn:
-                return this->CompileDropColumn(context, columnsDict);
-            case Constants::AlterTableType::RenameColumn:
-                return this->CompileRenameColumn(context, columnsDict);
-            default:
-                return Errors::ValidationStatus::Error(
-                    Messages::UNKNOWN_OPERATION,
-                    context.GetAllocator()
-                );
+        case Constants::AlterTableType::AddColumn:
+            return this->CompileAddColumn(context, columnsDict);
+        case Constants::AlterTableType::AlterColumn:
+            return this->CompileAlterColumn(context, columnsDict);
+        case Constants::AlterTableType::DropColumn:
+            return this->CompileDropColumn(context, columnsDict);
+        case Constants::AlterTableType::RenameColumn:
+            return this->CompileRenameColumn(context, columnsDict);
+        default:
+            return Errors::CompilationStatus::Error(
+                Messages::UNKNOWN_OPERATION,
+                context.GetAllocator()
+            );
         }
     }
 
@@ -1733,162 +1738,46 @@ namespace QueryPipeline::Statements {
         }
     }
 
-    Errors::ValidationStatus CompileNode(QueryContext& context, Expressions::Expression*& expression){
-        if (expression == nullptr)
-            return Errors::ValidationStatus::Ok();
-        if (expression->expressionType == Expressions::ExpressionType::Expression)
-            return Errors::ValidationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
-
-        return Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
-            return CompileNode(context, expression->As<TNode>(), expression);
-        });
-  }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ){
         if (expression == nullptr)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
         if (expression->expressionType == Expressions::ExpressionType::Expression)
-            return Errors::ValidationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
+            return Errors::CompilationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
 
         return Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
-            return CompileNode(context, expression->As<TNode>(), expression, validationScope);
+            return CompileNode(context, expression->As<TNode>(), expression, compilationScope);
         });
     }
 
-    Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::BinaryExpression *binaryExpr,
-        Expressions::Expression *&expression
-    ) {
-        auto result =
-            CompileNode(context, binaryExpr->left)
-            && CompileNode(context, binaryExpr->right);
-
-        if (!result.IsOk()) return result;
-
-
-        //validate binary expression action
-        const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
-        const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
-        if (leftType == DataType::Null || rightType == DataType::Null){
-            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
-            return Errors::ValidationStatus::Ok();
-        }
-
-        if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
-                    context.GetAllocator(),
-                    leftType,
-                    rightType
-                )
-            );
-        }
-
-        if (!binaryExpr->ValidateOperation()) {
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_OPERATION_ON_DATATYPES(
-                    context.GetAllocator(),
-                    leftType,
-                    rightType
-                )
-            );
-        }
-
-        const auto promotedType = PromoteType(leftType, rightType);
-
-        if (leftType != promotedType)
-            InsertCastExpression(context, binaryExpr->left, promotedType);
-        if (rightType != promotedType)
-            InsertCastExpression(context, binaryExpr->right, promotedType);
-
-        FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::BinaryExpression* binaryExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ) {
         auto result =
-            CompileNode(context, binaryExpr->left, validationScope)
-            && CompileNode(context, binaryExpr->right, validationScope);
+            CompileNode(context, binaryExpr->left, compilationScope)
+            && CompileNode(context, binaryExpr->right, compilationScope);
 
         if (!result.IsOk()) return result;
 
-        const auto leftType = Expressions::GetExpressionReturnType(binaryExpr->left);
-        const auto rightType = Expressions::GetExpressionReturnType(binaryExpr->right);
-        if (leftType == DataType::Null || rightType == DataType::Null){
-            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
-            return Errors::ValidationStatus::Ok();
-        }
-
-        if (!ValidateExpressionCoercionTypes(binaryExpr->left, binaryExpr->right)) {
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
-                    context.GetAllocator(),
-                    leftType,
-                    rightType
-                )
-            );
-        }
-
-        if (!binaryExpr->ValidateOperation()) {
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_OPERATION_ON_DATATYPES(
-                    context.GetAllocator(),
-                    leftType,
-                    rightType
-                )
-            );
-        }
-
-        const auto promotedType = PromoteType(leftType, rightType);
-
-        if (leftType != promotedType)
-            InsertCastExpression(context, binaryExpr->left, promotedType);
-        if (rightType != promotedType)
-            InsertCastExpression(context, binaryExpr->right, promotedType);
-
         FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
-        QueryContext &context,
-        Expressions::LogicalExpression *logicalExpr,
-        Expressions::Expression *&expression
-    ) {
-        auto result =
-            CompileNode(context, logicalExpr->left)
-            && CompileNode(context, logicalExpr->right);
-
-        if (!result.IsOk()) return result;
-
-        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->left))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->left));
-        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpr->right))
-            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
-
-        FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::LogicalExpression* logicalExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ) {
         auto result =
-            CompileNode(context, logicalExpr->left, validationScope)
-            && CompileNode(context, logicalExpr->right, validationScope);
+            CompileNode(context, logicalExpr->left, compilationScope)
+            && CompileNode(context, logicalExpr->right, compilationScope);
 
         if (!result.IsOk())return result;
 
@@ -1898,140 +1787,61 @@ namespace QueryPipeline::Statements {
             return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpr->right));
 
         FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
-        QueryContext &context,
-        const Expressions::FunctionExpression *funcExpr,
-        Expressions::Expression *&expression
-    ) {
-        for (auto* childExpr : funcExpr->arguments) {
-            auto childExpressionResult = CompileNode(context, childExpr);
-            if (!childExpressionResult.IsOk()) return childExpressionResult;
-        }
-
-        //validate functionExpression
-        DataTypes::String errorMessage(context.GetAllocator());
-        if (!funcExpr->ValidateNumberOfArguments(errorMessage))
-            return Errors::ValidationStatus::Error(std::move(errorMessage));
-
-        FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext &context,
         const Expressions::FunctionExpression *funcExpr,
         Expressions::Expression *&expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ) {
         //validate children expressions and assign return types and ids to column expressions
         for (auto* childExpr : funcExpr->arguments) {
-            auto childExpressionResult = CompileNode(context, childExpr, validationScope);
-            if (!childExpressionResult.IsOk()) return childExpressionResult;
+            auto childExpressionResult = CompileNode(context, childExpr, compilationScope);
+            if (!childExpressionResult.IsOk())
+                return childExpressionResult;
         }
 
-        //validate number of arguments
-        DataTypes::String errorMessage(context.GetAllocator());
-        if (!funcExpr->ValidateNumberOfArguments(errorMessage))
-            return Errors::ValidationStatus::Error(std::move(errorMessage));
-
         FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext &context,
         Expressions::BranchExpression *branchExpr,
         Expressions::Expression *&expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ) {
         if (!branchExpr->ValidateNumberOfArguments())
-            return Errors::ValidationStatus::Error(
-                    Messages::INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION,
-                    context.GetAllocator()
-            );
-
-        for (auto& branch : branchExpr->branches) {
-            auto result = CompileNode(context, branch, validationScope);
-            if (!result.IsOk()) return result;
-
-            if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
-                return Errors::ValidationStatus::Error(
-                    Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
-                        context.GetAllocator(),
-                        Expressions::GetExpressionReturnType(branch)
-                    )
-                );
-            }
-        }
-
-        for (auto& resultExpr : branchExpr->results) {
-            auto result = CompileNode(context, resultExpr, validationScope);
-            if (!result.IsOk()) return result;
-        }
-
-        if (branchExpr->HasBaseCase()) {
-            auto result = CompileNode(context, branchExpr->baseCase, validationScope);
-            if (!result.IsOk()) return result;
-        }
-
-        const auto returnType = branchExpr->GetReturnType();
-
-        for (const auto& resultExpr : branchExpr->results) {
-            if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
-                return Errors::ValidationStatus::Error(
-                    Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
-                    context.GetAllocator()
-                );
-        }
-
-        if (branchExpr->HasBaseCase()) {
-            if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
-                return Errors::ValidationStatus::Error(
-                Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
+            return Errors::CompilationStatus::Error(
+                Messages::INVALID_NUMBER_OF_ARGUMENTS_ON_BRANCH_EXPRESSION,
                 context.GetAllocator()
-                );
-        }
-
-        FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
-        QueryContext &context,
-        Expressions::BranchExpression *branchExpr,
-        Expressions::Expression *&expression
-    ){
-        if (!branchExpr->ValidateNumberOfArguments())
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
-                    context.GetAllocator(),
-                    branchExpr->GetReturnType()
-                )
             );
 
         for (auto& branch : branchExpr->branches) {
-            auto result = CompileNode(context, branch);
-            if (!result.IsOk()) return result;
+            auto result = CompileNode(context, branch, compilationScope);
+            if (!result.IsOk())
+                return result;
         }
 
         for (auto& resultExpr : branchExpr->results) {
-            auto result = CompileNode(context, resultExpr);
-            if (!result.IsOk()) return result;
+            auto result = CompileNode(context, resultExpr, compilationScope);
+            if (!result.IsOk())
+                return result;
         }
 
         if (branchExpr->HasBaseCase()) {
-            auto result = CompileNode(context, branchExpr->baseCase);
-            if (!result.IsOk()) return result;
+            auto result = CompileNode(context, branchExpr->baseCase, compilationScope);
+            if (!result.IsOk())
+                return result;
         }
 
         const auto returnType = branchExpr->GetReturnType();
 
         for (const auto& resultExpr : branchExpr->results) {
             if (!ValidateExpressionCoercionTypes(returnType, resultExpr))
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
                     context.GetAllocator()
                 );
@@ -2039,40 +1849,28 @@ namespace QueryPipeline::Statements {
 
         if (branchExpr->HasBaseCase()) {
             if (!ValidateExpressionCoercionTypes(returnType, branchExpr->baseCase))
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
                     context.GetAllocator()
                 );
         }
 
         FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
-        const Expressions::ColumnExpression *columnExpr
-    ){
-        return Errors::ValidationStatus::Error(
-        Messages::INVALID_COLUMN_ALIAS(
-                    context.GetAllocator(),
-                    columnExpr->alias
-                )
-        );
-    }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::ColumnExpression* columnExpr,
         Expressions::Expression*&,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     ){
         //if wildcard ensure statement is of select statement type
         if (DataTypes::StringView::ViewOf(columnExpr->alias) == WILDCARD) {
             auto* selectStatement = dynamic_cast<SelectStatement*>(statementValidationScope._statement);
 
             if (selectStatement == nullptr)
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::WILDCARD_USED_ON_NON_SELECT,
                     context.GetAllocator()
                 );
@@ -2081,20 +1879,20 @@ namespace QueryPipeline::Statements {
         }
 
         return columnExpr->HasTableAlias()
-            ? CompileColumnWhenTableAliasExists(context, columnExpr, statementValidationScope)
-            : CompileColumnWhenNoTableAliasExists(context, columnExpr, statementValidationScope);
+                   ? CompileColumnWhenTableAliasExists(context, columnExpr, statementValidationScope)
+                   : CompileColumnWhenNoTableAliasExists(context, columnExpr, statementValidationScope);
     }
 
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         const QueryContext &context,
         Expressions::VariableExpression* variableExpr,
         Expressions::Expression*&,
-        const StatementValidationScope&
+        const CompilationScope&
     ){
         DataType outType;
         const auto normalizedNameView = DataTypes::StringView::ViewOf(variableExpr->normalizedName);
         if (!context._scope.variables.TryGetValue(normalizedNameView, outType)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_VARIABLE(
                     context.GetAllocator(),
                     variableExpr->name
@@ -2103,21 +1901,21 @@ namespace QueryPipeline::Statements {
         }
 
         variableExpr->dataType = outType;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         const QueryContext &context,
         ColumnName &column,
-        StatementValidationScope& statementValidationScope
+        CompilationScope& statementValidationScope
     ){
         if (!column.alias.Empty()) {
             UnsignedSmallInt slotIndex;
             if (!statementValidationScope._tableAliasesDict.TryGetValue(column.alias, slotIndex)) {
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::INVALID_TABLE_ALIAS(
-                           context.GetAllocator(),
-                           column.alias
+                        context.GetAllocator(),
+                        column.alias
                     )
                 );
             }
@@ -2144,39 +1942,39 @@ namespace QueryPipeline::Statements {
         }
 
         if (!columnExistsOnTable) {
-            return Errors::ValidationStatus::Error(
-        Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
+            return Errors::CompilationStatus::Error(
+                Messages::COLUMN_DOES_NOT_EXIST_ON_TABLE(
                     context.GetAllocator(),
                     column.name
                 )
             );
         }
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
+    Errors::CompilationStatus CompileNode(
+        const QueryContext&,
         Expressions::ConstantExpression* constantExpr,
-        Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        Expressions::Expression*&,
+        CompilationScope&
     ){
         DataTypes::Coercions::DeduceIntegerType(constantExpr->value);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::JsonExpression* jsonExpr,
         Expressions::Expression*&,
-        StatementValidationScope& validationScope
+        const CompilationScope& compilationScope
     ){
         Expressions::Expression* expression = nullptr;
-        auto result = CompileNode(context, jsonExpr->columnPtr, expression, validationScope);
+        auto result = CompileNode(context, jsonExpr->columnPtr, expression, compilationScope);
         if (!result.IsOk()) return result;
 
         if (jsonExpr->pathSegments.Empty())
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::EMPTY_JSON_PATH,
                 context.GetAllocator()
             );
@@ -2185,15 +1983,15 @@ namespace QueryPipeline::Statements {
             const auto& segment = jsonExpr->pathSegments[i];
             if (segment._accessorType == DataTypes::JsonAccessorType::Scalar
                 && i != jsonExpr->pathSegments.Size() - 1
-            ) return Errors::ValidationStatus::Error(
-            Messages::INVALID_JSON_ACCESSOR_TYPE,
-                    context.GetAllocator()
-                );
+            ) return Errors::CompilationStatus::Error(
+                Messages::INVALID_JSON_ACCESSOR_TYPE,
+                context.GetAllocator()
+            );
         }
 
         const auto& lastPathSegment = jsonExpr->pathSegments.Back();
         if (lastPathSegment->_accessorType != DataTypes::JsonAccessorType::Scalar)
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_JSON_PATH(
                     context.GetAllocator(),
                     DataTypes::StringView::ViewOf(lastPathSegment->_key)
@@ -2202,112 +2000,33 @@ namespace QueryPipeline::Statements {
 
         //verify json validity maybe
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileNode(
-        const QueryContext& context,
-        const Expressions::JsonExpression* jsonExpr
-    ){
-        auto result = CompileNode(context, jsonExpr->columnPtr);
-        if (!result.IsOk()) return result;
-
-        if (jsonExpr->pathSegments.Empty())
-            return Errors::ValidationStatus::Error(
-                Messages::EMPTY_JSON_PATH,
-                context.GetAllocator()
-            );
-
-        for (auto i = 0; i < jsonExpr->pathSegments.Size(); i++){
-            const auto& segment = jsonExpr->pathSegments[i];
-            if (segment._accessorType == DataTypes::JsonAccessorType::Scalar
-                && i != jsonExpr->pathSegments.Size() - 1
-                ) return Errors::ValidationStatus::Error(
-                Messages::INVALID_JSON_ACCESSOR_TYPE,
-                        context.GetAllocator()
-                    );
-        }
-
-        const auto& lastPathSegment = jsonExpr->pathSegments.Back();
-        if (lastPathSegment->_accessorType != DataTypes::JsonAccessorType::Scalar)
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_JSON_PATH(
-                    context.GetAllocator(),
-                    DataTypes::StringView::ViewOf(lastPathSegment->_key)
-                )
-            );
-
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
-        QueryContext& context,
-        Expressions::CastExpression* castExpr,
-        Expressions::Expression*& expression
-    ){
-        auto result = CompileNode(context, castExpr->childExpr);
-        if (!result.IsOk()) return result;
-
-        const auto childReturnType = Expressions::GetExpressionReturnType(castExpr->childExpr);
-        if (castExpr->targetType == childReturnType){
-            expression = castExpr->childExpr;
-            return Errors::ValidationStatus::Ok();
-        }
-
-        if (!ValidateExpressionCoercionTypes(castExpr->targetType, castExpr->childExpr)){
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
-                    context.GetAllocator(),
-                    childReturnType,
-                    castExpr->targetType
-                )
-            );
-        }
-
-        FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
-    }
-
-    Errors::ValidationStatus CompileNode(
+    Errors::CompilationStatus CompileNode(
         QueryContext& context,
         Expressions::CastExpression* castExpr,
         Expressions::Expression*& expression,
-        StatementValidationScope& validationScope
+        CompilationScope& compilationScope
     ){
-        auto result = CompileNode(context, castExpr->childExpr, validationScope);
+        auto result = CompileNode(context, castExpr->childExpr, compilationScope);
         if (!result.IsOk()) return result;
 
-        const auto childReturnType = Expressions::GetExpressionReturnType(castExpr->childExpr);
-        if (castExpr->targetType == childReturnType){
-            expression = castExpr->childExpr;
-            return Errors::ValidationStatus::Ok();
-        }
-
-        if (!ValidateExpressionCoercionTypes(castExpr->targetType, castExpr->childExpr)){
-            return Errors::ValidationStatus::Error(
-                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
-                    context.GetAllocator(),
-                    childReturnType,
-                    castExpr->targetType
-                )
-            );
-        }
-
         FoldNode(context, expression);
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileColumnWhenTableAliasExists(
+    Errors::CompilationStatus CompileColumnWhenTableAliasExists(
         QueryContext& context,
         Expressions::ColumnExpression *column,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     ){
         Headers::ColumnHeader columnHeader;
         if (!statementValidationScope._tableAliasesDict.TryGetValue(column->tableAlias, column->_slotIndex)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_TABLE_ALIAS(
-                            context.GetAllocator(),
-                            column->tableAlias
+                    context.GetAllocator(),
+                    column->tableAlias
                 )
             );
         }
@@ -2315,10 +2034,10 @@ namespace QueryPipeline::Statements {
         const auto& columns = statementValidationScope._tableColumnsArray[column->_slotIndex];
         const auto columnAliasToLower = column->alias.ToLower();
         if (!columns.TryGetValue(columnAliasToLower, columnHeader)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_NAME(
-                        context.GetAllocator(),
-                        column->alias
+                    context.GetAllocator(),
+                    column->alias
                 )
             );
         }
@@ -2333,13 +2052,13 @@ namespace QueryPipeline::Statements {
 
         context._referencedColumns.Add(column->_slotIndex, column->ordinalPosition, column->returnType);
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
-    Errors::ValidationStatus CompileColumnWhenNoTableAliasExists(
+    Errors::CompilationStatus CompileColumnWhenNoTableAliasExists(
         QueryContext& context,
         Expressions::ColumnExpression *column,
-        const StatementValidationScope& statementValidationScope
+        const CompilationScope& statementValidationScope
     ){
         Headers::ColumnHeader columnHeader;
         bool columnExistsOnStatement = false;
@@ -2351,11 +2070,11 @@ namespace QueryPipeline::Statements {
                 continue;
 
             if (columnExistsOnStatement) {
-                return Errors::ValidationStatus::Error(
-                Messages::AMBIGUOUS_COLUMN_NAME(
-                            context.GetAllocator(),
-                            column->alias
-                        )
+                return Errors::CompilationStatus::Error(
+                    Messages::AMBIGUOUS_COLUMN_NAME(
+                        context.GetAllocator(),
+                        column->alias
+                    )
                 );
             }
 
@@ -2369,10 +2088,10 @@ namespace QueryPipeline::Statements {
         }
 
         if (!columnExistsOnStatement) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_NAME(
-                        context.GetAllocator(),
-                        column->alias
+                    context.GetAllocator(),
+                    column->alias
                 )
             );
         }
@@ -2382,7 +2101,7 @@ namespace QueryPipeline::Statements {
 
         context._referencedColumns.Add(column->_slotIndex, column->ordinalPosition, column->returnType);
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     bool ValidateExpressionCoercionTypes(const Expressions::Expression *left, const Expressions::Expression *right){
@@ -2441,47 +2160,47 @@ namespace QueryPipeline::Statements {
         return DataTypes::Coercions::IsCoercionAllowed(Expressions::GetExpressionReturnType(expression), type);
     }
 
-    Errors::ValidationStatus CompileWildcard(
+    Errors::CompilationStatus CompileWildcard(
         QueryContext& context,
         const Expressions::ColumnExpression* column,
-        const StatementValidationScope& validationScope,
+        const CompilationScope& compilationScope,
         SelectStatement* statement
     ){
         if (DataTypes::StringView::ViewOf(column->alias) != WILDCARD)
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
 
-        if (validationScope._indexPos == nullptr)
-            return Errors::ValidationStatus::Error(
+        if (compilationScope._indexPos == nullptr)
+            return Errors::CompilationStatus::Error(
                 Messages::UNEXPECTED_ERROR,
                 context.GetAllocator()
             );
 
         //if no alias is specified get all the columns from the existing tables in the query
         if (column->tableAlias.Empty()) {
-            statement->_projections.erase(statement->_projections.begin() + *validationScope._indexPos);
+            statement->_projections.erase(statement->_projections.begin() + *compilationScope._indexPos);
 
-            for (Int slotIndex = 0; slotIndex < validationScope._tableColumnsArray.Size(); slotIndex++){
-                const auto& columns = validationScope._tableColumnsArray[slotIndex];
+            for (Int slotIndex = 0; slotIndex < compilationScope._tableColumnsArray.Size(); slotIndex++){
+                const auto& columns = compilationScope._tableColumnsArray[slotIndex];
                 AssignColumnsFromWildCardExpression(
                     context,
                     columns,
                     column->tableAlias,
-                    validationScope,
+                    compilationScope,
                     statement->_projections,
                     slotIndex
                 );
-                *validationScope._indexPos += static_cast<Int>(columns.size());
+                *compilationScope._indexPos += static_cast<Int>(columns.size());
             }
 
-            return Errors::ValidationStatus::Ok();
+            return Errors::CompilationStatus::Ok();
         }
 
         //else get only from the specified
         UnsignedSmallInt slotIndex = 0;
         if (!column->tableAlias.Empty()
-            && !validationScope._tableAliasesDict.TryGetValue(column->tableAlias, slotIndex)
+            && !compilationScope._tableAliasesDict.TryGetValue(column->tableAlias, slotIndex)
         ){
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
                 Messages::INVALID_TABLE_ALIAS(
                     context.GetAllocator(),
                     column->tableAlias
@@ -2490,24 +2209,24 @@ namespace QueryPipeline::Statements {
         }
 
         //remove the wildcard
-        statement->_projections.erase(statement->_projections.begin() + *validationScope._indexPos);
+        statement->_projections.erase(statement->_projections.begin() + *compilationScope._indexPos);
         AssignColumnsFromWildCardExpression(
             context,
-            validationScope._tableColumnsArray[slotIndex],
+            compilationScope._tableColumnsArray[slotIndex],
             column->tableAlias,
-            validationScope,
+            compilationScope,
             statement->_projections,
             slotIndex
         );
 
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     void AssignColumnsFromWildCardExpression(
         QueryContext& context,
         const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict,
         const DataTypes::String& tableAlias,
-        const StatementValidationScope& statementValidationScope,
+        const CompilationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,
         const UnsignedSmallInt slotIndex
     ) {
@@ -2531,6 +2250,153 @@ namespace QueryPipeline::Statements {
             results[insertPos] = columnExpression;
             context._referencedColumns.Add(slotIndex, header.ordinalPosition, dataType);
         }
+    }
+
+    Errors::CompilationStatus TypeCheckNode(QueryContext& context, Expressions::Expression*& expression){
+        if (expression == nullptr)
+            return Errors::CompilationStatus::Ok();
+        if (expression->expressionType == Expressions::ExpressionType::Expression)
+            return Errors::CompilationStatus::Error(Messages::UNKNOWN_OPERATION, context.GetAllocator());
+
+        return Expressions::VisitNode(expression->expressionType, [&]<typename TNode>(){
+            return TypeCheckNode(context, expression->As<TNode>(), expression);
+        });
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        Expressions::BinaryExpression* binaryExpression,
+        Expressions::Expression*& expression
+    ){
+        const auto leftType = Expressions::GetExpressionReturnType(binaryExpression->left);
+        const auto rightType = Expressions::GetExpressionReturnType(binaryExpression->right);
+        if (leftType == DataType::Null || rightType == DataType::Null){
+            expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null());
+            return Errors::CompilationStatus::Ok();
+        }
+
+        if (!ValidateExpressionCoercionTypes(binaryExpression->left, binaryExpression->right)) {
+            return Errors::CompilationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    leftType,
+                    rightType
+                )
+            );
+        }
+
+        if (!binaryExpression->ValidateOperation()) {
+            return Errors::CompilationStatus::Error(
+                Messages::INVALID_OPERATION_ON_DATATYPES(
+                    context.GetAllocator(),
+                    leftType,
+                    rightType
+                )
+            );
+        }
+
+        const auto promotedType = PromoteType(leftType, rightType);
+
+        if (leftType != promotedType)
+            InsertCastExpression(context, binaryExpression->left, promotedType);
+        if (rightType != promotedType)
+            InsertCastExpression(context, binaryExpression->right, promotedType);
+
+        return Errors::CompilationStatus::Ok();
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::LogicalExpression* logicalExpression,
+        Expressions::Expression*&
+    ){
+        if (!ValidateExpressionCoercionTypes(DataType::Bool, logicalExpression->left))
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpression->left));
+        if (!logicalExpression->IsNot() && !ValidateExpressionCoercionTypes(DataType::Bool, logicalExpression->right))
+            return ClauseCannotBeEvaluatedToBool(context, Expressions::GetExpressionReturnType(logicalExpression->right));
+
+        return Errors::CompilationStatus::Ok();
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::CastExpression* castExpression,
+        Expressions::Expression*& expression
+    ){
+        const auto childReturnType = Expressions::GetExpressionReturnType(castExpression->childExpr);
+        if (castExpression->targetType == childReturnType){
+            expression = castExpression->childExpr;
+            return Errors::CompilationStatus::Ok();
+        }
+
+        if (!ValidateExpressionCoercionTypes(castExpression->targetType, castExpression->childExpr)){
+            return Errors::CompilationStatus::Error(
+                Messages::INVALID_DATATYPE_CONVERSION_MESSAGE(
+                    context.GetAllocator(),
+                    childReturnType,
+                    castExpression->targetType
+                )
+            );
+        }
+
+        return Errors::CompilationStatus::Ok();
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        Expressions::BranchExpression* branchExpression,
+        Expressions::Expression*&
+    ){
+        for (const auto* branch: branchExpression->branches){
+            if (!ValidateExpressionCoercionTypes(DataType::Bool, branch)) {
+                return Errors::CompilationStatus::Error(
+                    Messages::INVALID_EXPRESSION_TYPE_FOR_BRANCH_EXPRESSION(
+                        context.GetAllocator(),
+                        Expressions::GetExpressionReturnType(branch)
+                    )
+                );
+            }
+        }
+        const auto promotedType = branchExpression->GetReturnType();
+        for (auto* resultExpr : branchExpression->results) {
+            if (!ValidateExpressionCoercionTypes(promotedType, resultExpr))
+                return Errors::CompilationStatus::Error(
+                    Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
+                    context.GetAllocator()
+                );
+
+            const auto resultExpressionType = Expressions::GetExpressionReturnType(resultExpr);
+            if (promotedType != resultExpressionType)
+                InsertCastExpression(context, resultExpr, resultExpressionType);
+        }
+
+        if (branchExpression->HasBaseCase()) {
+            if (!ValidateExpressionCoercionTypes(promotedType, branchExpression->baseCase))
+                return Errors::CompilationStatus::Error(
+                    Messages::INVALID_BRANCH_EXPRESSION_RESULT_TYPE,
+                    context.GetAllocator()
+                );
+
+            const auto resultExpressionType = Expressions::GetExpressionReturnType(branchExpression->baseCase);
+            if (promotedType != resultExpressionType)
+                InsertCastExpression(context, branchExpression->baseCase, resultExpressionType);
+        }
+
+        return Errors::CompilationStatus::Ok();
+    }
+
+    Errors::CompilationStatus TypeCheckNode(
+        const QueryContext& context,
+        const Expressions::FunctionExpression* functionExpression,
+        Expressions::Expression*& expression
+    ){
+        //validate number of arguments
+        //TODO
+        DataTypes::String errorMessage(context.GetAllocator());
+        if (!functionExpression->ValidateNumberOfArguments(errorMessage))
+            return Errors::CompilationStatus::Error(std::move(errorMessage));
+
+        return Errors::CompilationStatus::Ok();
     }
 
     void FoldNode(const QueryContext& context, Expressions::Expression *&expression) {
@@ -2569,24 +2435,11 @@ namespace QueryPipeline::Statements {
         if ((
                 logicalExpression->left->Is<Expressions::ConstantExpression>()
                 && TryPropagateChildExpression(expression, logicalExpression->left, logicalExpression->right, dominantValue)
-        ) || logicalExpression->IsNot()
+            ) || logicalExpression->IsNot()
         ) return;
 
         if (logicalExpression->right->Is<Expressions::ConstantExpression>())
             TryPropagateChildExpression(expression, logicalExpression->right, logicalExpression->left, dominantValue);
-    }
-
-    void FoldNode(
-        const QueryContext& context,
-        Expressions::FunctionExpression* functionExpression,
-        Expressions::Expression *&expression
-    ){
-        for (auto& argument : functionExpression->arguments) {
-            FoldNode(context, argument);
-            if (!argument->Is<Expressions::ConstantExpression>())
-                return;
-        }
-        EvaluateExpression(context, expression);
     }
 
     void FoldNode(
@@ -2608,12 +2461,35 @@ namespace QueryPipeline::Statements {
 
     void FoldNode(
         const QueryContext& context,
+        Expressions::FunctionExpression* functionExpression,
+        Expressions::Expression *&expression
+    ){
+        for (auto& argument : functionExpression->arguments) {
+            FoldNode(context, argument);
+            if (!argument->Is<Expressions::ConstantExpression>())
+                return;
+        }
+        EvaluateExpression(context, expression);
+    }
+
+    void FoldNode(
+        const QueryContext& context,
         Expressions::CastExpression* castExpression,
         Expressions::Expression *&expression
     ){
         FoldNode(context, castExpression->childExpr);
         if (castExpression->childExpr->Is<Expressions::ConstantExpression>())
             EvaluateExpression(context, expression);
+    }
+
+    void FoldToConstant(const QueryContext& context, Expressions::Expression*& expression){
+        Expressions::BindAndResolveExpressionKernel(expression, nullptr);
+
+        const CoreEngine::DataChunk chunk;
+        const auto executionContext = CoreEngine::ExecutionContext::BaseContext();
+
+        auto value = Expressions::EvaluateExpressionToValue(expression, &executionContext, &chunk);
+        expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
 
     void PropagateExpression(Expressions::Expression *&expression, Expressions::Expression *&childExpr) {
@@ -2625,8 +2501,8 @@ namespace QueryPipeline::Statements {
     void EvaluateExpression(const QueryContext& context, Expressions::Expression *&expression) {
         Expressions::BindExpressionRowKernel(expression);
         auto value = Expressions::EvaluateExpression(expression, Expressions::EvaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::Constant,
-            context.GetAllocator())
+                                                         Expressions::EvaluationContext::EvaluationContextType::Constant,
+                                                         context.GetAllocator())
         );
         expression = context._compileContext.Allocate<Expressions::ConstantExpression>(value);
     }
@@ -2645,7 +2521,7 @@ namespace QueryPipeline::Statements {
         });
     }
 
-    Errors::ValidationStatus ResolveOrderByExpression(
+    Errors::CompilationStatus ResolveOrderByExpression(
         const QueryContext& context,
         OrderColumn* column,
         const Dictionary<DataTypes::String, Int>& aliasesDictionary,
@@ -2655,13 +2531,13 @@ namespace QueryPipeline::Statements {
         if (expression->Is<Expressions::ColumnExpression>()){
             auto* columnExpr = expression->As<Expressions::ColumnExpression>();
             if (DataTypes::StringView::ViewOf(columnExpr->alias) == WILDCARD)
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::WILDCARD_NOT_ALLOWED_IN_ORDER_BY,
                     context.GetAllocator()
                 );
 
             if (aliasesDictionary.TryGetValue(columnExpr->alias, column->outputIndex))
-                return Errors::ValidationStatus::Ok();
+                return Errors::CompilationStatus::Ok();
 
 
         }
@@ -2669,7 +2545,7 @@ namespace QueryPipeline::Statements {
         if (expression->Is<Expressions::ConstantExpression>()){
             const auto* constantExpr = expression->As<Expressions::ConstantExpression>();
             if (constantExpr->value.IsNull())
-                return Errors::ValidationStatus::Error(
+                return Errors::CompilationStatus::Error(
                     Messages::ORDER_BY_NULL_VALUE,
                     context.GetAllocator()
                 );
@@ -2677,7 +2553,7 @@ namespace QueryPipeline::Statements {
             if (constantExpr->value.IsIntegral()){
                 const auto value = constantExpr->value.AsBigInt();
                 if (value < 1 || value > visibleProjectionCount)
-                    return Errors::ValidationStatus::Error(
+                    return Errors::CompilationStatus::Error(
                         Messages::ORDER_BY_INTEGRAL_INVALID_VALUE(
                             context.GetAllocator(),
                             value
@@ -2685,7 +2561,7 @@ namespace QueryPipeline::Statements {
                     );
 
                 column->outputIndex = value - 1;
-                return Errors::ValidationStatus::Ok();
+                return Errors::CompilationStatus::Ok();
             }
 
 
@@ -2693,14 +2569,14 @@ namespace QueryPipeline::Statements {
 
     }
 
-    Errors::ValidationStatus CompilePostProjectionColumnExpression(
+    Errors::CompilationStatus CompilePostProjectionColumnExpression(
         const QueryContext& context,
         Expressions::ColumnExpression *column,
         const Dictionary<DataTypes::String, const Expressions::Expression*>& postProjectionAliases
     ){
         const Expressions::Expression* expression;
         if (!postProjectionAliases.TryGetValue(column->alias, expression)) {
-            return Errors::ValidationStatus::Error(
+            return Errors::CompilationStatus::Error(
             Messages::INVALID_COLUMN_NAME(
                         context.GetAllocator(),
                         column->alias
@@ -2710,7 +2586,7 @@ namespace QueryPipeline::Statements {
 
         column->returnType = Expressions::GetExpressionReturnType(expression);
         column->ordinalPosition = expression->ordinalPosition;
-        return Errors::ValidationStatus::Ok();
+        return Errors::CompilationStatus::Ok();
     }
 
     void AssignPostProjectionIndicesToExpression(
@@ -2722,8 +2598,8 @@ namespace QueryPipeline::Statements {
         });
     }
 
-    Errors::ValidationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, const DataType type) {
-      return Errors::ValidationStatus::Error(
+    Errors::CompilationStatus ClauseCannotBeEvaluatedToBool(const QueryContext& context, const DataType type) {
+      return Errors::CompilationStatus::Error(
         Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
             context._compileContext.GetAllocator(),
             SQL_TYPES_NAMES[static_cast<Int>(type)]

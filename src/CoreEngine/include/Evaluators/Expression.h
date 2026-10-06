@@ -471,6 +471,7 @@ namespace Expressions{
         const CoreEngine::ExecutionContext* context,
         const CoreEngine::DataChunk* chunk
     );
+    
     void EvaluateExpression(
         const Expression* expression,
         const EvaluationContext& context,

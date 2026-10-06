@@ -32,14 +32,14 @@ namespace QueryPipeline{
         CompileValidationScope _scope;
         CompileContext _compileContext;
         DataStructures::PolymorphicArray<Cursor*> cursors;
-        Errors::Error status;
+        Errors::ParserStatus status;
         const Network::Session* _session;
 
         UnsignedSmallInt _virtualId;
         bool hasMore;
 
         QueryContext();
-        explicit QueryContext(Errors::Error&  error);
+        explicit QueryContext(Errors::ParserStatus&  error);
 
         QueryContext(const QueryContext&) = delete;
         QueryContext& operator=(const QueryContext&) = delete;

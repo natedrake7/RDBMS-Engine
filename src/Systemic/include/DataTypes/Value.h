@@ -9,7 +9,6 @@
 #include "JsonBinary.h"
 #include "Guid.h"
 #include "LobReference.h"
-#include "../../../Server/include/ConnectionManager.h"
 #include "../Serialization/JsonParser.h"
 
 namespace Memory{
@@ -47,7 +46,7 @@ class Value{
 
     explicit Value(
         const object_t* data,
-        Int size,
+        data_size_t size,
         DataType type,
         const ::Memory::IAllocator* allocator,
         column_index_t index = 0
@@ -56,7 +55,7 @@ class Value{
     //creates a session value object
     explicit Value(
         const object_t* data,
-        Int size,
+        data_size_t size,
         DataType type,
         column_index_t index = 0
     );
