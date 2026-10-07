@@ -1,7 +1,7 @@
-﻿#include "Database.h"
-#include "../../include/Pages/HeaderPageView.h"
-#include "DataStorage/Table.h"
-#include "Pages/Additional/Frame.h"
+﻿#include <CoreEngine/Database.h>
+#include <CoreEngine/Pages/HeaderPageView.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     object_t* HeaderPageView::GetTableHeaderDataOffset(const Int ordinalPosition) const{

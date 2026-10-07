@@ -1,16 +1,16 @@
-#include "../../include/SystemDatabases/VersionDatabase.h"
+#include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
 #include <fstream>
 
-#include "../../include/BufferPool/StorageManager.h"
-#include "../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 #include <nlohmann/json.hpp>
 
-#include "Contexts/ExecutionContext.h"
-#include "../../include/Extensions/StringExtensions.h"
-#include "../../include/DataStorage/Row/SerializedRow.h"
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/Extensions/StringExtensions.h>
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
 namespace CoreEngine {
     VersionDatabase& VersionDatabase::Get(){

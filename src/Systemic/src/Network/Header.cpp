@@ -1,5 +1,5 @@
-﻿#include "../../include/Network/Header.h"
-#include "../../Systemic/include/Macros.h"
+﻿#include <Systemic/Network/Header.h>
+#include <Systemic/Macros.h>
 
 #if IS_GCC
     #include <cstring>

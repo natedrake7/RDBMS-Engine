@@ -1,6 +1,6 @@
-﻿#include "../../../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
-#include "../../../../include/Evaluators/Expression.h"
-#include "Contexts/ExecutionContext.h"
+﻿#include <CoreEngine/Evaluators/Kernels/Vectorized/VectorizedKernels.h>
+#include <CoreEngine/Evaluators/Expression.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
 
 namespace CoreEngine::VectorizedKernels{
     DataVector* ColumnScanKernel(

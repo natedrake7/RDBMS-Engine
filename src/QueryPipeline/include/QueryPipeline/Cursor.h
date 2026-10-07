@@ -1,0 +1,33 @@
+#pragma once
+#include <QueryPipeline/DatabaseConstants.h>
+#include <QueryPipeline/PhysicalPlan.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+
+struct CancellationToken;
+
+namespace QueryPipeline {
+  class Cursor {
+    PipelineConstants::cursor_id_t id;
+    CoreEngine::ExecutionContext executionContext;
+
+    bool canFetchMore;
+
+    PhysicalPlan::PlanNode* plan;
+
+  public:
+    Cursor(
+      PipelineConstants::cursor_id_t cursorId,
+      CoreEngine::ExecutionContext& executionContext,
+      PhysicalPlan::PlanNode* plan
+    );
+
+    [[nodiscard]] PhysicalPlan::ExecutionResult FetchNextBatch();
+    [[nodiscard]] bool CanFetch()const;
+    [[nodiscard]] const CoreEngine::ExecutionContext& GetExecutionContext()const;
+    [[nodiscard]] const CoreEngine::Snapshot& GetSnapshot()const;
+    [[nodiscard]] PipelineConstants::cursor_id_t GetId()const;
+    [[nodiscard]] const CoreEngine::OutputSchema* GetSchema()const;
+
+    void AttachCancellationToken(CancellationToken& cancellationToken);
+  };
+}

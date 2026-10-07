@@ -1,14 +1,14 @@
-#include "../../../include/DatabaseConstants.h"
-#include "../../../include/DataStorage/Table.h"
-#include "../../../include/DataStorage/Column.h"
-#include "../../../include/Database.h"
+#include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/Database.h>
 
-#include "../../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../include/BufferPool/StorageManager.h"
-#include "Contexts/ExecutionContext.h"
-#include "Evaluators/Expression.h"
-#include "Evaluators/VectorizedPushedDownFilter.h"
-#include "Memory/PersistentAllocator.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/Evaluators/Expression.h>
+#include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
+#include <CoreEngine/Memory/PersistentAllocator.h>
 
 namespace CoreEngine::StorageTypes {
     Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
@@ -87,18 +87,18 @@ namespace CoreEngine::StorageTypes {
     Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const Int indexPos, const Int pagesToAllocate){
         if (this->GetType() == Constants::TableType::CLUSTERED) {
             this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos, pagesToAllocate);
-            return {};
+            return Errors::RuntimeStatus();
         }
 
         this->InsertExistingRowToNonClusteredIndexByHeap(indexPos, pagesToAllocate);
-        return {};
+        return Errors::RuntimeStatus();
     }
 
     Storage::FileKey Table::GetSystemFileKey() const{ return this->_db->SystemFileKey(); }
 
     Storage::FileKey Table::GetDataFileKey() const{ return this->_db->DataFileKey(); }
 
-    const Headers::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredHeaders[indexPos]; }
+    const Catalog::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredHeaders[indexPos]; }
 
     const DataStructures::StaticArray<column_index_t, 10>& Table::GetClusteredIndex() const { return this->clusteredHeader.columns; }
 
@@ -319,7 +319,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
-        const Headers::Index index(columnIndices.Data(), columnIndices.Size());
+        const Catalog::Index index(columnIndices.Data(), columnIndices.Size());
         this->nonClusteredHeaders.Push(index);
         return this->nonClusteredHeaders.Size() - 1;
     }

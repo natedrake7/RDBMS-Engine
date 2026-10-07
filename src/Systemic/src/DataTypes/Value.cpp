@@ -1,14 +1,14 @@
-#include "../../include/DataTypes/Value.h"
+#include <Systemic/DataTypes/Value.h>
 
-#include "../../include/Coercions/Coercions.h"
-#include "../../include/Functions/StringFunctions.h"
+#include <Systemic/Coercions/Coercions.h>
+#include <Systemic/Functions/StringFunctions.h>
 
 #include <stdexcept>
 
-#include "Comparators.h"
-#include "DataTypes/DateTime.h"
-#include "../../include/Memory/IAllocator.h"
-#include "DataTypes/DataTypes.StaticData.h"
+#include <Systemic/Comparators.h>
+#include <Systemic/DataTypes/DateTime.h>
+#include <Systemic/Memory/IAllocator.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
 
 long double Value::InterpolateString() const{
     // const auto str = this->AsString();

@@ -1,8 +1,8 @@
-#include "../../include/Managers/IdentityManager.h"
+#include <CoreEngine/Managers/IdentityManager.h>
 
-#include "../../include/SystemDatabases/SystemCatalog.h"
-#include "../../../Server/include/Server.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <Server/Server.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 namespace CoreEngine::StorageTypes {
     void IdentityManager::ReserveBlock(const ::Memory::IAllocator* allocator, const BigInt value){
@@ -34,14 +34,14 @@ namespace CoreEngine::StorageTypes {
         this->header.columnId = columnId;
     }
 
-    void IdentityManager::SetHeader(const Headers::IdentityColumnsHeader &newHeader){
+    void IdentityManager::SetHeader(const Catalog::IdentityColumnsHeader &newHeader){
         this->header = newHeader;
         this->reservedUpTo.store(this->header.lastValue, std::memory_order_relaxed);
         // this->reservedUpTo.store(this->header.lastValue + this->header.cacheBlock, std::memory_order_relaxed);
         this->counter.store(this->header.lastValue, std::memory_order_relaxed);
     }
 
-    const Headers::IdentityColumnsHeader& IdentityManager::GetHeader() const{
+    const Catalog::IdentityColumnsHeader& IdentityManager::GetHeader() const{
         return this->header;
     }
 

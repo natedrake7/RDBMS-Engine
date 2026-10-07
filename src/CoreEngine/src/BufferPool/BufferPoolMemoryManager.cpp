@@ -1,9 +1,9 @@
-﻿#include "BufferPool/BufferPoolMemoryManager.h"
+﻿#include <CoreEngine/BufferPool/BufferPoolMemoryManager.h>
 #include <cstring>
 #include <memory>
 
-#include "Managers/GlobalMemoryManager.h"
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace CoreEngine{
     BufferPoolMemoryManager::BufferPoolMemoryManager(){

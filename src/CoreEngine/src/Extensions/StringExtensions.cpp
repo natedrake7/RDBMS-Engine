@@ -1,6 +1,6 @@
-﻿ #include "../../include/Extensions/StringExtensions.h"
+﻿ #include <CoreEngine/Extensions/StringExtensions.h>
 #include <nlohmann/json.hpp>
-#include "DataTypes/String.h"
+#include <Systemic/DataTypes/String.h>
 
  namespace DataTypes{
     void from_json(const nlohmann::json& j, String& str){

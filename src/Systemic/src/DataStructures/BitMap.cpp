@@ -1,10 +1,10 @@
-﻿#include "../../include/DataStructures/BitMap.h"
+﻿#include <Systemic/DataStructures/BitMap.h>
 #include <cstring>
 #include <iostream>
 
 #include <fstream>
 
-#include "Memory/IAllocator.h"
+#include <Systemic/Memory/IAllocator.h>
 
 namespace ByteMaps{
     BitMap::BitMap(object_t* data, const bit_map_size_t size)

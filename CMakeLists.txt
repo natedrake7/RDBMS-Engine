@@ -51,7 +51,10 @@ add_library(Systemic SHARED
 )
 
 target_link_libraries(Systemic PUBLIC $<$<PLATFORM_ID:Windows>:ws2_32>)
-target_include_directories(Systemic PUBLIC src/Systemic/include)
+target_include_directories(Systemic
+        PUBLIC src/Systemic/include
+        # TODO(layering): GroupCondition.h -> CoreEngine/DatabaseConstants.h -> Server/Security/Security.h
+        PRIVATE src/CoreEngine/include src/Server/include)
 
 add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Optimizer.cpp
@@ -71,10 +74,13 @@ add_library(QueryPipeline STATIC
         src/QueryPipeline/src/Parsing/SqlParser.Statements.cpp
 )
 
-target_include_directories(QueryPipeline PUBLIC src/QueryPipeline/include)
+target_include_directories(QueryPipeline
+        PUBLIC src/QueryPipeline/include
+        # TODO(layering): Statements.h, Parser.cpp, PhysicalPlan*.cpp include Server headers
+        PRIVATE src/Server/include)
 
 
-target_link_libraries(QueryPipeline PRIVATE CoreEngine)
+target_link_libraries(QueryPipeline PUBLIC CoreEngine)
 
 add_library(PluginApi SHARED
         src/Plugins/src/Plugin.cpp
@@ -148,12 +154,16 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/LargeObjects/LobReader.cpp
         src/CoreEngine/src/DataStorage/LargeObjects/LobWriter.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Utilities.cpp
+        src/CoreEngine/src/DataStorage/Schemas/SchemaBuilder.cpp
 )
 
-target_include_directories(CoreEngine PUBLIC src/CoreEngine/include)
+target_include_directories(CoreEngine
+        PUBLIC src/CoreEngine/include
+        # TODO(layering): DatabaseConstants.h, TransactionManager.h, Table.cpp, ... include QueryPipeline/Server headers
+        PRIVATE src/QueryPipeline/include src/Server/include)
 
 target_link_libraries(CoreEngine
-        PRIVATE Systemic
+        PUBLIC Systemic
         PRIVATE nlohmann_json::nlohmann_json
         PRIVATE PluginApi
 )
@@ -171,7 +181,7 @@ add_library(Server STATIC
 
 target_include_directories(Server PUBLIC src/Server/include)
 
-target_link_libraries(Server PRIVATE QueryPipeline PRIVATE unofficial::argon2::libargon2)
+target_link_libraries(Server PUBLIC QueryPipeline PRIVATE unofficial::argon2::libargon2)
 
 add_executable(Client
     src/Client/src/client.cpp
@@ -183,4 +193,4 @@ target_include_directories(Client PUBLIC src/Client/include)
 
 target_link_libraries(Client PRIVATE Systemic)
 
-target_link_libraries(Database PRIVATE Server)
+target_link_libraries(Database PRIVATE Server PluginApi)

@@ -1,11 +1,11 @@
-﻿#include "../../include/Decoding/ResultDecoder.h"
+﻿#include <Client/Decoding/ResultDecoder.h>
 #include <ostream>
 
-#include "DataTypes/DateTime.h"
-#include "DataTypes/Guid.h"
-#include "DataTypes/PackedWord.h"
-#include "Network/PayloadReader.h"
-#include "Network/Header.h"
+#include <Systemic/DataTypes/DateTime.h>
+#include <Systemic/DataTypes/Guid.h>
+#include <Systemic/DataTypes/PackedWord.h>
+#include <Systemic/Network/PayloadReader.h>
+#include <Systemic/Network/Header.h>
 
 namespace Client{
     bool ResultDecoder::DecodeVariableLengthColumn(

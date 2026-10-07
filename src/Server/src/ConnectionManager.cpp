@@ -1,9 +1,9 @@
-#include "../include/ConnectionManager.h"
+#include <Server/ConnectionManager.h>
 
-#include "../include/Server.h"
-#include "../../QueryPipeline/include/Parser.h"
-#include "../include/ThreadPool.h"
-#include "../include/Constants.h"
+#include <Server/Server.h>
+#include <QueryPipeline/Parser.h>
+#include <Server/ThreadPool.h>
+#include <Server/Constants.h>
 
 #include <atomic>
 #include <iostream>
@@ -13,12 +13,12 @@
 #include <fcntl.h>
 #include <ranges>
 
-#include "ClientConnection.h"
-#include "ValidationMessages.h"
-#include "../../Systemic/include/CancellationToken.h"
-#include "../../Systemic/include/Network/PayloadReader.h"
-#include "../../Systemic/include/Network/WireTypes.h"
-#include "Encoding/ResultEncoder.h"
+#include <Server/ClientConnection.h>
+#include <Server/ValidationMessages.h>
+#include <Systemic/CancellationToken.h>
+#include <Systemic/Network/PayloadReader.h>
+#include <Systemic/Network/WireTypes.h>
+#include <Server/Encoding/ResultEncoder.h>
 
 #ifdef _WIN32
   #include <winsock2.h>

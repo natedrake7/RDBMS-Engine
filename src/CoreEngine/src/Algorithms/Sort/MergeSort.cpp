@@ -1,6 +1,6 @@
-#include "../../../include/DataStorage/Row/Row.h"
-#include "../../../include/Algorithms/Sort/MergeSort.h"
-#include "../../../include/Algorithms/Sort/SortingFunctions.h"
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/Algorithms/Sort/MergeSort.h>
+#include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
 
 void MergeSort::Merge(const MergeSortParameters& parameters){
     Int i, j;

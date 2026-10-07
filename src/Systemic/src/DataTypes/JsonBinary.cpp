@@ -1,8 +1,8 @@
-﻿#include "../../include/DataTypes/JsonBinary.h"
+﻿#include <Systemic/DataTypes/JsonBinary.h>
 
-#include "Comparators.h"
-#include "DataTypes/StringValue.h"
-#include "Serialization/JsonBuilder.h"
+#include <Systemic/Comparators.h>
+#include <Systemic/DataTypes/StringValue.h>
+#include <Systemic/Serialization/JsonBuilder.h>
 
 namespace DataTypes{
     // JsonKey::JsonKey()

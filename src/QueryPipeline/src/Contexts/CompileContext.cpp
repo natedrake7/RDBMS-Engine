@@ -1,4 +1,4 @@
-﻿#include "../../../QueryPipeline/include/CompileContext.h"
+﻿#include <QueryPipeline/CompileContext.h>
 
 namespace QueryPipeline{
     CompileContext::CompileContext(const Int size)

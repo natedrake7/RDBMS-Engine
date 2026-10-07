@@ -1,4 +1,4 @@
-﻿#include "../../include/DataTypes/SortCondition.h"
+﻿#include <Systemic/DataTypes/SortCondition.h>
 
 SortCondition::SortCondition(const column_index_t& columnIndex, const Constants::OrderType& sortType, const bool& isColumnIndexed)
 {

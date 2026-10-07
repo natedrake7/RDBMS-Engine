@@ -1,10 +1,10 @@
-#include "../../include/DataStorage/Row/SerializedRow.h"
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
-#include "Converter.h"
-#include "Contexts/ExecutionContext.h"
-#include "DataStorage/Column.h"
-#include "DataStorage/Row/Row.h"
-#include "Pages/Additional/RawRowReference.h"
+#include <Systemic/Converter.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/Pages/Additional/RawRowReference.h>
 
 namespace CoreEngine::StorageTypes{
     SerializedRow::SerializedRow(){

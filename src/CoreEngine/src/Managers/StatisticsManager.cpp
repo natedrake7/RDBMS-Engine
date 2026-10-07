@@ -1,9 +1,9 @@
-#include "../../include/Managers/StatisticsManager.h"
+#include <CoreEngine/Managers/StatisticsManager.h>
 
-#include "Guards/ReaderGuard.h"
-#include "Guards/WriterGuard.h"
-#include "Memory/Allocator.h"
-#include "SystemDatabases/SystemCatalog.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <CoreEngine/Memory/Allocator.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
 namespace CoreEngine {
   StatisticsManager & StatisticsManager::Get() {
@@ -11,10 +11,10 @@ namespace CoreEngine {
     return instance;
   }
 
-  Headers::TableStatistics StatisticsManager::GetTableStatistics(const Int tableId) {
+  Catalog::TableStatistics StatisticsManager::GetTableStatistics(const Int tableId) {
     MultiThreading::ReaderGuard lock(&this->tableStatisticsLatch);
 
-    Headers::TableStatistics stats;
+    Catalog::TableStatistics stats;
     if (this->tableStatisticsCache.TryGetValue(tableId, stats))
       return stats;
 
@@ -31,13 +31,13 @@ namespace CoreEngine {
     return catalogStats;
   }
 
-  Headers::ColumnStatistics StatisticsManager::GetColumnStatistics(
+  Catalog::ColumnStatistics StatisticsManager::GetColumnStatistics(
     const Int tableId,
     const Int columnId
   ) {
     MultiThreading::ReaderGuard lock(&this->columnStatisticsLatch);
 
-    Headers::ColumnStatistics stats;
+    Catalog::ColumnStatistics stats;
     if (this->columnStatisticsCache.TryGetValue(columnId, stats))
       return stats;
 
@@ -56,10 +56,10 @@ namespace CoreEngine {
     return catalogStats;
   }
 
-  DataStructures::PolymorphicArray<Headers::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
+  DataStructures::PolymorphicArray<Catalog::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
     MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
 
-    DataStructures::PolymorphicArray<Headers::IndexStatistics> stats;
+    DataStructures::PolymorphicArray<Catalog::IndexStatistics> stats;
     // if (this->indexStatisticsCache.TryGetValue(tableId, stats))
     //   return stats;
 
@@ -77,9 +77,9 @@ namespace CoreEngine {
   }
 
   void StatisticsManager::Update(
-    const Headers::TableStatistics &tableStatistics,
-    const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
-    const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics
+    const Catalog::TableStatistics &tableStatistics,
+    const DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
+    const DataStructures::PolymorphicArray<Catalog::IndexStatistics>& indexStatistics
   ) {
     {
       MultiThreading::WriterGuard lock(&this->tableStatisticsLatch);

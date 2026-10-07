@@ -1,6 +1,6 @@
-#include "../include/Plugin.h"
+#include <Plugins/Plugin.h>
 
-#include "PluginApi.h"
+#include <Plugins/PluginApi.h>
 
 #include <iostream>
 #ifdef _WIN32

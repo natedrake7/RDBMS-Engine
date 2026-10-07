@@ -1,7 +1,7 @@
-#include "../../../include/Algorithms/Sort/QuickSort.h"
-#include "../../../include/Algorithms/Sort/SortingFunctions.h"
+#include <CoreEngine/Algorithms/Sort/QuickSort.h>
+#include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
 
-#include "../../../include/DataStorage/Row/Row.h"
+#include <CoreEngine/DataStorage/Row/Row.h>
 
 void QuickSort::Sort(std::vector<MaterializedRow> &rows, const Int low, const Int high, const std::vector<SortCondition>& sortConditions)
 {

@@ -1,5 +1,5 @@
-﻿#include "../../include/DataTypes/StringValue.h"
-#include "../../include/DataTypes/String.h"
+﻿#include <Systemic/DataTypes/StringValue.h>
+#include <Systemic/DataTypes/String.h>
 
 namespace DataTypes{
     StringValue::StringValue(String& str){

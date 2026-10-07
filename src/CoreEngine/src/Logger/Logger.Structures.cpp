@@ -1,10 +1,10 @@
-#include "../../include/Logger/Logger.Structures.h"
-#include "../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../include/DataStorage/Table.h"
+#include <CoreEngine/Logger/Logger.Structures.h>
+#include <Systemic/DataStructures/BitMap.h>
+#include <CoreEngine/DataStorage/Table.h>
 
 #include <cstring>
 
-#include "BufferPool/StorageManager.h"
+#include <CoreEngine/BufferPool/StorageManager.h>
 
 namespace CoreEngine::LoggingStructures {
 

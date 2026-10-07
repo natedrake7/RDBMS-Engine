@@ -1,29 +1,30 @@
-﻿#include "../../../include/DatabaseConstants.h"
-#include "../../../../Systemic/include/DataTypes/Value.h"
-#include "../../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../../include/DataStorage/Column.h"
-#include "../../../include/DataStorage/Row/Row.h"
-#include "../../../include/DataStorage/Table.h"
+﻿#include <CoreEngine/DatabaseConstants.h>
+#include <Systemic/DataTypes/Value.h>
+#include <Systemic/DataStructures/BitMap.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/DataStorage/Table.h>
 
 #include <cassert>
-#include "Messages.h"
-#include "../../../include/SystemDatabases/SystemCatalog.h"
-#include "../../../include/BufferPool/StorageManager.h"
-#include "../../../include/Indexing/BTree.h"
-#include "../../../../Server/include/Server.h"
-#include "../../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../../Systemic/include/Guards/WriterGuard.h"
-#include "../../../../QueryPipeline/include/Statements.h"
-#include "../../../include/Database.h"
-#include "Contexts/ExecutionContext.h"
-#include "DataStorage/LargeObjects/LobWriter.h"
-#include "DataStorage/Row/Row.SerializationContext.h"
-#include "DataStructures/PolymorphicArray.h"
-#include "Logger/WriteAheadLogger.h"
-#include "Memory/PersistentAllocator.h"
+#include <CoreEngine/Messages.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <CoreEngine/SystemDatabases/CatalogSchema.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Indexing/BTree.h>
+#include <Server/Server.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <QueryPipeline/Statements.h>
+#include <CoreEngine/Database.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/DataStorage/LargeObjects/LobWriter.h>
+#include <CoreEngine/DataStorage/Row/Row.SerializationContext.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
+#include <CoreEngine/Logger/WriteAheadLogger.h>
+#include <CoreEngine/Memory/PersistentAllocator.h>
 
-#include "../../Systemic/include/Macros.h"
-#include "DataStorage/Row/Row.InsertPlan.Templates.h"
+#include <Systemic/Macros.h>
+#include <CoreEngine/DataStorage/Row/Row.InsertPlan.Templates.h>
 
 #ifdef IS_GCC
     #include <cmath>
@@ -74,7 +75,7 @@ namespace CoreEngine::StorageTypes {
         return false;
     }
 
-    void Table::PopulateClusteredIndexCache(const Headers::Index& index){
+    void Table::PopulateClusteredIndexCache(const Catalog::Index& index){
         for (const auto& columnIndex: index.columns) {
             const auto* column = this->_columns[columnIndex];
             this->clusteredIndexColumnsCache.Add(column->GetColumnId());
@@ -298,7 +299,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     Table::Table(
-        const Headers::TableHeader& masterDbHeader,
+        const Catalog::TableHeader& masterDbHeader,
         const TableHeader &tableHeader,
         Database *database
     ):  _header(tableHeader), _db(database),
@@ -310,9 +311,9 @@ namespace CoreEngine::StorageTypes {
     }
 
     Table::Table(
-        const Headers::sysTable &systemHeader,
+        const CoreEngine::sysTable &systemHeader,
         const TableHeader &tableHeader,
-        const Headers::Index& primaryKey,
+        const Catalog::Index& primaryKey,
         Database *database,
         const SmallInt ordinalPosition
     ):  _header(tableHeader), clusteredHeader(primaryKey),
@@ -331,8 +332,8 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::Destroy() const{
-        for (const auto* column : this->_columns)
-            column->Destroy();
+        // for (const auto* column : this->_columns)
+        //     column->Destroy();
 
         this->_allocator.Release();
     }
@@ -643,7 +644,8 @@ namespace CoreEngine::StorageTypes {
         const Expressions::Expression *expression,
         const DataStructures::PolymorphicArray<Value> &updates
     ){
-        if(this->IsEmpty()) return {};
+        if(this->IsEmpty())
+            return Errors::RuntimeStatus();
 
         const auto dataKey = this->_db->DataFileKey();
         const auto systemFileKey = this->_db->SystemFileKey();
@@ -692,7 +694,7 @@ namespace CoreEngine::StorageTypes {
             }
         }
 
-        return {};
+        return Errors::RuntimeStatus();
     }
 
     Errors::RuntimeStatus Table::HeapUpdate(
@@ -701,7 +703,7 @@ namespace CoreEngine::StorageTypes {
         const DataStructures::PolymorphicArray<Expressions::Expression*> &updates
     ){
         if(this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         const auto dataKey = this->_db->DataFileKey();
         const auto systemFileKey = this->_db->SystemFileKey();
@@ -748,7 +750,7 @@ namespace CoreEngine::StorageTypes {
             }
         }
 
-        return {};
+        return Errors::RuntimeStatus();
     }
 
     void Table::ClusteredIndexScanUpdate(
@@ -1466,13 +1468,13 @@ namespace CoreEngine::StorageTypes {
               continue;
           }
 
-          Headers::Index tableIndex(indexColumnsIndices.Data(), indexColumnsIndices.Size());
+          Catalog::Index tableIndex(indexColumnsIndices.Data(), indexColumnsIndices.Size());
           this->nonClusteredHeaders.Push(tableIndex);
       }
   }
 
   void Table::SetPrimaryKeyIndexedColumns(const column_index_t* _array, const Int size){
-      this->clusteredHeader = Headers::Index(_array, size);
+      this->clusteredHeader = Catalog::Index(_array, size);
   }
 
 }

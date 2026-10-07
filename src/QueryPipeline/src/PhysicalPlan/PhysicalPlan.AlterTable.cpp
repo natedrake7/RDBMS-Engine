@@ -1,10 +1,10 @@
-#include "ValidationMessages.h"
-#include "../../../CoreEngine/include/SystemDatabases/CatalogSchema.h"
-#include "../../include/PhysicalPlan.h"
-#include "../../../Server/include/Server.h"
-#include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
-#include "../../../CoreEngine/include/DataStorage/Table.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
+#include <QueryPipeline/ValidationMessages.h>
+#include <CoreEngine/SystemDatabases/CatalogSchema.h>
+#include <QueryPipeline/PhysicalPlan.h>
+#include <Server/Server.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
 
 namespace QueryPipeline::PhysicalPlan{
 

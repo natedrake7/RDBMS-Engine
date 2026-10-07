@@ -1,7 +1,7 @@
-#include "../../../include/DataStorage/Table.h"
-#include "../../../include/Database.h"
-#include "../../../include/BufferPool/StorageManager.h"
-#include "../../../include/DataStorage/Row/SerializedRow.h"
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/Database.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
 namespace CoreEngine::StorageTypes {
     page_id_t Table::InsertLargeObject(const ::Memory::IAllocator* allocator, const Value& value) const{

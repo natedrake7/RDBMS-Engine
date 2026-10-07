@@ -1,18 +1,18 @@
-#include "../include/Statements.h"
+#include <QueryPipeline/Statements.h>
 
-#include "../../CoreEngine/include/Database.h"
-#include "../../Systemic/include/Coercions/Coercions.h"
-#include "../../Systemic/include/Functions/StringFunctions.h"
-#include "../../Server/include/Server.h"
-#include "../include/LogicalPlan.h"
-#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include <CoreEngine/Database.h>
+#include <Systemic/Coercions/Coercions.h>
+#include <Systemic/Functions/StringFunctions.h>
+#include <Server/Server.h>
+#include <QueryPipeline/LogicalPlan.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 #include <ranges>
-#include <ValidationMessages.h>
+#include <QueryPipeline/ValidationMessages.h>
 
-#include "Optimizer.h"
-#include "Parser.h"
-#include "../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "../../CoreEngine/include/DataStorage/Row/SerializedRow.h"
+#include <QueryPipeline/Optimizer.h>
+#include <QueryPipeline/Parser.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
 namespace QueryPipeline::Statements {
     Statement::Statement()
@@ -261,7 +261,7 @@ namespace QueryPipeline::Statements {
 
     CompilationScope::CompilationScope(
         Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
-        DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>>& tableColumnsArray,
+        DataStructures::PolymorphicArray<Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>>& tableColumnsArray,
         Statement *statement,
         int *indexPos
     ):  _tableAliasesDict(std::move(tableAliasesDictionary)),
@@ -359,7 +359,7 @@ namespace QueryPipeline::Statements {
 
     bool OrderByStatement::Validate(
         const DataStructures::PolymorphicArray<OrderColumn*>& selectColumns,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& columnsDict
     ){
         HashSet<DataTypes::String> selectColumnMap;
         // for (const auto& selectColumn : selectColumns) {
@@ -372,7 +372,7 @@ namespace QueryPipeline::Statements {
         //     return false;
         //   }
         //
-        //   Headers::ColumnHeader header;
+        //   CoreEngine::Catalog::ColumnHeader header;
         //   columnsDict.TryGetValue(column->name.name, header);
         //
         //   this->columnIndices.Push(header.ordinalPosition);
@@ -472,7 +472,7 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus CreateTableStatement::CompileSchema(const QueryContext& context) const{
         const auto& schemasDict = CoreEngine::SystemCatalog::Get().SelectSchemasToDictionary(context.GetAllocator(), this->databaseId);
-        Headers::SchemaHeader schemaHeader;
+        CoreEngine::Catalog::SchemaHeader schemaHeader;
 
         this->table->schema.ToLowerInPlace();
         if (!schemasDict.TryGetValue(this->table->schema, schemaHeader))
@@ -657,7 +657,7 @@ namespace QueryPipeline::Statements {
         QueryContext& context,
         Dictionary<DataTypes::String, table_id_t>& aliasesDict
     ){
-        DataStructures::PolymorphicArray<Dictionary<DataTypes::String, Headers::ColumnHeader>> tableColumnsArray(
+        DataStructures::PolymorphicArray<Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>> tableColumnsArray(
             context.GetAllocator(),
             this->_joins.Size() + 1
         );
@@ -1006,8 +1006,8 @@ namespace QueryPipeline::Statements {
     Int InsertStatement::InsertDefaultValue(
         const ::Memory::IAllocator* allocator,
         DataStructures::PolymorphicArray<Expressions::Expression*>& defaultExpressions,
-        const Headers::ColumnHeader &header,
-        Headers::DefaultValuesHeader& defaultValue
+        const CoreEngine::Catalog::ColumnHeader &header,
+        CoreEngine::Catalog::DefaultValuesHeader& defaultValue
     ){
         auto value = Value::FromExternalStorage(
             reinterpret_cast<object_t*>(defaultValue.value.Data()),
@@ -1022,7 +1022,7 @@ namespace QueryPipeline::Statements {
         return defaultExpressions.Size();
     }
 
-    void InsertStatement::InsertNullValues(const QueryContext& context, const Headers::ColumnHeader& header){
+    void InsertStatement::InsertNullValues(const QueryContext& context, const CoreEngine::Catalog::ColumnHeader& header){
         for (auto& [insertColumns] : this->values){
             auto* expression = context._compileContext.Allocate<Expressions::ConstantExpression>(Value::Null(header.ordinalPosition));
             insertColumns.Push(expression);
@@ -1190,7 +1190,7 @@ namespace QueryPipeline::Statements {
       HashSet<Int> statementColumns;
       for (Int i = 0;i < this->columns.Size(); i++){
           const auto& column = this->columns[i];
-          Headers::ColumnHeader header;
+          CoreEngine::Catalog::ColumnHeader header;
 
           //check if columns exist on the table
           if (!columnsDict.TryGetValue(column.name.ToLower(), header)) {
@@ -1439,7 +1439,7 @@ namespace QueryPipeline::Statements {
         const auto columnsDict = catalog.SelectColumnsToDictionary(context.GetAllocator(), this->table->_tableId);
 
         for(auto& column: this->columns) {
-            Headers::ColumnHeader header;
+            CoreEngine::Catalog::ColumnHeader header;
             if (columnsDict.TryGetValue(column, header)) {
                 this->columnIndices.Push(header.ordinalPosition);
                 continue;
@@ -1490,7 +1490,7 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus AlterTableStatement::CompileAddColumn(
         const QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& headers
     )const{
         auto* newColumn = this->column.newColumn;
         const auto columnNameToLower = newColumn->name.name.ToLower();
@@ -1552,9 +1552,9 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus AlterTableStatement::CompileAlterColumn(
         const QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& headers
     )const{
-        Headers::ColumnHeader header;
+        CoreEngine::Catalog::ColumnHeader header;
         std::ostringstream os;
 
         auto* alterColumn = this->column.alterColumn;
@@ -1621,9 +1621,9 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus AlterTableStatement::CompileDropColumn(
         const QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& headers
     )const{
-        Headers::ColumnHeader header;
+        CoreEngine::Catalog::ColumnHeader header;
 
         auto* dropColumn = this->column.dropColumn;
         const auto columnNameToLower = dropColumn->name.name.ToLower();
@@ -1665,9 +1665,9 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus AlterTableStatement::CompileRenameColumn(
         const QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& headers
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& headers
     )const{
-        Headers::ColumnHeader header;
+        CoreEngine::Catalog::ColumnHeader header;
 
         auto* renameColumn = this->column.renameColumn;
         const auto columnNameToLower = renameColumn->oldName.name.ToLower();
@@ -1864,7 +1864,7 @@ namespace QueryPipeline::Statements {
         }
 
         bool columnExistsOnTable = false;
-        Headers::ColumnHeader columnHeader;
+        CoreEngine::Catalog::ColumnHeader columnHeader;
         for (Int slotIndex = 0;slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
             const auto& columns = statementValidationScope._tableColumnsArray[slotIndex];
             const auto columnNameToLower = column.name.ToLower();
@@ -1942,7 +1942,7 @@ namespace QueryPipeline::Statements {
         Expressions::ColumnExpression *column,
         const CompilationScope& statementValidationScope
     ){
-        Headers::ColumnHeader columnHeader;
+        CoreEngine::Catalog::ColumnHeader columnHeader;
         if (!statementValidationScope._tableAliasesDict.TryGetValue(column->tableAlias, column->_slotIndex)) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_TABLE_ALIAS(
@@ -1981,7 +1981,7 @@ namespace QueryPipeline::Statements {
         Expressions::ColumnExpression *column,
         const CompilationScope& statementValidationScope
     ){
-        Headers::ColumnHeader columnHeader;
+        CoreEngine::Catalog::ColumnHeader columnHeader;
         bool columnExistsOnStatement = false;
 
         for (Int slotIndex = 0; slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
@@ -2145,7 +2145,7 @@ namespace QueryPipeline::Statements {
 
     void AssignColumnsFromWildCardExpression(
         QueryContext& context,
-        const Dictionary<DataTypes::String, Headers::ColumnHeader>& columnsDict,
+        const Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>& columnsDict,
         const DataTypes::String& tableAlias,
         const CompilationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,

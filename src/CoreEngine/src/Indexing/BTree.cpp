@@ -1,24 +1,24 @@
-﻿#include "../../include/Indexing/BTree.h"
+﻿#include <CoreEngine/Indexing/BTree.h>
 #include <algorithm>
-#include "../../include/DataStorage/Row/Row.h"
-#include "../../include/DataStorage/Column.h"
-#include "../../include/DataStorage/Table.h"
-#include "../../include/BufferPool/StorageManager.h"
-#include "../../include/Database.h"
-#include "../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
-#include "Schedulers/StatisticsScheduler.h"
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Database.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <CoreEngine/Schedulers/StatisticsScheduler.h>
 
-#include "ScanState.h"
-#include "Contexts/ExecutionContext.h"
-#include "DataStorage/FilterColumnInfo.h"
-#include "Evaluators/Expression.h"
-#include "Evaluators/VectorizedPushedDownFilter.h"
-#include "Memory/Allocator.h"
-#include "SystemDatabases/VersionDatabase.h"
-#include "Vectorization/Vectorization.h"
+#include <CoreEngine/ScanState.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/DataStorage/FilterColumnInfo.h>
+#include <CoreEngine/Evaluators/Expression.h>
+#include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
+#include <CoreEngine/Memory/Allocator.h>
+#include <CoreEngine/SystemDatabases/VersionDatabase.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
 
-#include "../../Systemic/include/Macros.h"
+#include <Systemic/Macros.h>
 
 #if IS_GCC
     #include <cmath>
@@ -653,7 +653,7 @@ namespace Indexing{
         const Int childIndex
     )const {
         if (!child.IsLeaf())
-            return {};
+            return false;
 
         if (child.HasLeftSibling()) {
             auto sibling = this->GetNode(child.LeftSibling());
@@ -886,8 +886,8 @@ namespace Indexing{
     void BTree::CalculateClusteredStatistics(
         const ::Memory::IAllocator* allocator,
         Pages::IndexPageView& currentNode,
-        Headers::IndexStatistics& indexStatistics,
-        Headers::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+        CoreEngine::Catalog::IndexStatistics& indexStatistics,
+        CoreEngine::Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const{
 
@@ -1532,7 +1532,7 @@ namespace Indexing{
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     )const{
         if (this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         auto currentNode = this->SearchLeftMostLeafNode();
         Expressions::EvaluationContext evaluationContext(
@@ -1567,12 +1567,12 @@ namespace Indexing{
             }
 
             if(!currentNode.HasRightSibling())
-                return {};
+                return Errors::RuntimeStatus();
 
             currentNode = this->GetNode(currentNode.RightSibling());
         }
 
-        return {};
+        return Errors::RuntimeStatus();
     }
 
    Errors::RuntimeStatus BTree::ScanUpdate(
@@ -1580,7 +1580,7 @@ namespace Indexing{
        const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
    )const{
        if (this->IsEmpty())
-           return {};
+           return Errors::RuntimeStatus();
 
        auto currentNode = this->SearchLeftMostLeafNode();
 
@@ -1604,12 +1604,12 @@ namespace Indexing{
            }
 
            if(!currentNode.HasRightSibling())
-               return {};
+               return Errors::RuntimeStatus();
 
            currentNode = this->GetNode(currentNode.RightSibling());
        }
 
-       return {};
+       return Errors::RuntimeStatus();
    }
 
     Errors::RuntimeStatus BTree::SeekUpdate(
@@ -1618,7 +1618,7 @@ namespace Indexing{
         const DataStructures::PolymorphicArray<Value> &updates
     ) const {
         if (this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         auto currentNode = this->SearchKey(key);
 
@@ -1644,7 +1644,7 @@ namespace Indexing{
             }
 
             if(!currentNode.HasRightSibling())
-                return {};
+                return Errors::RuntimeStatus();
 
             currentNode = this->GetNode(currentNode.RightSibling());
             startingIndex = 0;
@@ -1659,7 +1659,7 @@ namespace Indexing{
         const DataStructures::PolymorphicArray<Value>& updates
     )const{
         if (this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         Expressions::EvaluationContext evaluationContext(
             Expressions::EvaluationContext::EvaluationContextType::SingleRow,
@@ -1695,7 +1695,7 @@ namespace Indexing{
             }
 
             if(!currentNode.HasRightSibling())
-                return {};
+                return Errors::RuntimeStatus();
 
             currentNode = this->GetNode(currentNode.RightSibling());
             startingIndex = 0;
@@ -1709,7 +1709,7 @@ namespace Indexing{
         const DataStructures::PolymorphicArray<Value> &updates
     )const{
         if (this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         auto currentNode = this->SearchKey(*minKey);
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, *minKey);
@@ -1735,7 +1735,7 @@ namespace Indexing{
             }
 
             if(!currentNode.HasRightSibling())
-                return {};
+                return Errors::RuntimeStatus();
 
             currentNode = this->GetNode(currentNode.RightSibling());
             startingIndex = 0;
@@ -1748,7 +1748,7 @@ namespace Indexing{
         const DataStructures::PolymorphicArray<Value>& updates
     ) const{
         if (this->IsEmpty())
-            return {};
+            return Errors::RuntimeStatus();
 
         auto currentNode = this->SearchKey(key);
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
@@ -1771,7 +1771,7 @@ namespace Indexing{
             }
 
             if(!currentNode.HasRightSibling())
-                return {};
+                return Errors::RuntimeStatus();
 
             currentNode = this->GetNode(currentNode.RightSibling());
             startingIndex = 0;
@@ -1895,8 +1895,8 @@ namespace Indexing{
     bool BTree::IsEmpty() const{ return this->rootPageId == INVALID_PAGE_ID; }
 
     void BTree::CalculateIndexStatistics(
-        Headers::IndexStatistics& indexStatistics,
-        Headers::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+        CoreEngine::Catalog::IndexStatistics& indexStatistics,
+        CoreEngine::Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const {
         if (this->IsEmpty())

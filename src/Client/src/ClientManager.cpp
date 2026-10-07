@@ -1,15 +1,15 @@
-#include "../include/ClientManager.h"
+#include <Client/ClientManager.h>
 #include <string>
 #include <iostream>
 #include <ostream>
 #include <vector>
 #include <sstream>
 
-#include "../../Systemic/include/Converter.h"
-#include "Decoding/ResultDecoder.h"
-#include "Network/PayloadReader.h"
-#include "Network/PayloadWriter.h"
-#include "Network/Transport.h"
+#include <Systemic/Converter.h>
+#include <Client/Decoding/ResultDecoder.h>
+#include <Systemic/Network/PayloadReader.h>
+#include <Systemic/Network/PayloadWriter.h>
+#include <Systemic/Network/Transport.h>
 
 #ifdef _WIN32
 #define NOMINMAX

@@ -1,4 +1,4 @@
-#include "../../include/Logger/WriteAheadLogger.h"
+#include <CoreEngine/Logger/WriteAheadLogger.h>
 
 #include <cstring>
 #include <fcntl.h>

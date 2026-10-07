@@ -1,5 +1,5 @@
-#include "../../../include/Guards/WriterGuard.h"
-#include "../../../include/Guards/Mutex.h"
+#include <Systemic/Guards/WriterGuard.h>
+#include <Systemic/Guards/Mutex.h>
 
 namespace MultiThreading {
     WriterGuard::WriterGuard(Mutex *mtx){

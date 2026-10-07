@@ -1,4 +1,4 @@
-#include "../../include/Logger/CrashRecoveryLogger.h"
+#include <CoreEngine/Logger/CrashRecoveryLogger.h>
 
 namespace CoreEngine::Logging {
 

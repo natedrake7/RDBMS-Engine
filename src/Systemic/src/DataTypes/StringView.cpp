@@ -1,8 +1,8 @@
-﻿#include "../../include/DataTypes/StringView.h"
+﻿#include <Systemic/DataTypes/StringView.h>
 
 #include <ostream>
 
-#include "DataTypes/String.h"
+#include <Systemic/DataTypes/String.h>
 
 namespace DataTypes{
     StringView::StringView(const std::string& other)

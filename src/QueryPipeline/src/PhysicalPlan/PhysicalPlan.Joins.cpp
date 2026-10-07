@@ -1,7 +1,7 @@
-#include "../../../CoreEngine/include/Database.h"
-#include "../../include/PhysicalPlan.h"
-#include "../../../CoreEngine/include/Contexts/ExecutionContext.h"
-#include "../../../CoreEngine/include/Vectorization/Vectorization.h"
+#include <CoreEngine/Database.h>
+#include <QueryPipeline/PhysicalPlan.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult PhysicalNestedLoopInnerJoin::ExecuteBatchJoin(

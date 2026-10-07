@@ -1,6 +1,6 @@
-#include "../../include/Schedulers/GarbageCollector.h"
-#include "../../include/Managers/TransactionManager.h"
-#include "../../include/SystemDatabases/VersionDatabase.h"
+#include <CoreEngine/Schedulers/GarbageCollector.h>
+#include <CoreEngine/Managers/TransactionManager.h>
+#include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
 namespace CoreEngine {
     using namespace std::chrono_literals;

@@ -1,9 +1,9 @@
-﻿#include "../../include/DataTypes/String.h"
-#include "../../include/Memory/IAllocator.h"
+﻿#include <Systemic/DataTypes/String.h>
+#include <Systemic/Memory/IAllocator.h>
 #include <cstring>
 #include <ostream>
 
-#include "Comparators.h"
+#include <Systemic/Comparators.h>
 
 namespace DataTypes{
     void String::CalculateCapacity(const data_size_t size){

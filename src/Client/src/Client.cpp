@@ -4,8 +4,8 @@
 #include <vector>
 #include <csignal>
 
-#include "../include/Client.h"
-#include "../include/ClientManager.h"
+#include <Client/Client.h>
+#include <Client/ClientManager.h>
 
 #ifdef _WIN32
 #define NOMINMAX

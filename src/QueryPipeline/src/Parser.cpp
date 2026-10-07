@@ -1,19 +1,19 @@
-#include "../include/Parser.h"
+#include <QueryPipeline/Parser.h>
 #include <string>
 #include <utility>
-#include "../../CoreEngine/include/Managers/TransactionManager.h"
-#include "../../Server/include/Server.h"
-#include "../include/Cursor.h"
-#include "../include/LogicalPlan.h"
-#include "../include/ErrorListener.h"
+#include <CoreEngine/Managers/TransactionManager.h>
+#include <Server/Server.h>
+#include <QueryPipeline/Cursor.h>
+#include <QueryPipeline/LogicalPlan.h>
+#include <QueryPipeline/ErrorListener.h>
 #include <thread>
 
 #include <iostream>
 
-#include "../../Systemic/include/CancellationToken.h"
-#include "../include/CompileContext.h"
-#include "Parsing/Lexer.h"
-#include "Parsing/SqlParser.h"
+#include <Systemic/CancellationToken.h>
+#include <QueryPipeline/CompileContext.h>
+#include <QueryPipeline/Parsing/Lexer.h>
+#include <QueryPipeline/Parsing/SqlParser.h>
 
 
 namespace QueryPipeline{

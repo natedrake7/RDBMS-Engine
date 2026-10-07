@@ -1,9 +1,8 @@
-﻿#include "../../include/Memory/Allocator.h"
-#include "../../include/Managers/GlobalMemoryManager.h"
-#include "../../include/Memory/Chunk.h"
+﻿#include <CoreEngine/Memory/Allocator.h>
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <CoreEngine/Memory/Chunk.h>
+#include <Systemic/Functions/MathFunctions.h>
 #include <iostream>
-#include <ostream>
-
 
 namespace CoreEngine::Memory{
     UnsignedInt Allocator::NewChunkCapacity(const UnsignedInt size) const{
@@ -11,21 +10,23 @@ namespace CoreEngine::Memory{
             return size;
 
         if (!this->_tail)
-            return std::max(size, Chunk::DEFAULT_SIZE);  // e.g., 16 KB
+            return Math::Max(size, Chunk::DEFAULT_SIZE);  // e.g., 16 KB
 
-        return std::min(this->_tail->_size * 2, Chunk::MAX_SIZE);
+        return Math::Max(size, Math::Min(this->_tail->_size * 2, Chunk::MAX_SIZE));
     }
 
-    void Allocator::AllocateNewChunk(const UnsignedInt size) const{
-        const auto newChunkSize = this->NewChunkCapacity(size);
+    void Allocator::AllocateNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+        const auto newChunkSize = this->NewChunkCapacity(size + Chunk::MaxPadding(alignment));
 
         if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false)
             throw std::bad_alloc();
 
         auto* newChunk = static_cast<Chunk*>(std::malloc(sizeof(Chunk) + newChunkSize));
 
-        if (newChunk == nullptr)
+        if (newChunk == nullptr){
+            GlobalMemoryManager::Get().ReleaseExecutionReservation(newChunkSize);
             throw std::bad_alloc();
+        }
 
         newChunk->_size = newChunkSize;
         newChunk->_offset = 0;
@@ -37,13 +38,14 @@ namespace CoreEngine::Memory{
             return;
         }
 
+        newChunk->_next = this->_tail->_next;
         this->_tail->_next = newChunk;
         this->_tail = newChunk;
     }
 
-    void Allocator::TryFindNewChunk(const UnsignedInt size) const{
+    void Allocator::TryFindNewChunk(const UnsignedInt size, const std::size_t alignment) const{
         auto* node = this->_tail->_next;
-        while (node != nullptr && node->_offset + size > node->_size)
+        while (node != nullptr && node->AlignedOffset(alignment) + size > node->_size)
             node = node->_next;
 
         if (node != nullptr){
@@ -51,19 +53,11 @@ namespace CoreEngine::Memory{
             return;
         }
 
-        this->AllocateNewChunk(size);
+        this->AllocateNewChunk(size, alignment);
     }
 
-    Allocator::Allocator(){
-        this->_head = nullptr;
-        this->_tail = nullptr;
-    }
-
-    Allocator::Allocator(const UnsignedInt capacity){
-        this->_head = nullptr;
-        this->_tail = nullptr;
-        this->AllocateNewChunk(capacity);
-    }
+    Allocator::Allocator()
+        : _head(nullptr), _tail(nullptr){}
 
     Allocator::~Allocator(){
         this->Allocator::Release();
@@ -93,23 +87,28 @@ namespace CoreEngine::Memory{
         return *this;
     }
 
-    void* Allocator::AllocateRaw(const UnsignedInt size)const{
+    void* Allocator::AllocateAligned(const UnsignedInt size, const std::size_t alignment)const{
         if (this->_head == nullptr)
-            this->AllocateNewChunk(size);
-        else if(this->_tail->_offset + size > this->_tail->_size)
-            this->TryFindNewChunk(size);
+            this->AllocateNewChunk(size, alignment);
 
-        auto* ptr = this->_tail->_data + this->_tail->_offset;
-        this->_tail->_offset += size;
-        return ptr;
+        auto offSet = this->_tail->AlignedOffset(alignment);
+        if(offSet + size > this->_tail->_size){
+            this->TryFindNewChunk(size, alignment);
+            offSet = this->_tail->AlignedOffset(alignment);
+        }
+
+        assert(offSet + size <= this->_tail->_size && "Allocator::AllocateAligned: Overflow on tail");
+
+        this->_tail->_offset = offSet + size;
+        return this->_tail->_data + offSet;
     }
 
     void Allocator::Release() const{
         auto* node = this->_head;
-        Int totalMemoryFreed = 0;
+        UnsignedBigInt freedMemory = 0;
         while(node != nullptr){
             auto* next = node->_next;
-            totalMemoryFreed += static_cast<Int>(node->_size);
+            freedMemory += node->_size;
             std::free(node);
             node = next;
         }
@@ -117,7 +116,7 @@ namespace CoreEngine::Memory{
         this->_head = nullptr;
         this->_tail = nullptr;
 
-        GlobalMemoryManager::Get().ReleaseExecutionReservation(totalMemoryFreed);
+        GlobalMemoryManager::Get().ReleaseExecutionReservation(freedMemory);
     }
 
     void Allocator::Reset() const{
@@ -136,7 +135,7 @@ namespace CoreEngine::Memory{
 
     ::Memory::AllocationStep Allocator::RecordAllocationStart() const{
         if (this->_tail == nullptr)
-            this->AllocateNewChunk(0);
+            this->AllocateNewChunk(0, ::Memory::DEFAULT_ALIGNMENT);
 
         return ::Memory::AllocationStep(this->_tail, this->_tail->_offset);
     }

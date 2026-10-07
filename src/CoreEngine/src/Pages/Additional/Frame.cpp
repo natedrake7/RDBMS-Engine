@@ -1,6 +1,6 @@
-﻿#include "../../../include/Pages/Additional/Frame.h"
+﻿#include <CoreEngine/Pages/Additional/Frame.h>
 
-#include "Pages/PageView.h"
+#include <CoreEngine/Pages/PageView.h>
 
 namespace Pages{
     Frame::Frame()

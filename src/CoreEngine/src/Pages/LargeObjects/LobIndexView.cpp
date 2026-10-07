@@ -1,8 +1,8 @@
-﻿#include "../../../include/Pages/LargeObjects/LobIndexView.h"
+﻿#include <CoreEngine/Pages/LargeObjects/LobIndexView.h>
 
 #include <assert.h>
 
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     LobIndexView::LobIndexView(Frame* framePtr)

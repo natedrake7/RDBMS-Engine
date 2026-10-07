@@ -1,4 +1,4 @@
-﻿#include "../../include/Memory/Functions.h"
+﻿#include <Systemic/Memory/Functions.h>
 #include <ostream>
 
 #ifdef _WIN32

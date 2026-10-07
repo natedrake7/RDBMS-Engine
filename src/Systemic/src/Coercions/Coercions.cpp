@@ -1,9 +1,9 @@
-#include "../../include/Coercions/Coercions.h"
+#include <Systemic/Coercions/Coercions.h>
 
-#include "../../include/Converter.h"
-#include "../../include/Functions/StringFunctions.h"
-#include "DataTypes/DataTypes.StaticData.h"
-#include "DataTypes/DateTime.h"
+#include <Systemic/Converter.h>
+#include <Systemic/Functions/StringFunctions.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
+#include <Systemic/DataTypes/DateTime.h>
 
 namespace DataTypes {
     void Coercions::ThrowException(const DataType type, const DataType toType) {

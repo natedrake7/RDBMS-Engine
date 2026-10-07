@@ -1,4 +1,4 @@
-#include "../../../include/Guards/Mutex.h"
+#include <Systemic/Guards/Mutex.h>
 
 namespace MultiThreading {
     bool Mutex::TrySharedFast() {

@@ -1,13 +1,13 @@
-﻿#include "../include/Encoding/ResultEncoder.h"
+﻿#include <Server/Encoding/ResultEncoder.h>
 
 #include <bit>
 #include <cassert>
 
-#include "../../../CoreEngine/include/Contexts/OutputSchema.h"
-#include "../../../CoreEngine/include/Vectorization/Vectorization.h"
-#include "../../../Systemic/include/DataTypes/String.h"
-#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
-#include "../../../Systemic/include/Network/TypeMapping.h"
+#include <CoreEngine/Contexts/OutputSchema.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
+#include <Systemic/DataTypes/String.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
+#include <Systemic/Network/TypeMapping.h>
 
 static_assert(std::endian::native == std::endian::little);
 

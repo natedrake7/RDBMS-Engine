@@ -1,6 +1,6 @@
-#include "../../include/Logger/Logger.h"
-#include "../../../Systemic/include/DataStructures/BitMap.h"
-#include "../../include/DataStorage/Table.h"
+#include <CoreEngine/Logger/Logger.h>
+#include <Systemic/DataStructures/BitMap.h>
+#include <CoreEngine/DataStorage/Table.h>
 #include <cstring>
 #include <fcntl.h>
 #include <iostream>

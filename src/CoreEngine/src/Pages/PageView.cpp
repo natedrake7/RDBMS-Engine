@@ -1,14 +1,14 @@
-﻿#include "../include/Pages/PageView.h"
+﻿#include <CoreEngine/Pages/PageView.h>
 
 #include <algorithm>
 
-#include "DataStorage/Column.h"
-#include "DataStorage/Table.h"
-#include "Pages/Additional/Frame.h"
-#include "Pages/Additional/RawRowReference.h"
-#include "../../include/DataStorage/Row/Row.h"
-#include "DataTypes/StringValue.h"
-#include "SystemDatabases/VersionDatabase.h"
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
+#include <CoreEngine/Pages/Additional/RawRowReference.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <Systemic/DataTypes/StringValue.h>
+#include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
 namespace Pages{
     PageHeader::PageHeader(){

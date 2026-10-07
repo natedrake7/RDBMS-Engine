@@ -2,12 +2,12 @@
 
 #include <csignal>
 #include <iostream>
-#include "../../CoreEngine/include/DataStorage/Table.h"
-#include "../../CoreEngine/include/DataStorage/Column.h"
-#include "../../CoreEngine/include/Pages/Additional/Frame.h"
-#include "../../src/Systemic/include/Serialization/JsonParser.h"
-#include "../../src/Systemic/include/Serialization/JsonBuilder.h"
-#include "../../src/Systemic/include/DataTypes/JsonBinary.h"
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
+#include <Systemic/Serialization/JsonParser.h>
+#include <Systemic/Serialization/JsonBuilder.h>
+#include <Systemic/DataTypes/JsonBinary.h>
 
 #ifdef __linux__
     #include <csignal>

@@ -1,10 +1,10 @@
-﻿#include "../../include/BufferPool/FileManager.h"
+﻿#include <CoreEngine/BufferPool/FileManager.h>
 
 #include <fcntl.h>
 #include <functional>
 
-#include "../../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 #include <filesystem>
 #include <ranges>

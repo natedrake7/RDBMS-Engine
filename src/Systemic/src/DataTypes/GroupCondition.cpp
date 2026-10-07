@@ -1,4 +1,4 @@
-#include "../../include/GroupCondition.h"
+#include <Systemic/GroupCondition.h>
 
 GroupCondition::GroupCondition(const column_index_t &columnIndex, const DataType &columnType, const Constants::AggregateFunction& aggregateFunction, const bool &isColumnIndexed, const long double* constantValue )
 {

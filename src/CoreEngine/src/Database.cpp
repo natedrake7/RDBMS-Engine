@@ -1,22 +1,23 @@
-﻿#include "../include/Database.h"
+﻿#include <CoreEngine/Database.h>
 
-#include "../include/SystemDatabases/SystemCatalog.h"
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <CoreEngine/SystemDatabases/CatalogSchema.h>
 
 #include <stdexcept>
 #include <vector>
-#include "../include/DatabaseConstants.h"
-#include "../include/DataStorage/Table.h"
-#include "../include/DataStorage/Column.h"
-#include "../include/BufferPool/StorageManager.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
-#include "../include/Logger/WriteAheadLogger.h"
+#include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <CoreEngine/Logger/WriteAheadLogger.h>
 
 #include <iostream>
 
-#include "Managers/GlobalMemoryManager.h"
-#include "Memory/Allocator.h"
-#include "Memory/PersistentAllocator.h"
-#include "../../Systemic/include/Macros.h"
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <CoreEngine/Memory/Allocator.h>
+#include <CoreEngine/Memory/PersistentAllocator.h>
+#include <Systemic/Macros.h>
 
 #if IS_GCC
     #include <cmath>
@@ -195,7 +196,7 @@ namespace CoreEngine{
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::String& dbName,
-        const std::vector<Headers::sysTable>& tables
+        const std::vector<CoreEngine::sysTable>& tables
     ){
         this->id = databaseId;
         DataTypes::String file,sysFile;
@@ -212,7 +213,7 @@ namespace CoreEngine{
 
         for (int i = 0; i < tables.size(); i++) {
             HashSet primaryKeysSet(tables[i].primaryKey);
-            Headers::Index index;
+            Catalog::Index index;
 
             Int counter = 0;
             for(int j = 0;j < tables[i].columns.size(); j++){
@@ -319,7 +320,7 @@ namespace CoreEngine{
         return table;
     }
 
-    void Database::CreateTable(const Headers::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
+    void Database::CreateTable(const Catalog::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
         static auto& catalog = SystemCatalog::Get();
 
         auto* table = this->_allocator.Allocate<StorageTypes::Table>(masterDbHeader, tableHeader, this);
@@ -345,9 +346,9 @@ namespace CoreEngine{
     }
 
     void Database::CreateTable(
-        const Headers::sysTable &sysHeader,
+        const CoreEngine::sysTable &sysHeader,
         const StorageTypes::TableHeader &tableHeader,
-        const Headers::Index& primaryKey,
+        const Catalog::Index& primaryKey,
         const Int ordinalPosition
     ){
         auto* table = this->_allocator.Allocate<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);

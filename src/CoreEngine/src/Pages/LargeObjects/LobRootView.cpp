@@ -1,8 +1,8 @@
-﻿#include "../../../include/Pages/LargeObjects/LobRootView.h"
+﻿#include <CoreEngine/Pages/LargeObjects/LobRootView.h>
 
 #include <assert.h>
 
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     LobRootView::LobRootView(Frame* framePtr)

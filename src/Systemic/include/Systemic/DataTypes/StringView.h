@@ -1,0 +1,416 @@
+﻿#pragma once
+#include <span>
+#include <Systemic/DataTypes/DataTypes.h>
+#include <ostream>
+#include <Systemic/DataTypes/StringValue.h>
+
+namespace Memory{
+    class IAllocator;
+}
+
+namespace DataTypes{
+    class String;
+
+    class StringView{
+        const char* _data;
+        data_size_t _size;
+
+        template <bool IgnoreCase>
+        [[nodiscard]] static constexpr bool MatchesAt(
+            const char* haystack,
+            const char* needle,
+            const data_size_t count
+        ) noexcept{
+                    if !consteval{
+                        if constexpr (!IgnoreCase)
+                            return std::memcmp(haystack, needle, count) == 0;
+                    }
+
+                    for (data_size_t i = 0; i < count; i++) {
+                        if (IgnoreCase) {
+                            if (Lower(haystack[i]) != Lower(needle[i]))
+                                return false;
+                        }
+                        else {
+                            if (haystack[i] != needle[i])
+                                return false;
+                        }
+                    }
+
+                    return true;
+                }
+
+        template <bool IgnoreCase>
+        [[nodiscard]] static constexpr bool ContainsImplementation(const StringView& lhs, const StringView& rhs) noexcept{
+            if (rhs._size == 0)
+                return true;
+            if (lhs._size < rhs._size)
+                return false;
+
+            for (data_size_t i = 0; i <= lhs._size - rhs._size; i++)
+                if (MatchesAt<IgnoreCase>(lhs._data + i, rhs._data, rhs._size)) return true;
+
+            return false;
+        }
+
+        public:
+        /**
+             *
+             * @param data Non-owning pointer of the actual data
+             * @param size The size of the string view in bytes (not including null terminator, if any).
+             * The string view can contain null characters within it and is not required to be null-terminated.
+        */
+       constexpr StringView(const char* data, const data_size_t size){
+            this->_data = data;
+            this->_size = size;
+        }
+
+        constexpr StringView(const StringView& other)noexcept{
+            this->_data = other._data;
+            this->_size = other._size;
+        }
+
+        constexpr StringView(StringView&& other) noexcept
+            : _data(other._data), _size(other._size){
+            other._data = nullptr;
+            other._size = 0;
+        }
+
+        constexpr StringView& operator=(StringView&& other) noexcept{
+            if (this == &other)
+                return *this;
+
+           this->_data = other._data;
+           this->_size = other._size;
+
+           other._data = nullptr;
+           other._size = 0;
+
+           return *this;
+       }
+
+        constexpr StringView()
+            : _data(nullptr), _size(0){}
+
+        constexpr StringView(const char* other)
+            : _data(other), _size(StringView::CalculateSize(other)){}
+
+        constexpr StringView& operator=(const char* other){
+            this->_data = other;
+            this->_size = StringView::CalculateSize(other);
+            return *this;
+        }
+
+        explicit StringView(const std::string& other);
+
+        constexpr StringView& operator=(const StringView& other)= default;
+        constexpr ~StringView() = default;
+
+        [[nodiscard]] constexpr const char* Data() const noexcept{ return this->_data; }
+
+        //operators
+        friend std::ostream& operator<<(std::ostream& os, const StringView& sv);
+        [[nodiscard]] constexpr char operator[](const data_size_t index) const{
+            return this->_data[index];
+        }
+
+        //Equality Operators
+        [[nodiscard]] constexpr bool operator==(const char* other) const{
+            return this->Compare<StringComparisonType::Equals, const char*>(other);
+        }
+
+        [[nodiscard]] constexpr bool operator==(const StringView& other) const{
+            return this->Compare<StringComparisonType::Equals, StringView>(other);
+        }
+
+        [[nodiscard]] constexpr bool operator!=(const char* other) const{
+            return !(*this == other);
+        }
+
+        [[nodiscard]] constexpr bool operator!=(const StringView& other) const{
+            return !(*this == other);
+        }
+
+        //Comparison Operators
+        [[nodiscard]] constexpr bool operator<(const char* other) const {
+            const auto otherSize = StringView::CalculateSize(other);
+
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other, size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const StringView& other) const noexcept{
+            const auto size = std::min(this->_size, other._size);
+            const auto cmp = std::memcmp(this->_data, other._data, size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < other._size;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const std::string& other) const {
+            const auto otherSize = static_cast<data_size_t>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<(const std::string_view& other) const {
+            const auto otherSize = static_cast<data_size_t>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp < 0;
+
+            return this->_size < otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const char* other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const StringView& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const std::string& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator<=(const std::string_view& other) const {
+            return !(*this > other);
+        }
+
+        [[nodiscard]] constexpr bool operator>(const StringView& other) const noexcept{
+            const auto size = std::min(this->_size, other._size);
+            const auto cmp = std::memcmp(this->_data, other._data, size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > other._size;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const char* other) const {
+            const auto otherSize = StringView::CalculateSize(other);
+
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other, size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const std::string& other) const {
+            const auto otherSize = static_cast<data_size_t>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>(const std::string_view& other) const {
+            const auto otherSize = static_cast<data_size_t>(other.size());
+            const auto size = std::min(this->_size, otherSize);
+            const auto cmp = std::memcmp(this->_data, other.data(), size);
+            if (cmp != 0) return cmp > 0;
+
+            return this->_size > otherSize;
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const char* other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const StringView& other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const std::string& other) const {
+            return !(*this < other);
+        }
+
+        [[nodiscard]] constexpr bool operator>=(const std::string_view& other) const {
+            return !(*this < other);
+        }
+
+        operator std::string_view() const;
+        operator std::span<const char>() const;
+
+        //functions
+        [[nodiscard]] StringView Substring(data_size_t startIndex, data_size_t length) const;
+
+        [[nodiscard]] constexpr data_size_t Size()const{ return this->_size; }
+
+        [[nodiscard]] data_size_t IndexOf(char c) const;
+
+        [[nodiscard]] bool Compare(const StringView& other, StringComparisonType type) const;
+        template<IsStringLike TOther>
+        [[nodiscard]] bool Compare(const TOther& other, const StringComparisonType type) const{
+            return this->Compare(StringView::ViewOf(other), type);
+        }
+
+        template<StringComparisonType Type, IsStringLike TOther>
+        [[nodiscard]] bool Compare(const TOther& other) const{
+            const auto otherView = StringView::ViewOf(other);
+            if constexpr (Type == StringComparisonType::Equals)
+                return StringView::Equals(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EqualsIgnoreCase)
+                return StringView::EqualsIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::StartsWith)
+                return StringView::StartsWith(*this, otherView);
+            else if constexpr (Type == StringComparisonType::StartsWithIgnoreCase)
+                return StringView::StartsWithIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EndsWith)
+                return StringView::EndsWith(*this, otherView);
+            else if constexpr (Type == StringComparisonType::EndsWithIgnoreCase)
+                return StringView::EndsWithIgnoreCase(*this, otherView);
+            else if constexpr (Type == StringComparisonType::Contains)
+                return StringView::Contains(*this, otherView);
+            else if constexpr (Type == StringComparisonType::ContainsIgnoreCase)
+                return StringView::ContainsIgnoreCase(*this, otherView);
+            else
+                static_assert(AlwaysFalse<TOther>, "Compare: unsupported StringComparisonType");
+
+            return false;
+        }
+
+        template <StringComparisonType Type, IsStringLike TLeft, IsStringLike TRight>
+        static constexpr bool Compare(const TLeft& lhs, const TRight& rhs) {
+            const auto leftView  = StringView::ViewOf(lhs);
+            const auto rightView = StringView::ViewOf(rhs);
+            return leftView.template Compare<Type>(rightView);
+        }
+
+        [[nodiscard]] constexpr bool Empty() const { return this->_size == 0; };
+
+        // STL compatibility
+        using const_iterator = const char*;
+
+        [[nodiscard]] constexpr const_iterator begin() const{
+            return this->_data;
+        }
+        
+        [[nodiscard]] constexpr const_iterator end() const{
+            return this->_data + this->_size;
+        }
+
+        static constexpr data_size_t CalculateSize(const char* str){
+            if (!str) return 0;
+
+            data_size_t size = 0;
+            while (str[size] != '\0') size++;
+            return size;
+        }
+
+        template <IsStringLike T>
+        static constexpr StringView ViewOf(const T& str){
+            if constexpr (
+                std::is_same_v<std::decay_t<T>, StringView>
+                || std::is_same_v<std::decay_t<T>, String>
+                || std::is_same_v<std::decay_t<T>, StringValue>
+            ){
+                return StringView(str.Data(), str.Size());
+            }
+
+            else if constexpr (
+                std::is_same_v<std::decay_t<T>, std::string>
+                || std::is_same_v<std::decay_t<T>, std::string_view>
+            ){
+                return StringView(str.data(), static_cast<data_size_t>(str.size()));
+            }
+            else if constexpr (std::is_same_v<std::decay_t<T>, char*> ||
+                               std::is_same_v<std::decay_t<T>, const char*>
+            ){
+                return StringView(str, static_cast<data_size_t>(std::strlen(str)));
+            }
+            else if constexpr (
+                std::is_same_v<std::decay_t<T>, const char>
+                || std::is_same_v<std::decay_t<T>, char>
+            ){
+                return StringView(&str, 1);
+            }
+            else
+                static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for StringView constructor");
+
+            return StringView();
+        }
+
+        static StringView ViewOf(const char* str, const data_size_t size){
+            return StringView(str, size);
+        }
+
+        [[nodiscard]] static constexpr char Lower(const char c) noexcept{
+            return (c >= 'A' && c <= 'Z')
+                ? (c + 'a' - 'A')
+                : c;
+        }
+
+        [[nodiscard]] inline static constexpr bool Equals(const StringView& lhs, const StringView& rhs){
+            return lhs._size == rhs._size
+                && MatchesAt<false>(lhs._data, rhs._data, lhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EqualsIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size == rhs._size
+                && MatchesAt<true>(lhs._data, rhs._data, lhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool StartsWith(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<false>(lhs._data, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool StartsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<true>(lhs._data, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EndsWith(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<false>(lhs._data + lhs._size - rhs._size, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool EndsWithIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return lhs._size >= rhs._size
+                && MatchesAt<true>(lhs._data + lhs._size - rhs._size, rhs._data, rhs._size);
+        }
+
+        [[nodiscard]] inline static constexpr bool Contains(const StringView& lhs, const StringView& rhs){
+            return StringView::ContainsImplementation<false>(lhs, rhs);
+        }
+
+        [[nodiscard]] inline static constexpr bool ContainsIgnoreCase(const StringView& lhs, const StringView& rhs){
+            return StringView::ContainsImplementation<true>(lhs, rhs);
+        }
+    };
+
+    struct StringEqualsIgnoreCase {
+        bool operator()(const StringValue& lhs, const StringValue& rhs) const{
+            return StringView::Compare<StringComparisonType::EqualsIgnoreCase>(lhs, rhs);
+        }
+    };
+
+    class StringViewStreamBuf final : public std::streambuf {
+    public:
+        explicit StringViewStreamBuf(const StringView& view) {
+            auto* data = const_cast<char*>(view.Data());
+            this->setg(data, data, data + view.Size());
+        }
+    };
+}
+
+template <>
+struct std::hash<DataTypes::StringView> {
+    size_t operator()(const DataTypes::StringView& str) const noexcept {
+        // FNV-1a hash
+        size_t hash = 14695981039346656037ULL;
+        for (size_t i = 0; i < str.Size(); ++i) {
+            hash ^= static_cast<size_t>(str.Data()[i]);
+            hash *= 1099511628211ULL;
+        }
+        return hash;
+    }
+};

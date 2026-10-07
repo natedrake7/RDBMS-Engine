@@ -1,5 +1,5 @@
-#include "../../include/Parsing/Lexer.h"
-#include "../../include/Parsing/Keywords.h"
+#include <QueryPipeline/Parsing/Lexer.h>
+#include <QueryPipeline/Parsing/Keywords.h>
 
 namespace QueryPipeline::Parsing{
 

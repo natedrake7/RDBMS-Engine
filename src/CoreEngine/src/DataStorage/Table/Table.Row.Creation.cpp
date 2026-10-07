@@ -1,12 +1,12 @@
 ﻿#include <cmath>
-#include "../../../include/DataStorage/Table.h"
-#include "DataStorage/Column.h"
-#include "../../../include/DataStorage/Row/SerializedRow.h"
-#include "DataStorage/LargeObjects/LobWriter.h"
-#include "DataStorage/Row/Row.SerializationContext.h"
-#include "Evaluators/Expression.h"
-#include "../../../include/Messages.h"
-#include "DataStorage/Row/Row.InsertPlan.h"
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
+#include <CoreEngine/DataStorage/LargeObjects/LobWriter.h>
+#include <CoreEngine/DataStorage/Row/Row.SerializationContext.h>
+#include <CoreEngine/Evaluators/Expression.h>
+#include <CoreEngine/Messages.h>
+#include <CoreEngine/DataStorage/Row/Row.InsertPlan.h>
 
 namespace CoreEngine::StorageTypes{
     template <typename ValueProvider>

@@ -1,10 +1,10 @@
-﻿#include "../include/ClientConnection.h"
+﻿#include <Server/ClientConnection.h>
 
 #include <cassert>
 
-#include "Constants.h"
-#include "Server.h"
-#include "Security/Session.h"
+#include <Server/Constants.h>
+#include <Server/Server.h>
+#include <Server/Security/Session.h>
 
 #ifndef NDEBUG
     #define IS_DEBUG

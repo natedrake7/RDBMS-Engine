@@ -1,4 +1,4 @@
-﻿#include "../../../include/DataStorage/LargeObjects/LobReader.h"
+﻿#include <CoreEngine/DataStorage/LargeObjects/LobReader.h>
 
 namespace CoreEngine::StorageTypes{
     bool LobReader::InitializeRootView(){

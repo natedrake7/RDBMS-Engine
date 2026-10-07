@@ -1,25 +1,25 @@
-#include "../../include/Evaluators/Expression.h"
+#include <CoreEngine/Evaluators/Expression.h>
 
-#include "../../../Systemic/include/Coercions/Coercions.h"
-#include "../../../Systemic/include/DataTypes/Value.h"
-#include "../../../Systemic/include/MaterializedRow.h"
-#include "../../../Systemic/include/Functions/StringFunctions.h"
-#include "../../include/DataStorage/Row/Row.h"
-#include "Plugin.h"
-#include "Contexts/ExecutionContext.h"
-#include "DataStructures/PolymorphicArray.h"
-#include "DataTypes/DateTime.h"
+#include <Systemic/Coercions/Coercions.h>
+#include <Systemic/DataTypes/Value.h>
+#include <Systemic/MaterializedRow.h>
+#include <Systemic/Functions/StringFunctions.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <Plugins/Plugin.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
+#include <Systemic/DataTypes/DateTime.h>
 
-#include "../../../Systemic/include/DataTypes/Variable.h"
-#include "DataStorage/Table.h"
-#include "DataTypes/DataTypes.StaticData.h"
-#include "../../include/Evaluators/Kernels/Row/RowKernels.h"
-#include "../../include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
-#include "Contexts/OutputSchema.h"
-#include "Evaluators/Kernels/Row/RowKernels.Binary.h"
-#include "Evaluators/Kernels/Row/RowKernels.Cast.h"
-#include "Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
-#include "Vectorization/Vectorization.h"
+#include <Systemic/DataTypes/Variable.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.h>
+#include <CoreEngine/Evaluators/Kernels/Vectorized/VectorizedKernels.h>
+#include <CoreEngine/Contexts/OutputSchema.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.Binary.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.Cast.h>
+#include <CoreEngine/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
 
 namespace Expressions{
     static constexpr ConstexprDictionary FunctionDictionary{

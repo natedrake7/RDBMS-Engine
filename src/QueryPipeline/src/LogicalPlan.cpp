@@ -1,17 +1,17 @@
-#include "../include/LogicalPlan.h"
-#include "../../CoreEngine/include/Managers/StatisticsManager.h"
-#include "../include/Optimizer.h"
-#include "../include/Statements.h"
-#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include <QueryPipeline/LogicalPlan.h>
+#include <CoreEngine/Managers/StatisticsManager.h>
+#include <QueryPipeline/Optimizer.h>
+#include <QueryPipeline/Statements.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
 #include <utility>
 
-#include "DatabaseConstants.h"
-#include "../../CoreEngine/include/Contexts/OutputSchema.h"
-#include "Parser.h"
-#include "../../CoreEngine/include/DataStorage/ColumnMaterializationInfo.h"
-#include "../../CoreEngine/include/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h"
-#include "../../CoreEngine/include/Evaluators/Kernels/Vectorized/VectorizedKernels.h"
+#include <QueryPipeline/DatabaseConstants.h>
+#include <CoreEngine/Contexts/OutputSchema.h>
+#include <QueryPipeline/Parser.h>
+#include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
+#include <CoreEngine/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h>
+#include <CoreEngine/Evaluators/Kernels/Vectorized/VectorizedKernels.h>
 
 
 namespace QueryPipeline {
@@ -620,7 +620,7 @@ namespace QueryPipeline {
         columns(std::move(columns)), primaryKey(std::move(primaryKey)) {}
 
     PhysicalPlan::PhysicalTableCreate* LogicalTableCreate::ToPhysical(QueryContext& context){
-        Headers::Index index(this->primaryKey.Data(), this->primaryKey.Size());
+        CoreEngine::Catalog::Index index(this->primaryKey.Data(), this->primaryKey.Size());
         return context._compileContext.Allocate<PhysicalPlan::PhysicalTableCreate>(
             this->sessionId,
             this->table,

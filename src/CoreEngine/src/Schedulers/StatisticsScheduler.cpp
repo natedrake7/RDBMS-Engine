@@ -1,17 +1,17 @@
-#include "../../include/Schedulers/StatisticsScheduler.h"
+#include <CoreEngine/Schedulers/StatisticsScheduler.h>
 
-#include "Database.h"
-#include "BufferPool/StorageManager.h"
-#include "DataStructures/Dictionary.h"
-#include "Guards/ReaderGuard.h"
-#include "Managers/StatisticsManager.h"
-#include "SystemDatabases/SystemCatalog.h"
+#include <CoreEngine/Database.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <Systemic/DataStructures/Dictionary.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <CoreEngine/Managers/StatisticsManager.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
 #include <cmath>
 #include <iostream>
 
-#include "DataStorage/Table.h"
-#include "Memory/Allocator.h"
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/Memory/Allocator.h>
 
 namespace CoreEngine {
     std::vector<Database *> StatisticsScheduler::GetDatabases()const {
@@ -33,8 +33,8 @@ namespace CoreEngine {
 
     bool StatisticsScheduler::GenerateColumnHistograms(
         const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
-        DataStructures::PolymorphicArray<Headers::ColumnHistograms>& histograms,
-        const Headers::ColumnStatistics& columnStatistics,
+        DataStructures::PolymorphicArray<Catalog::ColumnHistograms>& histograms,
+        const Catalog::ColumnStatistics& columnStatistics,
         const BigInt totalRows
     ){
         if (totalRows < 10000)
@@ -57,7 +57,7 @@ namespace CoreEngine {
 
             //insert
             if (histograms.Size() <= counter){
-                auto histogram = Headers::ColumnHistograms(
+                auto histogram = Catalog::ColumnHistograms(
                 columnStatistics.columnId,
                 bucketStart,
                 value,
@@ -107,19 +107,19 @@ namespace CoreEngine {
 
         if (iamPageId == INVALID_PAGE_ID) return;
 
-        auto tableStatistics = Headers::TableStatistics(table->GetTableId());
+        auto tableStatistics = Catalog::TableStatistics(table->GetTableId());
 
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>> sortedValues;
-        Dictionary<Int, DataStructures::PolymorphicArray<Headers::ColumnHistograms>> columnHistogramsDictionary;
+        Dictionary<Int, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> columnHistogramsDictionary;
 
         const auto _baseContext = ExecutionContext::BaseContext();
 
-        DataStructures::PolymorphicArray<Headers::ColumnStatistics> columnStatistics(_baseContext.GetAllocator());
+        DataStructures::PolymorphicArray<Catalog::ColumnStatistics> columnStatistics(_baseContext.GetAllocator());
         for (const auto& column : table->GetColumns()) {
             const auto& columnId = column->GetColumnId();
 
             columnStatistics.Push(
-                Headers::ColumnStatistics{
+                Catalog::ColumnStatistics{
                     .columnId = columnId,
                     .distinctCount = 0,
                     .min = Value::Null(),
@@ -140,7 +140,7 @@ namespace CoreEngine {
             const auto indexes = SystemCatalog::Get().SelectIndexes(_baseContext.GetAllocator(), tableStatistics.tableId);
 
             for (const auto& index : indexes){
-                auto indexStats = Headers::IndexStatistics(tableStatistics.tableId, index.id);
+                auto indexStats = Catalog::IndexStatistics(tableStatistics.tableId, index.id);
 
                 const auto result = StatisticsScheduler::UpdateIndexStatistics(
                     table,
@@ -206,9 +206,9 @@ namespace CoreEngine {
 
     bool StatisticsScheduler::UpdateIndexStatistics(
         StorageTypes::Table *table,
-        Headers::IndexStatistics& indexStatistics,
-        Headers::TableStatistics& tableStatistics,
-        DataStructures::PolymorphicArray<Headers::ColumnStatistics>& columnStatistics,
+        Catalog::IndexStatistics& indexStatistics,
+        Catalog::TableStatistics& tableStatistics,
+        DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     )  {
         indexStatistics.Reset();
@@ -234,8 +234,8 @@ namespace CoreEngine {
     void StatisticsScheduler::UpdateHeapStatistics(
         const StorageTypes::Table *table,
         const page_id_t iamPageId,
-        Headers::TableStatistics &tableStatistics,
-        DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
+        Catalog::TableStatistics &tableStatistics,
+        DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) {
 
@@ -332,10 +332,10 @@ namespace CoreEngine {
 
     void StatisticsScheduler::UpdateCatalogStatistics(
         const ExecutionContext& baseContext,
-        const Headers::TableStatistics &tableStatistics,
-        const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
-        const DataStructures::PolymorphicArray<Headers::IndexStatistics>& indexStatistics,
-        const Dictionary<Int, DataStructures::PolymorphicArray<Headers::ColumnHistograms>> &columnHistogramsDictionary
+        const Catalog::TableStatistics &tableStatistics,
+        const DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
+        const DataStructures::PolymorphicArray<Catalog::IndexStatistics>& indexStatistics,
+        const Dictionary<Int, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> &columnHistogramsDictionary
     )const {
 
         this->catalog->UpdateTableStatisticsById(
@@ -395,9 +395,9 @@ namespace CoreEngine {
     }
 
     void StatisticsScheduler::UpdateCache(
-        const Headers::TableStatistics &tableStatistics,
-        const DataStructures::PolymorphicArray<Headers::ColumnStatistics> &columnStatistics,
-        const DataStructures::PolymorphicArray<Headers::IndexStatistics> &indexStatistics
+        const Catalog::TableStatistics &tableStatistics,
+        const DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
+        const DataStructures::PolymorphicArray<Catalog::IndexStatistics> &indexStatistics
     ) const {
         this->statsManager->Update(tableStatistics, columnStatistics, indexStatistics);
     }
@@ -443,7 +443,7 @@ namespace CoreEngine {
     }
 
     void StatisticsScheduler::UpdateColumnStatistics(
-        Headers::ColumnStatistics &columnStatistics,
+        Catalog::ColumnStatistics &columnStatistics,
         const Value &value,
         SortedDictionary<Value, BigInt, ValueComparator>& sortedValues
     ) {

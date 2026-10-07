@@ -1,6 +1,6 @@
-﻿#include "../../include/DataTypes/Decimal.h"
+﻿#include <Systemic/DataTypes/Decimal.h>
 
-#include "DataTypes/StringValue.h"
+#include <Systemic/DataTypes/StringValue.h>
 
 namespace DataTypes {
     String Decimal::ToString(const ::Memory::IAllocator* allocator) const{

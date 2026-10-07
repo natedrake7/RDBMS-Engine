@@ -1,14 +1,14 @@
-#include "../include/SessionManager.h"
+#include <Server/SessionManager.h>
 
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 #include <ranges>
 
-#include "../../CoreEngine/include/Managers/GlobalMemoryManager.h"
-#include "../../QueryPipeline/include/CompileContext.h"
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <QueryPipeline/CompileContext.h>
 
-#include "../../Systemic/include/DataTypes/BoundVariable.h"
+#include <Systemic/DataTypes/BoundVariable.h>
 
 namespace Network::Sessions {
     const Session* SessionManager::CreateSession(const Security::User* user){

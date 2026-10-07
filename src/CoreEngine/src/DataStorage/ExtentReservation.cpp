@@ -1,9 +1,9 @@
-﻿#include "../../include/DataStorage/ExtentReservation.h"
+﻿#include <CoreEngine/DataStorage/ExtentReservation.h>
 
-#include "Database.h"
-#include "../../include/BufferPool/StorageManager.h"
-#include "../../include/Pages/IndexPageView.h"
-#include "Guards/WriterGuard.h"
+#include <CoreEngine/Database.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Pages/IndexPageView.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 namespace CoreEngine::StorageTypes{
     ExtentReservation::ExtentReservation()

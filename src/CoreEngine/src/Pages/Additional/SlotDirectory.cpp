@@ -1,4 +1,4 @@
-﻿#include "../../../include/Pages/Additional/SlotDirectory.h"
+﻿#include <CoreEngine/Pages/Additional/SlotDirectory.h>
 
 namespace Pages{
     SlotDirectory::SlotDirectory()

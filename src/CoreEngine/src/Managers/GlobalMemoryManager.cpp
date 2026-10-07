@@ -1,7 +1,7 @@
-﻿#include "../../include/Managers/GlobalMemoryManager.h"
+﻿#include <CoreEngine/Managers/GlobalMemoryManager.h>
 
-#include "DatabaseConstants.h"
-#include "Memory/Functions.h"
+#include <CoreEngine/DatabaseConstants.h>
+#include <Systemic/Memory/Functions.h>
 
 namespace CoreEngine{
     GlobalMemoryManager::GlobalMemoryManager(){

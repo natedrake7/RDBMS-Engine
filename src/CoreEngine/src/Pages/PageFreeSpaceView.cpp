@@ -1,7 +1,7 @@
-﻿#include "../../include/Pages/PageFreeSpaceView.h"
+﻿#include <CoreEngine/Pages/PageFreeSpaceView.h>
 
 #include <cassert>
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     page_offset_t PageFreeSpaceView::GetOffset(const page_id_t pageId) const{

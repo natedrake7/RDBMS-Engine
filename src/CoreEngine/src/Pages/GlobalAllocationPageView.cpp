@@ -1,8 +1,8 @@
-﻿#include "../../include/Pages/GlobalAllocationPageView.h"
+﻿#include <CoreEngine/Pages/GlobalAllocationPageView.h>
 
-#include "DataStorage/ExtentReservation.h"
-#include "Pages/AllocationPageView.h"
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/DataStorage/ExtentReservation.h>
+#include <CoreEngine/Pages/AllocationPageView.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     GlobalAllocationPageAdditionalHeader* GlobalAllocationPageView::GetAdditionalHeader() const{

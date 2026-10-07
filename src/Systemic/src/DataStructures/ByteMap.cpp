@@ -1,9 +1,9 @@
-﻿#include "../../include/DataStructures/ByteMap.h"
+﻿#include <Systemic/DataStructures/ByteMap.h>
 
 #include <cstring>
 #include <fstream>
 
-#include "DataTypes/DataTypes.h"
+#include <Systemic/DataTypes/DataTypes.h>
 
 namespace ByteMaps{
     void ByteMap::CheckIndex(const byte_map_pos_t pos) const{

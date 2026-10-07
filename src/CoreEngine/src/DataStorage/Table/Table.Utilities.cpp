@@ -1,6 +1,6 @@
-﻿#include "../../../include/DataStorage/Table.h"
-#include "../../../include/DataStorage/Column.h"
-#include "../../../include/Messages.h"
+﻿#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Column.h>
+#include <CoreEngine/Messages.h>
 
 namespace CoreEngine::StorageTypes{
 
@@ -73,5 +73,9 @@ namespace CoreEngine::StorageTypes{
         return (type == DataType::String || type == DataType::Json)
             && column->Size() > LOB_REFERENCE_SIZE
             && !this->IsKeyColumn(ordinalPosition);
+    }
+
+    const ::Memory::IAllocator* Table::Allocator() const{
+        return &this->_allocator;
     }
 }

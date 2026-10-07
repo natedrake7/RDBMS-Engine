@@ -1,10 +1,10 @@
-﻿#include "src/CoreEngine/include/Schedulers/GarbageCollector.h"
-#include "src/CoreEngine/include/Schedulers/StatisticsScheduler.h"
-#include "src/Plugins/include/Plugin.h"
-#include "src/QueryPipeline/include/Parser.h"
-#include "src/Server/include/Server.h"
-#include "src/Server/include/ConnectionManager.h"
-#include "src/Systemic/include/Functions/StringFunctions.h"
+﻿#include <CoreEngine/Schedulers/GarbageCollector.h>
+#include <CoreEngine/Schedulers/StatisticsScheduler.h>
+#include <Plugins/Plugin.h>
+#include <QueryPipeline/Parser.h>
+#include <Server/Server.h>
+#include <Server/ConnectionManager.h>
+#include <Systemic/Functions/StringFunctions.h>
 #include "main.h"
 
 #include <atomic>
@@ -13,12 +13,12 @@
 #include <iostream>
 #include <string>
 
-#include "src/CoreEngine/include/BufferPool/BufferPoolMemoryManager.h"
-#include "src/CoreEngine/include/Evaluators/Kernels/Row/RowKernels.h"
-#include "src/CoreEngine/include/Managers/GlobalMemoryManager.h"
-#include "src/QueryPipeline/include/RowCursor.h"
-#include "src/Systemic/include/Coercions/Coercions.h"
-#include "src/Systemic/include/Memory/Functions.h"
+#include <CoreEngine/BufferPool/BufferPoolMemoryManager.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.h>
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <QueryPipeline/RowCursor.h>
+#include <Systemic/Coercions/Coercions.h>
+#include <Systemic/Memory/Functions.h>
 #include "UnitTests/include/UnitTests.h"
 
 //TODO

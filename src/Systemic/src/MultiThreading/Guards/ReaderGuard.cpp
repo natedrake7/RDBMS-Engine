@@ -1,5 +1,5 @@
-#include "../../../include/Guards/ReaderGuard.h"
-#include "../../../include/Guards/Mutex.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/Mutex.h>
 
 namespace MultiThreading {
     ReaderGuard::ReaderGuard(){

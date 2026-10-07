@@ -1,15 +1,15 @@
-#include "../include/UserManager.h"
+#include <Server/UserManager.h>
 
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
-#include "../include/Security/Security.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <Server/Security/Security.h>
 
 
 #include <argon2.h>
 #include <iostream>
 
-#include "../../CoreEngine/include/Memory/PersistentAllocator.h"
-#include "../../Systemic/include/DataTypes/DataTypes.h"
+#include <CoreEngine/Memory/PersistentAllocator.h>
+#include <Systemic/DataTypes/DataTypes.h>
 
 namespace Security {
     UserManager::~UserManager(){

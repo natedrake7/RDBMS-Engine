@@ -1,16 +1,16 @@
-﻿#include "../../../../Systemic/include/GroupCondition.h"
-#include "../../../include/DataStorage/Row/Row.h"
-#include "../../../include/Algorithms/Sort/SortingFunctions.h"
-#include "../../../include/Algorithms/AggregateFunctions.h"
-#include "../../../include/Algorithms/Sort/MergeSort.h"
-#include "../../../include/Algorithms/Sort/QuickSort.h"
+﻿#include <Systemic/GroupCondition.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
+#include <CoreEngine/Algorithms/AggregateFunctions.h>
+#include <CoreEngine/Algorithms/Sort/MergeSort.h>
+#include <CoreEngine/Algorithms/Sort/QuickSort.h>
 
 #include <ranges>
-#include "Evaluators/Expression.h"
+#include <CoreEngine/Evaluators/Expression.h>
 
-#include "../../QueryPipeline/include/Statements.h"
-#include "Contexts/ExecutionContext.h"
-#include "DataStructures/PolymorphicArray.h"
+#include <QueryPipeline/Statements.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
 
 bool SortingFunctions::CompareRowsAscending(
     const CoreEngine::ExecutionContext& context,

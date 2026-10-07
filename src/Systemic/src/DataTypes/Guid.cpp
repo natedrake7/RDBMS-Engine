@@ -1,4 +1,4 @@
-#include "../../include/DataTypes/Guid.h"
+#include <Systemic/DataTypes/Guid.h>
 
 #include <array>
 #include <cstring>
@@ -7,8 +7,8 @@
 #include <random>
 #include <regex>
 
-#include "DataTypes/StringValue.h"
-#include "DataTypes/StringView.h"
+#include <Systemic/DataTypes/StringValue.h>
+#include <Systemic/DataTypes/StringView.h>
 
 namespace DataTypes {
     bool Guid::Validate(const char* str, const Int size){

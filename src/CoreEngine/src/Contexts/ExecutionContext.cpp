@@ -1,6 +1,6 @@
-﻿#include "../../include/Contexts/ExecutionContext.h"
-#include "../../include/DataStorage/Row/Row.h"
-#include "SystemDatabases/VersionDatabase.h"
+﻿#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(

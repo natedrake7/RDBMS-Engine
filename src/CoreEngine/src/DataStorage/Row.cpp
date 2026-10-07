@@ -1,5 +1,5 @@
-﻿#include "../../include/DataStorage/Row/Row.h"
-#include "Contexts/ExecutionContext.h"
+﻿#include <CoreEngine/DataStorage/Row/Row.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
 
 namespace CoreEngine::StorageTypes {
     RID::RID()

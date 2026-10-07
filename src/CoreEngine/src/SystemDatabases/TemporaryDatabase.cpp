@@ -1,11 +1,11 @@
-﻿#include "../include/SystemDatabases/TemporaryDatabase.h"
+﻿#include <CoreEngine/SystemDatabases/TemporaryDatabase.h>
 
 #include <fstream>
 #include <nlohmann/json.hpp>
 
-#include "Database.h"
-#include "Managers/GlobalMemoryManager.h"
-#include "../../include/Extensions/StringExtensions.h"
+#include <CoreEngine/Database.h>
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <CoreEngine/Extensions/StringExtensions.h>
 
 namespace CoreEngine {
     std::tuple<DataTypes::String, DataTypes::String> TemporaryDatabase::ReadConfiguration(

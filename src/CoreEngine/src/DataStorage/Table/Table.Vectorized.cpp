@@ -1,10 +1,10 @@
-﻿#include "../../../include/Contexts/ExecutionContext.h"
-#include "../../../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../../../Systemic/include/DataTypes/StringValue.h"
-#include "../../../include/Vectorization/Vectorization.h"
-#include "../../../include/DataStorage/Table.h"
-#include "../../../include/BufferPool/StorageManager.h"
-#include "../../../include/Database.h"
+﻿#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <Systemic/DataTypes/DataTypes.h>
+#include <Systemic/DataTypes/StringValue.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Database.h>
 
 namespace CoreEngine::StorageTypes{
     template <typename T>

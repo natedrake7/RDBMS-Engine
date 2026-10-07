@@ -1,11 +1,11 @@
-﻿#include "../include/Comparators.h"
-#include "../include/DataTypes/Decimal.h"
-#include "../include/DataTypes/Guid.h"
-#include "../include/DataTypes/DateTime.h"
-#include "../include/DataTypes/String.h"
-#include "../include/DataTypes/StringView.h"
-#include "../include/DataTypes/Value.h"
-#include "DataTypes/StringValue.h"
+﻿#include <Systemic/Comparators.h>
+#include <Systemic/DataTypes/Decimal.h>
+#include <Systemic/DataTypes/Guid.h>
+#include <Systemic/DataTypes/DateTime.h>
+#include <Systemic/DataTypes/String.h>
+#include <Systemic/DataTypes/StringView.h>
+#include <Systemic/DataTypes/Value.h>
+#include <Systemic/DataTypes/StringValue.h>
 
 namespace Comparators{
     //Branchless Comparison

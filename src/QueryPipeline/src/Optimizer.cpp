@@ -1,13 +1,13 @@
-#include "../include/Optimizer.h"
+#include <QueryPipeline/Optimizer.h>
 
 #include <algorithm>
 
-#include "CostEstimator.h"
-#include "DatabaseConstants.h"
-#include "Parser.h"
-#include "Statements.h"
-#include "../../CoreEngine/include/Managers/StatisticsManager.h"
-#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include <QueryPipeline/CostEstimator.h>
+#include <QueryPipeline/DatabaseConstants.h>
+#include <QueryPipeline/Parser.h>
+#include <QueryPipeline/Statements.h>
+#include <CoreEngine/Managers/StatisticsManager.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
 namespace QueryPipeline {
     JoinAlgorithmAnalysisResult::JoinAlgorithmAnalysisResult()
@@ -308,7 +308,7 @@ namespace QueryPipeline {
     }
 
     DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> Optimizer::AnalyzeTableScan(
-        const Headers::IndexHeader& index,
+        const CoreEngine::Catalog::IndexHeader& index,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& conjunctions
     ){
         DataStructures::PolymorphicArray<IndexSeekColumnAnalysisResults> result;
@@ -486,7 +486,7 @@ namespace QueryPipeline {
     }
 
     DataStructures::PolymorphicArray<Int> Optimizer::CheckPredicatesSorting(
-        const Headers::TableStatistics& tableStats,
+        const CoreEngine::Catalog::TableStatistics& tableStats,
         const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
     ) const{
         const auto indexes = CoreEngine::StatisticsManager::Get().GetIndexStatistics(tableStats.tableId);
@@ -693,9 +693,9 @@ namespace QueryPipeline {
     }
 
     Range Optimizer::PerformIndexAnalysis(
-        DataStructures::PolymorphicArray<Headers::IndexHeader>& indexes,
+        DataStructures::PolymorphicArray<CoreEngine::Catalog::IndexHeader>& indexes,
         Expressions::Expression* expression,
-        const Headers::TableStatistics& tableStatistics
+        const CoreEngine::Catalog::TableStatistics& tableStatistics
     ){
         DataStructures::PolymorphicArray<IndexCandidate> candidates(this->context->_compileContext.GetAllocator());
         candidates.Reserve(indexes.Size());

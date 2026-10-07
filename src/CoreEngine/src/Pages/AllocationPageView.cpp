@@ -1,9 +1,9 @@
-﻿#include "../../include/Pages/AllocationPageView.h"
-#include "../../../Systemic/include/DataStructures/PolymorphicArray.h"
+﻿#include <CoreEngine/Pages/AllocationPageView.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
 
-#include "Database.h"
-#include "Guards/ReaderGuard.h"
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Database.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     IndexAllocationPageAdditionalHeader* AllocationPageView::GetAdditionalHeader() const{

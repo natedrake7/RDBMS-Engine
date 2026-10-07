@@ -1,8 +1,8 @@
-﻿#include "../../../include/Pages/LargeObjects/LobDataView.h"
+﻿#include <CoreEngine/Pages/LargeObjects/LobDataView.h>
 
 #include <cassert>
 
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     LobDataView::LobDataView(Frame* framePtr) : PageView(framePtr){}

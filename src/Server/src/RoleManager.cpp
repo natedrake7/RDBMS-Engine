@@ -1,14 +1,14 @@
-#include "../include/RoleManager.h"
+#include <Server/RoleManager.h>
 
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
-#include "../include/Security/Security.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <Server/Security/Security.h>
 
 #include <iostream>
 #include <ranges>
 
-#include "../../Systemic/include/DataTypes/DataTypes.h"
-#include "../../Systemic/include/DataTypes/StringView.h"
+#include <Systemic/DataTypes/DataTypes.h>
+#include <Systemic/DataTypes/StringView.h>
 
 namespace Security {
     RoleManager::RoleManager() = default;

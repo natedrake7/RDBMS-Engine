@@ -1,5 +1,5 @@
-﻿#include "../../../../include/Evaluators/Kernels/Row/RowKernels.h"
-#include "Evaluators/Kernels/Row/RowKernels.Binary.h"
+﻿#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.Binary.h>
 
 namespace CoreEngine::RowKernels{
     void ConstantScanNullKernel(

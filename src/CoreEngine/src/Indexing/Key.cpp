@@ -1,8 +1,8 @@
-#include "../../include/Indexing/Key.h"
-#include "../../../Systemic/include/DataTypes/Value.h"
+#include <CoreEngine/Indexing/Key.h>
+#include <Systemic/DataTypes/Value.h>
 #include <stdexcept>
 
-#include "Encoding.h"
+#include <Systemic/Encoding.h>
 
 namespace DataTypes::Indexing{
     Key::Key()

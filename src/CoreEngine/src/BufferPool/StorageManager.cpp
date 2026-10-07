@@ -1,9 +1,9 @@
-#include "../../include/BufferPool/StorageManager.h"
-#include "../../include/Database.h"
-#include "../../../Systemic/include/Guards/WriterGuard.h"
-#include "Pages/GlobalAllocationPageView.h"
-#include "Pages/HeaderPageView.h"
-#include "Pages/Additional/Frame.h"
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Database.h>
+#include <Systemic/Guards/WriterGuard.h>
+#include <CoreEngine/Pages/GlobalAllocationPageView.h>
+#include <CoreEngine/Pages/HeaderPageView.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 #include <iostream>
 
 namespace Storage {

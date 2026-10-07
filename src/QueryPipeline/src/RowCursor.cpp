@@ -1,9 +1,9 @@
-﻿#include "../include/RowCursor.h"
+﻿#include <QueryPipeline/RowCursor.h>
 
-#include "PhysicalPlan.h"
-#include "../../Systemic/include/DataTypes/String.h"
-#include "../../Systemic/include/DataTypes/StringValue.h"
-#include "../../Systemic/include/DataTypes/JsonBinary.h"
+#include <QueryPipeline/PhysicalPlan.h>
+#include <Systemic/DataTypes/String.h>
+#include <Systemic/DataTypes/StringValue.h>
+#include <Systemic/DataTypes/JsonBinary.h>
 
 namespace QueryPipeline{
     RowCursor::RowCursor(const CoreEngine::DataChunk* batch)

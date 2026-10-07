@@ -1,9 +1,9 @@
-#include "../../include/Managers/TransactionManager.h"
+#include <CoreEngine/Managers/TransactionManager.h>
 
 #include <ranges>
 
-#include "../../../Server/include/Server.h"
-#include "Contexts/ExecutionContext.h"
+#include <Server/Server.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
 
 namespace CoreEngine {
     TransactionManager::TransactionManager(){

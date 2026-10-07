@@ -1,15 +1,15 @@
-#include "../include/Server.h"
-#include "../../CoreEngine/include/Logger/WriteAheadLogger.h"
-#include "../../CoreEngine/include/Managers/TransactionManager.h"
-#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
-#include "../../CoreEngine/include/SystemDatabases/TemporaryDatabase.h"
-#include "../../Systemic/include/Guards/ReaderGuard.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
+#include <Server/Server.h>
+#include <CoreEngine/Logger/WriteAheadLogger.h>
+#include <CoreEngine/Managers/TransactionManager.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <CoreEngine/SystemDatabases/TemporaryDatabase.h>
+#include <Systemic/Guards/ReaderGuard.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 #include <iostream>
 #include <ranges>
 
-#include "ValidationMessages.h"
+#include <Server/ValidationMessages.h>
 
 namespace Network {
     Server::Server(){

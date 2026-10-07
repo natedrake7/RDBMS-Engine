@@ -1,5 +1,5 @@
-﻿#include "../../../../include/Evaluators/Kernels/Row/RowKernels.h"
-#include "Evaluators/Kernels/Row/RowKernels.Cast.h"
+﻿#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.h>
+#include <CoreEngine/Evaluators/Kernels/Row/RowKernels.Cast.h>
 
 namespace CoreEngine::RowKernels{
     template<typename...> struct TypeList {};

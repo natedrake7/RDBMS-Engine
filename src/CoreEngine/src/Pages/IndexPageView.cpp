@@ -1,6 +1,6 @@
-﻿#include "../../include/Pages/IndexPageView.h"
-#include "../../include/DataStorage/Row/SerializedRow.h"
-#include "Pages/Additional/Frame.h"
+﻿#include <CoreEngine/Pages/IndexPageView.h>
+#include <CoreEngine/DataStorage/Row/SerializedRow.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace Pages{
     void IndexPageView::InsertFirstTuple(const IndexInsertTuple& tuple) const{

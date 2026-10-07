@@ -1,13 +1,13 @@
-﻿#include "../include/CostEstimator.h"
+﻿#include <QueryPipeline/CostEstimator.h>
 
 #include <cmath>
 
-#include "DatabaseConstants.h"
-#include "Optimizer.h"
-#include "Parser.h"
-#include "../../Systemic/include/Headers.h"
-#include "../../CoreEngine/include/Managers/StatisticsManager.h"
-#include "../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
+#include <QueryPipeline/DatabaseConstants.h>
+#include <QueryPipeline/Optimizer.h>
+#include <QueryPipeline/Parser.h>
+#include <CoreEngine/SystemDatabases/CatalogHeaders.h>
+#include <CoreEngine/Managers/StatisticsManager.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
 namespace QueryPipeline{
     CostEstimator::HistogramSelectivityEstimate::HistogramSelectivityEstimate(){
@@ -135,7 +135,7 @@ namespace QueryPipeline{
         }
     }
 
-    double CostEstimator::InterpolateBucket(const Headers::ColumnHistograms& bucket, const Value& value){
+    double CostEstimator::InterpolateBucket(const CoreEngine::Catalog::ColumnHistograms& bucket, const Value& value){
         const auto minInterpolated = bucket.rangeStart.Interpolate();
         const auto maxInterpolated = bucket.rangeEnd.Interpolate();
         const auto valueInterpolated = value.Interpolate();
@@ -153,7 +153,7 @@ namespace QueryPipeline{
     }
 
     int CostEstimator::FindBucketForValue(
-        const DataStructures::PolymorphicArray<Headers::ColumnHistograms>& histograms,
+        const DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnHistograms>& histograms,
         const Value& value
     ){
         for (int i = 0;i < histograms.Size(); i++){
@@ -168,7 +168,7 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateEqualSelectivityByHistograms(
         const SeekRange& range,
-        const Headers::ColumnHistograms& histogram
+        const CoreEngine::Catalog::ColumnHistograms& histogram
     ){
         auto selectivity = CostEstimator::InterpolateBucket(histogram, range.start);
 
@@ -178,7 +178,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateRangeStartSelectivityByHistograms(
-        const Headers::ColumnHistograms& histogram,
+        const CoreEngine::Catalog::ColumnHistograms& histogram,
         const HistogramSelectivityEstimate& info
     ){
         const auto fraction = CostEstimator::InterpolateBucket(histogram, *info.value);
@@ -189,7 +189,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateRangeEndSelectivityByHistograms(
-        const Headers::ColumnHistograms& histogram,
+        const CoreEngine::Catalog::ColumnHistograms& histogram,
         const HistogramSelectivityEstimate& info
     ){
         const auto fraction = CostEstimator::InterpolateBucket(histogram, *info.value);
@@ -200,9 +200,9 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateRangeSelectivityByHistograms(
-        const Headers::ColumnHistograms& startHistogram,
+        const CoreEngine::Catalog::ColumnHistograms& startHistogram,
         const HistogramSelectivityEstimate& startInfo,
-        const Headers::ColumnHistograms& endHistogram,
+        const CoreEngine::Catalog::ColumnHistograms& endHistogram,
         const HistogramSelectivityEstimate& endInfo
     ){
         const auto fractionStart = CostEstimator::InterpolateBucket(startHistogram, *startInfo.value);
@@ -219,8 +219,8 @@ namespace QueryPipeline{
     double CostEstimator::EstimateSelectivityByHistograms(
         const QueryContext* context,
         const SeekRange& range,
-        const Headers::TableStatistics& tableStats,
-        const Headers::ColumnStatistics& columnStats
+        const CoreEngine::Catalog::TableStatistics& tableStats,
+        const CoreEngine::Catalog::ColumnStatistics& columnStats
     ){
         static const auto& catalog = CoreEngine::SystemCatalog::Get();
         const auto histograms = catalog.SelectColumnHistogramsByColumnId(
@@ -304,7 +304,7 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateSelectivityForSmallTable(
         const SeekRange& range,
-        const Headers::ColumnStatistics& columnStats
+        const CoreEngine::Catalog::ColumnStatistics& columnStats
     ){
         if (!range.hasRange)
             return static_cast<double>(1.0 / static_cast<long double>(columnStats.distinctCount));
@@ -352,8 +352,8 @@ namespace QueryPipeline{
     double CostEstimator::EstimateSelectivity(
         const QueryContext* context,
         const SeekRange& range,
-        const Headers::ColumnStatistics& columnStats,
-        const Headers::TableStatistics& tableStats
+        const CoreEngine::Catalog::ColumnStatistics& columnStats,
+        const CoreEngine::Catalog::TableStatistics& tableStats
     ){
         if (tableStats.rowCount <= PipelineConstants::SMALL_TABLE)
             return CostEstimator::EstimateSelectivityForSmallTable(range, columnStats);
@@ -370,7 +370,7 @@ namespace QueryPipeline{
     void CostEstimator::EstimateIndexCost(
         const QueryContext* context,
         IndexCandidate& candidate,
-        const Headers::TableStatistics& tableStats
+        const CoreEngine::Catalog::TableStatistics& tableStats
     ){
         //if empty default to full scan
         if (candidate.analyzeInfo.Empty()){
@@ -382,7 +382,7 @@ namespace QueryPipeline{
         const auto indexStats = CoreEngine::StatisticsManager::Get().GetIndexStatistics(candidate.header->id);
 
         //TODO fix make sure index stats are available and cached by better key
-        const Headers::IndexStatistics* indexStatistic = nullptr;
+        const CoreEngine::Catalog::IndexStatistics* indexStatistic = nullptr;
         for (const auto& stats : indexStats){
             if (stats.indexId != candidate.header->id)
                 continue;

@@ -1,23 +1,23 @@
-#include "../../include/PhysicalPlan.h"
+#include <QueryPipeline/PhysicalPlan.h>
 
 #include <cassert>
 #include <utility>
 
-#include "ValidationMessages.h"
-#include "../../../CoreEngine/include/Database.h"
-#include "../../../CoreEngine/include/SystemDatabases/SystemCatalog.h"
-#include "../../../Server/include/Server.h"
-#include "../../../CoreEngine/include/Algorithms/Sort/SortingFunctions.h"
-#include "../../../CoreEngine/include/ScanState.h"
-#include "../../../CoreEngine/include/DataStorage/Table.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "../../../CoreEngine/include/Contexts/ExecutionContext.h"
-#include "../../../CoreEngine/include/SystemDatabases/TemporaryDatabase.h"
-#include "../../../CoreEngine/include/Vectorization/Vectorization.h"
-#include "../../../CoreEngine/include/BufferPool/StorageManager.h"
-#include "../../../CoreEngine/include/Contexts/OutputSchema.h"
-#include "../../../CoreEngine/include/DataStorage/ColumnMaterializationInfo.h"
-#include "Evaluators/VectorizedPushedDownFilter.h"
+#include <QueryPipeline/ValidationMessages.h>
+#include <CoreEngine/Database.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <Server/Server.h>
+#include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
+#include <CoreEngine/ScanState.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
+#include <CoreEngine/Contexts/ExecutionContext.h>
+#include <CoreEngine/SystemDatabases/TemporaryDatabase.h>
+#include <CoreEngine/Vectorization/Vectorization.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <CoreEngine/Contexts/OutputSchema.h>
+#include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
+#include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
@@ -272,7 +272,7 @@ namespace QueryPipeline::PhysicalPlan {
         const session_id_t sessionId,
         Statements::DataSource*  table,
         DataStructures::PolymorphicArray<Statements::NewColumn*> &columns,
-        const Headers::Index& primaryKey,
+        const CoreEngine::Catalog::Index& primaryKey,
         DataTypes::String& constraintName
     ):  PlanNode(sessionId), table(table), constraintName(std::move(constraintName)),
         columns(std::move(columns)), primaryKey(primaryKey) {}
@@ -401,7 +401,7 @@ namespace QueryPipeline::PhysicalPlan {
             context,
             tableResult.primaryKey.AsInt<Int>(),
             DataTypes::StringView::ViewOf(this->constraintName),
-            Headers::ConstraintType::PrimaryKey,
+            CoreEngine::StorageTypes::ConstraintType::PrimaryKey,
             false,
             &indexId,
             DataTypes::StringView::ViewOf(this->session->user->name)
@@ -471,7 +471,7 @@ namespace QueryPipeline::PhysicalPlan {
           context,
           this->table->_tableId,
           DataTypes::StringView::ViewOf(this->constraintName),
-          Headers::ConstraintType::IndexKey,
+          CoreEngine::StorageTypes::ConstraintType::IndexKey,
           false,
           &indexId,
           DataTypes::StringView::ViewOf(this->session->user->name)

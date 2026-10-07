@@ -1,5 +1,5 @@
-﻿#include "../../include/Vectorization/Vectorization.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
+﻿#include <CoreEngine/Vectorization/Vectorization.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
 
 namespace CoreEngine{
     void SelectionVector::AllocateRids(const ::Memory::IAllocator* allocator, const Int index, const Int size){

@@ -1,14 +1,14 @@
-﻿#include "../include/Database.h"
+﻿#include <CoreEngine/Database.h>
 
-#include "../include/SystemDatabases/SystemCatalog.h"
+#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
-#include "../include/DatabaseConstants.h"
-#include "../include/DataStorage/Table.h"
-#include "../include/BufferPool/StorageManager.h"
-#include "../../Systemic/include/Guards/WriterGuard.h"
+#include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
+#include <Systemic/Guards/WriterGuard.h>
 
-#include "Guards/ReaderGuard.h"
-#include "Managers/GlobalMemoryManager.h"
+#include <Systemic/Guards/ReaderGuard.h>
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
 
 namespace CoreEngine{
     template <typename TView>

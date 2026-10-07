@@ -1,6 +1,9 @@
-﻿#include "../../include/Memory/PersistentAllocator.h"
-#include "../../include/Managers/GlobalMemoryManager.h"
-#include "../../include/Memory/Chunk.h"
+﻿#include <CoreEngine/Memory/PersistentAllocator.h>
+#include <CoreEngine/Managers/GlobalMemoryManager.h>
+#include <CoreEngine/Memory/Chunk.h>
+#include <Systemic/Functions/MathFunctions.h>
+#include <cassert>
+#include <stdexcept>
 
 
 namespace CoreEngine::Memory{
@@ -9,21 +12,22 @@ namespace CoreEngine::Memory{
             return size;
 
         if (!this->_tail)
-            return std::max(size, Chunk::DEFAULT_SIZE);  // e.g., 16 KB
+            return Math::Max(size, Chunk::DEFAULT_SIZE);
 
-        return std::min(this->_tail->_size * 2, Chunk::MAX_SIZE);
+        return Math::Max(size, Math::Min(this->_tail->_size * 2, Chunk::MAX_SIZE));
     }
 
-    void PersistentAllocator::AllocateNewChunk(const UnsignedInt size) const{
-        const auto newChunkSize = this->NewChunkCapacity(size);
+    void PersistentAllocator::AllocateNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+        const auto newChunkSize = this->NewChunkCapacity(size + Chunk::MaxPadding(alignment));
 
-        if(GlobalMemoryManager::Get().TryReserveForMisc(newChunkSize) == false){
+        if(GlobalMemoryManager::Get().TryReserveForMisc(newChunkSize) == false)
             throw std::bad_alloc();
-        }
 
         auto* newChunk = static_cast<Chunk*>(std::malloc(sizeof(Chunk) + newChunkSize));
-        if (newChunk == nullptr)
+        if (newChunk == nullptr){
+            GlobalMemoryManager::Get().ReleaseMiscReservation(newChunkSize);
             throw std::bad_alloc();
+        }
 
         newChunk->_size = newChunkSize;
         newChunk->_offset = 0;
@@ -35,19 +39,31 @@ namespace CoreEngine::Memory{
             return;
         }
 
+        // insert after the tail: chunks behind it (kept by Reset) stay reachable and are freed by Release
+        newChunk->_next = this->_tail->_next;
         this->_tail->_next = newChunk;
         this->_tail = newChunk;
     }
 
-    PersistentAllocator::PersistentAllocator(){
-        this->_head = nullptr;
-        this->_tail = nullptr;
+    void PersistentAllocator::TryFindNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+        auto* node = this->_tail->_next;
+        while (node != nullptr && node->AlignedOffset(alignment) + size > node->_size)
+            node = node->_next;
+
+        if (node != nullptr){
+            this->_tail = node;
+            return;
+        }
+
+        this->AllocateNewChunk(size, alignment);
     }
 
-    PersistentAllocator::PersistentAllocator(const UnsignedInt size){
-        this->_head = nullptr;
-        this->_tail = nullptr;
-        this->AllocateNewChunk(size);
+    PersistentAllocator::PersistentAllocator()
+        : _head(nullptr), _tail(nullptr){}
+
+    PersistentAllocator::PersistentAllocator(const UnsignedInt size)
+        : _head(nullptr), _tail(nullptr){
+        this->AllocateNewChunk(size, ::Memory::DEFAULT_ALIGNMENT);
     }
 
     PersistentAllocator::~PersistentAllocator(){
@@ -77,13 +93,20 @@ namespace CoreEngine::Memory{
         return *this;
     }
 
-    void* PersistentAllocator::AllocateRaw(const UnsignedInt size)const{
-        if (this->_head == nullptr || this->_tail->_offset + size > this->_tail->_size)
-            this->AllocateNewChunk(size);
+    void* PersistentAllocator::AllocateAligned(const UnsignedInt size, const std::size_t alignment)const{
+        if (this->_head == nullptr)
+            this->AllocateNewChunk(size, alignment);
 
-        auto* ptr = this->_tail->_data + this->_tail->_offset;
-        this->_tail->_offset += size;
-        return ptr;
+        auto offSet = this->_tail->AlignedOffset(alignment);
+        if(offSet + size > this->_tail->_size){
+            this->TryFindNewChunk(size, alignment);
+            offSet = this->_tail->AlignedOffset(alignment);
+        }
+
+        assert(offSet + size <= this->_tail->_size && "PersistentAllocator::AllocateAligned: Overflow on tail");
+
+        this->_tail->_offset = offSet + size;
+        return this->_tail->_data + offSet;
     }
 
     void PersistentAllocator::Release() const{
@@ -91,10 +114,10 @@ namespace CoreEngine::Memory{
             return;
 
         auto* node = this->_head;
-        Int totalMemoryFreed = 0;
+        UnsignedBigInt freedMemory = 0;
         while(node != nullptr){
             auto* next = node->_next;
-            totalMemoryFreed += node->_size;
+            freedMemory += node->_size;
             std::free(node);
             node = next;
         }
@@ -102,7 +125,7 @@ namespace CoreEngine::Memory{
         this->_head = nullptr;
         this->_tail = nullptr;
 
-        GlobalMemoryManager::Get().ReleaseMiscReservation(totalMemoryFreed);
+        GlobalMemoryManager::Get().ReleaseMiscReservation(freedMemory);
     }
 
     void PersistentAllocator::Reset() const{
@@ -111,15 +134,15 @@ namespace CoreEngine::Memory{
             node->_offset = 0;
             node = node->_next;
         }
+
+        this->_tail = this->_head;
     }
 
     ::Memory::AllocationStep PersistentAllocator::RecordAllocationStart() const{
-        static_assert("PersistentAllocator::RecordAllocationStart Not implemented");
         throw std::logic_error("PersistentAllocator::RecordAllocationStart Not implemented");
     }
 
     void PersistentAllocator::ReleaseFromAllocationStep(::Memory::AllocationStep& step) const{
-        static_assert("PersistentAllocator::ReleaseFromAllocationStep Not implemented");
         throw std::logic_error("PersistentAllocator::ReleaseFromAllocationStep Not implemented");
     }
 }

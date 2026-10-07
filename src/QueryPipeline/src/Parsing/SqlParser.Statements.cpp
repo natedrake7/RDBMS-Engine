@@ -1,11 +1,11 @@
-#include "../../include/Parsing/SqlParser.h"
-#include "../../include/Statements.h"
+#include <QueryPipeline/Parsing/SqlParser.h>
+#include <QueryPipeline/Statements.h>
 
-#include "../../../CoreEngine/include/Evaluators/Expression.h"
-#include "../../../Systemic/include/Converter.h"
-#include "../../../Systemic/include/DataTypes/DataTypes.StaticData.h"
-#include "../../../Systemic/include/DataTypes/Value.h"
-#include "../../../Systemic/include/Memory/IAllocator.h"
+#include <CoreEngine/Evaluators/Expression.h>
+#include <Systemic/Converter.h>
+#include <Systemic/DataTypes/DataTypes.StaticData.h>
+#include <Systemic/DataTypes/Value.h>
+#include <Systemic/Memory/IAllocator.h>
 
 namespace QueryPipeline::Parsing{
     /**

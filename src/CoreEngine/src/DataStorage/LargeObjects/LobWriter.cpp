@@ -1,6 +1,6 @@
-﻿#include "../../../include/DataStorage/LargeObjects/LobWriter.h"
-#include "../../../../Systemic/include/Memory/IAllocator.h"
-#include "DataStorage/Table.h"
+﻿#include <CoreEngine/DataStorage/LargeObjects/LobWriter.h>
+#include <Systemic/Memory/IAllocator.h>
+#include <CoreEngine/DataStorage/Table.h>
 
 namespace CoreEngine::StorageTypes{
     void LobWriter::InitializeRootView(){

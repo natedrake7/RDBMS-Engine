@@ -1,5 +1,5 @@
-#include "../../include/Managers/LockManager.h"
-#include "../../include/BufferPool/StorageManager.h"
+#include <CoreEngine/Managers/LockManager.h>
+#include <CoreEngine/BufferPool/StorageManager.h>
 
 namespace CoreEngine::Lock {
 

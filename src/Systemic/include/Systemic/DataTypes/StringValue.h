@@ -1,0 +1,124 @@
+﻿#pragma once
+#include <ostream>
+
+#include <Systemic/DataTypes/DataTypes.h>
+#include <Systemic/Memory/IAllocator.h>
+#include <Systemic/Comparators.h>
+#include <Systemic/Macros.h>
+
+#if IS_GCC
+    #include <cstring>
+#endif
+
+namespace DataTypes{
+    class StringValue{
+        static constexpr data_size_t PREFIX_SIZE = 4;
+        static constexpr data_size_t INLINE_SIZE = 12;
+
+        union{
+            struct{
+                data_size_t _size;
+                char _prefix[PREFIX_SIZE];
+                const char* _data;
+            } _external;
+
+            struct{
+                data_size_t _size;
+                char _data[INLINE_SIZE];
+            } _inlineVal;
+        } _value;
+
+        public:
+            StringValue()
+                : _value{} {}
+
+            StringValue(const StringValue&) = delete;
+            StringValue& operator=(const StringValue&) = delete;
+
+            StringValue(StringValue&& other) noexcept
+                : _value{other._value} {}
+
+            StringValue& operator=(StringValue&& other) noexcept {
+                if (this == &other)
+                    return *this;
+                _value = other._value;
+                return *this;
+            }
+
+            StringValue(const ::Memory::IAllocator* allocator, const char* data, const data_size_t size){
+                this->_value._inlineVal._size = size;
+
+                auto* copy = static_cast<char*>(allocator->AllocateRaw(size));
+                std::memcpy(copy, data, size);
+                this->_value._external._data = copy;
+
+                std::memcpy(this->_value._external._prefix, copy, PREFIX_SIZE);
+            }
+
+            StringValue(const char* data, const data_size_t size){
+                this->_value._inlineVal._size = size;
+                std::memcpy(this->_value._inlineVal._data, data, size);
+                std::memset(this->_value._inlineVal._data + size, 0, INLINE_SIZE - size);
+            }
+
+            explicit StringValue(String& str);
+
+            static StringValue Create(const ::Memory::IAllocator* allocator, const char* data, const data_size_t size){
+                return (size <= INLINE_SIZE)
+                    ? StringValue(data, size)
+                    : StringValue(allocator, data, size);
+            }
+
+            static StringValue Create(const ::Memory::IAllocator* allocator, const StringView& strView);
+
+            static StringValue Empty(){
+                return StringValue(nullptr, 0);
+            }
+
+            static StringValue MoveFromString(String& str);
+
+            [[nodiscard]] data_size_t Size()const { return  this->_value._inlineVal._size;}
+            [[nodiscard]] bool IsInline()const { return this->Size() <= INLINE_SIZE; }
+            [[nodiscard]] const char* Data()const{
+                return this->IsInline()
+                    ? this->_value._inlineVal._data
+                    : this->_value._external._data;
+            }
+
+            [[nodiscard]] const char* Prefix() const{
+                return reinterpret_cast<const char*>(this) + PREFIX_SIZE;
+            }
+
+            [[nodiscard]] friend bool operator==(const StringValue& lhs, const StringValue& rhs){
+                return Comparators::Equals(lhs, rhs);
+            }
+
+            [[nodiscard]] friend bool operator!=(const StringValue& lhs, const StringValue& rhs){
+                return !Comparators::Equals(lhs, rhs);
+            }
+
+            [[nodiscard]] friend bool operator<(const StringValue& lhs, const StringValue& rhs){
+                return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Less;
+            }
+
+            [[nodiscard]] friend bool operator>(const StringValue& lhs, const StringValue& rhs){
+                return Comparators::Compare(lhs, rhs) == Comparators::Comparator::Greater;
+            }
+
+            [[nodiscard]] friend bool operator>=(const StringValue& lhs, const StringValue& rhs){
+                return Comparators::Compare(lhs, rhs) >= Comparators::Comparator::Equal;
+            }
+
+            [[nodiscard]] friend bool operator<=(const StringValue& lhs, const StringValue& rhs){
+                return Comparators::Compare(lhs, rhs) <= Comparators::Comparator::Equal;
+            }
+
+            [[nodiscard]] static inline constexpr data_size_t PrefixSize() { return PREFIX_SIZE; }
+            [[nodiscard]] static inline constexpr data_size_t InlineSize() { return INLINE_SIZE; }
+
+            friend std::ostream& operator<<(std::ostream& os, const StringValue& value){
+                os.write(value.Data(), value.Size());
+                return os;
+            }
+    };
+}

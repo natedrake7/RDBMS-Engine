@@ -1,7 +1,7 @@
 ﻿#include <utility>
 
-#include "DataTypes/JsonBinary.h"
-#include "Serialization/JsonBuilder.h"
+#include <Systemic/DataTypes/JsonBinary.h>
+#include <Systemic/Serialization/JsonBuilder.h>
 
 namespace Serialization {
     JsonValue::Data::Data()
