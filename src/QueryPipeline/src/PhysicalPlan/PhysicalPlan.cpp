@@ -401,7 +401,7 @@ namespace QueryPipeline::PhysicalPlan {
             context,
             tableResult.primaryKey.AsInt<Int>(),
             DataTypes::StringView::ViewOf(this->constraintName),
-            CoreEngine::StorageTypes::ConstraintType::PrimaryKey,
+            CoreEngine::Schemas::ConstraintType::PrimaryKey,
             false,
             &indexId,
             DataTypes::StringView::ViewOf(this->session->user->name)
@@ -471,7 +471,7 @@ namespace QueryPipeline::PhysicalPlan {
           context,
           this->table->_tableId,
           DataTypes::StringView::ViewOf(this->constraintName),
-          CoreEngine::StorageTypes::ConstraintType::IndexKey,
+          CoreEngine::Schemas::ConstraintType::IndexKey,
           false,
           &indexId,
           DataTypes::StringView::ViewOf(this->session->user->name)

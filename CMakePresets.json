@@ -7,6 +7,20 @@
   },
   "configurePresets": [
     {
+      "name": "mingw64-ucrt-debug",
+      "displayName": "MinGW64 UCRT (GCC/libstdc++) - Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-mingw64-ucrt-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_TOOLCHAIN_FILE": "C:/Users/kolampropoulos/.vcpkg-clion/vcpkg/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
+        "CMAKE_C_COMPILER": "C:/msys64/ucrt64/bingcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/msys64/ucrt64/bing++.exe",
+        "CMAKE_MAKE_PROGRAM": "C:/msys64/clang64/bin/ninja.exe"
+      }
+    },
+    {
       "name": "mingw64-debug",
       "displayName": "MinGW64 (GCC/libstdc++) - Debug",
       "generator": "Ninja",

@@ -28,6 +28,15 @@ namespace Memory {
                 return this->AllocateAligned(size, alignment);
             }
 
+            template<typename T> requires(
+                std::is_trivially_copyable_v<T>
+                && std::is_default_constructible_v<T>
+                && !std::is_pointer_v<T>
+            )
+            [[nodiscard]] T* AllocateRaw(const UnsignedInt size) const{
+                return static_cast<T*>(this->AllocateAligned(size, alignof(T)));
+            }
+
             template <typename Entity, typename... Args>
             Entity* Allocate(Args&&... args)const;
 

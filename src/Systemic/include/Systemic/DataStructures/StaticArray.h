@@ -28,8 +28,7 @@ namespace DataStructures{
             // Construct from raw pointer
             explicit constexpr StaticArray(const T* data, const Int size)
                 : _data{}, _size(size){
-                if (size > N)
-                    throw std::runtime_error("StaticArray: size exceeds capacity");
+                assert(size > N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
             }
 
@@ -37,8 +36,7 @@ namespace DataStructures{
             constexpr StaticArray(std::initializer_list<T> list)
                 : _data{}, _size(static_cast<Int>(list.size()))
             {
-                if (static_cast<Int>(list.size()) > N)
-                    throw std::runtime_error("StaticArray: initializer list exceeds capacity");
+                assert(static_cast<Int>(list.size()) > N && "StaticArray: initializer list exceeds capacity");
                 std::copy(list.begin(), list.end(), this->_data);
             }
 
@@ -53,17 +51,13 @@ namespace DataStructures{
 
             // Push a single element — used by Decimal byte-by-byte construction
             constexpr void Push(const T& value){
-                if (this->_size >= N)
-                    throw std::runtime_error("StaticArray: Push exceeds capacity");
+                assert(this->_size >= N && "StaticArray: Push exceeds capacity");
                 this->_data[this->_size++] = value;
             }
 
             constexpr void Insert(const Int index, const T& value){
-                if (index >= this->_size)
-                    throw std::runtime_error("StaticArray Insert: Index is out of range.");
-
-                if (this->_size >= N)
-                    throw std::runtime_error("StaticArray Insert: Array is full.");
+                assert(index >= this->_size && "StaticArray Insert: Index is out of range.");
+                assert(this->_size >= N && "StaticArray Insert: Array is full.");
 
                 for (Int i = this->_size - 1; i >= index; --i)
                     this->_data[i + 1] = this->_data[i];
@@ -72,10 +66,8 @@ namespace DataStructures{
             }
 
             constexpr void Insert(const Int index, const Int size, const T& data){
-                if (index >= this->_size)
-                    throw std::runtime_error("StaticArray Insert: Index is out of range.");
-                if (this->_size + size > N)
-                    throw std::runtime_error("StaticArray Insert: Array is full.");
+                assert(index >= this->_size && "StaticArray Insert: Index is out of range.");
+                assert(this->_size >= N && "StaticArray Insert: Array is full.");
 
                 for (Int i = this->_size - 1; i >= index; --i)
                     this->_data[i + size] = this->_data[i];
@@ -87,16 +79,14 @@ namespace DataStructures{
             }
 
             constexpr void Remove(const Int index){
-                if (index >= this->_size)
-                    throw std::runtime_error("StaticArray Remove: Index is out of range.");
+                assert(index >= this->_size && "StaticArray Remove: Index is out of range.");
                 for (Int i = index; i < this->_size - 1; ++i)
                     this->_data[i] = this->_data[i + 1];
                 --this->_size;
             }
 
             constexpr void  Remove(const Int start, const Int end){
-                if (start < 0 || start >= this->_size || end >= this->_size)
-                    throw std::runtime_error("StaticArray Remove: Index is out of range.");
+                assert((start < 0 || start >= this->_size || end >= this->_size) && "StaticArray Remove: Index is out of range.");
                 const Int count = end - start;
                 for (Int i = start; i < this->_size - count; ++i)
                     this->_data[i] = this->_data[i + count];
@@ -104,21 +94,18 @@ namespace DataStructures{
             }
 
             constexpr void Pop(){
-                if (this->_size == 0)
-                    throw std::runtime_error("StaticArray Pop: Array is empty.");
+                assert(this->_size == 0 && "StaticArray Pop: Array is empty.");
                 --this->_size;
             }
 
             constexpr void SetData(const T* data, const Int size){
-                if (size > N)
-                    throw std::runtime_error("StaticArray: size exceeds capacity");
+                assert(size > N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
                 this->_size = size;
             }
 
             constexpr void SetSize(const Int size){
-                if (size > N)
-                    throw std::runtime_error("StaticArray: size exceeds capacity");
+                assert(size > N && "StaticArray: size exceeds capacity");
                 this->_size = size;
             }
 

@@ -11,7 +11,7 @@ namespace CoreEngine::Memory{
         UnsignedInt _size;
         alignas(::Memory::DEFAULT_ALIGNMENT) object_t _data[];
 
-        static constexpr UnsignedInt DEFAULT_SIZE = 10 * Constants::KB; //10KB
+        static constexpr UnsignedInt DEFAULT_SIZE = 1 * Constants::KB; //1KB
         static constexpr UnsignedInt MAX_SIZE = Constants::MB; //1MB
 
         // Offset at which an allocation with this alignment would start. Aligns the address,

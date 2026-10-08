@@ -60,7 +60,7 @@ namespace DataTypes{
              * @param size The size of the string view in bytes (not including null terminator, if any).
              * The string view can contain null characters within it and is not required to be null-terminated.
         */
-       constexpr StringView(const char* data, const data_size_t size){
+       explicit constexpr StringView(const char* data, const data_size_t size){
             this->_data = data;
             this->_size = size;
         }
@@ -89,10 +89,10 @@ namespace DataTypes{
            return *this;
        }
 
-        constexpr StringView()
+        explicit constexpr StringView()
             : _data(nullptr), _size(0){}
 
-        constexpr StringView(const char* other)
+        explicit constexpr StringView(const char* other)
             : _data(other), _size(StringView::CalculateSize(other)){}
 
         constexpr StringView& operator=(const char* other){

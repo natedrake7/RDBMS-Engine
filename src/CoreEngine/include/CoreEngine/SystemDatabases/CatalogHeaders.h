@@ -11,9 +11,9 @@
 
 // Catalog rows as read from / written to the system tables
 namespace CoreEngine::Catalog{
-    using StorageTypes::ConstraintType;
+    using Schemas::ConstraintType;
 
-    // TODO: runtime index description, replaced by StorageTypes::IndexSchema
+    // TODO: runtime index description, replaced by Schemas::IndexSchema
     struct Index{
         using IndexedColumns = DataStructures::StaticArray<UnsignedTinyInt, 10>;
         IndexedColumns columns;
@@ -39,29 +39,29 @@ namespace CoreEngine::Catalog{
                 version(0), isDeleted(false),
                 deletedAt(DataTypes::DateTime::Now()){}
 
-        AuditInformation(
+        explicit AuditInformation(
             const DataTypes::DateTime& createdAt,
             const DataTypes::DateTime& lastModified,
-            DataTypes::String& lastModifiedBy,
+            const DataTypes::String& lastModifiedBy,
             const Int version,
             const bool isDeleted,
             const DataTypes::DateTime& deletedAt
         ) : createdAt(createdAt),
             lastModified(lastModified),
-            lastModifiedBy(std::move(lastModifiedBy)),
+            lastModifiedBy(lastModifiedBy),
             version(version),
             isDeleted(isDeleted),
             deletedAt(deletedAt){}
 
         // Partial constructor — for headers that only store version/isDeleted/deletedAt
-        AuditInformation(
+        explicit AuditInformation(
             const Int version,
             const bool isDeleted,
-            DataTypes::String& lastModifiedBy,
+            const DataTypes::String& lastModifiedBy,
             const DataTypes::DateTime& deletedAt
         ) : createdAt(DataTypes::DateTime::Now()),
             lastModified(DataTypes::DateTime::Now()),
-            lastModifiedBy(std::move(lastModifiedBy)),
+            lastModifiedBy(lastModifiedBy),
             version(version),
             isDeleted(isDeleted),
             deletedAt(deletedAt){}
@@ -87,12 +87,12 @@ namespace CoreEngine::Catalog{
         Int cacheBlock;
         AuditInformation additionalInfo;
 
-        IdentityColumnsHeader()
+        explicit IdentityColumnsHeader()
             :   tableId(INVALID_TABLE_ID), columnId(INVALID_COLUMN_ID),
                 seedValue(0), increment(1), lastValue(0),
                 isCached(false), cacheBlock(0){}
 
-        IdentityColumnsHeader(
+        explicit IdentityColumnsHeader(
             const Int tableId,
             const Int columnId,
             const Int seedValue,
@@ -105,7 +105,7 @@ namespace CoreEngine::Catalog{
             lastValue(lastValue), isCached(isCached),
             cacheBlock(cacheBlock){}
 
-        IdentityColumnsHeader(
+        explicit IdentityColumnsHeader(
             const Int tableId,
             const Int columnId,
             const Int seedValue,
@@ -113,11 +113,11 @@ namespace CoreEngine::Catalog{
             const BigInt lastValue,
             const bool isCached,
             const Int cacheBlock,
-            const AuditInformation& additionalInfo
+            AuditInformation  additionalInfo
         ):  tableId(tableId), columnId(columnId),
             seedValue(seedValue), increment(increment),
             lastValue(lastValue),isCached(isCached),
-            cacheBlock(cacheBlock),additionalInfo(additionalInfo){}
+            cacheBlock(cacheBlock),additionalInfo(std::move(additionalInfo)){}
     };
 
     struct IndexHeader {
@@ -129,7 +129,6 @@ namespace CoreEngine::Catalog{
         AuditInformation additionalInfo;
 
         DataStructures::PolymorphicArray<IndexColumnsHeader> columns;
-        IdentityColumnsHeader identity;
     };
 
     struct ConstraintsColumnsHeader{
@@ -345,6 +344,18 @@ namespace CoreEngine::Catalog{
             const DataTypes::String& name
         ) : id(id), databaseId(databaseId), name(name){}
 
+    };
+
+    struct TableDefinition{
+        const TableHeader* _table;
+        DataStructures::PolymorphicArray<ColumnHeader> _columns;
+        DataStructures::PolymorphicArray<IndexHeader> _indexes;
+        DataStructures::PolymorphicArray<ConstraintsHeader> _constraints;
+        DataStructures::PolymorphicArray<IdentityColumnsHeader> _identities;
+        DataStructures::PolymorphicArray<DefaultValuesHeader> _defaults;
+
+        UnsignedInt _indexesColumnsCount;
+        UnsignedInt _constraintsColumnsCount;
     };
 
     struct DatabaseHeader {

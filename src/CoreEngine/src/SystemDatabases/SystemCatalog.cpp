@@ -272,7 +272,7 @@ namespace CoreEngine {
                     baseContext,
                     tableId,
                     DataTypes::StringView::ViewOf(_columns),
-                    StorageTypes::ConstraintType::PrimaryKey,
+                    Schemas::ConstraintType::PrimaryKey,
                     false,
                     &indexId
                 );
@@ -518,7 +518,7 @@ namespace CoreEngine {
         .tableId = data[static_cast<column_index_t>(SysConstraints::TableId)].AsInt(),
         .constraintId = data[static_cast<column_index_t>(SysConstraints::ConstraintId)].AsInt(),
         .name = data[static_cast<column_index_t>(SysConstraints::Name)].AsString(allocator),
-        .type = static_cast<StorageTypes::ConstraintType>(data[static_cast<column_index_t>(SysConstraints::Type)].AsTinyInt()),
+        .type = static_cast<Schemas::ConstraintType>(data[static_cast<column_index_t>(SysConstraints::Type)].AsTinyInt()),
         .isDisabled = data[static_cast<column_index_t>(SysConstraints::IsDisabled)].AsBool(),
         .indexId = indexHeader.id,
         .index = std::move(indexHeader),
@@ -1076,7 +1076,7 @@ namespace CoreEngine {
         const ExecutionContext& executionContext,
         const Int tableId,
         const DataTypes::StringView&  constraintName,
-        const StorageTypes::ConstraintType& constraintType,
+        const Schemas::ConstraintType& constraintType,
         const bool  isDisabled,
         const Int *constraintIndexId,
         const DataTypes::StringView&  user,
@@ -1605,6 +1605,44 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             return {};
 
         return SystemCatalog::ToTableHeader(allocator, &selectedTables[0], sysTablesPtr);
+    }
+
+    Catalog::TableDefinition SystemCatalog::SelectTableDefinition(
+        const ::Memory::IAllocator* allocator,
+        const Catalog::TableHeader& tableHeader
+    ) const{
+        const auto tableId = tableHeader.id;
+        Catalog::TableDefinition definition{
+            ._table = &tableHeader
+        };
+
+        UnsignedInt indexesColumnsCount = 0, constraintsColumnsCount = 0;
+
+        definition._columns = this->SelectColumns(allocator, tableId);
+        definition._constraints = this->SelectConstraints(allocator, tableId);
+
+        for (auto& constraint : definition._constraints){
+            constraint.columns = this->SelectConstraintColumnsByConstraintId(allocator, constraint.constraintId);
+            indexesColumnsCount += constraint.columns.Size();
+        }
+
+        definition._indexes = this->SelectIndexes(allocator, tableId);
+        for (auto& index : definition._indexes){
+            index.columns = this->SelectIndexColumnsByIndexId(allocator, index.id);
+            constraintsColumnsCount += index.columns.Size();
+        }
+
+        definition._identities = this->SelectIdentityColumnsByTableId(allocator, tableId);
+        definition._defaults = DataStructures::PolymorphicArray<Catalog::DefaultValuesHeader>(allocator, definition._columns.Size());
+        for (const auto& column : definition._columns){
+            auto value = this->SelectDefaultValueByColumnId(allocator, column.id);
+            if (value.columnId != INVALID_COLUMN_ID)
+                definition._defaults.Push(std::move(value));
+        }
+
+        definition._indexesColumnsCount = indexesColumnsCount;
+        definition._constraintsColumnsCount = constraintsColumnsCount;
+        return definition;
     }
 
     DataStructures::PolymorphicArray<Catalog::ConstraintsHeader> SystemCatalog::SelectConstraints(

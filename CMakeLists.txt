@@ -154,7 +154,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/LargeObjects/LobReader.cpp
         src/CoreEngine/src/DataStorage/LargeObjects/LobWriter.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Utilities.cpp
-        src/CoreEngine/src/DataStorage/Schemas/SchemaBuilder.cpp
+        src/CoreEngine/src/DataStorage/Schemas/Schemas.cpp
 )
 
 target_include_directories(CoreEngine

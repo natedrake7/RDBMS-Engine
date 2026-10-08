@@ -173,7 +173,7 @@ namespace CoreEngine {
             const ExecutionContext& executionContext,
             Int tableId,
             const DataTypes::StringView& constraintName,
-            const StorageTypes::ConstraintType& constraintType,
+            const Schemas::ConstraintType& constraintType,
             bool isDisabled,
             const Int* constraintIndexId,
             const DataTypes::StringView& user = "system",
@@ -292,6 +292,12 @@ namespace CoreEngine {
             const DataTypes::StringView& tableName,
             const DataTypes::StringView& schema
         ) const;
+
+        [[nodiscard]] Catalog::TableDefinition SelectTableDefinition(
+            const ::Memory::IAllocator* allocator,
+            const Catalog::TableHeader& tableHeader
+        ) const;
+
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
         [[nodiscard]] Catalog::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
