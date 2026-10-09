@@ -126,6 +126,8 @@ namespace Constants{
     inline constexpr Int VERSION_DATABASE_ID = 1;
     inline constexpr Int SYSTEM_CATALOG_ID = 2;
 
+    inline constexpr Int SYSTEM_SCHEMA_ID = 1;
+
     inline constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
 
     inline constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);

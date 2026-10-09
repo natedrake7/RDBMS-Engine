@@ -8,48 +8,50 @@ namespace CoreEngine::StorageTypes {
     void IdentityManager::ReserveBlock(const ::Memory::IAllocator* allocator, const BigInt value){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        auto ceiling = this->reservedUpTo.load(std::memory_order_relaxed);
+        auto ceiling = this->_reservedUpTo.load(std::memory_order_relaxed);
         if (value < ceiling)
             return;
 
         do{
-          ceiling += this->header.cacheBlock;
+          ceiling += this->_schema->_cacheBlock;
         }while (value >= ceiling);
 
         SystemCatalog::Get().UpdateIdentityByColumnId(
             allocator,
-            this->header.tableId,
-            this->header.columnId,
+            this->_tableId,
+            this->_columnId,
             ceiling
         );
 
-        this->reservedUpTo.store(ceiling, std::memory_order_relaxed);
+        this->_reservedUpTo.store(ceiling, std::memory_order_relaxed);
     }
 
     IdentityManager::IdentityManager()
-        : reservedUpTo(0), counter(0){}
+        :   _schema(nullptr), _reservedUpTo(0),
+            _counter(0), _tableId(INVALID_TABLE_ID),
+            _columnId(INVALID_COLUMN_ID), _isBootstrapped(false){}
 
-    void IdentityManager::SetHeaderIds(const Int tableId, const Int columnId){
-        this->header.tableId = tableId;
-        this->header.columnId = columnId;
-    }
+    void IdentityManager::Bootstrap(
+        const Schemas::IdentitySchema* schema,
+        const Int tableId,
+        const Int columnId
+    ){
+        if (this->_isBootstrapped.load(std::memory_order_relaxed))
+            return;
 
-    void IdentityManager::SetHeader(const Catalog::IdentityColumnsHeader &newHeader){
-        this->header = newHeader;
-        this->reservedUpTo.store(this->header.lastValue, std::memory_order_relaxed);
-        // this->reservedUpTo.store(this->header.lastValue + this->header.cacheBlock, std::memory_order_relaxed);
-        this->counter.store(this->header.lastValue, std::memory_order_relaxed);
-    }
+        this->_schema = schema;
+        this->_tableId = tableId;
+        this->_columnId = columnId;
 
-    const Catalog::IdentityColumnsHeader& IdentityManager::GetHeader() const{
-        return this->header;
+        this->_reservedUpTo.store(this->_schema->_lastValue, std::memory_order_relaxed);
+        this->_counter.store(this->_schema->_lastValue, std::memory_order_relaxed);
     }
 
     template <DataTypes::IsInteger T>
     T IdentityManager::Generate(const ::Memory::IAllocator* allocator){
-        const auto value = this->counter.fetch_add(this->header.increment, std::memory_order_relaxed);
+        const auto value = this->_counter.fetch_add(this->_schema->_increment, std::memory_order_relaxed);
 
-        if (value >= this->reservedUpTo.load(std::memory_order_relaxed))
+        if (value >= this->_reservedUpTo.load(std::memory_order_relaxed))
             this->ReserveBlock(allocator, value);
 
         return static_cast<T>(value);
@@ -62,9 +64,9 @@ namespace CoreEngine::StorageTypes {
 
     template <DataTypes::IsInteger T>
     T IdentityManager::ReserveRange(const ::Memory::IAllocator* allocator, T range){
-        const auto value = this->counter.fetch_add(range * this->header.increment, std::memory_order_relaxed);
+        const auto value = this->_counter.fetch_add(range * this->_schema->_increment, std::memory_order_relaxed);
 
-        if (value >= this->reservedUpTo.load(std::memory_order_relaxed))
+        if (value >= this->_reservedUpTo.load(std::memory_order_relaxed))
             this->ReserveBlock(allocator, value);
 
         return static_cast<T>(value);
@@ -77,9 +79,6 @@ namespace CoreEngine::StorageTypes {
 
     template <DataTypes::IsInteger T>
     bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, T& value){
-        if (this->header.columnId == INVALID_COLUMN_ID)
-            return false;
-
         value = this->Generate<T>(allocator);
         return true;
     }
@@ -90,20 +89,15 @@ namespace CoreEngine::StorageTypes {
     template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
 
     void IdentityManager::UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const{
-        if (this->header.columnId == INVALID_COLUMN_ID)
-            return;
-
         MultiThreading::WriterGuard guard(&this->mutex);
 
         SystemCatalog::Get().UpdateIdentityByColumnId(
             allocator,
-            this->header.tableId,
-            this->header.columnId,
-            this->counter.load(std::memory_order_relaxed)
+            this->_tableId,
+            this->_columnId,
+            this->_counter.load(std::memory_order_relaxed)
         );
     }
 
-    bool IdentityManager::IsValid() const{ return this->header.columnId != INVALID_COLUMN_ID; }
-
-    Int IdentityManager::GetIncrement() const{ return this->header.increment; }
+    BigInt IdentityManager::GetIncrement() const{ return this->_schema->_increment; }
 }

@@ -98,7 +98,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/Table/Table.Indexes.cpp
         src/CoreEngine/src/DataStorage/Table/Table.LargeObjects.cpp
         src/CoreEngine/src/DataStorage/Row.cpp
-        src/CoreEngine/src/DataStorage/Column.cpp
         src/CoreEngine/src/BufferPool/FileManager.cpp
         src/CoreEngine/src/BufferPool/StorageManager.cpp
         src/CoreEngine/src/Indexing/Key.cpp
@@ -155,6 +154,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/LargeObjects/LobWriter.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Utilities.cpp
         src/CoreEngine/src/DataStorage/Schemas/Schemas.cpp
+        src/CoreEngine/src/SystemDatabases/CatalogSchema.cpp
 )
 
 target_include_directories(CoreEngine

@@ -8,20 +8,29 @@ namespace CoreEngine{
 
 namespace CoreEngine::StorageTypes{
     class IdentityManager {
-        Catalog::IdentityColumnsHeader header;
         mutable MultiThreading::Mutex mutex;
 
-        std::atomic<BigInt> reservedUpTo;
-        std::atomic<BigInt> counter;
+        const Schemas::IdentitySchema* _schema;
+
+
+        std::atomic<BigInt> _reservedUpTo;
+        std::atomic<BigInt> _counter;
+
+        Int _tableId;
+        Int _columnId;
+
+        std::atomic<bool> _isBootstrapped;
 
         void ReserveBlock(const ::Memory::IAllocator* allocator, BigInt value);
 
     public:
         IdentityManager();
 
-        void SetHeaderIds(Int tableId, Int columnId);
-        void SetHeader(const Catalog::IdentityColumnsHeader& newHeader);
-        [[nodiscard]] const Catalog::IdentityColumnsHeader& GetHeader() const;
+        void Bootstrap(
+            const Schemas::IdentitySchema* schema,
+            Int tableId,
+            Int columnId
+        );
 
         template<DataTypes::IsInteger T>
         [[nodiscard]] T Generate(const ::Memory::IAllocator* allocator);
@@ -33,8 +42,6 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, T& value);
         void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
-        [[nodiscard]] bool IsValid()const;
-
-        [[nodiscard]] Int GetIncrement() const;
+        [[nodiscard]] BigInt GetIncrement() const;
     };
 }

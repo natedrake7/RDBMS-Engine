@@ -281,6 +281,7 @@ namespace CoreEngine {
             const ::Memory::IAllocator* allocator,
             Int databaseId
         ) const;
+        [[nodiscard]] Catalog::TableHeader SelectTable(const ::Memory::IAllocator* allocator, Int databaseId, Int tableId) const;
         [[nodiscard]] Catalog::TableHeader SelectTable(
             const ::Memory::IAllocator* allocator,
             const DataTypes::StringView& dbName,

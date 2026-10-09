@@ -16,6 +16,8 @@ namespace CoreEngine::StorageTypes{
             : _extentId(INVALID_EXTENT_ID), _offset(0) {}
         AllocationCursor(const extent_id_t extentId, const UnsignedInt offset)
             : _extentId(extentId), _offset(offset) {}
+
+        ~AllocationCursor() = default;
     };
 
     struct ExtentSegment{
@@ -36,13 +38,13 @@ namespace CoreEngine::StorageTypes{
         table_id_t _tableOrdinalPos;
 
         public:
-            ExtentReservation();
-            ExtentReservation(
+            explicit ExtentReservation();
+            explicit ExtentReservation(
                 const ::Memory::IAllocator* allocator,
                 Database* db,
                 table_id_t tableOrdinalPos
             );
-            ExtentReservation(
+            explicit ExtentReservation(
                 DataStructures::PolymorphicArray<ExtentSegment>& segments,
                 Database* db,
                 table_id_t tableOrdinalPos

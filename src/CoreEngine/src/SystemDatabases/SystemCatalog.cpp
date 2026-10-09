@@ -1564,11 +1564,28 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::TableHeader SystemCatalog::SelectTable(
         const ::Memory::IAllocator* allocator,
+        const Int databaseId,
+        const Int tableId
+    ) const{
+        DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
+        auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+
+        const DataTypes::Indexing::Key key(allocator, databaseId, tableId);
+        sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, nullptr);
+
+        if (selectedTables.Empty())
+            return {};
+
+        return SystemCatalog::ToTableHeader(allocator, &selectedTables[0], sysTablesPtr);
+    }
+
+    Catalog::TableHeader SystemCatalog::SelectTable(
+        const ::Memory::IAllocator* allocator,
         const DataTypes::StringView& dbName,
         const DataTypes::StringView& tableName
     ) const{
         const auto databaseHeader = this->SelectDatabase(allocator, dbName);
-        return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME.Data());
+        return this->SelectTable(allocator, databaseHeader.id, tableName, Constants::DEFAULT_SCHEMA_NAME);
     }
 
     Catalog::TableHeader SystemCatalog::SelectTable(

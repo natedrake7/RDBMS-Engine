@@ -14,7 +14,6 @@
 
 #include <iostream>
 
-#include <CoreEngine/Managers/GlobalMemoryManager.h>
 #include <CoreEngine/Memory/Allocator.h>
 #include <CoreEngine/Memory/PersistentAllocator.h>
 #include <Systemic/Macros.h>
@@ -196,7 +195,7 @@ namespace CoreEngine{
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::String& dbName,
-        const std::vector<CoreEngine::sysTable>& tables
+        const std::vector<sysTable>& tables
     ){
         this->id = databaseId;
         DataTypes::String file,sysFile;
@@ -233,7 +232,7 @@ namespace CoreEngine{
         headerPage.SetDatabaseHeader(this->header);
 
         for (const auto* dbTable : this->_tables){
-            headerPage.SetTableHeader(dbTable->GetHeader(), dbTable->GetOrdinalPosition());
+            headerPage.SetTableHeader(dbTable->GetPhysicalHeader(), dbTable->GetOrdinalPosition());
             dbTable->Destroy();
         }
 
@@ -309,50 +308,20 @@ namespace CoreEngine{
         return static_cast<byte_t>(freeSpacePercentage * 7);
     }
 
-    StorageTypes::Table* Database::CreateTable(
-        const table_id_t tableId,
-        const Int ordinalPosition
-    ){
-        auto* table = this->_allocator.Allocate<StorageTypes::Table>(tableId, ordinalPosition, this);
-        this->_tables.Push(table);
+    StorageTypes::Table* Database::CreateTable(const Schemas::TableSchema* schema){
+        auto* table = this->AttachTable(schema, StorageTypes::TableHeader());
         this->header.numberOfTables++;
-        this->header.lastTableId = tableId;
+        this->header.lastTableId = schema->_id;
         return table;
     }
 
-    void Database::CreateTable(const Catalog::TableHeader& masterDbHeader, const StorageTypes::TableHeader &tableHeader){
-        static auto& catalog = SystemCatalog::Get();
-
-        auto* table = this->_allocator.Allocate<StorageTypes::Table>(masterDbHeader, tableHeader, this);
-
-        const Memory::Allocator allocator;
-        const auto masterDbColumns = catalog.SelectColumns(&allocator, masterDbHeader.id);
-        for (const auto & masterDbColumn : masterDbColumns) {
-            if (masterDbColumn.isSystem)
-                continue;
-
-            auto* column = this->_allocator.Allocate<StorageTypes::Column>(masterDbColumn, table);
-            table->AddColumn(column);
-        }
-
-        //TODO
-        //maybe add in a single function
-        table->RetrieveColumnHeadersFromCatalog(&allocator);
-        table->RetrieveIdentityColumnsFromCatalog(&allocator);
-        table->RetrieveIndexesFromCatalog(&allocator);
-        table->RetrieveDefaultValuesFromCatalog(&allocator);
-
-        this->_tables.Push(table);
-    }
-
-    void Database::CreateTable(
-        const CoreEngine::sysTable &sysHeader,
-        const StorageTypes::TableHeader &tableHeader,
-        const Catalog::Index& primaryKey,
-        const Int ordinalPosition
+    StorageTypes::Table* Database::AttachTable(
+        const Schemas::TableSchema* schema,
+        const StorageTypes::TableHeader& physicalHeader
     ){
-        auto* table = this->_allocator.Allocate<StorageTypes::Table>(sysHeader, tableHeader, primaryKey, this, ordinalPosition);
+        auto* table = this->_allocator.Allocate<StorageTypes::Table>(schema, physicalHeader, this);
         this->_tables.Push(table);
+        return table;
     }
 
     void Database::InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns){
@@ -407,7 +376,7 @@ namespace CoreEngine{
         if (table == nullptr)
             return;
 
-        const auto& tableHeader = table->GetHeader();
+        const auto& tableHeader = table->GetPhysicalHeader();
 
         // const auto extentId = Database::CalculateExtentId(tableHeader._allocationPageId);
 
@@ -587,34 +556,6 @@ namespace CoreEngine{
     Storage::FileKey Database::DataFileKey() const{ return this->dataFileKey; }
 
     Storage::FileKey Database::SystemFileKey() const{ return this->systemFileKey; }
-
-    void Database::GetIdentityColumns(const ::Memory::IAllocator* allocator)const{
-        for(const auto& table: this->_tables)
-            table->RetrieveIdentityColumnsFromCatalog(allocator);
-    }
-
-    void Database::UpdateIdentityManagersIds(const ::Memory::IAllocator* allocator)const{
-        for(const auto& table: this->_tables)
-            table->UpdateCatalogIdentityColumns(allocator);
-    }
-
-    void Database::GetColumnsHeaders(const ::Memory::IAllocator* allocator) const{
-        for (const auto& table : this->_tables)
-            table->RetrieveColumnHeadersFromCatalog(allocator);
-    }
-
-    void Database::GetDefaultValues(const ::Memory::IAllocator* allocator) const{
-        for (const auto& table : this->_tables)
-            table->RetrieveDefaultValuesFromCatalog(allocator);
-    }
-
-    void Database::GetIndexes(const ::Memory::IAllocator* allocator) const{
-        for (const auto& table : this->_tables)
-            table->RetrieveIndexesFromCatalog(allocator);
-    }
-
-    void Database::GetTableHeaders() const{
-    }
 
     void Database::UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const{
         for(const auto& table: this->_tables)

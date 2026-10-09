@@ -25,9 +25,12 @@ namespace CoreEngine::StorageTypes {
     ){
         auto* tree = this->GetClusteredIndexedTree();
 
+        auto* index = &this->_schema->_indexes[this->_schema->_clusteredIndexOrdinalPosition];
+        std::span keyColumns(index->_keyColumns, index->_keyCount);
+
         auto key = this->CreateKey(
             executionContext,
-            this->GetClusteredIndex(),
+            keyColumns,
             payload
         );
 
@@ -97,10 +100,6 @@ namespace CoreEngine::StorageTypes {
     Storage::FileKey Table::GetSystemFileKey() const{ return this->_db->SystemFileKey(); }
 
     Storage::FileKey Table::GetDataFileKey() const{ return this->_db->DataFileKey(); }
-
-    const Catalog::Index& Table::GetNonClusteredIndexes(const Int indexPos) const { return this->nonClusteredHeaders[indexPos]; }
-
-    const DataStructures::StaticArray<column_index_t, 10>& Table::GetClusteredIndex() const { return this->clusteredHeader.columns; }
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionContext& executionContext,
@@ -207,7 +206,7 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<RID>* selectedRows,
         const Expressions::Expression* expression
     ){
-        if (this->_header.GetAllocationPageId() == INVALID_PAGE_ID)
+        if (this->_physicalHeader.GetAllocationPageId() == INVALID_PAGE_ID)
             return;
 
         const auto* tree = this->GetClusteredIndexedTree();
@@ -319,15 +318,15 @@ namespace CoreEngine::StorageTypes {
     }
 
     Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
-        const Catalog::Index index(columnIndices.Data(), columnIndices.Size());
-        this->nonClusteredHeaders.Push(index);
-        return this->nonClusteredHeaders.Size() - 1;
+        // const Catalog::Index index(columnIndices.Data(), columnIndices.Size());
+        // this->nonClusteredHeaders.Push(index);
+        // return this->nonClusteredHeaders.Size() - 1;
     }
 
-    page_id_t Table::GetClusteredIndexPageId() const { return this->_header.GetClusteredIndexPageId(); }
+    page_id_t Table::GetClusteredIndexPageId() const { return this->_physicalHeader.GetClusteredIndexPageId(); }
 
     void Table::SetClusteredIndexPageId(const page_id_t pageId) const{
-        this->_header.SetClusteredIndexPageId(pageId);
+        this->_physicalHeader.SetClusteredIndexPageId(pageId);
     }
 
     page_id_t Table::GetNonClusteredIndexPageId(const Int indexPosition) const{
@@ -345,11 +344,11 @@ namespace CoreEngine::StorageTypes {
 
         this->_clusteredTree = this->_allocator.Allocate<Indexing::BTree>(
             this,
-            this->_header.GetClusteredIndexPageId(),
+            this->_physicalHeader.GetClusteredIndexPageId(),
             Constants::TreeType::Clustered
         );
 
-        if (this->_header.GetClusteredIndexPageId() == INVALID_PAGE_ID)
+        if (this->_physicalHeader.GetClusteredIndexPageId() == INVALID_PAGE_ID)
             return this->_clusteredTree;
 
         this->_clusteredTree->SetTreeType(Constants::TreeType::Clustered);
@@ -357,10 +356,9 @@ namespace CoreEngine::StorageTypes {
     }
 
       Indexing::BTree* Table::GetNonClusteredIndexTree(const Int nonClusteredIndexId){
-          const auto numOfIndexes = this->nonClusteredHeaders.Size();
-
-          if(this->_nonClusteredTrees.Empty())
-              this->_nonClusteredTrees.Resize(numOfIndexes);
+          //
+          // if(this->_nonClusteredTrees.Empty())
+          //     this->_nonClusteredTrees.Resize(numOfIndexes);
 
           // if (this->header.nonClusteredIndexPageIds.Size() < numOfIndexes)
           //     this->header.nonClusteredIndexPageIds.Resize(numOfIndexes);
@@ -386,43 +384,29 @@ namespace CoreEngine::StorageTypes {
           return nonClusteredTree;
       }
 
-    bool Table::HasNonClusteredIndexes() const { return !this->nonClusteredHeaders.Empty(); }
-
     DataTypes::Indexing::Key Table::CreateKey(
         const ExecutionContext& executionContext,
-        const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
+        const std::span<const Schemas::IndexKeyColumn>& columnKeys,
         const SerializedRow& payload
     ) const{
         DataStructures::PolymorphicArray<Value> values(executionContext.GetAllocator());
-        for (const auto columnId : indexedColumns){
-            auto value = payload.MaterializeColumn(
+        for (const auto [ordinal, sort] : columnKeys){
+            const auto value = payload.MaterializeColumn(
                 executionContext,
-                this->_columns[columnId]
+                this->Column(ordinal)
             );
-            values.Push(std::move(value));
+            values.Push(value);
         }
 
         return DataTypes::Indexing::Key(executionContext.GetAllocator(), values);
     }
 
     key_size_t Table::CalculateIndexKeySize(const Int indexPos) const {
-        if (indexPos != -1)
-            return this->CalculateNonClusteredIndexKeySize(indexPos);
-
         key_size_t keySize = 0;
-        for(const auto columnOrdinalPos : this->clusteredHeader.columns){
-            const auto* column = this->_columns[columnOrdinalPos];
-            keySize += column->Size();
-        }
-
-        return keySize;
-    }
-
-    key_size_t Table::CalculateNonClusteredIndexKeySize(const Int indexPos) const{
-        key_size_t keySize = 0;
-        for(const auto columnOrdinalPos : this->nonClusteredHeaders[indexPos].columns){
-            const auto* column = this->_columns[columnOrdinalPos];
-            keySize += column->Size();
+        const auto* index = &this->_schema->_indexes[indexPos];
+        for (Int i = 0;i < index->_keyCount; i++){
+            const auto ordinal = index->_keyColumns[i]._ordinalPosition;
+            keySize += this->_schema->_columns[ordinal]._recordSize;
         }
 
         return keySize;

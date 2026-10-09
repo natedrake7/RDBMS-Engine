@@ -60,39 +60,22 @@ namespace DataTypes{
              * @param size The size of the string view in bytes (not including null terminator, if any).
              * The string view can contain null characters within it and is not required to be null-terminated.
         */
-       explicit constexpr StringView(const char* data, const data_size_t size){
+        constexpr StringView(const char* data, const data_size_t size){
             this->_data = data;
             this->_size = size;
         }
 
-        constexpr StringView(const StringView& other)noexcept{
-            this->_data = other._data;
-            this->_size = other._size;
-        }
+        constexpr StringView(const StringView&)noexcept = default;
+        constexpr StringView& operator=(const StringView&) = default;
 
-        constexpr StringView(StringView&& other) noexcept
-            : _data(other._data), _size(other._size){
-            other._data = nullptr;
-            other._size = 0;
-        }
+        constexpr StringView(StringView&&) noexcept = default;
+        constexpr StringView& operator=(StringView&&) noexcept = default;
 
-        constexpr StringView& operator=(StringView&& other) noexcept{
-            if (this == &other)
-                return *this;
 
-           this->_data = other._data;
-           this->_size = other._size;
-
-           other._data = nullptr;
-           other._size = 0;
-
-           return *this;
-       }
-
-        explicit constexpr StringView()
+        constexpr StringView()
             : _data(nullptr), _size(0){}
 
-        explicit constexpr StringView(const char* other)
+        constexpr StringView(const char* other)
             : _data(other), _size(StringView::CalculateSize(other)){}
 
         constexpr StringView& operator=(const char* other){
@@ -103,7 +86,6 @@ namespace DataTypes{
 
         explicit StringView(const std::string& other);
 
-        constexpr StringView& operator=(const StringView& other)= default;
         constexpr ~StringView() = default;
 
         [[nodiscard]] constexpr const char* Data() const noexcept{ return this->_data; }

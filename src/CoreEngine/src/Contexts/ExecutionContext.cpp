@@ -11,7 +11,8 @@ namespace CoreEngine{
     )   :   _snapshot(std::move(snapshot)),
             _allocator(initialAllocatorSize),
             _variables(variables),
-            _batchSize(batchSize){}
+            _batchSize(batchSize){
+    }
 
     ExecutionContext::ExecutionContext()
     : _variables(nullptr), _batchSize(0){}

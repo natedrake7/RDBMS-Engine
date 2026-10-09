@@ -27,6 +27,11 @@ namespace CoreEngine::StorageTypes {
 } // namespace DatabaseEngine::StorageTypes
 
 namespace CoreEngine {
+    namespace Schemas
+    {
+        class TableSchema;
+    }
+
     class ExecutionContext;
     struct ScanState;
     struct sysTable;
@@ -134,21 +139,13 @@ public:
     static page_id_t CalculateNextGamPageId(page_id_t currentGamPageId);
     static byte_t GetObjectSizeToCategory(const row_size_t &size);
 
-    StorageTypes::Table* CreateTable(
-        table_id_t tableId,
-        Int ordinalPosition
-    );
+    [[nodiscard]]
+    StorageTypes::Table* CreateTable(const Schemas::TableSchema* schema);
 
-    void CreateTable(
-        const Catalog::TableHeader& masterDbHeader,
-        const StorageTypes::TableHeader &tableHeader
-    );
-
-    void CreateTable(
-        const CoreEngine::sysTable& sysHeader,
-        const StorageTypes::TableHeader &tableHeader,
-        const Catalog::Index& primaryKey,
-        Int ordinalPosition
+    [[nodiscard]]
+    StorageTypes::Table* AttachTable(
+        const Schemas::TableSchema* schema,
+        const StorageTypes::TableHeader& physicalHeader
     );
 
     static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
@@ -189,18 +186,6 @@ public:
     static page_id_t CalculateGamPageId(const extent_id_t &extentId);
 
     static extent_id_t CalculateExtentId(page_id_t pageId);
-
-    void GetIdentityColumns(const ::Memory::IAllocator* allocator)const;
-
-    void UpdateIdentityManagersIds(const ::Memory::IAllocator* allocator)const;
-
-    void GetColumnsHeaders(const ::Memory::IAllocator* allocator)const;
-
-    void GetDefaultValues(const ::Memory::IAllocator* allocator)const;
-
-    void GetIndexes(const ::Memory::IAllocator* allocator) const;
-
-    void GetTableHeaders()const;
 
     void UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const;
 

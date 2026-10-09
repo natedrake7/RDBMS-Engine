@@ -1,8 +1,8 @@
 ﻿#include <CoreEngine/DataStorage/Schema/Schemas.h>
-#include <CoreEngine/SystemDatabases/SystemCatalog.h>
 
-#include "QueryPipeline/Parsing/Token.h"
-#include "Systemic/Functions/StringFunctions.h"
+#include <CoreEngine/SystemDatabases/CatalogHeaders.h>
+#include <Systemic/DataStructures/PolymorphicArray.h>
+#include <Systemic/Functions/StringFunctions.h>
 
 namespace CoreEngine::Schemas{
     namespace{
@@ -18,7 +18,7 @@ namespace CoreEngine::Schemas{
             if (size == 0)
                 return nullptr;
 
-            return static_cast<T*>(allocator->AllocateRaw(size, alignof(T)));
+            return allocator->AllocateRaw<T>(size * sizeof(T));
         }
 
         template<bool LowerCase>
@@ -41,13 +41,45 @@ namespace CoreEngine::Schemas{
             return DataTypes::StringView(destination, size);
         }
 
-        struct ColumnOrdinals{
+        class ColumnOrdinals{
             struct Entry{
                 Int _id;
                 column_index_t _ordinalPosition;
             };
 
-            DataStructures::StaticArray<Entry, std::numeric_limits<column_index_t>::max() + 1> _entries;
+            static constexpr column_number_t ENTRIES_SIZE = std::numeric_limits<column_index_t>::max() + 1;
+
+            DataStructures::StaticArray<Entry, ENTRIES_SIZE> _entries;
+
+        public:
+            static constexpr column_number_t NOT_FOUND = ENTRIES_SIZE;
+
+            explicit ColumnOrdinals(const DataStructures::PolymorphicArray<Catalog::ColumnHeader>& headers){
+                for (const auto& header : headers){
+                    this->_entries.Push(Entry{
+                        ._id = header.id,
+                        ._ordinalPosition = static_cast<column_index_t>(header.ordinalPosition)
+                    });
+                }
+
+                const auto sortFunction = [](const Entry& lhs, const Entry& rhs){
+                    return lhs._id < rhs._id;
+                };
+
+                if (!std::ranges::is_sorted(this->_entries.begin(), this->_entries.end(), sortFunction))
+                    std::ranges::sort(this->_entries.begin(), this->_entries.end(), sortFunction);
+            }
+
+            [[nodiscard]] column_index_t GetOrdinal(const Int columnId){
+                const auto it = std::lower_bound(this->_entries.begin(), this->_entries.end(), columnId, [](const Entry& lhs, const Int id){
+                    return lhs._id < id;
+                });
+
+                return it == this->_entries.end()
+                    ? NOT_FOUND
+                    : it->_ordinalPosition;
+            }
+
         };
     }
 
@@ -66,15 +98,17 @@ namespace CoreEngine::Schemas{
     }
     TableSchema* TableSchema::Build(
         const Catalog::TableDefinition& tableDefinition,
-        schema_version_t version
+        const schema_version_t version
     ){
         const auto* __restrict__ tableHeader = tableDefinition._table;
+
+        ColumnOrdinals columnOrdinals(tableDefinition._columns);
 
         const UnsignedInt indexesByteCount = [&]{
             //later add coveredColumns and filter size as well if they exist
             return
                 RegionBytes<IndexSchema>(tableDefinition._indexes.Size())
-                + RegionBytes<IndexKeyColumn>(tableDefinition._indexesColumnsCount);
+                + RegionBytes<IndexKeyColumn>(tableDefinition._indexesColumnsCount)
                 + RegionBytes<DataType>(tableDefinition._indexesColumnsCount);
         }();
 
@@ -93,6 +127,7 @@ namespace CoreEngine::Schemas{
             + indexesByteCount;
 
         //count strings bytes
+        arenaSize += tableHeader->name.Size();
         for (const auto& column : tableDefinition._columns)
             arenaSize += 2 * column.name.Size();
         for (const auto& defaultValue : tableDefinition._defaults)
@@ -113,7 +148,8 @@ namespace CoreEngine::Schemas{
                ._seedValue = header.seedValue,
                ._increment = header.increment,
                ._lastValue = header.lastValue,
-               ._ordinalPosition = i
+                ._cacheBlock = header.cacheBlock,
+               ._slot = i
             });
         }
 
@@ -122,6 +158,7 @@ namespace CoreEngine::Schemas{
         auto* defaults = AllocateArray<ExpressionSchema>(allocator, tableDefinition._defaults.Size());
         auto* indexes = AllocateArray<IndexSchema>(allocator, tableDefinition._indexes.Size());
         auto* indexesColumns = AllocateArray<IndexKeyColumn>(allocator, tableDefinition._indexesColumnsCount);
+        auto* indexesTypes = AllocateArray<DataType>(allocator, tableDefinition._indexesColumnsCount);
 
         auto* constraints = AllocateArray<ConstraintSchema>(allocator, tableDefinition._constraints.Size());
         auto* constraintsColumns = AllocateArray<column_index_t>(allocator, tableDefinition._constraintsColumnsCount);
@@ -180,42 +217,110 @@ namespace CoreEngine::Schemas{
         });
 
         std::size_t nextIndexColumn = 0;
-        for (column_number_t i = 0;i < static_cast<column_number_t>(tableDefinition._indexes.Size()); i++){
+        std::size_t nextDataTypeIndex = 0;
+        Int clusteredIndexOrdinal = NONE;
+        for (Int i = 0;i < tableDefinition._indexes.Size(); i++){
             const auto& header = tableDefinition._indexes[i];
 
-            for (const auto& column: header.columns){
-                auto* indexColumn = std::construct_at(&indexesColumns[nextIndexColumn++], IndexKeyColumn{
-                    ._ordinalPosition = column.,
+            auto* index = std::construct_at(&indexes[i]);
+            index->_name = CopyString<false>(allocator, header.name);
+            index->_id = header.id;
+            index->_keyCount = header.columns.Size();
+            index->_includedCount = 0;
+            index->_treeOrdinalPosition = NONE;
+            index->_isClustered = header.isClustered;
+            index->_isUnique = header.isClustered;
+            index->_isDisabled = header.isDisabled;
+
+            if (index->_isClustered)
+                clusteredIndexOrdinal = i;
+
+            for (Int j = 0; j < header.columns.Size(); j++){
+                const auto& column = header.columns[j];
+                const auto ordinalPosition = columnOrdinals.GetOrdinal(column.columnId);
+
+                assert(
+                    column.ordinalPosition == j
+                    && "TableSchema::Build: Index Columns must be ordered"
+                );
+                assert(
+                    ordinalPosition != ColumnOrdinals::NOT_FOUND
+                    && "TableSchema::Build: Column Id given in index columns build is out of bounds"
+                );
+
+                index->_coveredColumnsMask.Set(ordinalPosition);
+                const auto* indexColumn = std::construct_at(&indexesColumns[nextIndexColumn++], IndexKeyColumn{
+                    ._ordinalPosition = ordinalPosition,
                     ._isDescending = false
                 });
-            }
 
-            std::construct_at(&indexes[i], IndexSchema{
-               ._name = CopyString<false>(allocator, header.name),
-               ._keyColumns = ,
-               ._keyTypes = ,
-               ._includedColumns = nullptr,
-               ._filter = nullptr,
-               ._coveredColumnsMask = ,
-               ._id = header.id,
-               ._keyCount = header.columns.Size(),
-               ._includedCount = 0,
-               ._treeOrdinalPosition = NONE,
-               ._isClustered = header.isClustered,
-               ._isUnique = header.isClustered,
-               ._isDisabled = header.isDisabled
-            });
+                auto* dataType = &indexesTypes[nextDataTypeIndex++];
+                *dataType = columns[ordinalPosition]._type;
+
+                if (j == 0){
+                    index->_keyColumns = indexColumn;
+                    index->_keyTypes = dataType;
+                }
+            }
         }
 
+        const auto findIndexById = [&](const Int indexId){
+            if (indexId == INVALID_INDEX_ID)
+                return INVALID_INDEX_ID;
+
+            for (Int i = 0;i < schema->_indexesCount; i++){
+                if (indexes[i]._id == indexId)
+                    return i;
+            }
+
+            std::unreachable();
+        };
+
+        std::size_t nextConstraintColumn = 0;
+        Int primaryKeyOrdinal = NONE;
+        for (Int i = 0;i < tableDefinition._constraints.Size(); i++){
+            const auto& header = tableDefinition._constraints[i];
+            auto* constraint = std::construct_at(&constraints[i]);
+            constraint->_id = header.constraintId;
+            constraint->_name = CopyString<false>(allocator, header.name);
+            constraint->_type = header.type;
+            constraint->_indexOrdinalPosition = findIndexById(header.indexId);
+            constraint->_checkPredicate = nullptr;
+            constraint->_keyCount = static_cast<UnsignedTinyInt>(header.columns.Size());
+
+            if (constraint->_type == ConstraintType::PrimaryKey)
+                primaryKeyOrdinal = i;
+
+            for (Int j = 0;j < header.columns.Size(); j++){
+                const auto& column = header.columns[j];
+                auto* constraintColumn = &constraintsColumns[nextConstraintColumn++];
+                 *constraintColumn = columnOrdinals.GetOrdinal(column.columnId);
+
+                if (j == 0)
+                    constraint->_keyColumns = constraintColumn;
+            }
+        }
+
+        schema->_id = tableHeader->id;
+        schema->_schemaId = tableHeader->schemaId;
+        schema->_ordinalPosition = static_cast<UnsignedSmallInt>(tableHeader->ordinalPosition);
+        schema->_version = version;
+        schema->_name = CopyString<false>(allocator, tableHeader->name);
 
         schema->_columns = columns;
         schema->_columnsByLowerName = lowerNames;
         schema->_constraints = constraints;
-        schema->_identityCount = tableDefinition._identities.Size();
-        schema->_name = CopyString<false>(allocator, tableHeader->name);
-        schema->_id = tableHeader->id;
-        schema->_schemaId = tableHeader->schemaId;
-        schema->_version = version;
+        schema->_indexes = indexes;
+        schema->_identities = identities;
+        schema->_storedComputedOrder = nullptr;
+
+        schema->_primaryKeyOrdinalPosition = static_cast<UnsignedTinyInt>(primaryKeyOrdinal);
+        schema->_clusteredIndexOrdinalPosition = static_cast<UnsignedTinyInt>(clusteredIndexOrdinal);
+        schema->_checkConstraintsCount = tableDefinition._constraints.Size();
+        schema->_columnCount = tableDefinition._columns.Size();
+        schema->_indexesCount = tableDefinition._indexes.Size();
+        schema->_identitiesCount = tableDefinition._identities.Size();
+        schema->_storedComputedOrderCount = 0;
 
         return schema.release();
     }

@@ -19,6 +19,7 @@ namespace Pages{
 }
 
 namespace CoreEngine::StorageTypes{
+    class IdentityManager;
     struct ChunkInsertState;
     struct InsertPlan;
     struct RowSerializationContext;
@@ -51,16 +52,16 @@ namespace ByteMaps{
 
 namespace CoreEngine::StorageTypes{
     struct TableHeader{
-        private:
             DataStructures::StaticArray<page_id_t, 10> nonClusteredIndexPageIds;
             mutable page_id_t _allocationPageId;
             mutable page_id_t _clusteredIndexPageId;
 
             mutable AllocationCursor _allocationCursor;
 
-        public:
-            TableHeader();
-            TableHeader &operator=(const TableHeader &other);
+            TableHeader()
+                :   _allocationPageId(INVALID_PAGE_ID),
+                    _clusteredIndexPageId(INVALID_PAGE_ID){}
+            ~TableHeader() = default;
 
             page_id_t GetAllocationPageId() const;
             void SetAllocationPageId(page_id_t allocationPageId) const;
@@ -68,70 +69,87 @@ namespace CoreEngine::StorageTypes{
             page_id_t GetClusteredIndexPageId() const;
             void SetClusteredIndexPageId(page_id_t indexPageId) const;
     };
+    static_assert(std::is_trivially_copyable_v<TableHeader>);
 
     class Table final{
-        HashSet<column_id_t> clusteredIndexColumnsCache;
-        TableHeader _header;
+        TableHeader _physicalHeader;
+
+        const Schemas::TableSchema* _schema;
+
+        DataStructures::PolymorphicArray<IdentityManager> _identities;
         DataStructures::PolymorphicArray<Indexing::BTree*> _nonClusteredTrees;
-        DataStructures::PolymorphicArray<Column*> _columns;
 
         Memory::PersistentAllocator _allocator;
-
-        Catalog::Index clusteredHeader;
-        DataStructures::PolymorphicArray<Catalog::Index> nonClusteredHeaders;
 
         Database* _db;
         Indexing::BTree* _clusteredTree;
 
-        SmallInt _ordinalPosition;
-        Int _id;
-
-        protected:
-            static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
+        static bool VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, column_index_t index, int& indexPosition);
 
         /**
         * @name Index and Pages protected Functions
         * Functions to manage indexes and pages.
         * @{
         */
-            void PopulateClusteredIndexCache(const Catalog::Index& index);
-            bool IsColumnAutoComputedPrimaryKey(const Column* column) const;
+        [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
 
-            [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
-
-            [[nodiscard]]
-            page_id_t InsertLargeObject(
-                const ::Memory::IAllocator* allocator,
-                const Value& value
-            )const;
-            page_id_t StoreLargeObject(
-                ExtentReservation& reservation,
-                const Value& value
-            )const;
+        [[nodiscard]]
+        page_id_t InsertLargeObject(
+            const ::Memory::IAllocator* allocator,
+            const Value& value
+        )const;
+        page_id_t StoreLargeObject(
+            ExtentReservation& reservation,
+            const Value& value
+        )const;
 
         /** @} End of: Class Constructors and Destructors*/
 
-            void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int indexPos, Int pagesToAllocate);
-            void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
-            void RemoveColumnByClusteredIndex(column_index_t index);
-            void RemoveColumnByHeap(column_index_t index)const;
-            [[nodiscard]]
-            static RID InsertToVersionDatabase(
-                const ::Memory::IAllocator* allocator,
-                const Pages::RawRowReference& rowRef
-            );
+        void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int indexPos, Int pagesToAllocate);
+        void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
+        void RemoveColumnByClusteredIndex(column_index_t index);
+        void RemoveColumnByHeap(column_index_t index)const;
+        [[nodiscard]]
+        static RID InsertToVersionDatabase(
+            const ::Memory::IAllocator* allocator,
+            const Pages::RawRowReference& rowRef
+        );
 
-            /**
-            * @name Row Insert Functions
-            * @{
-            */
-            void PrepareChunkSources(
-                const ExecutionContext& context,
-                const InsertPlan& plan,
-                const ChunkInsertState& state
-            )const;
+        /**
+        * @name Row Insert Functions
+        * @{
+        */
+        void PrepareChunkSources(
+            const ExecutionContext& context,
+            const InsertPlan& plan,
+            const ChunkInsertState& state
+        );
 
-            /** @} End of: Row Insert Functions*/
+        /** @} End of: Row Insert Functions*/
+
+        [[nodiscard]] IdentityManager* IdentityOf(const column_index_t ordinal){
+            const auto* identity = this->Column(ordinal)->_identity;
+            assert(identity != nullptr && "Table: column has no identity");
+            return &this->_identities[identity->_slot];
+        }
+
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] T GenerateIdentityValue(const ::Memory::IAllocator* allocator, const column_index_t ordinal){
+            auto* manager = this->IdentityOf(ordinal);
+            return manager->Generate<T>(allocator);
+        }
+
+        template<DataTypes::IsInteger T>
+        [[nodiscard]] T ReserveIdentityRange(
+            const ::Memory::IAllocator* allocator,
+            const column_index_t ordinal,
+            T rowCount
+        ){
+            auto* manager = this->IdentityOf(ordinal);
+            return manager->ReserveRange<T>(allocator, rowCount);
+        }
+
+        [[nodiscard]] Value GenerateIdentityValue(const ::Memory::IAllocator* allocator, column_index_t ordinal);
 
         public:
             template<typename ValueProvider>
@@ -160,18 +178,37 @@ namespace CoreEngine::StorageTypes{
         * Functions to create and destroy Table objects.
         * @{
         */
-            Table(table_id_t tableId, SmallInt ordinalPosition, Database *db);
-            Table(const Catalog::TableHeader& masterDbHeader, const TableHeader &tableHeader, Database *database);
             Table(
-                const CoreEngine::sysTable& systemHeader,
-                const TableHeader &tableHeader,
-                const Catalog::Index& primaryKey,
-                Database *database,
-                SmallInt ordinalPosition
+                const Schemas::TableSchema* schema,
+                const TableHeader& physicalHeader,
+                Database *database
             );
             void Destroy()const;
 
         /** @} End of: Class Constructors and Destructors*/
+
+        /**
+        * @name Schema Functions
+        * Functions for schema Lookups and Updates.
+        * @{
+        */
+
+        [[nodiscard]] const Schemas::TableSchema* Schema()const { return this->_schema; }
+        [[nodiscard]] const Schemas::ColumnSchema* Column(const column_index_t ordinal) const{
+            return &this->_schema->_columns[ordinal];
+        }
+        [[nodiscard]] std::span<const Schemas::ColumnSchema> Columns() const{
+            return {this->_schema->_columns, this->_schema->_columnCount};
+        }
+        [[nodiscard]] column_number_t ColumnCount()const{
+            return this->_schema->_columnCount;
+        }
+        [[nodiscard]] bool HasIdentity(const column_index_t ordinal)const{
+            return this->_schema->_columns[ordinal]._identity != nullptr;
+        }
+
+        void PersistIdentities()const;
+        /** @} End of: Schema Functions*/
 
         /**
         * @name Insert Functions
@@ -226,17 +263,28 @@ namespace CoreEngine::StorageTypes{
         */
             [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
             [[nodiscard]] Storage::FileKey GetDataFileKey() const;
-            [[nodiscard]] column_number_t GetNumberOfColumns() const;
-            [[nodiscard]] const TableHeader &GetHeader() const;
-            [[nodiscard]] const DataStructures::PolymorphicArray<Column*>& GetColumns() const;
-            [[nodiscard]] const Column* GetColumn(column_index_t index) const;
-            void GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const;
-            [[nodiscard]] const Catalog::Index& GetNonClusteredIndexes(Int indexPos) const;
-            [[nodiscard]] const DataStructures::StaticArray<column_index_t, 10>& GetClusteredIndex() const;
-            [[nodiscard]] DataStructures::StaticArray<DataType, 10> GetColumnTypeByTreeId(UnsignedTinyInt treeId) const;
-            [[nodiscard]] table_id_t GetTableId() const;
-            [[nodiscard]] Constants::TableType GetType() const;
-            [[nodiscard]] bool IsClustered()const;
+            [[nodiscard]] const TableHeader& GetPhysicalHeader() const { return this->_physicalHeader; }
+            [[nodiscard]] bool IsClustered()const{
+                return this->_schema->_clusteredIndexOrdinalPosition != Schemas::TableSchema::NONE;
+            }
+            [[nodiscard]] const Schemas::IndexSchema* GetNonClusteredIndexes(const Int indexPos) const{
+                return &this->_schema->_indexes[this->IsClustered() + indexPos];
+            }
+            [[nodiscard]] const Schemas::IndexSchema* GetClusteredIndex() const{
+                return &this->_schema->_indexes[this->_schema->_clusteredIndexOrdinalPosition];
+            }
+            [[nodiscard]] table_id_t GetTableId() const{
+                return this->_schema->_id;
+            }
+            [[nodiscard]] Constants::TableType GetType() const{
+                return this->IsClustered()
+                   ? Constants::TableType::CLUSTERED
+                   : Constants::TableType::HEAP;
+            }
+            [[nodiscard]] UnsignedSmallInt GetOrdinalPosition() const{
+                return this->_schema->_ordinalPosition;
+            }
+
 
         /** @} End of: Metadata Accessor Functions*/
 
@@ -463,11 +511,13 @@ namespace CoreEngine::StorageTypes{
 
             Indexing::BTree* GetClusteredIndexedTree();
             Indexing::BTree* GetNonClusteredIndexTree(Int nonClusteredIndexId);
-            [[nodiscard]] bool HasNonClusteredIndexes() const;
+            [[nodiscard]] bool HasNonClusteredIndexes() const{
+                return this->_schema->_indexesCount > this->IsClustered();
+            }
 
             DataTypes::Indexing::Key CreateKey(
                 const ExecutionContext& executionContext,
-                const DataStructures::StaticArray<column_index_t, 10>& indexedColumns,
+                const std::span<const Schemas::IndexKeyColumn>& columnKeys,
                 const SerializedRow& payload
             ) const;
 
@@ -486,13 +536,9 @@ namespace CoreEngine::StorageTypes{
             void Truncate();
 
             [[nodiscard]] key_size_t CalculateIndexKeySize(Int indexPos = -1) const;
-            [[nodiscard]] key_size_t CalculateNonClusteredIndexKeySize(Int indexPos) const;
             [[nodiscard]] Database* GetDatabase() const;
 
-            [[nodiscard]] SmallInt GetOrdinalPosition() const;
-
             int HandleRowOverflow(RID* rowPtr) const;
-            int HandleRowOverflow(RID* rowPtr, const Column* column)const;
 
             [[nodiscard]] bool IsEmpty()const;
 
@@ -506,25 +552,7 @@ namespace CoreEngine::StorageTypes{
         * Functions that alter the structure of the table.
         * @{
         */
-            void AddColumn(Column *column);
-            Column* AddColumn(
-                const DataTypes::StringView& columnName,
-                DataType type,
-                row_size_t recordSize,
-                column_index_t index,
-                bool allowNulls
-            );
-            void HandleAddColumn(
-                const ExecutionContext& executionContext,
-                const Pages::PageView* page,
-                const RID* rowPtr,
-                column_index_t index,
-                const Value& defaultValue
-            ) const;
-            void UpdateColumnName(column_index_t index, const DataTypes::String& name)const;
-            void RemoveColumn(const ExecutionContext& context, column_index_t index);
-            static void HandleRemoveColumn(Pages::PageView* page, MaterializedRow& row, column_index_t index);
-            void HandleRemoveColumn(column_index_t index);
+            void ReplaceSchema(const Schemas::TableSchema* newSchema);
 
         /** @} End of System Catalog Integration Functions */
 
@@ -534,12 +562,7 @@ namespace CoreEngine::StorageTypes{
         * @{
         */
             void UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const;
-            void RetrieveDefaultValuesFromCatalog(const ::Memory::IAllocator* allocator)const;
-            void RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const;
             void UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator)const;
-            void RetrieveIdentityColumnsFromCatalog(const ::Memory::IAllocator* allocator)const;
-            void RetrieveIdentityColumnById(const ::Memory::IAllocator* allocator, Int columnId)const;
-            void RetrieveIndexesFromCatalog(const ::Memory::IAllocator* allocator);
 
         /** @} End of System Catalog Integration Functions */
 

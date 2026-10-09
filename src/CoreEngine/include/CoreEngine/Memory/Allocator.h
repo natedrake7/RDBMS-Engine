@@ -15,6 +15,7 @@ namespace CoreEngine::Memory{
 
         public:
             explicit Allocator();
+            explicit Allocator(UnsignedInt capacity);
 
             Allocator(Allocator&& other) noexcept;
             Allocator& operator=(Allocator&& other) noexcept;

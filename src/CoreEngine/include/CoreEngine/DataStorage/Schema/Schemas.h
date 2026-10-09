@@ -4,17 +4,18 @@
 #include <CoreEngine/Memory/PersistentAllocator.h>
 #include <Systemic/DataTypes/PackedWord.h>
 
-#include <CoreEngine/SystemDatabases/CatalogHeaders.h>
-
 #include <limits>
 #include <type_traits>
 #include <Systemic/Reflection/Enum.h>
+
+#include "Systemic/Constants.h"
 
 namespace Expressions{
     class Expression;
 }
 
 namespace CoreEngine::Catalog{
+    struct TableDefinition;
     struct TableHeader;
     struct DefaultValuesHeader;
 }
@@ -72,8 +73,9 @@ namespace CoreEngine::Schemas{
         BigInt _seedValue;
         BigInt _increment;
         BigInt _lastValue;
+        Int _cacheBlock;
 
-        UnsignedTinyInt _ordinalPosition;
+        UnsignedTinyInt _slot;
     };
     static_assert(std::is_trivially_destructible_v<IdentitySchema>);
 
@@ -169,7 +171,7 @@ namespace CoreEngine::Schemas{
 
         DataTypes::StringView _name;
         Int _id;
-        ConstraintType _constraintType;
+        ConstraintType _type;
         UnsignedTinyInt _indexOrdinalPosition;
 
         const column_index_t* _keyColumns;
@@ -178,7 +180,7 @@ namespace CoreEngine::Schemas{
         const Expressions::Expression* _checkPredicate;
 
         ConstraintSchema()
-            :   _id(0), _constraintType(),
+            :   _id(0), _type(),
                 _indexOrdinalPosition(NO_INDEX), _keyColumns(nullptr),
                 _keyCount(0), _checkPredicate(nullptr){}
     };
@@ -193,6 +195,8 @@ namespace CoreEngine::Schemas{
         const ColumnSchema* _columns;
         const LowerNameEntry* _columnsByLowerName;
 
+        const IdentitySchema* _identities;
+
         const IndexSchema* _indexes;
         const ConstraintSchema* _constraints;
         const column_index_t* _storedComputedOrder;
@@ -202,6 +206,7 @@ namespace CoreEngine::Schemas{
 
         Int _id;
         Int _schemaId;
+        UnsignedSmallInt _ordinalPosition;
         schema_version_t _version;
         column_number_t _columnCount;
 
@@ -209,35 +214,38 @@ namespace CoreEngine::Schemas{
         UnsignedTinyInt _constraintsCount;
         UnsignedTinyInt _storedComputedOrderCount;
         UnsignedTinyInt _checkConstraintsCount;
-        UnsignedTinyInt _identityCount;
+        UnsignedTinyInt _identitiesCount;
 
         UnsignedTinyInt _clusteredIndexOrdinalPosition;
         UnsignedTinyInt _primaryKeyOrdinalPosition;
 
         TableSchema()
-            : _columns(nullptr), _columnsByLowerName(nullptr),
+            : _columns(nullptr), _columnsByLowerName(nullptr), _identities(nullptr),
               _indexes(nullptr), _constraints(nullptr),
               _storedComputedOrder(nullptr), _checkConstraints(nullptr), _id(0), _schemaId(INVALID_SCHEMA_ID),
+              _ordinalPosition(0),
               _version(0), _columnCount(0),
               _indexesCount(0), _constraintsCount(0),
-              _storedComputedOrderCount(0), _checkConstraintsCount(0), _identityCount(0),
+              _storedComputedOrderCount(0), _checkConstraintsCount(0), _identitiesCount(0),
               _clusteredIndexOrdinalPosition(NONE), _primaryKeyOrdinalPosition(NONE)
         {}
 
         explicit TableSchema(const UnsignedInt size)
-            : _allocator(size), _columns(nullptr), _columnsByLowerName(nullptr),
+            : _allocator(size), _columns(nullptr), _columnsByLowerName(nullptr), _identities(nullptr),
               _indexes(nullptr), _constraints(nullptr),
               _storedComputedOrder(nullptr), _checkConstraints(nullptr), _id(0), _schemaId(INVALID_SCHEMA_ID),
+              _ordinalPosition(0),
               _version(0), _columnCount(0),
               _indexesCount(0), _constraintsCount(0),
-              _storedComputedOrderCount(0), _checkConstraintsCount(0), _identityCount(0),
-              _clusteredIndexOrdinalPosition(NONE), _primaryKeyOrdinalPosition(NONE){}
+              _storedComputedOrderCount(0), _checkConstraintsCount(0), _identitiesCount(0),
+              _clusteredIndexOrdinalPosition(NONE), _primaryKeyOrdinalPosition(NONE)
+        {}
 
         TableSchema(const TableSchema&) = delete;
         TableSchema& operator=(const TableSchema&) = delete;
 
-        TableSchema(TableSchema&&) = default;
-        TableSchema& operator=(TableSchema&&) = default;
+        TableSchema(TableSchema&&) = delete;
+        TableSchema& operator=(TableSchema&&) = delete;
 
         ~TableSchema(){
             this->_allocator.Release();

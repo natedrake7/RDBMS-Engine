@@ -75,10 +75,10 @@ namespace CoreEngine::StorageTypes{
 
     Value SerializedRow::MaterializeColumn(
         const ExecutionContext& context,
-        const Column* column
+        const Schemas::ColumnSchema* column
     ) const{
         // Calculate bitmap size once
-        const auto columnOrdinal = column->OrdinalPosition();
+        const auto columnOrdinal = column->_ordinalPosition;
 
         const auto offSet = sizeof(RowHeader) + columnOrdinal * sizeof(RowEntry);
         const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
@@ -90,7 +90,7 @@ namespace CoreEngine::StorageTypes{
         return Value::FromExternalStorage(
             this->_data + columnDataEntry->Offset(),
             columnDataEntry->Size(),
-            column->Type(),
+            column->_type,
             context.GetAllocator(),
             columnOrdinal
         );

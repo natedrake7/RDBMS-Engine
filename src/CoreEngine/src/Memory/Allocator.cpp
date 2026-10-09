@@ -59,6 +59,11 @@ namespace CoreEngine::Memory{
     Allocator::Allocator()
         : _head(nullptr), _tail(nullptr){}
 
+    Allocator::Allocator(const UnsignedInt capacity)
+        : _head(nullptr), _tail(nullptr){
+        this->AllocateNewChunk(capacity, ::Memory::DEFAULT_ALIGNMENT);
+    }
+
     Allocator::~Allocator(){
         this->Allocator::Release();
     }

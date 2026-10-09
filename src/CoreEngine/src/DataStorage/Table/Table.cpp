@@ -1,7 +1,6 @@
 ﻿#include <CoreEngine/DatabaseConstants.h>
 #include <Systemic/DataTypes/Value.h>
 #include <Systemic/DataStructures/BitMap.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/DataStorage/Table.h>
 
@@ -26,25 +25,13 @@
 #include <Systemic/Macros.h>
 #include <CoreEngine/DataStorage/Row/Row.InsertPlan.Templates.h>
 
+#include "CoreEngine/Managers/IdentityManager.h"
+
 #ifdef IS_GCC
     #include <cmath>
 #endif
 
 namespace CoreEngine::StorageTypes {
-    TableHeader::TableHeader()
-        :   _allocationPageId(INVALID_PAGE_ID), _clusteredIndexPageId(INVALID_PAGE_ID){}
-
-    TableHeader& TableHeader::operator=(const TableHeader& other) {
-        if (this == &other)
-            return *this;
-
-        this->_allocationPageId = other._allocationPageId;
-        this->_clusteredIndexPageId = other._clusteredIndexPageId;
-        this->_allocationCursor = other._allocationCursor;
-        this->nonClusteredIndexPageIds = other.nonClusteredIndexPageIds;
-        return *this;
-    }
-
     page_id_t TableHeader::GetAllocationPageId()const{
         const std::atomic_ref _allocationPageIdAtomic(this->_allocationPageId);
         return _allocationPageIdAtomic.load(std::memory_order_acquire);
@@ -75,16 +62,12 @@ namespace CoreEngine::StorageTypes {
         return false;
     }
 
-    void Table::PopulateClusteredIndexCache(const Catalog::Index& index){
-        for (const auto& columnIndex: index.columns) {
-            const auto* column = this->_columns[columnIndex];
-            this->clusteredIndexColumnsCache.Add(column->GetColumnId());
-        }
-    }
-
-    bool Table::IsColumnAutoComputedPrimaryKey(const Column *column) const{
-        return this->clusteredIndexColumnsCache.Contains(column->GetColumnId())
-            && this->clusteredIndexColumnsCache.Size() == 1;
+    Value Table::GenerateIdentityValue(const ::Memory::IAllocator* allocator, const column_index_t ordinal){
+        return DataTypes::VisitDataType(this->Column(ordinal)->_type, [&]<typename T>()
+        {
+            if constexpr(DataTypes::IsInteger<T>)
+                return Value(GenerateIdentityValue<T>(allocator, ordinal));
+        });
     }
 
     void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
@@ -100,50 +83,50 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->_header.GetAllocationPageId()
+            this->_physicalHeader.GetAllocationPageId()
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
-        const auto& indexedColumns = this->nonClusteredHeaders[indexPos].columns;
-
-        for (const auto& extentId : tableExtentIds){
-            const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
-
-            const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
-                this->_db->SystemFileKey(),
-                extentFirstPageId
-            );
-
-            const page_id_t pageId = (tableMapPage.PageId() != extentFirstPageId)
-                                         ? extentFirstPageId
-                                         : extentFirstPageId + 1;
-
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++)
-            {
-                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
-                    break;
-
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
-
-                if (page.IsEmpty())
-                    continue;
-
-                // const auto rows = page.DataRowsNoLock(this);
-                //
-                // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
-                // extent_id_t startingExtentIndex = 0;
-                //
-                // for (int i = 0; i < rows.size(); i++) {
-                //   const auto& row = rows.at(i);
-                //
-                //   Headers::RowIdentifier rowId(extentPageId, i);
-                //   const auto key = Database::CreateKey(indexedColumns, &row, rowId);
-                //   this->NonClusteredIndexInsert(&row, indexPos, pagesToAllocate, rowId);
-                // }
-            }
-        }
+        // const auto& indexedColumns = this->nonClusteredHeaders[indexPos].columns;
+        //
+        // for (const auto& extentId : tableExtentIds){
+        //     const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
+        //
+        //     const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
+        //         this->_db->SystemFileKey(),
+        //         extentFirstPageId
+        //     );
+        //
+        //     const page_id_t pageId = (tableMapPage.PageId() != extentFirstPageId)
+        //                                  ? extentFirstPageId
+        //                                  : extentFirstPageId + 1;
+        //
+        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++)
+        //     {
+        //         if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
+        //             break;
+        //
+        //         auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
+        //
+        //         if (page.IsEmpty())
+        //             continue;
+        //
+        //         // const auto rows = page.DataRowsNoLock(this);
+        //         //
+        //         // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
+        //         // extent_id_t startingExtentIndex = 0;
+        //         //
+        //         // for (int i = 0; i < rows.size(); i++) {
+        //         //   const auto& row = rows.at(i);
+        //         //
+        //         //   Headers::RowIdentifier rowId(extentPageId, i);
+        //         //   const auto key = Database::CreateKey(indexedColumns, &row, rowId);
+        //         //   this->NonClusteredIndexInsert(&row, indexPos, pagesToAllocate, rowId);
+        //         // }
+        //     }
+        // }
     }
 
     void Table::RemoveColumnByClusteredIndex(const column_index_t index){
@@ -195,7 +178,7 @@ namespace CoreEngine::StorageTypes {
         const ExecutionContext& context,
         const InsertPlan& plan,
         const ChunkInsertState& state
-    ) const{
+    ){
         const auto* allocator = context.GetAllocator();
 
         const Expressions::EvaluationContext evaluationContext(
@@ -244,13 +227,14 @@ namespace CoreEngine::StorageTypes {
 
         //TODO add identity source.
         const auto identitySourceFunc = [&](const column_index_t slotIndex, const DataType type){
-            auto* column = this->_columns[slotIndex];
-            assert(column->OrdinalPosition() == slotIndex && "Table::PrepareChunkSources: Invalid slot index");
+            const auto* column = this->Column(slotIndex);
+            assert(column->_ordinalPosition == slotIndex && "Table::PrepareChunkSources: Invalid slot index");
 
             auto* vector = DataVector::FlatVector(allocator, type, state._rowCount);
 
-            const auto base = column->ReserveIdentityRange<BigInt>(allocator, state._rowCount);
-            const auto increment = column->GetIncrement();
+            auto* identityManager = this->IdentityOf(slotIndex);
+            const auto base = identityManager->ReserveRange<BigInt>(allocator, state._rowCount);
+            const auto increment = identityManager->GetIncrement();
 
             VisitStorageType(type, [&]<typename T>(){
                 if constexpr (DataTypes::IsInteger<T>){
@@ -289,52 +273,31 @@ namespace CoreEngine::StorageTypes {
     }
 
     Table::Table(
-        const table_id_t tableId,
-        const SmallInt ordinalPosition,
-        Database* db
-    ):  _db(db), _clusteredTree(nullptr),
-        _ordinalPosition(ordinalPosition), _id(tableId){
-        this->_columns.SetAllocator(&this->_allocator);
-        this->_nonClusteredTrees.SetAllocator(&this->_allocator);
-    }
-
-    Table::Table(
-        const Catalog::TableHeader& masterDbHeader,
-        const TableHeader &tableHeader,
+        const Schemas::TableSchema* schema,
+        const TableHeader &physicalHeader,
         Database *database
-    ):  _header(tableHeader), _db(database),
-        _clusteredTree(nullptr), _ordinalPosition(masterDbHeader.ordinalPosition),
-        _id(masterDbHeader.id){
-        this->_columns.SetAllocator(&this->_allocator);
-        this->_nonClusteredTrees.SetAllocator(&this->_allocator);
-        this->PopulateClusteredIndexCache(this->clusteredHeader);
-    }
-
-    Table::Table(
-        const CoreEngine::sysTable &systemHeader,
-        const TableHeader &tableHeader,
-        const Catalog::Index& primaryKey,
-        Database *database,
-        const SmallInt ordinalPosition
-    ):  _header(tableHeader), clusteredHeader(primaryKey),
-        _db(database), _clusteredTree(nullptr),
-        _ordinalPosition(ordinalPosition), _id(systemHeader.id) {
-
-        this->_columns.SetAllocator(&this->_allocator);
-        this->_nonClusteredTrees.SetAllocator(&this->_allocator);
-
-        for (auto i = 0;i < systemHeader.columns.size(); i++){
-            auto* column = this->_allocator.Allocate<Column>(systemHeader.columns[i], i,  this);
-            this->AddColumn(column);
+    ):  _physicalHeader(physicalHeader), _schema(schema),
+        _db(database), _clusteredTree(nullptr){
+        const auto nonClusteredCount = this->_schema->_indexesCount - this->IsClustered();
+        if (nonClusteredCount > 0){
+            this->_nonClusteredTrees.SetAllocator(&this->_allocator);
+            this->_nonClusteredTrees.Resize(nonClusteredCount);
         }
 
-        this->PopulateClusteredIndexCache(this->clusteredHeader);
+        this->_identities.SetAllocator(&this->_allocator);
+        this->_identities.Resize(this->_schema->_identitiesCount);
+
+        for (Int i = 0;i < this->_schema->_columnCount; i++){
+            const auto* column = this->Column(i);
+
+            if (column->_identity != nullptr){
+                auto& manager = this->_identities[column->_identity->_slot];
+                manager.Bootstrap(column->_identity, this->_schema->_id, column->_id);
+            }
+        }
     }
 
     void Table::Destroy() const{
-        // for (const auto* column : this->_columns)
-        //     column->Destroy();
-
         this->_allocator.Release();
     }
 
@@ -348,7 +311,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto* allocator = executionContext.GetAllocator();
 
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        RowSerializationContext rowContext(allocator, this->ColumnCount());
         const auto transactionId = executionContext.GetCurrentTransactionId();
 
         rowContext._header._createdTransactionId = transactionId;
@@ -371,7 +334,7 @@ namespace CoreEngine::StorageTypes {
         auto checkPoint = Database::LogRowBatchInsert(
             buffer,
             transactionId,
-            this->_ordinalPosition
+            this->_schema->_ordinalPosition
         );
 
         const auto pageSize = this->IsClustered()
@@ -402,7 +365,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto* allocator = executionContext.GetAllocator();
 
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        RowSerializationContext rowContext(allocator, this->ColumnCount());
         const auto transactionId = executionContext.GetCurrentTransactionId();
         rowContext._header._createdTransactionId = transactionId;
 
@@ -488,7 +451,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->_header.GetAllocationPageId()
+            this->_physicalHeader.GetAllocationPageId()
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
@@ -533,46 +496,6 @@ namespace CoreEngine::StorageTypes {
         return this->HeapInsertToNewPage(extentReservation, payload);
     }
 
-    column_number_t Table::GetNumberOfColumns() const { return this->_columns.Size(); }
-
-    const TableHeader &Table::GetHeader() const { return this->_header; }
-
-    const DataStructures::PolymorphicArray<Column*>& Table::GetColumns() const { return this->_columns; }
-
-    const Column* Table::GetColumn(const column_index_t index) const{
-        return this->_columns[index];
-    }
-
-    void Table::GetConstantColumns(DataStructures::PolymorphicArray<const Column*>* array) const {
-        for (const auto* column : this->_columns)
-            array->Push(column);
-    }
-
-    DataStructures::StaticArray<DataType, 10> Table::GetColumnTypeByTreeId(const UnsignedTinyInt treeId) const{
-        DataStructures::StaticArray<DataType, 10> columnDatatypes;
-
-        if(treeId == 0){
-            for(const auto& columnIndex: this->clusteredHeader.columns)
-                columnDatatypes.Push(this->_columns[columnIndex]->Type());
-
-            return columnDatatypes;
-        }
-
-        return columnDatatypes;
-    }
-
-    table_id_t Table::GetTableId() const { return this->_id; }
-
-    Constants::TableType Table::GetType() const{
-        return !this->clusteredHeader.columns.Empty()
-                   ? Constants::TableType::CLUSTERED
-                   : Constants::TableType::HEAP;
-    }
-
-    bool Table::IsClustered() const{
-        return !this->clusteredHeader.columns.Empty();
-    }
-
     void Table::HeapScan(
         const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<RID>* result,
@@ -586,7 +509,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto& snapshot = executionContext.GetSnapshot();
 
-        const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_header.GetAllocationPageId());
+        const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         allocPage.GetAllocatedExtents(&tableExtentIds, state._extentId);
@@ -652,7 +575,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->_header.GetAllocationPageId()
+            this->_physicalHeader.GetAllocationPageId()
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
@@ -710,7 +633,7 @@ namespace CoreEngine::StorageTypes {
 
         const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
             dataKey,
-            this->_header.GetAllocationPageId()
+            this->_physicalHeader.GetAllocationPageId()
         );
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
@@ -822,7 +745,7 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
 
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        RowSerializationContext rowContext(allocator, this->ColumnCount());
         rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
         rowContext._header._versionRID = versionRid;
 
@@ -871,7 +794,7 @@ namespace CoreEngine::StorageTypes {
 
         Errors::RuntimeStatus status;
         //update function here (all columns will be present on the materialized row now)
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        RowSerializationContext rowContext(allocator, this->ColumnCount());
         rowContext._header._createdTransactionId = context.GetCurrentTransactionId();
         rowContext._header._versionRID = versionRid;
 
@@ -916,7 +839,7 @@ namespace CoreEngine::StorageTypes {
         materializedRow.Update(updates);
 
         Errors::RuntimeStatus status;
-        RowSerializationContext rowContext(allocator, this->_columns.Size());
+        RowSerializationContext rowContext(allocator, this->ColumnCount());
         rowContext._header._createdTransactionId = FIRST_TRANSACTION_ID;
         rowContext._header._versionRID = versionRid;
 
@@ -999,10 +922,10 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::UpdateAllocationPageId(const page_id_t allocationPageId) const{
-        this->_header.SetAllocationPageId(allocationPageId);
+        this->_physicalHeader.SetAllocationPageId(allocationPageId);
     }
 
-    page_id_t Table::GetAllocationPageId() const{ return this->_header.GetAllocationPageId(); }
+    page_id_t Table::GetAllocationPageId() const{ return this->_physicalHeader.GetAllocationPageId(); }
 
     void Table::DeleteLargeObjectFromPage(
         RID* rowPtr,
@@ -1082,75 +1005,23 @@ namespace CoreEngine::StorageTypes {
         return this->_db->ReserveExtents(
             allocator,
             requiredPages,
-            this->_ordinalPosition
+            this->_schema->_ordinalPosition
         );
     }
 
     ExtentReservation Table::LazyReservation(const ::Memory::IAllocator* allocator) const{
-        return ExtentReservation(allocator, this->_db, this->_ordinalPosition);
+        return ExtentReservation(allocator, this->_db, this->_schema->_ordinalPosition);
     }
 
-    void Table::Truncate()
-    {
-        this->_db->TruncateTable(this->_id);
+    void Table::Truncate(){
+        this->_db->TruncateTable(this->_schema->_id);
     }
 
     Database* Table::GetDatabase() const { return this->_db; }
 
-    SmallInt Table::GetOrdinalPosition() const{ return this->_ordinalPosition; }
-
-    int Table::HandleRowOverflow(RID* rowPtr) const{
-        // auto largestBlock = row->FindLargestVariableLengthColumn();
-
-        // if(largestBlock.IsNull())
-        //   return -1;
-        //
-        // auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
-        //
-        // int indexPos = 0;
-        // overflowPage->InsertObject(largestBlock.Data(), largestBlock.Size(), indexPos);
-        //
-        // row->SetOverflowBitMapValue(largestBlock.GetColumnIndex(), true);
-        //
-        // auto pfsPage = Database::GetAssociatedPfsPage(this->database->GetSystemFilename(), overflowPage->GetPageId());
-        //
-        // pfsPage->SetPageMetaData(overflowPage.Get());
-        //
-        // const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-        // largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
-
-        // return largestBlock.Size();
-    }
-
-    int Table::HandleRowOverflow(RID* rowPtr, const Column *column)const{
-        // auto& data = row->GetData();
-        //
-        // if(data.size() < column->OrdinalPosition())
-        //   return -1;
-        //
-        // auto* largestBlock = row->GetData().at(column->OrdinalPosition());
-        //
-        // auto overflowPage = this->database->GetLastOverflowPage(this->header.ordinalPosition, largestBlock->Size());
-        //
-        // int indexPos = 0;
-        // overflowPage->InsertObject(largestBlock->Data(), largestBlock->Size(), indexPos);
-        //
-        // row->SetOverflowBitMapValue(largestBlock->ColumnIndex(), true);
-        //
-        // const auto pfsPageId = DatabaseEngine::Database::GetPfsAssociatedPage(overflowPage->GetPageId());
-        //
-        // auto pfsPage = Storage::StorageManager::Get().GetPageFreeSpacePage(this->database->GetFileName(), pfsPageId);
-        //
-        // pfsPage->SetPageMetaData(overflowPage.Get());
-        //
-        // const Pages::OverflowPointer ptr(overflowPage->GetPageId(), indexPos);
-        // largestBlock->SetData(&ptr, Constants::OVERFLOW_POINTER_SIZE);
-        //
-        // return largestBlock->Size();
-    }
 
     bool Table::IsEmpty() const{
-        return this->_header.GetAllocationPageId() == INVALID_PAGE_ID;
+        return this->_physicalHeader.GetAllocationPageId() == INVALID_PAGE_ID;
     }
 
     void Table::PopulateColumn(const column_index_t index, const Value &defaultValue){
@@ -1175,7 +1046,7 @@ namespace CoreEngine::StorageTypes {
         const auto dataKey = this->_db->DataFileKey();
         const auto systemKey = this->_db->SystemFileKey();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_header.GetAllocationPageId());
+        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
         tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
@@ -1245,236 +1116,4 @@ namespace CoreEngine::StorageTypes {
 
         // page.UpdateBytesLeft();
     }
-
-    void Table::AddColumn(Column *column) { this->_columns.Push(column); }
-
-    Column* Table::AddColumn(
-        const DataTypes::StringView& columnName,
-        DataType type,
-        row_size_t recordSize,
-        column_index_t index,
-        bool allowNulls
-    ){
-        auto* column = this->_allocator.Allocate<Column>(columnName, type, recordSize, index, allowNulls);
-        this->_columns.Push(column);
-        return column;
-    }
-
-    //TODO add heap insert if row still cant remain in page if heap
-    void Table::HandleAddColumn(
-        const ExecutionContext& executionContext,
-        const Pages::PageView* page,
-        const RID* rowPtr,
-        const column_index_t index,
-        const Value &defaultValue
-    ) const{
-        const auto* allocator = executionContext.GetAllocator();
-
-        // auto materializedRow = rowPtr->Materialize(allocator);
-        // materializedRow.AddColumn(defaultValue, index);
-
-        Errors::RuntimeStatus status;
-        // const auto payload = this->CreateInsertPayload(status, allocator, 0, materializedRow.Data());
-
-        // page->UpdateRow(allocator, payload, rowPtr);
-
-        // this->InsertLargeObjectToPage(row);
-
-        // if(isHeap && (PAGE_SIZE - PageHeader::GetPageHeaderSize() - row->GetTotalRowSize()) > 0){
-        //   vector<extent_id_t> allocatedExtents;
-        //   extent_id_t startingExtentIndex = 0;
-        //
-        //   this->InsertRInsertRow(row, allocatedExtents, startingExtentIndex);
-        //
-        //   return;
-        // }
-
-        // while(page.BytesLeft() - diff < 0){
-        //     const int result = this->HandleRowOverflow(row);
-        //
-        //     if(result == -1)
-        //     break;
-        //
-        //     diff -= result;
-        // }
-    }
-
-    void Table::UpdateColumnName(const column_index_t index, const DataTypes::String& name)const{
-        auto* column = this->_columns[index];
-        column->SetColumnName(DataTypes::StringView::ViewOf(name));
-    }
-
-    void Table::RemoveColumn(
-        const ExecutionContext& context,
-        const column_index_t index
-    ){
-        //add also last updated at deleted at etc...
-        const auto* removedColumn = this->_columns[index];
-
-        const auto& server = SystemCatalog::Get();
-
-        //schema adjustments in master db change this as well
-        DataStructures::PolymorphicArray<Value> updates = {
-            // Value(true, static_cast<column_index_t>(SysColumns::IsDeleted)),
-            // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::LastModifiedAt)),
-            // Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysColumns::DeletedAt)),
-        };
-
-        auto result = server.UpdateColumnById(context.GetAllocator(), removedColumn->GetColumnId(), updates);
-
-        this->HandleRemoveColumn(removedColumn->OrdinalPosition());
-        this->_columns.erase(this->_columns.begin() + index);
-
-        for (int i = index; i < this->_columns.Size(); i++) {
-            const auto& column = this->_columns[i];
-
-            column->SetOrdinalPosition(i);
-
-            DataStructures::PolymorphicArray<Value> update = {
-                // Value(i, static_cast<column_index_t>(DatabaseEngine::SysColumns::OrdinalPosition))
-            };
-
-            //adjust in master db
-            result = server.UpdateColumnById(context.GetAllocator(), column->GetColumnId(), updates);
-        }
-
-        //adjust rows by heap or clustered
-        delete removedColumn;
-    }
-
-    void Table::HandleRemoveColumn(Pages::PageView* page, MaterializedRow& row, const column_index_t index){
-        // auto& data = row->GetData();
-
-        // data.erase(data.begin() + index);
-
-        // page.UpdateBytesLeft();
-    }
-
-    void Table::HandleRemoveColumn(const column_index_t index){
-        if (this->IsEmpty())
-            return;
-
-        if (this->GetType() == Constants::TableType::CLUSTERED) {
-            this->RemoveColumnByClusteredIndex(index);
-            return;
-        }
-
-        this->RemoveColumnByHeap(index);
-    }
-
-  void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
-      for (const auto& column: this->_columns)
-          column->UpdateMetadata(allocator);
-  }
-
-  void Table::RetrieveDefaultValuesFromCatalog(const ::Memory::IAllocator* allocator) const{
-      for(const auto& column: this->_columns) {
-          const auto systemHeader = SystemCatalog::Get().SelectDefaultValueByColumnId(allocator, column->GetColumnId());
-
-          if (systemHeader.columnId == INVALID_COLUMN_ID)
-              continue;
-
-          column->SetDefaultValue(systemHeader);
-      }
-  }
-
-    void Table::RetrieveColumnHeadersFromCatalog(const ::Memory::IAllocator* allocator)const{
-        const auto headers = SystemCatalog::Get().SelectColumns(allocator, this->_id);
-
-        assert(headers.Size() == this->_columns.Size());
-
-        if (headers.Empty()) return;
-
-        for (int i = 0;i < this->_columns.Size(); i++) {
-            auto* column = this->_columns[i];
-            column->SetColumnId(headers[i].id);
-        }
-    }
-
-  void Table::UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator) const{
-      static auto& catalog = SystemCatalog::Get();
-
-      const auto headers = catalog.SelectIdentityColumnsByTableId(allocator, this->_id);
-
-      if(headers.Empty())return;
-
-      for(const auto& column: this->_columns){
-          for (const auto& identity: headers) {
-              if(column->GetColumnId() != identity.columnId)
-                  continue;
-
-              column->SetIdentityManagerIds(this->_id);
-              break;
-          }
-      }
-  }
-
-    void Table::RetrieveIdentityColumnsFromCatalog(const ::Memory::IAllocator* allocator)const{
-        static auto& catalog = SystemCatalog::Get();
-
-        const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->_id);
-
-        if(identityHeaders.Empty()) return;
-
-        for(const auto& column: this->_columns){
-            for (const auto& identity: identityHeaders) {
-                if(column->GetColumnId() != identity.columnId)
-                    continue;
-
-                column->SetIdentity(identity);
-                break;
-            }
-        }
-    }
-
-  void Table::RetrieveIdentityColumnById(const ::Memory::IAllocator* allocator, const Int columnId)const{
-      static auto& catalog = SystemCatalog::Get();
-
-      const auto identityHeaders = catalog.SelectIdentityColumnsByTableId(allocator, this->_id);
-
-      if (identityHeaders.Empty()) return;
-
-      for(const auto& column: this->_columns){
-          if (columnId != column->GetColumnId())
-              continue;
-
-          for (const auto& identity: identityHeaders) {
-              if(column->GetColumnId() != identity.columnId)
-                  continue;
-
-              column->SetIdentity(identity);
-              break;
-          }
-      }
-  }
-
-  void Table::RetrieveIndexesFromCatalog(const ::Memory::IAllocator* allocator){
-      Dictionary<Int, Column*> columnsDict;
-
-      for (auto& column: this->_columns)
-          columnsDict.Add(column->GetColumnId(), column);
-
-      const auto indexes = SystemCatalog::Get().SelectIndexes(allocator, this->_id);
-
-      for (const auto& index: indexes) {
-          const auto indexedColumns = SystemCatalog::Get().SelectIndexColumnsByIndexId(allocator, index.id);
-
-          DataStructures::PolymorphicArray<column_index_t> indexColumnsIndices(allocator, indexedColumns.Size());
-          for (const auto& indexedColumn : indexedColumns)
-              indexColumnsIndices.Push(columnsDict.Get(indexedColumn.columnId)->OrdinalPosition());
-
-          if (index.isClustered) {
-              this->clusteredHeader.columns.SetData(indexColumnsIndices.Data(), indexColumnsIndices.Size());
-              continue;
-          }
-
-          Catalog::Index tableIndex(indexColumnsIndices.Data(), indexColumnsIndices.Size());
-          this->nonClusteredHeaders.Push(tableIndex);
-      }
-  }
-
-  void Table::SetPrimaryKeyIndexedColumns(const column_index_t* _array, const Int size){
-      this->clusteredHeader = Catalog::Index(_array, size);
-  }
-
 }

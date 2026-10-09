@@ -92,7 +92,7 @@ namespace QueryPipeline::PhysicalPlan {
       //table ordinal and table id are the same rn
       this->temporaryTableId = table->GetTableId();
 
-      const auto& columns = table->GetColumns();
+      const auto& columns = table->Columns();
       // result.status = table->BatchInsert(context, result.results);
 
       // firstRowId = result.status.rowId;
@@ -304,32 +304,19 @@ namespace QueryPipeline::PhysicalPlan {
         );
 
         const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
-
-        auto* tablePtr = db->CreateTable(tableId, index);
-
-        const auto tableStatsResult = CoreEngine::SystemCatalog::Get().InsertTableStatisticsToMasterDb(
+        const auto _ = CoreEngine::SystemCatalog::Get().InsertTableStatisticsToMasterDb(
             context,
             tableId
         );
 
         Dictionary<Int, Int> columnIdsDict;
         for (const auto* column: this->columns){
-            const auto normalizedTableName = DataTypes::String::Normalize(column->type.name, context.GetAllocator());
-                auto* columnPtr =
-                    tablePtr->AddColumn(
-                          DataTypes::StringView::ViewOf(column->name.name),
-                          COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(normalizedTableName)),
-                          column->type.size,
-                          column->index,
-                          column->isNullable
-                    );
-
             const auto columnResult =
                 CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
                       context,
                       tableId,
                       DataTypes::StringView::ViewOf(column->name.name),
-                      COLUMN_TYPENAMES_TO_ENUMS.Get(DataTypes::StringView::ViewOf(normalizedTableName)),
+                      ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type.name)),
                       column->type.size,
                       column->type.decimal.precision,
                       column->type.decimal.scale,
@@ -340,10 +327,8 @@ namespace QueryPipeline::PhysicalPlan {
                 );
 
             const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
-            columnPtr->SetColumnId(columnId);
 
-            const auto columnStatsResult = CoreEngine::SystemCatalog::Get().InsertColumnStatisticsToMasterDb(context, columnId);
-            columnIdsDict.Add(column->index, columnId);
+            const auto _ = CoreEngine::SystemCatalog::Get().InsertColumnStatisticsToMasterDb(context, columnId);
 
             if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
                 const auto _ = CoreEngine::SystemCatalog::Get().InsertDefaultValuesToMasterDb(
@@ -354,7 +339,8 @@ namespace QueryPipeline::PhysicalPlan {
             }
 
             //insert identity columns
-            if (column->identity == nullptr) continue;
+            if (column->identity == nullptr)
+                continue;
 
             const auto _ = CoreEngine::SystemCatalog::Get().InsertIdentityColumnToMasterDb(
                 context,
@@ -381,8 +367,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
         if (primaryKeyColumnIdsArray.Empty()) {
-            tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-            tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+            auto* tablePtr = db->CreateTable(tableId, index);
             return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
         }
 
@@ -433,9 +418,9 @@ namespace QueryPipeline::PhysicalPlan {
             indexId
         );
 
-        tablePtr->RetrieveIndexesFromCatalog(allocator);
-        tablePtr->RetrieveColumnHeadersFromCatalog(allocator);
-        tablePtr->RetrieveIdentityColumnsFromCatalog(allocator);
+        const auto tableHeader = CoreEngine::SystemCatalog::Get().SelectTable();
+
+        auto* tablePtr = db->CreateTable(tableId, index);
 
         return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
     }

@@ -28,7 +28,7 @@ namespace CoreEngine::StorageTypes{
         }
     }
 
-        Errors::RuntimeStatus Table::PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize) const{
+    Errors::RuntimeStatus Table::PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize) const{
         UnsignedInt rowSize = sizeof(RowHeader) + this->_columns.Size() * sizeof(RowEntry);
 
         for (const auto* column : this->_columns){

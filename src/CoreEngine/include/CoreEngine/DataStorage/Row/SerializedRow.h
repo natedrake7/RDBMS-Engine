@@ -2,6 +2,8 @@
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <Systemic/DataTypes/DataTypes.h>
 
+#include "CoreEngine/DataStorage/Schema/Schemas.h"
+
 namespace Errors{
     struct RuntimeStatus;
 }
@@ -46,7 +48,7 @@ namespace CoreEngine::StorageTypes{
 
         Value MaterializeColumn(
             const ExecutionContext& context,
-            const Column* column
+            const Schemas::ColumnSchema* column
         ) const;
 
         [[nodiscard]] object_t* ColumnAt(column_index_t index, Int& outSize)const;

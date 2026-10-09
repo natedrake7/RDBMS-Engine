@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <stdexcept>
 #include <initializer_list>
-
+#include <cassert>
 #include <Systemic/DataTypes/DataTypes.h>
 
 namespace DataStructures{
@@ -14,6 +14,7 @@ namespace DataStructures{
         public:
             // Empty array — N slots allocated on stack, 0 logically used
             constexpr StaticArray() : _data{}, _size(0) {}
+            constexpr  ~StaticArray() = default;
 
             // Fill `size` elements with `value`
             explicit constexpr StaticArray(const Int size, const T& value = T())
@@ -28,7 +29,7 @@ namespace DataStructures{
             // Construct from raw pointer
             explicit constexpr StaticArray(const T* data, const Int size)
                 : _data{}, _size(size){
-                assert(size > N && "StaticArray: size exceeds capacity");
+                assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
             }
 
@@ -36,7 +37,7 @@ namespace DataStructures{
             constexpr StaticArray(std::initializer_list<T> list)
                 : _data{}, _size(static_cast<Int>(list.size()))
             {
-                assert(static_cast<Int>(list.size()) > N && "StaticArray: initializer list exceeds capacity");
+                assert(static_cast<Int>(list.size()) <= N && "StaticArray: initializer list exceeds capacity");
                 std::copy(list.begin(), list.end(), this->_data);
             }
 
@@ -51,13 +52,13 @@ namespace DataStructures{
 
             // Push a single element — used by Decimal byte-by-byte construction
             constexpr void Push(const T& value){
-                assert(this->_size >= N && "StaticArray: Push exceeds capacity");
+                assert(this->_size < N && "StaticArray: Push exceeds capacity");
                 this->_data[this->_size++] = value;
             }
 
             constexpr void Insert(const Int index, const T& value){
-                assert(index >= this->_size && "StaticArray Insert: Index is out of range.");
-                assert(this->_size >= N && "StaticArray Insert: Array is full.");
+                assert(index >= 0 && index <= this->_size && "StaticArray Insert: Index is out of range.");   // == _size appends
+                assert(this->_size < N && "StaticArray Insert: Array is full.");
 
                 for (Int i = this->_size - 1; i >= index; --i)
                     this->_data[i + 1] = this->_data[i];
@@ -66,8 +67,8 @@ namespace DataStructures{
             }
 
             constexpr void Insert(const Int index, const Int size, const T& data){
-                assert(index >= this->_size && "StaticArray Insert: Index is out of range.");
-                assert(this->_size >= N && "StaticArray Insert: Array is full.");
+                assert(index >= 0 && index <= this->_size && "StaticArray Insert: Index is out of range.");
+                assert(size >= 0 && this->_size + size <= N && "StaticArray Insert: Not enough capacity.");
 
                 for (Int i = this->_size - 1; i >= index; --i)
                     this->_data[i + size] = this->_data[i];
@@ -79,14 +80,15 @@ namespace DataStructures{
             }
 
             constexpr void Remove(const Int index){
-                assert(index >= this->_size && "StaticArray Remove: Index is out of range.");
+                assert(index >= 0 && index < this->_size && "StaticArray Remove: Index is out of range.");
                 for (Int i = index; i < this->_size - 1; ++i)
                     this->_data[i] = this->_data[i + 1];
                 --this->_size;
             }
 
-            constexpr void  Remove(const Int start, const Int end){
-                assert((start < 0 || start >= this->_size || end >= this->_size) && "StaticArray Remove: Index is out of range.");
+            // removes [start, end)
+            constexpr void Remove(const Int start, const Int end){
+                assert(start >= 0 && start <= end && end <= this->_size && "StaticArray Remove: Range is out of bounds.");
                 const Int count = end - start;
                 for (Int i = start; i < this->_size - count; ++i)
                     this->_data[i] = this->_data[i + count];
@@ -94,18 +96,18 @@ namespace DataStructures{
             }
 
             constexpr void Pop(){
-                assert(this->_size == 0 && "StaticArray Pop: Array is empty.");
+                assert(this->_size > 0 && "StaticArray Pop: Array is empty.");
                 --this->_size;
             }
 
             constexpr void SetData(const T* data, const Int size){
-                assert(size > N && "StaticArray: size exceeds capacity");
+                assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
                 this->_size = size;
             }
 
             constexpr void SetSize(const Int size){
-                assert(size > N && "StaticArray: size exceeds capacity");
+                assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 this->_size = size;
             }
 
