@@ -1,16 +1,15 @@
 ﻿#include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/Messages.h>
 
 namespace CoreEngine::StorageTypes{
 
     Errors::RuntimeStatus Table::ValidateTableLayout(const ::Memory::IAllocator* allocator) const{
-        UnsignedInt minimum = sizeof(RowHeader) + this->_columns.Size() * sizeof(RowEntry);
+        UnsignedInt minimum = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
 
-        for (const auto* column : this->_columns){
-            minimum += this->CanStoreColumnOffRow(column->OrdinalPosition())
+        for (const auto& column : this->Columns()){
+            minimum += this->CanStoreColumnOffRow(column._ordinalPosition)
                     ? LOB_REFERENCE_SIZE
-                    : column->Size();
+                    : column._recordSize;
         }
 
         if (minimum > this->MaxInlineRowSize()){
@@ -38,40 +37,40 @@ namespace CoreEngine::StorageTypes{
 
     row_size_t Table::ClusteredKeySize() const{
         row_size_t size = 0;
-        for (const auto pos : this->clusteredHeader.columns)
-            size += this->_columns[pos]->Size();
+        const auto* index = &this->_schema->_indexes[this->_schema->_clusteredIndexOrdinalPosition];
+        for (Int i = 0;i < index->_keyCount; i++)
+            size += this->_schema->_columns[index->_keyColumns[i]._ordinalPosition]._recordSize;
         return size;
     }
 
     row_size_t Table::WorstCaseRowSize() const{
-        UnsignedInt size = sizeof(RowHeader) + sizeof(RowEntry) * this->_columns.Size();
+        UnsignedInt size = sizeof(RowHeader) + sizeof(RowEntry) * this->ColumnCount();
 
-        for (const auto* column : this->_columns){
-            size += column->Size();
+        for (const auto& column : this->Columns()){
+            size += column._recordSize;
         }
 
         return static_cast<row_size_t>(Math::Min<UnsignedInt>(size, this->MaxInlineRowSize()));
     }
 
     bool Table::IsKeyColumn(const column_index_t ordinalPosition) const{
-        for (const auto pos : this->clusteredHeader.columns)
-            if (pos == ordinalPosition)
-                return true;
+        auto* column = &this->_schema->_columns[ordinalPosition];
 
-        for (Int i = 0; i < this->nonClusteredHeaders.Size(); i++){
-            for (const auto pos : this->nonClusteredHeaders[i].columns)
-                if (pos == ordinalPosition)
-                    return true;
+        for (Int i = 0;i < this->_schema->_indexesCount; i++){
+            const auto* index = &this->_schema->_indexes[i];
+            if (index->_coveredColumnsMask.HasValue(ordinalPosition))
+                return true;
         }
 
         return false;
     }
 
     bool Table::CanStoreColumnOffRow(const column_index_t ordinalPosition) const{
-        const auto* column = this->_columns[ordinalPosition];
-        const auto type = column->Type();
+        const auto* column = &this->_schema->_columns[ordinalPosition];
+        const auto type = column->_type;
+
         return (type == DataType::String || type == DataType::Json)
-            && column->Size() > LOB_REFERENCE_SIZE
+            && column->_recordSize > LOB_REFERENCE_SIZE
             && !this->IsKeyColumn(ordinalPosition);
     }
 

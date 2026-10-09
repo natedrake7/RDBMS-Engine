@@ -6,10 +6,7 @@
 #include <Systemic/Guards/ReaderGuard.h>
 #include <Systemic/Guards/WriterGuard.h>
 
-#include <nlohmann/json.hpp>
-
 #include <CoreEngine/Contexts/ExecutionContext.h>
-#include <CoreEngine/Extensions/StringExtensions.h>
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
 namespace CoreEngine {
@@ -18,16 +15,15 @@ namespace CoreEngine {
         return instance;
     }
 
-    void VersionDatabase::Initialize(
-        const ExecutionContext& baseContext,
-        const DataTypes::StringView& configPath
-    ){
-        const auto [dbName, dbPath] = this->ReadConfiguration(baseContext.GetAllocator(), configPath);
-        this->PopulateFilenames(baseContext.GetAllocator(), dbName);
+    void VersionDatabase::Initialize(const ExecutionContext& baseContext){
+        constexpr auto sysDbName = DataTypes::StringView("versionDb");
+        constexpr auto sysDbPath = DataTypes::StringView("versionDb/versionDb.data");
+
+        this->PopulateFilenames(baseContext.GetAllocator(), sysDbName);
         this->CreateKeys();
 
-        if (!this->VersionDatabaseExists(DataTypes::StringView::ViewOf(dbName)))
-            CoreEngine::CreateDatabase(Constants::VERSION_DATABASE_ID, dbName);
+        if (!CoreEngine::VersionDatabase::VersionDatabaseExists(sysDbPath))
+            CoreEngine::CreateDatabase(baseContext.GetAllocator(), Constants::VERSION_DATABASE_ID, sysDbName);
 
         Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
         Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
@@ -45,33 +41,6 @@ namespace CoreEngine {
         this->_allocator.Release();
     }
 
-    std::tuple<DataTypes::String, DataTypes::String> VersionDatabase::ReadConfiguration(
-        const ::Memory::IAllocator* allocator,
-        const DataTypes::StringView& configPath
-    ){
-        std::ifstream file(configPath.Data());
-
-        if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + std::string(configPath.Data(), configPath.Size()) + " could not be opened");
-
-        nlohmann::json jsonFile;
-
-        try {
-            file >> jsonFile;
-        }
-        catch (std::exception &e){
-            throw std::runtime_error(e.what());
-        }
-
-        DataTypes::String sysDbName(allocator);
-        DataTypes::String sysDbPath(allocator);
-
-        jsonFile.at("version_db_name").get_to(sysDbName);
-        jsonFile.at("version_db_path").get_to(sysDbPath);
-
-        return std::make_tuple(std::move(sysDbName), std::move(sysDbPath));
-    }
-
     bool VersionDatabase::VersionDatabaseExists(const DataTypes::StringView& path){
         return Storage::FileManager::FileExists(path);
     }
@@ -83,7 +52,7 @@ namespace CoreEngine {
 
     void VersionDatabase::PopulateFilenames(
         const ::Memory::IAllocator* allocator,
-        const DataTypes::String& dbName
+        const DataTypes::StringView& dbName
     ){
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
         this->filename = DataTypes::String::Concat(&this->_allocator, path, Constants::DATA_FILE_EXTENSION);

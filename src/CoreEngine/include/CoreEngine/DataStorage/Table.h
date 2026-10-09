@@ -3,6 +3,7 @@
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 #include <CoreEngine/DatabaseConstants.h>
 #include <CoreEngine/SystemDatabases/CatalogHeaders.h>
+#include <CoreEngine/Managers/IdentityManager.h>      // _identities is stored by value and used inline
 #include <CoreEngine/Indexing/BTree.h>
 #include <CoreEngine/Logger/Logger.h>
 #include <CoreEngine/BufferPool/FileManager.h>
@@ -153,7 +154,7 @@ namespace CoreEngine::StorageTypes{
 
         public:
             template<typename ValueProvider>
-            void EvaluateRow(RowSerializationContext& context, ValueProvider&& provider)const;
+            void EvaluateRow(RowSerializationContext& context, ValueProvider&& provider);
 
             [[nodiscard]] Errors::RuntimeStatus PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize)const;
 
@@ -166,13 +167,13 @@ namespace CoreEngine::StorageTypes{
                 Errors::RuntimeStatus& status,
                 RowSerializationContext& rowContext,
                 ValueProvider&& provider
-            ) const;
+            );
 
             SerializedRow SerializeRow(
                 Errors::RuntimeStatus& status,
                 RowSerializationContext& rowContext,
                 const DataStructures::PolymorphicArray<Value>& values
-            ) const;
+            );
         /**
         * @name Class Constructors and Destructors
         * Functions to create and destroy Table objects.
@@ -422,7 +423,7 @@ namespace CoreEngine::StorageTypes{
                 const RID* row,
                 const ::Memory::IAllocator* allocator,
                 const DataStructures::PolymorphicArray<Value>& updates
-            ) const;
+            );
         /** @} End of: Update Functions*/
 
         /**
@@ -561,7 +562,7 @@ namespace CoreEngine::StorageTypes{
         * Functions to retrieve and update system catalog information related to the table.
         * @{
         */
-            void UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const;
+            void UpdateSystemCatalog(const ::Memory::IAllocator* allocator);
             void UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator)const;
 
         /** @} End of System Catalog Integration Functions */

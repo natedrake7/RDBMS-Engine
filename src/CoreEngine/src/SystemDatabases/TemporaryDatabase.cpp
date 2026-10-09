@@ -1,41 +1,9 @@
 ﻿#include <CoreEngine/SystemDatabases/TemporaryDatabase.h>
 
-#include <fstream>
-#include <nlohmann/json.hpp>
-
 #include <CoreEngine/Database.h>
 #include <CoreEngine/Managers/GlobalMemoryManager.h>
-#include <CoreEngine/Extensions/StringExtensions.h>
 
 namespace CoreEngine {
-    std::tuple<DataTypes::String, DataTypes::String> TemporaryDatabase::ReadConfiguration(
-        const ::Memory::IAllocator* allocator,
-        const DataTypes::StringView& configPath
-    ){
-        std::ifstream file(configPath.Data());
-
-        if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + std::string(configPath) + " could not be opened");
-
-        nlohmann::json jsonFile;
-
-        try {
-            file >> jsonFile;
-        }
-        catch (std::exception &e)
-        {
-            throw std::runtime_error(e.what());
-        }
-
-        DataTypes::String dbName(allocator);
-        DataTypes::String dbPath(allocator);
-
-        jsonFile.at("temp_db_name").get_to(dbName);
-        jsonFile.at("temp_db_path").get_to(dbPath);
-
-        return std::make_tuple(std::move(dbName), std::move(dbPath));
-    }
-
     TemporaryDatabase::TemporaryDatabase(){
         this->_db = nullptr;
     }
@@ -44,14 +12,6 @@ namespace CoreEngine {
 
     bool TemporaryDatabase::Exists(const DataTypes::StringView& filename){
         return Storage::FileManager::FileExists(filename);
-    }
-
-    void TemporaryDatabase::ClearTemporaryFiles(
-        const ::Memory::IAllocator* allocator,
-        const DataTypes::String& dbName
-    ){
-        const auto dirPath = DataTypes::String::Concat(allocator, dbName, "/");
-        Storage::FileManager::RemoveFile(DataTypes::StringView::ViewOf(dirPath));
     }
 
     Int TemporaryDatabase::GetNextOrdinalPosition(){
@@ -63,22 +23,20 @@ namespace CoreEngine {
         return instance;
     }
 
-    void TemporaryDatabase::Initialize(
-        const ::Memory::IAllocator* allocator,
-        const DataTypes::StringView& configPath
-    ){
-        const auto [dbName, dbPath] = this->ReadConfiguration(allocator, configPath);
+    void TemporaryDatabase::Initialize(const ::Memory::IAllocator* allocator){
+        constexpr auto sysDbName = DataTypes::StringView("tempDb");
 
-        if (this->Exists(DataTypes::StringView::ViewOf(dbName)))
-            this->ClearTemporaryFiles(allocator, dbName);
+        // The temporary database never survives a restart. Remove its whole directory: CreateDatabase
+        // creates both tempDb.data and tempDb_sys.data, and a leftover of either makes CreateFile throw.
+        if (CoreEngine::TemporaryDatabase::Exists(sysDbName))
+            Storage::FileManager::RemoveFile(sysDbName);          // std::filesystem::remove_all
 
-        CreateDatabase(Constants::TEMPORARY_DATABASE_ID, dbName);
+        CreateDatabase(allocator, Constants::TEMPORARY_DATABASE_ID, sysDbName);
 
         this->_db = new Database(
             allocator,
             Constants::TEMPORARY_DATABASE_ID,
-            dbName,
-            true
+            sysDbName
         );
     }
 
@@ -95,10 +53,11 @@ namespace CoreEngine {
         //     )
         // };
 
-        return this->_db->CreateTable(
-            ordinalPosition,
-            ordinalPosition
-        );
+        return nullptr;
+        // return this->_db->CreateTable(
+        //     ordinalPosition,
+        //     ordinalPosition
+        // );
     }
 
     StorageTypes::Table* TemporaryDatabase::OpenTable(const Int tableId) const{

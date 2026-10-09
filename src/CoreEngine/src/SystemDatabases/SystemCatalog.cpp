@@ -2,150 +2,75 @@
 
 #include <fstream>
 
-#include <CoreEngine/SystemDatabases/CatalogSchema.h>
+#include <CoreEngine/SystemDatabases/CatalogRows.h>
 #include <CoreEngine/Database.h>
 
 #include <iostream>
-#include <nlohmann/json.hpp>
 
 #include <Systemic/Converter.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Evaluators/Expression.h>
-#include <Systemic/DataTypes/DataTypes.StaticData.h>
-#include <CoreEngine/Extensions/StringExtensions.h>
-
-namespace CoreEngine {
-    static void from_json(const nlohmann::json& j, sysColumn& sysColumn) {
-        j.at("name").get_to(sysColumn.name);
-        j.at("type").get_to(sysColumn.type);
-
-        if (j.contains("size"))
-            j.at("size").get_to(sysColumn.size);
-        if (j.contains("default"))
-            j.at("default").get_to(sysColumn._default);
-        if (j.contains("nullable"))
-            j.at("nullable").get_to(sysColumn.nullable);
-        if (j.contains("hasIdentity"))
-            j.at("hasIdentity").get_to(sysColumn.hasIdentity);
-    }
-
-    static void from_json(const nlohmann::json& j, sysTable& sysTable) {
-        j.at("name").get_to(sysTable.name);
-        j.at("id").get_to(sysTable.id);
-        j.at("columns").get_to(sysTable.columns);
-        j.at("primaryKey").get_to(sysTable.primaryKey);
-    }
-}
+#include "CoreEngine/BufferPool/StorageManager.h"
 
 namespace CoreEngine {
     SystemCatalog::SystemCatalog()
         : masterDb(nullptr){}
 
-    std::tuple<DataTypes::String, DataTypes::String> SystemCatalog::ReadConfiguration(
-        const ::Memory::IAllocator* allocator,
-        const DataTypes::StringView& configPath
-    ) {
-        std::ifstream file(configPath.Data());
-
-        if (!file.is_open())
-            throw std::runtime_error("System Tables file: " + std::string(configPath.Data(), configPath.Size()) + " could not be opened");
-
-        nlohmann::json jsonFile;
-
-        try {
-            file >> jsonFile;
-        }
-        catch (std::exception &e){
-            throw std::runtime_error(e.what());
-        }
-
-        DataTypes::String sysDbName(allocator);
-        DataTypes::String sysDbPath(allocator);
-
-        jsonFile.at("db_name").get_to(sysDbName);
-        jsonFile.at("db_path").get_to(sysDbPath);
-        jsonFile.at("tables").get_to(this->sysTables);
-
-        return std::make_tuple(std::move(sysDbName), std::move(sysDbPath));
-    }
-
     bool SystemCatalog::CatalogExists(const DataTypes::StringView& path){
         return Storage::FileManager::FileExists(path);
     }
 
-    void SystemCatalog::UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName) {
+    void SystemCatalog::UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) {
         this->masterDb = new Database(
             allocator,
             Constants::SYSTEM_CATALOG_ID,
-            dbName,
-            this->sysTables
+            dbName
         );
-        this->masterDb->GetColumnsHeaders(allocator);
-        this->masterDb->GetIndexes(allocator);
-        this->masterDb->GetIdentityColumns(allocator);
+
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
+            this->masterDb->SystemFileKey(),
+            Constants::HEADER_PAGE_ID
+        );
+
+        for (const auto& table: Catalog::SYSTEM_TABLES){
+            auto allocationStep = allocator->RecordAllocationStart();
+
+            const auto tableDefinition = SystemTableDefinition(allocator, table);
+            const auto* schema = Schemas::TableSchema::Build(tableDefinition, 1);
+
+            const auto* _ = this->masterDb->AttachTable(schema, *headerPage.GetTableHeaderPtr(table.ordinal));
+
+            allocator->ReleaseFromAllocationStep(allocationStep);
+        }
     }
 
-    void SystemCatalog::CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName) {
-        CreateDatabase(Constants::SYSTEM_CATALOG_ID, dbName);
+    void SystemCatalog::CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) {
+        CreateDatabase(allocator, Constants::SYSTEM_CATALOG_ID, dbName);
         this->masterDb = new Database(
             allocator,
             Constants::SYSTEM_CATALOG_ID,
-            dbName,
-            true
+            dbName
         );
 
-        for (int i = 0;i < this->sysTables.size(); i++) {
-            const auto& tableHeader = this->sysTables[i];
+        auto executionContext = ExecutionContext::BaseContext();
+        //
+        // for (const auto& table: Catalog::SYSTEM_TABLES){
+        //     auto allocationStep = allocator->RecordAllocationStart();
+        //
+        //     const auto tableDefinition = SystemTableDefinition(allocator, table);
+        //     const auto* schema = Schemas::TableSchema::Build(tableDefinition, 1);
+        //
+        //     const auto* _ = this->masterDb->CreateTable(schema);
+        //
+        //     allocator->ReleaseFromAllocationStep(allocationStep);
+        //
+        //     this->InsertTableToMasterDb(
+        //         executionContext,
+        //
+        //     );
+        // }
 
-            column_index_t primaryKeyIndexes[10];
-            Int counter = 0;
 
-            auto* table = this->masterDb->CreateTable(tableHeader.id, i);
-            for (Int columnIndex = 0; columnIndex < tableHeader.columns.size(); columnIndex++) {
-                const auto& columnHeader = tableHeader.columns[columnIndex];
-
-                block_size_t columnSize = 0;
-                const auto strView = DataTypes::StringView(columnHeader.type);
-                if (!COLUMN_SIZES_BY_TYPENAME.TryGetValue(strView, columnSize))
-                    throw std::runtime_error("Column type " + std::string(strView.Data(), strView.Size()) + " does not exist");
-                if (columnSize == 0)
-                    columnSize = columnHeader.size;
-
-                const auto columnType = COLUMN_TYPENAMES_TO_ENUMS.Get(&strView);
-                for (const auto& key: tableHeader.primaryKey) {
-                    if (columnHeader.name != key)
-                        continue;
-
-                    primaryKeyIndexes[counter++] = columnIndex;
-                }
-
-                const auto nameView = DataTypes::StringView(columnHeader.name);
-                auto* column = table->AddColumn(nameView, columnType, columnSize, columnIndex, columnHeader.nullable);
-
-                if (columnHeader.hasIdentity){
-                    auto defaultIdentityValue = Constants::DEFAULT_IDENTITY_VALUE;
-                    if (i == CatalogTables::SysDatabases
-                        && columnIndex == static_cast<Int>(SysDatabases::DatabaseId)
-                    ) defaultIdentityValue = Constants::SYSTEM_CATALOG_ID;
-
-                    column->SetIdentity(
-                        Catalog::IdentityColumnsHeader(
-                            tableHeader.id,
-                            columnIndex,
-                            Constants::DEFAULT_IDENTITY_SEED,
-                            Constants::DEFAULT_IDENTITY_INCREMENT,
-                            defaultIdentityValue,
-                            true,
-                            Constants::DEFAULT_IDENTITY_CACHE_BLOCK
-                        )
-                    );
-                }
-            }
-
-            if (counter == 0)
-                throw std::runtime_error("All tables in masterDb must have a primary key");
-            table->SetPrimaryKeyIndexedColumns(primaryKeyIndexes, counter);
-        }
     }
 
     void SystemCatalog::StoreSystemTablesToCatalog(
@@ -153,150 +78,7 @@ namespace CoreEngine {
         const DataTypes::StringView& dbNameView,
         const DataTypes::StringView& dbPathView
     )const {
-        const auto dbInsertResult = this->InsertDbToMasterDb(
-            baseContext,
-            dbNameView,
-            dbPathView,
-            true
-        );
 
-        const auto databaseId = dbInsertResult.primaryKey.AsInt<Int>();
-
-        const auto schemaInsertResult = this->InsertSchemaToMasterDb(
-            baseContext,
-            databaseId,
-            Constants::DEFAULT_SCHEMA_NAME
-        );
-
-        const auto schemaId = schemaInsertResult.primaryKey.AsInt<Int>(1);
-
-        Dictionary<std::string, column_index_t> columnNameToIndex;
-
-        int counter=  0;
-        for (int i = 0;i < this->sysTables.size(); i++) {
-            const auto& table = this->sysTables[i];
-
-            const auto tableResult =
-            this->InsertTableToMasterDb(
-                baseContext,
-                databaseId,
-                schemaId,
-                DataTypes::StringView(table.name),
-                static_cast<SmallInt>(i),
-                true
-            );
-
-
-            int columnPos = 0;
-            const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
-
-            Dictionary<std::string, Int> columnIdsDict;
-
-            for (auto& column: table.columns) {
-                counter++;
-
-                const auto normalizedColumnType = DataTypes::String::Normalize(column.type, baseContext.GetAllocator());
-                const auto strView = DataTypes::StringView::ViewOf(normalizedColumnType);
-
-                auto columnSize = COLUMN_SIZES_BY_TYPENAME.Get(&strView);
-
-                if (columnSize == 0)
-                    columnSize = column.size;
-
-                const auto& type = COLUMN_TYPENAMES_TO_ENUMS.Get(&strView);
-
-                const auto columnResult =
-                this->InsertColumnToMasterDb(
-                    baseContext,
-                    tableId,
-                    DataTypes::StringView(column.name),
-                    type,
-                    columnSize,
-                    INVALID_DECIMAL_PRECISION,
-                    INVALID_DECIMAL_SCALE,
-                    column.nullable,
-                    columnPos,
-                    true
-                );
-
-                if (columnResult.code != Errors::RuntimeError::Ok)
-                    std::cerr << columnResult.message << std::endl;
-
-                const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
-
-                if (column.hasIdentity){
-                    const auto identityValue = (i == 0)
-                        ? Constants::SYSTEM_CATALOG_ID + 1
-                        : Constants::DEFAULT_IDENTITY_VALUE;
-
-                    const auto _ = this->InsertIdentityColumnToMasterDb(
-                        baseContext,
-                        tableId,
-                        columnId,
-                        Constants::DEFAULT_IDENTITY_SEED,
-                        Constants::DEFAULT_IDENTITY_INCREMENT,
-                        identityValue,
-                        true,
-                        Constants::DEFAULT_IDENTITY_CACHE_BLOCK
-                    );
-                }
-
-                columnNameToIndex.Add(column.name, columnPos);
-                columnIdsDict.Add(column.name, columnId);
-
-                columnPos++;
-            }
-
-            DataTypes::String _columns(static_cast<const char*>("PK"), baseContext.GetAllocator());
-
-            for (const auto& primaryKeyStr : table.primaryKey) {
-                const auto key = columnNameToIndex.Get(primaryKeyStr);
-                char buffer[3];
-                snprintf(buffer, sizeof(buffer), "%d", key);
-                _columns += "_" + primaryKeyStr;
-            }
-
-            //TODO keep the last value keys
-            const auto indexResult =
-                this->InsertIndexToMasterDb(
-                    baseContext,
-                    tableId,
-                    DataTypes::StringView::ViewOf(_columns),
-                    true
-                );
-
-            auto indexId = indexResult.primaryKey.AsInt<Int>(1);
-
-            const auto constraintResult =
-                this->InsertConstraintToMasterDb(
-                    baseContext,
-                    tableId,
-                    DataTypes::StringView::ViewOf(_columns),
-                    Schemas::ConstraintType::PrimaryKey,
-                    false,
-                    &indexId
-                );
-
-            for(int j = 0;j < table.primaryKey.size(); j++){
-                auto _ = this->InsertIndexColumnToMasterDb(
-                    baseContext,
-                    indexId,
-                    columnIdsDict.Get(table.primaryKey[j]),
-                    static_cast<SmallInt>(j),
-                    true
-                );
-
-                _ = this->InsertConstraintColumnToMasterDb(
-                    baseContext,
-                    constraintResult.primaryKey.AsInt<Int>(1),
-                    columnIdsDict.Get(table.primaryKey[j]),
-                    static_cast<SmallInt>(j)
-                );
-            }
-        }
-
-        this->masterDb->GetColumnsHeaders(baseContext.GetAllocator());
-        this->masterDb->UpdateIdentityManagersIds(baseContext.GetAllocator());
     }
 
     Catalog::DatabaseHeader SystemCatalog::ToDatabaseHeader(
@@ -681,14 +463,13 @@ namespace CoreEngine {
 
     Database* SystemCatalog::GetDatabase() const{ return this->masterDb; }
 
-    bool SystemCatalog::Initialize(
-            const ExecutionContext& baseContext,
-            const DataTypes::StringView& configPath
-    ){
+    bool SystemCatalog::Initialize(const ExecutionContext& baseContext){
         const auto* allocator = baseContext.GetAllocator();
-        const auto [sysDbName, sysDbPath] = this->ReadConfiguration(allocator, configPath);
 
-        if (SystemCatalog::CatalogExists(DataTypes::StringView::ViewOf(sysDbName))){
+        constexpr auto sysDbName = DataTypes::StringView("masterDb");
+        constexpr auto sysDbPath = DataTypes::StringView("masterDb/masterDb.data");
+
+        if (SystemCatalog::CatalogExists(sysDbPath)){
             this->UseCatalogDatabase(allocator, sysDbName);
             return false;
         }
@@ -701,7 +482,7 @@ namespace CoreEngine {
 
     void SystemCatalog::Shutdown(){
         const Memory::Allocator allocator;
-        this->masterDb->UpdateMasterDatabase(&allocator);
+        this->masterDb->UpdateSystemCatalog(&allocator);
         this->masterDb->Destroy();
 
         delete this->masterDb;
@@ -1640,13 +1421,13 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
         for (auto& constraint : definition._constraints){
             constraint.columns = this->SelectConstraintColumnsByConstraintId(allocator, constraint.constraintId);
-            indexesColumnsCount += constraint.columns.Size();
+            constraintsColumnsCount += constraint.columns.Size();
         }
 
         definition._indexes = this->SelectIndexes(allocator, tableId);
         for (auto& index : definition._indexes){
             index.columns = this->SelectIndexColumnsByIndexId(allocator, index.id);
-            constraintsColumnsCount += index.columns.Size();
+            indexesColumnsCount += index.columns.Size();
         }
 
         definition._identities = this->SelectIdentityColumnsByTableId(allocator, tableId);

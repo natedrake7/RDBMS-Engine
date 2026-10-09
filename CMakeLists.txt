@@ -20,7 +20,6 @@ add_executable(
         UnitTests/src/UnitTests.cpp
 )
 
-find_package(nlohmann_json CONFIG REQUIRED)
 find_package(unofficial-argon2 CONFIG REQUIRED)
 
 add_library(Systemic SHARED
@@ -139,7 +138,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Contexts/ExecutionContext.cpp
         src/CoreEngine/src/Memory/Allocator.cpp
         src/CoreEngine/src/Memory/PersistentAllocator.cpp
-        src/CoreEngine/src/Extensions/StringExtensions.cpp
         src/CoreEngine/src/Vectorization/Vectorization.cpp
         src/CoreEngine/src/Evaluators/Kernels/Vectorized/VectorizedKernels.cpp
         src/CoreEngine/src/DataStorage/Table/Table.Vectorized.cpp
@@ -164,7 +162,6 @@ target_include_directories(CoreEngine
 
 target_link_libraries(CoreEngine
         PUBLIC Systemic
-        PRIVATE nlohmann_json::nlohmann_json
         PRIVATE PluginApi
 )
 

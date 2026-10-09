@@ -117,7 +117,7 @@ namespace CoreEngine::Schemas{
             EngineBitmap::SetBitmapBit(this->_words, ordinalPosition, false);
         }
 
-        [[nodiscard]] constexpr bool Test(const column_index_t ordinalPosition) const{
+        [[nodiscard]] constexpr bool HasValue(const column_index_t ordinalPosition) const{
             return EngineBitmap::GetBitmapBit(this->_words, ordinalPosition);
         }
 

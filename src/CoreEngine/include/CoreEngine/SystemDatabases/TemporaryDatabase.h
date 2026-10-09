@@ -17,15 +17,10 @@ namespace CoreEngine {
         Database* _db;
         std::atomic<int> currentOrdinalPosition;
 
-        static std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(
-            const ::Memory::IAllocator* allocator,
-            const DataTypes::StringView& configPath
-        );
         TemporaryDatabase();
         ~TemporaryDatabase();
 
         static bool Exists(const DataTypes::StringView& filename);
-        static void ClearTemporaryFiles(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
 
         [[nodiscard]] Int GetNextOrdinalPosition();
 
@@ -36,10 +31,7 @@ namespace CoreEngine {
             void operator=(TemporaryDatabase&&) = delete;
 
             static TemporaryDatabase &Get();
-            void Initialize(
-                const ::Memory::IAllocator* allocator,
-                const DataTypes::StringView& configPath
-            );
+            void Initialize(const ::Memory::IAllocator* allocator);
 
             [[nodiscard]] StorageTypes::Table* CreateTable();
             [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;

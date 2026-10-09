@@ -115,12 +115,10 @@ namespace CoreEngine {
         const auto _baseContext = ExecutionContext::BaseContext();
 
         DataStructures::PolymorphicArray<Catalog::ColumnStatistics> columnStatistics(_baseContext.GetAllocator());
-        for (const auto& column : table->GetColumns()) {
-            const auto& columnId = column->GetColumnId();
-
+        for (const auto& column : table->Columns()) {
             columnStatistics.Push(
                 Catalog::ColumnStatistics{
-                    .columnId = columnId,
+                    .columnId = column._id,
                     .distinctCount = 0,
                     .min = Value::Null(),
                     .max = Value::Null(),
@@ -128,9 +126,9 @@ namespace CoreEngine {
                 }
             );
 
-            sortedValues.Add(columnId, {});
-            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(_baseContext.GetAllocator(), tableStatistics.tableId, columnId);
-            columnHistogramsDictionary.Add(columnId, std::move(histograms));
+            sortedValues.Add(column._id, {});
+            auto histograms = this->catalog->SelectColumnHistogramsByColumnId(_baseContext.GetAllocator(), tableStatistics.tableId, column._id);
+            columnHistogramsDictionary.Add(column._id, std::move(histograms));
         }
 
         auto indexStatistics = StatisticsManager::Get().GetIndexStatistics(tableStatistics.tableId);

@@ -496,7 +496,7 @@ namespace QueryPipeline::PhysicalPlan {
         auto result = ExecutionResult(context);
 
         auto rightResult = this->right->Execute(context);
-        auto rightNumberOfColumns = rightResult.columns.Size();
+        auto rightNumberOfColumns = rightResult.columns.size();
 
         // if (rightResult.rows.Empty()){
         //     for (auto& outerRow : leftResult.rows){

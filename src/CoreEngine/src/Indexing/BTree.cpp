@@ -1,7 +1,6 @@
 ﻿#include <CoreEngine/Indexing/BTree.h>
 #include <algorithm>
 #include <CoreEngine/DataStorage/Row/Row.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Database.h>
@@ -440,15 +439,18 @@ namespace Indexing{
             return calculatedDegree;
         }
 
-        const auto& columns = otherTable->GetColumns();
+        const auto& columns = otherTable->Columns();
 
-        const auto& index = otherTable->GetNonClusteredIndexes(nonClusteredId);
+        const auto* index = otherTable->GetNonClusteredIndexes(nonClusteredId);
 
         Int computedKeySize = 0;
-        for(const auto& columnPos: index.columns){
-            const auto* column = columns[columnPos];
-            computedKeySize += column->Size();
-        }
+        // for (Int i = 0;i < index->_keyCount; i++){
+        //     computedKeySize += index->_keySize[i];
+        // }
+        // for(const auto& columnPos: index-){
+        //     const auto* column = columns[columnPos];
+        //     computedKeySize += column->Size();
+        // }
 
         return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
     }

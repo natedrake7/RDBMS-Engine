@@ -3,7 +3,6 @@
 #include <csignal>
 #include <iostream>
 #include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 #include <Systemic/Serialization/JsonParser.h>
 #include <Systemic/Serialization/JsonBuilder.h>

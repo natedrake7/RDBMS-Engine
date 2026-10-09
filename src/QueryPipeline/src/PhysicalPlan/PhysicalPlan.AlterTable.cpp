@@ -62,21 +62,18 @@ namespace QueryPipeline::PhysicalPlan{
 
     auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
-    auto* columnPtr = tablePtr->AddColumn(
-        DataTypes::StringView::ViewOf(this->column->name.name),
-        columnType,
-        this->column->type.size,
-        this->column->index,
-        this->column->isNullable
-      );
+    // auto* columnPtr = tablePtr->AddColumn(
+    //     DataTypes::StringView::ViewOf(this->column->name.name),
+    //     columnType,
+    //     this->column->type.size,
+    //     this->column->index,
+    //     this->column->isNullable
+    //   );
 
-    columnPtr->SetColumnId(columnId);
+    // columnPtr->SetColumnId(columnId);
 
-    tablePtr->AddColumn(columnPtr);
-    tablePtr->RetrieveIdentityColumnById(context.GetAllocator(), columnId);
 
     tablePtr->PopulateColumn(this->column->index, this->column->defaultValue);
-    tablePtr->RetrieveDefaultValuesFromCatalog(context.GetAllocator());
 
     return ExecutionResult(context);
   }
@@ -100,7 +97,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
 
-    tablePtr->RemoveColumn(context, this->column->index);
+    // tablePtr->RemoveColumn(context, this->column->index);
 
     return result;
   }
@@ -131,7 +128,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto _ = CoreEngine::SystemCatalog::Get().UpdateColumnById(context.GetAllocator(), this->column->columnId, updates);
 
-    tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
+    // tablePtr->UpdateColumnName(this->column->ordinalPosition, this->column->newName.name);
 
     return result;
   }

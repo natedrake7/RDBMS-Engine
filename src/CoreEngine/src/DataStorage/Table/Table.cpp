@@ -65,8 +65,10 @@ namespace CoreEngine::StorageTypes {
     Value Table::GenerateIdentityValue(const ::Memory::IAllocator* allocator, const column_index_t ordinal){
         return DataTypes::VisitDataType(this->Column(ordinal)->_type, [&]<typename T>()
         {
-            if constexpr(DataTypes::IsInteger<T>)
+            if constexpr(DataTypes::IsInteger<T> && !std::is_same_v<bool, T>)
                 return Value(GenerateIdentityValue<T>(allocator, ordinal));
+            else
+                return Value::Null();
         });
     }
 
@@ -829,7 +831,7 @@ namespace CoreEngine::StorageTypes {
         const RID* row,
         const ::Memory::IAllocator* allocator,
         const DataStructures::PolymorphicArray<Value>& updates
-    ) const{
+    ){
         //copy row for old transactions
         //this has the pointers of the old row to LOBS and overflow pages
         const auto rowRawData = page->RawRowData(row->_index);
@@ -1115,5 +1117,14 @@ namespace CoreEngine::StorageTypes {
         // row.SetDeletedTransactionId(prevRowVersionHeader.deletedTransactionId);
 
         // page.UpdateBytesLeft();
+    }
+
+    void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator){
+        for (Int i = 0;i < this->_schema->_columnCount; i++){
+            if (this->_schema->_columns[i]._identity != nullptr){
+                const auto* manager = this->IdentityOf(i);
+                manager->UpdateMasterDbOnShutdown(allocator);
+            }
+        }
     }
 }

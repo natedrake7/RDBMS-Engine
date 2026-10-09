@@ -44,7 +44,7 @@ namespace Network {
 
   public:
     [[nodiscard]] static Server& Get();
-    void Initialize(const DataTypes::StringView& configPath);
+    void Initialize();
     void Shutdown();
 
     //Security Functions
@@ -90,8 +90,7 @@ namespace Network {
 
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,
-        Int databaseId,
-        bool isServerInitialization = false
+        Int databaseId
     );
     const Dictionary<Int, CoreEngine::Database*>& GetDatabases()const;
     MultiThreading::Mutex& GetDatabasesLatch();

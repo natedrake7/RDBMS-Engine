@@ -4,7 +4,6 @@
 
 #include <Systemic/DataStructures/PolymorphicArray.h>
 #include  <CoreEngine/Memory/PersistentAllocator.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/ExtentReservation.h>
 #include <CoreEngine/Logger/Logger.h>
 #include <CoreEngine/Pages/AllocationPageView.h>
@@ -27,6 +26,11 @@ namespace CoreEngine::StorageTypes {
 } // namespace DatabaseEngine::StorageTypes
 
 namespace CoreEngine {
+    namespace Catalog
+    {
+        struct TableHeader;
+    }
+
     namespace Schemas
     {
         class TableSchema;
@@ -69,7 +73,7 @@ class Database final{
 
     static void PopulateFilenames(
         const ::Memory::IAllocator* tempAllocator,
-        const DataTypes::String& dbName,
+        const DataTypes::StringView& dbName,
         DataTypes::String& outFile,
         DataTypes::String& outSysFile
     );
@@ -97,16 +101,10 @@ public:
     Database(
         const ::Memory::IAllocator* allocator,
         Int databaseId,
-        const DataTypes::String& dbName,
-        const bool& isServerInitialization = false
+        const DataTypes::StringView& dbName
     );
 
-    Database(
-        const ::Memory::IAllocator* allocator,
-        Int databaseId,
-        const DataTypes::String& dbName,
-        const std::vector<CoreEngine::sysTable>& tables
-    );
+    void Bootstrap(const ::Memory::IAllocator* allocator);
 
     void Destroy();
 
@@ -148,8 +146,6 @@ public:
         const StorageTypes::TableHeader& physicalHeader
     );
 
-    static void InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns);
-
     [[nodiscard]] StorageTypes::Table *OpenTable(table_id_t tableId) const;
 
     void DeleteTable(const DataTypes::String& tableName);
@@ -187,10 +183,14 @@ public:
 
     static extent_id_t CalculateExtentId(page_id_t pageId);
 
-    void UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const;
+    void UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const;
 
     const DataStructures::PolymorphicArray<StorageTypes::Table*>& GetTables() const;
 };
 
-void CreateDatabase(Int databaseId, const DataTypes::String& dbName);
+void CreateDatabase(
+    const ::Memory::IAllocator* allocator,
+    Int databaseId,
+    const DataTypes::StringView& dbName
+);
 }; // namespace DatabaseEngine

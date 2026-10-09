@@ -4,7 +4,6 @@
 
 #include <Systemic/RowIdentifier.h>
 #include <Systemic/MaterializedRow.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <Systemic/DataStructures/PolymorphicArray.h>
 

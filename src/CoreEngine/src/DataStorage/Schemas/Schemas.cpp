@@ -268,7 +268,7 @@ namespace CoreEngine::Schemas{
             if (indexId == INVALID_INDEX_ID)
                 return INVALID_INDEX_ID;
 
-            for (Int i = 0;i < schema->_indexesCount; i++){
+            for (Int i = 0;i < tableDefinition._indexes.Size(); i++){
                 if (indexes[i]._id == indexId)
                     return i;
             }

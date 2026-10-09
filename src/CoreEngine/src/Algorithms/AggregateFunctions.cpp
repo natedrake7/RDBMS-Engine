@@ -1,5 +1,4 @@
 ﻿#include <CoreEngine/Algorithms/AggregateFunctions.h>
-#include <CoreEngine/DataStorage/Column.h>
 
 #include <limits>
 

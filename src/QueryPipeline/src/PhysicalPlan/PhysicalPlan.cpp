@@ -21,9 +21,9 @@
 
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
-        : status(context.GetAllocator()), displayColumnNames(context.GetAllocator()),
-          columns(context.GetAllocator()),
-          selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
+        :   status(context.GetAllocator()),
+            displayColumnNames(context.GetAllocator()),
+            selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
 
     ExecutionResult::ExecutionResult(
         const Errors::RuntimeError &code,
@@ -220,7 +220,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto _ = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
-      CoreEngine::CreateDatabase(databaseId, this->dbName);
+      CoreEngine::CreateDatabase(context.GetAllocator(), databaseId, DataTypes::StringView::ViewOf(this->dbName));
 
       return ExecutionResult(context);
   }
@@ -367,7 +367,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
         if (primaryKeyColumnIdsArray.Empty()) {
-            auto* tablePtr = db->CreateTable(tableId, index);
+            // auto* tablePtr = db->CreateTable(tableId, index);
             return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
         }
 
@@ -418,9 +418,9 @@ namespace QueryPipeline::PhysicalPlan {
             indexId
         );
 
-        const auto tableHeader = CoreEngine::SystemCatalog::Get().SelectTable();
+        // const auto tableHeader = CoreEngine::SystemCatalog::Get().SelectTable();
 
-        auto* tablePtr = db->CreateTable(tableId, index);
+        // auto* tablePtr = db->CreateTable(tableId, index);
 
         return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
     }
@@ -514,8 +514,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
         const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
-
-        tablePtr->GetConstantColumns(&result.columns);
+        result.columns = tablePtr->Columns();
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
         tablePtr->HeapScan(context, &rows, this->state);
@@ -562,8 +561,8 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        result.columns = tablePtr->Columns();
 
-        tablePtr->GetConstantColumns(&result.columns);
         context.SetFileKey(tablePtr->GetDataFileKey(), slotIndex);
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rids(context.GetAllocator(), context.GetBatchSize());
@@ -607,8 +606,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
-
-        tablePtr->GetConstantColumns(&result.columns);
+        result.columns = tablePtr->Columns();
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
@@ -640,8 +638,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
         auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
-
-        tablePtr->GetConstantColumns(&result.columns);
+        result.columns = tablePtr->Columns();
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());

@@ -7,14 +7,12 @@
 #include <vector>
 #include <CoreEngine/DatabaseConstants.h>
 #include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/BufferPool/StorageManager.h>
 #include <Systemic/Guards/WriterGuard.h>
 #include <CoreEngine/Logger/WriteAheadLogger.h>
 
 #include <iostream>
 
-#include <CoreEngine/Memory/Allocator.h>
 #include <CoreEngine/Memory/PersistentAllocator.h>
 #include <Systemic/Macros.h>
 
@@ -61,7 +59,7 @@ namespace CoreEngine{
 
     void Database::PopulateFilenames(
         const ::Memory::IAllocator* tempAllocator,
-        const DataTypes::String& dbName,
+        const DataTypes::StringView& dbName,
         DataTypes::String& outFile,
         DataTypes::String& outSysFile
     ){
@@ -162,8 +160,7 @@ namespace CoreEngine{
     Database::Database(
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
-        const DataTypes::String& dbName,
-        const bool& isServerInitialization
+        const DataTypes::StringView& dbName
     ) {
         this->id = databaseId;
         DataTypes::String file,sysFile;
@@ -174,55 +171,23 @@ namespace CoreEngine{
         Storage::StorageManager::Get().OpenFile(this->systemFileKey, DataTypes::StringView::ViewOf(sysFile));
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
-
         this->header = *headerPage.GetDatabaseHeaderPtr();
+
         this->_tables.SetAllocator(&this->_allocator);
-
-        if (isServerInitialization) return;
-
-        static auto& catalog = SystemCatalog::Get();
-
-        //query get from masterDb
-        const auto masterDbData = catalog.SelectTables(allocator, DataTypes::StringView::ViewOf(dbName));
-
-        if (this->header.numberOfTables != masterDbData.Size()) return;
-
-        for (int i = 0;i < masterDbData.Size(); i++)
-            this->CreateTable(masterDbData[i], *headerPage.GetTableHeaderPtr(i));
     }
 
-    Database::Database(
-        const ::Memory::IAllocator* allocator,
-        const Int databaseId,
-        const DataTypes::String& dbName,
-        const std::vector<sysTable>& tables
-    ){
-        this->id = databaseId;
-        DataTypes::String file,sysFile;
-        Database::PopulateFilenames(allocator, dbName, file, sysFile);
-        this->CreateKeys();
+    void Database::Bootstrap(const ::Memory::IAllocator* allocator){
+        static auto& catalog = SystemCatalog::Get();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, DataTypes::StringView::ViewOf(file));
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, DataTypes::StringView::ViewOf(sysFile));
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
+            this->systemFileKey,
+            Constants::HEADER_PAGE_ID
+        );
 
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
-
-        this->header = *headerPage.GetDatabaseHeaderPtr();
-        this->_tables.SetAllocator(&this->_allocator);
-
-        for (int i = 0; i < tables.size(); i++) {
-            HashSet primaryKeysSet(tables[i].primaryKey);
-            Catalog::Index index;
-
-            Int counter = 0;
-            for(int j = 0;j < tables[i].columns.size(); j++){
-                const auto& column = tables[i].columns[j];
-
-                if(primaryKeysSet.Contains(column.name))
-                    index.columns[counter++] = j;
-            }
-
-            this->CreateTable(tables[i], *headerPage.GetTableHeaderPtr(i), index, i);
+        for (const auto& tableHeader : catalog.SelectTables(allocator, this->id)){
+            const auto tableDefinition = catalog.SelectTableDefinition(allocator, tableHeader);
+            const auto* schema = CoreEngine::Schemas::TableSchema::Build(tableDefinition, 1);
+            const auto* _ = this->AttachTable(schema, *headerPage.GetTableHeaderPtr(tableHeader.ordinalPosition));
         }
     }
 
@@ -322,12 +287,6 @@ namespace CoreEngine{
         auto* table = this->_allocator.Allocate<StorageTypes::Table>(schema, physicalHeader, this);
         this->_tables.Push(table);
         return table;
-    }
-
-    void Database::InferSchemaFromColumns(const std::vector<StorageTypes::Column*>& columns){
-        HashSet<std::string> schemaNamesSet;
-
-
     }
 
     page_id_t Database::CalculateExtentFirstPageId(const extent_id_t extentId){
@@ -557,17 +516,21 @@ namespace CoreEngine{
 
     Storage::FileKey Database::SystemFileKey() const{ return this->systemFileKey; }
 
-    void Database::UpdateMasterDatabase(const ::Memory::IAllocator* allocator)const{
+    void Database::UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const{
         for(const auto& table: this->_tables)
             table->UpdateSystemCatalog(allocator);
     }
 
     const DataStructures::PolymorphicArray<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
 
-    void CreateDatabase(const Int databaseId, const DataTypes::String& dbName){
+    void CreateDatabase(
+        const ::Memory::IAllocator* allocator,
+        const Int databaseId,
+        const DataTypes::StringView& dbName
+    ){
         static auto& storageManager = Storage::StorageManager::Get();
 
-        const auto path = dbName.ConcatInPlace("/", dbName);
+        const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
         const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
 
         storageManager.CreateFile_(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);

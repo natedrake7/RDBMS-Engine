@@ -46,17 +46,17 @@ namespace Network {
     return instance;
   }
 
-  void Server::Initialize(const DataTypes::StringView& configPath){
+  void Server::Initialize(){
     const CoreEngine::ExecutionContext _baseContext;
 
     this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
-    this->temporaryDatabase->Initialize(_baseContext.GetAllocator(), configPath);
+    this->temporaryDatabase->Initialize(_baseContext.GetAllocator());
 
     this->versionDatabase = &CoreEngine::VersionDatabase::Get();
-    this->versionDatabase->Initialize(_baseContext, configPath);
+    this->versionDatabase->Initialize(_baseContext);
 
     this->systemCatalog = &CoreEngine::SystemCatalog::Get();
-    if (this->systemCatalog->Initialize(_baseContext, configPath)){
+    if (this->systemCatalog->Initialize(_baseContext)){
         this->CreateSystemRoles(_baseContext);
         this->CreateSystemUsers(_baseContext);
         return;
@@ -215,7 +215,7 @@ namespace Network {
   void Server::Shutdown(){
     const CoreEngine::Memory::Allocator allocator;
     for (auto* database: this->databases | std::views::values){
-        database->UpdateMasterDatabase(&allocator);
+        database->UpdateSystemCatalog(&allocator);
         database->Destroy();
 
         delete database;
@@ -228,25 +228,29 @@ namespace Network {
 
     CoreEngine::Database* Server::UseDatabase(
         const CoreEngine::ExecutionContext& context,
-        const Int databaseId,
-        const bool isServerInitialization
+        const Int databaseId
     ){
         CoreEngine::Database* db = nullptr;
+        const auto* allocator = context.GetAllocator();
 
-        if (databaseId == Constants::SYSTEM_CATALOG_ID) return this->systemCatalog->GetDatabase();
+        if (databaseId == Constants::SYSTEM_CATALOG_ID)
+            return this->systemCatalog->GetDatabase();
 
         MultiThreading::WriterGuard lock(&this->databasesLatch);
 
-        if (this->databases.TryGetValue(databaseId, db)) return db;
+        if (this->databases.TryGetValue(databaseId, db))
+            return db;
 
-        const auto dbHeader = this->systemCatalog->SelectDatabaseById(context.GetAllocator(), databaseId);
+        const auto dbHeader = this->systemCatalog->SelectDatabaseById(allocator, databaseId);
 
         db = new CoreEngine::Database(
-            context.GetAllocator(),
+            allocator,
             databaseId,
-            dbHeader.name,
-            isServerInitialization
+            DataTypes::StringView::ViewOf(dbHeader.name)
         );
+
+        db->Bootstrap(allocator);
+
         this->databases.Add(databaseId, db);
 
         return db;

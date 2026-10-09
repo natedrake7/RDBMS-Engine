@@ -1,6 +1,5 @@
 ﻿#include <cmath>
 #include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 #include <CoreEngine/DataStorage/LargeObjects/LobWriter.h>
 #include <CoreEngine/DataStorage/Row/Row.SerializationContext.h>
@@ -10,31 +9,28 @@
 
 namespace CoreEngine::StorageTypes{
     template <typename ValueProvider>
-    void Table::EvaluateRow(RowSerializationContext& context, ValueProvider&& provider) const{
+    void Table::EvaluateRow(RowSerializationContext& context, ValueProvider&& provider){
         Int autoComputed = 0;
 
         auto* __restrict__ values = context._values;
 
-        for (auto* column: this->_columns){
-            const auto ordinalPosition = column->OrdinalPosition();
-
-            if (column->HasIdentity()){
-                values[ordinalPosition] = column->GenerateIdentityValue(context._allocator);
+        for (auto& column: this->Columns()){
+            if (column._identity != nullptr){
+                values[column._ordinalPosition] = this->GenerateIdentityValue(context._allocator, column._ordinalPosition);
                 autoComputed++;
                 continue;
             }
 
-            values[ordinalPosition] = provider(ordinalPosition, autoComputed);
+            values[column._ordinalPosition] = provider(column._ordinalPosition, autoComputed);
         }
     }
 
     Errors::RuntimeStatus Table::PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize) const{
-        UnsignedInt rowSize = sizeof(RowHeader) + this->_columns.Size() * sizeof(RowEntry);
+        UnsignedInt rowSize = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
 
-        for (const auto* column : this->_columns){
-            const auto ordinalPosition = column->OrdinalPosition();
-            const auto* __restrict__ value = &context._values[ordinalPosition];
-            auto* __restrict__ placement = &context._placements[ordinalPosition];
+        for (const auto& column : this->Columns()){
+            const auto* __restrict__ value = &context._values[column._ordinalPosition];
+            auto* __restrict__ placement = &context._placements[column._ordinalPosition];
 
             if (value->IsNull()){
                 placement->_kind = ColumnPlacement::Kind::Null;
@@ -49,10 +45,10 @@ namespace CoreEngine::StorageTypes{
                 continue;
             }
 
-            if (value->Size() > column->Size()){
+            if (value->Size() > column._recordSize){
                 return Errors::RuntimeStatus(
                     Errors::RuntimeError::ColumnSizeExceeded,
-                    Messages::COLUMN_SIZE_EXCEEDED(context._allocator, column->GetColumnNameView())
+                    Messages::COLUMN_SIZE_EXCEEDED(context._allocator, column._name)
                 );
             }
 
@@ -68,16 +64,15 @@ namespace CoreEngine::StorageTypes{
             Int largest = -1;
             UnsignedInt largestSize = LOB_REFERENCE_SIZE;
 
-            for (const auto* column : this->_columns){
-                const auto ordinalPosition = column->OrdinalPosition();
-                const auto* __restrict__ placement = &context._placements[ordinalPosition];
+            for (const auto& column : this->Columns()){
+                const auto* __restrict__ placement = &context._placements[column._ordinalPosition];
 
                 if (
                     placement->_kind == ColumnPlacement::Kind::Inline
                     && placement->_size > largestSize
-                    && this->CanStoreColumnOffRow(ordinalPosition)
+                    && this->CanStoreColumnOffRow(column._ordinalPosition)
                 ){
-                    largest = ordinalPosition;
+                    largest = column._ordinalPosition;
                     largestSize = placement->_size;
                 }
             }
@@ -98,32 +93,30 @@ namespace CoreEngine::StorageTypes{
     }
 
     void Table::WriteOffRowValues(const RowSerializationContext& context) const{
-        for (const auto* column : this->_columns){
-            const auto ordinalPosition = column->OrdinalPosition();
-            auto* __restrict__ placement = &context._placements[ordinalPosition];
+        for (const auto& column : this->Columns()){
+            auto* __restrict__ placement = &context._placements[column._ordinalPosition];
 
             if (placement->_kind != ColumnPlacement::Kind::OffRow)
                 continue;
 
-            auto* __restrict__ value = &context._values[ordinalPosition];
+            auto* __restrict__ value = &context._values[column._ordinalPosition];
             const auto lobRef = LobWriter::Write(context._allocator, this, value->Data(), value->Size());
-            *value = Value::FromLobReference(lobRef, value->GetType(), ordinalPosition);
+            *value = Value::FromLobReference(lobRef, value->GetType(), column._ordinalPosition);
         }
     }
 
     SerializedRow Table::WriteRow(const RowSerializationContext& context, const UnsignedInt rowSize) const{
         auto* __restrict__ buffer = static_cast<object_t*>(context._allocator->AllocateRaw(rowSize));
 
-        const auto dataStart = sizeof(RowHeader) + this->_columns.Size() * sizeof(RowEntry);
+        const auto dataStart = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
 
         std::memcpy(buffer, &context._header, sizeof(RowHeader));
         auto payload = SerializedRow(buffer, rowSize, dataStart);
 
         Int entryOffset = sizeof(RowHeader);
-        for (const auto* column : this->_columns){
-            const auto ordinalPosition = column->OrdinalPosition();
-            const auto* __restrict__ placement = &context._placements[ordinalPosition];
-            const auto* __restrict__ value = &context._values[ordinalPosition];
+        for (const auto& column : this->Columns()){
+            const auto* __restrict__ placement = &context._placements[column._ordinalPosition];
+            const auto* __restrict__ value = &context._values[column._ordinalPosition];
 
             RowEntry entry;
             switch (placement->_kind){
@@ -158,7 +151,7 @@ namespace CoreEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         RowSerializationContext& rowContext,
         ValueProvider&& provider
-    ) const{
+    ){
         this->EvaluateRow(rowContext, std::forward<ValueProvider>(provider));
         UnsignedInt rowSize = 0;
         status = this->PlanRow(rowContext, rowSize);
@@ -173,7 +166,7 @@ namespace CoreEngine::StorageTypes{
         Errors::RuntimeStatus& status,
         RowSerializationContext& rowContext,
         const DataStructures::PolymorphicArray<Value>& values
-    ) const{
+    ){
         return this->SerializeRowGeneric(status, rowContext,
         [&](const Int ordinalPosition, const Int autoComputedColumns) -> const Value&{
             return values[ordinalPosition - autoComputedColumns];

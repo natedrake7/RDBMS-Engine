@@ -2,7 +2,6 @@
 
 #include <algorithm>
 
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 #include <CoreEngine/Pages/Additional/RawRowReference.h>
@@ -428,8 +427,8 @@ namespace Pages{
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
-        const auto& columns = tablePtr->GetColumns();
-        const auto columnsSize = columns.Size();
+        const auto& columns = tablePtr->Columns();
+        const auto columnsSize = columns.size();
 
         MaterializedRow result(allocator);
 
@@ -445,7 +444,7 @@ namespace Pages{
                 auto value = Value::FromExternalStorage(
                     rowDataPtr + entries[i].Offset(),
                     entries[i].Size(),
-                    columns[i]->Type(),
+                    columns[i]._type,
                     allocator
                 );
                 result.AddColumn(value);
@@ -457,7 +456,7 @@ namespace Pages{
             case CoreEngine::StorageTypes::RowEntry::LOB:{
                 DataTypes::LobReference reference;
                 std::memcpy(&reference, rowDataPtr + entry->Offset(), sizeof(reference));
-                result.AddColumn(Value::FromLobReference(reference, columns[i]->Type()));
+                result.AddColumn(Value::FromLobReference(reference, columns[i]._type));
                 break;
             }
             default:

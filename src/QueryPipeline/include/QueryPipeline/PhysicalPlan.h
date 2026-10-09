@@ -42,7 +42,7 @@ namespace QueryPipeline::PhysicalPlan {
         Errors::RuntimeStatus status;
 
         DataStructures::PolymorphicArray<DataTypes::String> displayColumnNames;
-        DataStructures::PolymorphicArray<const CoreEngine::StorageTypes::Column*> columns;
+        std::span<const CoreEngine::Schemas::ColumnSchema> columns;
 
         CoreEngine::DataChunk dataChunk;
         CoreEngine::SelectionVector* selectionVector;

@@ -54,7 +54,6 @@ namespace Reflection{
         return !std::meta::annotations_of_with_type(item, ^^E).empty();
     }
 
-
     // Calls onFlag(name) for every single-bit enumerator set in value.
     // Skips NONE (0) and composites such as ALL, so it works on any flag enum.
     template<typename E, typename F> requires std::is_enum_v<E>

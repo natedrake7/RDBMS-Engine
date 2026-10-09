@@ -2,8 +2,12 @@
 #include <string>
 #include <vector>
 
+#include <meta>
+#include <optional>
+
 #include <CoreEngine/Errors.h>
 #include <CoreEngine/SystemDatabases/CatalogHeaders.h>
+#include <CoreEngine/SystemDatabases/CatalogRows.h>
 #include <CoreEngine/Contexts/ExecutionContext.h>
 
 namespace QueryPipeline
@@ -22,12 +26,10 @@ namespace CoreEngine {
         SystemCatalog();
 
         Database* masterDb;
-        std::vector<CoreEngine::sysTable> sysTables;
 
-        std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(const ::Memory::IAllocator* allocator, const DataTypes::StringView& configPath);
         [[nodiscard]] static bool CatalogExists(const DataTypes::StringView& path);
-        void UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
-        void CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
+        void UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName);
+        void CreateCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName);
         void StoreSystemTablesToCatalog(
             const ExecutionContext& baseContext,
             const DataTypes::StringView& dbNameView,
@@ -77,19 +79,48 @@ namespace CoreEngine {
         static Catalog::IndexStatistics ToIndexStatistics(const ::Memory::IAllocator* allocator, const StorageTypes::RID* rowPtr, const StorageTypes::Table* table);
 
     public:
-        SystemCatalog(SystemCatalog const&) = delete;
-        void operator=(SystemCatalog const&) = delete;
+        SystemCatalog(const SystemCatalog&) = delete;
+        SystemCatalog& operator=(const SystemCatalog&) = delete;
         SystemCatalog(SystemCatalog&&) = delete;
-        void operator=(SystemCatalog&&) = delete;
+        SystemCatalog& operator=(SystemCatalog&&) = delete;
 
         static SystemCatalog& Get();
 
         [[nodiscard]] Database* GetDatabase()const;
 
-        [[nodiscard]]bool Initialize(
-            const ExecutionContext& baseContext,
-            const DataTypes::StringView& configPath
-        );
+        /**
+         * @name Generic catalog row access
+         * Typed reads and writes of any catalog table through its row struct (CatalogRows.h).
+         * Defined in SystemCatalog.Templates.h: include it in the translation units that call them.
+         * @{
+         */
+
+        // Inserts the row. An Identity member left at 0 is generated; the result carries the new primary key.
+        template <Catalog::CatalogRow TRow>
+        [[nodiscard]] Errors::RuntimeStatus Insert(const ExecutionContext& context, const TRow& row) const;
+
+        // Rows whose primary key starts with keyPrefix, e.g. Select<Catalog::SysColumnRow>(allocator, tableId)
+        template <Catalog::CatalogRow TRow, DataTypes::Primitive... TKey> requires (sizeof...(TKey) > 0)
+        [[nodiscard]] DataStructures::PolymorphicArray<TRow> Select(
+            const ::Memory::IAllocator* allocator,
+            const TKey&... keyPrefix
+        ) const;
+
+        // The row with exactly this primary key, if any
+        template <Catalog::CatalogRow TRow, DataTypes::Primitive... TKey> requires (sizeof...(TKey) > 0)
+        [[nodiscard]] std::optional<TRow> SelectOne(
+            const ::Memory::IAllocator* allocator,
+            const TKey&... key
+        ) const;
+
+        // Overwrites the row with row's primary key. With no Fields every non-key column is written,
+        // otherwise only the listed members, e.g. Update<^^Catalog::SysIdentityColumnRow::lastValue>(allocator, row)
+        template <std::meta::info... Fields, Catalog::CatalogRow TRow>
+        [[nodiscard]] Errors::RuntimeStatus Update(const ::Memory::IAllocator* allocator, const TRow& row) const;
+
+        /** @} End of: Generic catalog row access */
+
+        [[nodiscard]]bool Initialize(const ExecutionContext& baseContext);
         void Shutdown();
 
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::DatabaseHeader> RetrieveCatalog()const;

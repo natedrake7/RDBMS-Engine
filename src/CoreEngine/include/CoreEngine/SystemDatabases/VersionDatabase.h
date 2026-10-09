@@ -28,7 +28,7 @@ namespace CoreEngine{
 
         static constexpr Int PENDING_VERSIONS_THRESHOLD = 1000;
 
-        void PopulateFilenames(const ::Memory::IAllocator* allocator, const DataTypes::String& dbName);
+        void PopulateFilenames(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName);
         void WriteHeaderToFile()const;
 
         bool AllocateNewExtent(
@@ -48,11 +48,6 @@ namespace CoreEngine{
         VersionDatabase();
         ~VersionDatabase();
 
-        static std::tuple<DataTypes::String, DataTypes::String> ReadConfiguration(
-            const ::Memory::IAllocator* allocator,
-            const DataTypes::StringView& configPath
-        );
-
         [[nodiscard]] static bool VersionDatabaseExists(const DataTypes::StringView& path);
         void CreateKeys();
 
@@ -64,10 +59,7 @@ namespace CoreEngine{
 
             static VersionDatabase& Get();
 
-            void Initialize(
-                const ExecutionContext& baseContext,
-                const DataTypes::StringView& configPath
-            );
+            void Initialize(const ExecutionContext& baseContext);
 
             [[nodiscard]]
             StorageTypes::RID InsertRow(

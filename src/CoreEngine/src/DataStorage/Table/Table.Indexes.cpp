@@ -1,6 +1,5 @@
 #include <CoreEngine/DatabaseConstants.h>
 #include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/DataStorage/Column.h>
 #include <CoreEngine/Database.h>
 
 #include <Systemic/Guards/ReaderGuard.h>

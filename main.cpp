@@ -154,8 +154,7 @@ int main(){
     //     std::ref(server.GetDatabasesLatch())
     // );
 
-    static constexpr DataTypes::StringView CONFIG_FILE_PATH = "configuration.json";
-    server.Initialize(CONFIG_FILE_PATH);
+    server.Initialize();
 
     CommandLineInterface(server);
 
