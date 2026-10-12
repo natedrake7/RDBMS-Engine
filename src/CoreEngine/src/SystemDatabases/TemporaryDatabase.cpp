@@ -61,7 +61,7 @@ namespace CoreEngine {
     }
 
     StorageTypes::Table* TemporaryDatabase::OpenTable(const Int tableId) const{
-        return this->_db->OpenTable(tableId);
+        return this->_db->OpenTableByOrdinal(tableId);
     }
 
     void TemporaryDatabase::Shutdown(){

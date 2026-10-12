@@ -279,6 +279,7 @@ namespace CoreEngine::StorageTypes {
         const TableHeader &physicalHeader,
         Database *database
     ):  _physicalHeader(physicalHeader), _schema(schema),
+        _pins(1), _dropped(false), _schemaId(0),
         _db(database), _clusteredTree(nullptr){
         const auto nonClusteredCount = this->_schema->_indexesCount - this->IsClustered();
         if (nonClusteredCount > 0){
@@ -297,10 +298,18 @@ namespace CoreEngine::StorageTypes {
                 manager.Bootstrap(column->_identity, this->_schema->_id, column->_id);
             }
         }
+
+        this->_lowerName = DataTypes::String::Lower(schema->_lowerName, &this->_allocator);
     }
 
-    void Table::Destroy() const{
+    void Table::Destroy(){
+        this->Unpin();
         this->_allocator.Release();
+    }
+
+    void Table::ReplaceSchema(const Schemas::TableSchema* newSchema){
+        MultiThreading::WriterGuard writerGuard(&this->_schemaMutex);
+        this->_schema = newSchema;
     }
 
     Errors::RuntimeStatus Table::ChunkInsert(
@@ -1006,13 +1015,13 @@ namespace CoreEngine::StorageTypes {
     ExtentReservation Table::ReserveExtents(const ::Memory::IAllocator* allocator, const Int requiredPages) const{
         return this->_db->ReserveExtents(
             allocator,
-            requiredPages,
-            this->_schema->_ordinalPosition
+            this,
+            requiredPages
         );
     }
 
     ExtentReservation Table::LazyReservation(const ::Memory::IAllocator* allocator) const{
-        return ExtentReservation(allocator, this->_db, this->_schema->_ordinalPosition);
+        return ExtentReservation(allocator, this->_db, this);
     }
 
     void Table::Truncate(){

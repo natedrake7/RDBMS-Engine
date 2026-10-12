@@ -202,7 +202,7 @@ namespace CoreEngine::Schemas{
         const column_index_t* _storedComputedOrder;
 
         const UnsignedTinyInt* _checkConstraints;
-        DataTypes::StringView _name;
+        DataTypes::StringView _lowerName;
 
         Int _id;
         Int _schemaId;

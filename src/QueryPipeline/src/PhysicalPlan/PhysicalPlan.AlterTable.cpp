@@ -60,7 +60,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+    auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
     // auto* columnPtr = tablePtr->AddColumn(
     //     DataTypes::StringView::ViewOf(this->column->name.name),
@@ -95,7 +95,7 @@ namespace QueryPipeline::PhysicalPlan{
     //remove it from table, remove it from rows. Adjust column indexes if need be.
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-    auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+    auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
     // tablePtr->RemoveColumn(context, this->column->index);
 
@@ -117,7 +117,7 @@ namespace QueryPipeline::PhysicalPlan{
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-    const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+    const auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
     const auto updates = DataStructures::PolymorphicArray<Value>::From(
         context.GetAllocator(),

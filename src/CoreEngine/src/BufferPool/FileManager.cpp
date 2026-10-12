@@ -51,7 +51,7 @@ namespace Storage{
     FileManager::FileManager() = default;
 
     FileManager::~FileManager(){
-        for(const auto& file : this->fileTable | std::views::values)
+        for(const auto& file : this->_fileTable | std::views::values)
             ::close(file._fd);
     }
 
@@ -62,7 +62,7 @@ namespace Storage{
     ){
         {
             MultiThreading::ReaderGuard lock(&this->tableMutex);
-            if (this->fileTable.Contains(key))
+            if (this->_fileTable.Contains(key))
                 throw std::runtime_error("File already exists");
         }
 
@@ -100,13 +100,18 @@ namespace Storage{
 
         MultiThreading::WriterGuard lock(&this->tableMutex);
 
-        if (this->fileTable.Contains(key))
+        if (this->_fileTable.Contains(key))
             return;
 
-        this->fileTable.Add(key, File(filename, fd));
+        this->_fileTable.Add(key, File(filename, fd));
     }
 
     void FileManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){
+        MultiThreading::WriterGuard lock(&this->tableMutex);
+
+        if (this->_fileTable.Contains(key))
+            return;
+
         char path[DIRECTORY_SIZE];
         std::snprintf(path, sizeof(path), "%.*s", filename.Size(), filename.Data());
 
@@ -114,21 +119,20 @@ namespace Storage{
         if (fd < 0)
             throw std::runtime_error("FileManager::Open: File could not be opened");
 
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-        this->fileTable.Add(key, File(filename, fd));
+        this->_fileTable.Add(key, File(filename, fd));
     }
 
     file_descriptor_t FileManager::GetFile(const FileKey key){
         MultiThreading::ReaderGuard lock(&this->tableMutex);
-        return this->fileTable.Get(key)._fd;
+        return this->_fileTable.Get(key)._fd;
     }
 
 
     void FileManager::CloseFile(const FileKey key){
         MultiThreading::WriterGuard lock(&this->tableMutex);
-        const auto* file = &this->fileTable.Get(key);
+        const auto* file = &this->_fileTable.Get(key);
         ::close(file->_fd);
-        this->fileTable.Remove(key);
+        this->_fileTable.Remove(key);
     }
 
     bool FileManager::FileExists(const DataTypes::StringView& fileName){

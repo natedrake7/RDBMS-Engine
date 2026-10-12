@@ -437,7 +437,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+      auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
       const auto columnsHeaders =CoreEngine::SystemCatalog::Get().SelectColumns(context.GetAllocator(), this->table->_tableId);
 
@@ -513,7 +513,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        const auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        const auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
@@ -560,7 +560,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto slotIndex = this->table->_slotIndex;
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
 
         context.SetFileKey(tablePtr->GetDataFileKey(), slotIndex);
@@ -605,7 +605,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
 
         //select if to use clustered or non clustered index here
@@ -637,7 +637,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
 
         //select if to use clustered or non clustered index here
@@ -900,7 +900,7 @@ namespace QueryPipeline::PhysicalPlan {
 
     ExecutionResult PhysicalInsert::Execute(CoreEngine::ExecutionContext& context){
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
         Int rowCount = 0;
         const auto* allocator = context.GetAllocator();
@@ -987,7 +987,7 @@ namespace QueryPipeline::PhysicalPlan {
         auto result = ExecutionResult(context);
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
         result.status = tablePtr->HeapUpdate(context, this->expression, this->updates);
         return result;
@@ -1003,7 +1003,7 @@ namespace QueryPipeline::PhysicalPlan {
         auto result = ExecutionResult(context);
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
         result.status = tablePtr->ClusteredIndexScanUpdate(context, this->expression, this->updates);
         return result;
@@ -1018,7 +1018,7 @@ namespace QueryPipeline::PhysicalPlan {
   ExecutionResult PhysicalIndexSeekUpdate::Execute(CoreEngine::ExecutionContext& context){
       const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+      auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
       DataTypes::Indexing::Key key;
 
@@ -1037,7 +1037,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-      const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+      const CoreEngine::StorageTypes::Table* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
       tablePtr->HeapDelete(context, this->expression);
 
@@ -1052,7 +1052,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-      auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+      auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
       tablePtr->ClusteredIndexScanDelete(context, this->expression, state);
 
@@ -1067,7 +1067,7 @@ namespace QueryPipeline::PhysicalPlan {
 
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        auto* tablePtr = db->OpenTable(this->table->_ordinalPosition);
+        auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
         tablePtr->ClusteredIndexSeekDelete(context, this->expression, this->state);
 

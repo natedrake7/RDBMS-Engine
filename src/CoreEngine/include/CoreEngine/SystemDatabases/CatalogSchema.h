@@ -31,6 +31,7 @@ namespace CoreEngine {
      */
 
     inline constexpr Int SYSTEM_SCHEMA_ID = 1;
+    inline constexpr auto SYSTEM_SCHEMA_NAME = DataTypes::StringView("dbo");
     inline constexpr Int FIRST_USER_OBJECT_ID = 10'000;
 
     // System tables have fewer than SYSTEM_COLUMN_ID_STRIDE columns (checked in SystemTablesAreValid)

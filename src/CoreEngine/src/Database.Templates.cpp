@@ -12,8 +12,11 @@
 
 namespace CoreEngine{
     template <typename TView>
-    TView Database::LazyAllocateSinglePage(const ::Memory::IAllocator* allocator, const table_id_t ordinalPos){
-        auto extentReservation = this->ReserveExtents(allocator, 1, ordinalPos);
+    TView Database::LazyAllocateSinglePage(
+        const ::Memory::IAllocator* allocator,
+        const StorageTypes::Table* table
+    ){
+        auto extentReservation = this->ReserveExtents(allocator, table, 1);
         auto page = extentReservation.Next<TView>();
 
         {
@@ -25,21 +28,22 @@ namespace CoreEngine{
         return page;
     }
 
-    template Pages::PageView Database::LazyAllocateSinglePage<Pages::PageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::IndexPageView Database::LazyAllocateSinglePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::LobDataView Database::LazyAllocateSinglePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::OverflowPageView Database::LazyAllocateSinglePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::PageView Database::LazyAllocateSinglePage<Pages::PageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::IndexPageView Database::LazyAllocateSinglePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::LobDataView Database::LazyAllocateSinglePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::OverflowPageView Database::LazyAllocateSinglePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
 
     template<typename TVIew>
     TVIew Database::LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        const table_id_t ordinalPos
+        const StorageTypes::Table* table
     ){
-        const auto allocationPageId = this->_tables[ordinalPos]->GetAllocationPageId();
+
+        const auto allocationPageId = table->GetAllocationPageId();
 
         TVIew page;
         if (allocationPageId == INVALID_PAGE_ID)
-            return this->LazyAllocateSinglePage<TVIew>(allocator, ordinalPos);
+            return this->LazyAllocateSinglePage<TVIew>(allocator, table);
 
         constexpr auto PAGE_TYPE = Storage::StorageManager::DeducePageType<TVIew>();
         const auto allocationPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
@@ -75,15 +79,15 @@ namespace CoreEngine{
             }
         }
 
-        return this->LazyAllocateSinglePage<TVIew>(allocator, ordinalPos);
+        return this->LazyAllocateSinglePage<TVIew>(allocator, table);
     }
 
 
-    template Pages::PageView Database::LazyAllocateTablePage<Pages::PageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::IndexPageView Database::LazyAllocateTablePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::OverflowPageView Database::LazyAllocateTablePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::PageView Database::LazyAllocateTablePage<Pages::PageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::IndexPageView Database::LazyAllocateTablePage<Pages::IndexPageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::OverflowPageView Database::LazyAllocateTablePage<Pages::OverflowPageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
 
-    template Pages::LobRootView Database::LazyAllocateTablePage<Pages::LobRootView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::LobIndexView Database::LazyAllocateTablePage<Pages::LobIndexView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
-    template Pages::LobDataView Database::LazyAllocateTablePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, table_id_t ordinalPos);
+    template Pages::LobRootView Database::LazyAllocateTablePage<Pages::LobRootView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::LobIndexView Database::LazyAllocateTablePage<Pages::LobIndexView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
+    template Pages::LobDataView Database::LazyAllocateTablePage<Pages::LobDataView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
 }

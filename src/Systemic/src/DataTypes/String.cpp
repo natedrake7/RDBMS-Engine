@@ -151,11 +151,11 @@ namespace DataTypes{
     }
 
     String String::Empty(const Memory::IAllocator* allocator){
-        return String(allocator, 0);
+        return {allocator, 0};
     }
 
     String String::Null(){
-        return String();
+        return {};
     }
 
     void String::SetAllocator(const Memory::IAllocator* allocator){
@@ -209,7 +209,7 @@ namespace DataTypes{
     }
 
     String::operator std::string_view() const{
-        return std::string_view(this->_data, this->_size);
+        return {this->_data, this->_size};
     }
 
     String::operator std::span<const char>() const{

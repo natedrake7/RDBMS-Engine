@@ -243,12 +243,12 @@ namespace DataStructures{
             return this->_data[0];
         }
 
-        [[nodiscard]] T& operator[](Int index){
+        [[nodiscard]] T& operator[](Int index) noexcept{
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]: Index out of range.");
             return this->_data[index];
         }
 
-        [[nodiscard]] const T& operator[](Int index) const{
+        [[nodiscard]] const T& operator[](Int index) const noexcept{
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]const: Index out of range.");
             return this->_data[index];
         }

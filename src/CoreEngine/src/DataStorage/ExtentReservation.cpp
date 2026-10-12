@@ -7,29 +7,29 @@
 
 namespace CoreEngine::StorageTypes{
     ExtentReservation::ExtentReservation()
-        :   _segments(), _db(nullptr), _segmentIndex(0),
-            _segmentOffset(0), _extentIndex(0), _tableOrdinalPos(0){}
+        :   _segments(), _db(nullptr), _table(nullptr),
+            _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
 
     ExtentReservation::ExtentReservation(
         const ::Memory::IAllocator* allocator,
         Database* db,
-        const table_id_t tableOrdinalPos
-    )   : _segments(allocator), _db(db), _segmentIndex(0),
-          _segmentOffset(0), _extentIndex(0), _tableOrdinalPos(tableOrdinalPos){}
+        const Table* table
+    )   : _segments(allocator), _db(db), _table(table),
+          _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
 
     ExtentReservation::ExtentReservation(
         DataStructures::PolymorphicArray<ExtentSegment>& segments,
         Database* db,
-        const table_id_t tableOrdinalPos
-    ):   _segments(std::move(segments)), _db(db), _segmentIndex(0),
-        _segmentOffset(0), _extentIndex(0), _tableOrdinalPos(tableOrdinalPos){}
+        const Table* table
+    ):   _segments(std::move(segments)), _db(db), _table(table),
+        _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
 
     template <typename TView>
     TView ExtentReservation::Next(){
         if (this->_segmentIndex == this->_segments.Size()){
             return this->_db->LazyAllocateTablePage<TView>(
                 this->_segments.GetAllocator(),
-                this->_tableOrdinalPos
+                this->_table
             );
             // const auto subReserve = this->_db->ReserveExtents(
             //     this->_segments.GetAllocator(),
@@ -75,8 +75,8 @@ namespace CoreEngine::StorageTypes{
     template Pages::LobDataView ExtentReservation::Next<Pages::LobDataView>();
 
     ExtentReservation::ExtentReservation(ExtentReservation&& other) noexcept
-        : _segments(std::move(other._segments)), _db(other._db), _segmentIndex(other._segmentIndex),
-          _segmentOffset(other._segmentOffset), _extentIndex(other._extentIndex), _tableOrdinalPos(other._tableOrdinalPos){}
+        : _segments(std::move(other._segments)), _db(other._db), _table(other._table),
+          _segmentIndex(other._segmentIndex), _segmentOffset(other._segmentOffset), _extentIndex(other._extentIndex){}
 
     ExtentReservation& ExtentReservation::operator=(ExtentReservation&& other) noexcept{
         if (this == &other)
@@ -87,14 +87,14 @@ namespace CoreEngine::StorageTypes{
         this->_segmentIndex = other._segmentIndex;
         this->_segmentOffset = other._segmentOffset;
         this->_extentIndex = other._extentIndex;
-        this->_tableOrdinalPos = other._tableOrdinalPos;
+        this->_table = other._table;
 
         other._db = nullptr;
         other._segments.Clear();
         other._segmentIndex = 0;
         other._segmentOffset = 0;
         other._extentIndex = 0;
-        other._tableOrdinalPos = 0;
+        other._table = nullptr;
 
         return *this;
     }

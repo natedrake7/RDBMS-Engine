@@ -86,7 +86,7 @@ namespace CoreEngine {
     }
 
     void StatisticsScheduler::UpdateDatabaseStatistics(const Database *database)const {
-        for (const auto& table : database->GetTables()) {
+        for (const auto& [key, table] : database->GetTables()) {
             const auto cacheStats = this->statsManager->GetTableStatistics(table->GetTableId());
 
             auto currentTime = DataTypes::DateTime::Now();

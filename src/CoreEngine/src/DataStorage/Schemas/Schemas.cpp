@@ -26,7 +26,7 @@ namespace CoreEngine::Schemas{
             const auto size = text.Size();
 
             if (size == 0)
-                return DataTypes::StringView();
+                return {};
 
             auto* destination =  allocator->AllocateRaw<char>(size);
             const auto* source = text.Data();
@@ -305,7 +305,7 @@ namespace CoreEngine::Schemas{
         schema->_schemaId = tableHeader->schemaId;
         schema->_ordinalPosition = static_cast<UnsignedSmallInt>(tableHeader->ordinalPosition);
         schema->_version = version;
-        schema->_name = CopyString<false>(allocator, tableHeader->name);
+        schema->_lowerName = CopyString<true>(allocator, tableHeader->name);
 
         schema->_columns = columns;
         schema->_columnsByLowerName = lowerNames;

@@ -1,4 +1,5 @@
 #pragma once
+#include <array>
 #include <string>
 #include <vector>
 
@@ -26,6 +27,14 @@ namespace CoreEngine {
         SystemCatalog();
 
         Database* masterDb;
+
+        // Catalog tables by CatalogTables ordinal: fixed for the process lifetime, so no lookup and no lock
+        std::array<StorageTypes::Table*, Catalog::SYSTEM_TABLES.size()> _catalogTables{};
+
+        void BindCatalogTables();
+        [[nodiscard]] StorageTypes::Table* CatalogTable(const CatalogTables ordinal) const{
+            return this->_catalogTables[ordinal];
+        }
 
         [[nodiscard]] static bool CatalogExists(const DataTypes::StringView& path);
         void UseCatalogDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName);

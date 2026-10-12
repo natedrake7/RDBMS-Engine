@@ -24,7 +24,7 @@ namespace Storage{
     };
 
     class FileManager final {
-        Dictionary<FileKey, File> fileTable;
+        Dictionary<FileKey, File> _fileTable;
         mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
 
         static constexpr Int DIRECTORY_SIZE = 512;

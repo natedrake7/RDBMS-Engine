@@ -249,7 +249,7 @@ namespace Network {
             DataTypes::StringView::ViewOf(dbHeader.name)
         );
 
-        db->Bootstrap(allocator);
+        db->Bootstrap(allocator, dbHeader);
 
         this->databases.Add(databaseId, db);
 

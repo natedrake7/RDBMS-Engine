@@ -153,6 +153,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/Table/Table.Utilities.cpp
         src/CoreEngine/src/DataStorage/Schemas/Schemas.cpp
         src/CoreEngine/src/SystemDatabases/CatalogSchema.cpp
+        src/CoreEngine/src/Database.Bootstrap.cpp
 )
 
 target_include_directories(CoreEngine

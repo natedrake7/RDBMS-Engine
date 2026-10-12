@@ -71,7 +71,6 @@ namespace DataTypes{
         constexpr StringView(StringView&&) noexcept = default;
         constexpr StringView& operator=(StringView&&) noexcept = default;
 
-
         constexpr StringView()
             : _data(nullptr), _size(0){}
 
@@ -235,7 +234,7 @@ namespace DataTypes{
         }
 
         template<StringComparisonType Type, IsStringLike TOther>
-        [[nodiscard]] bool Compare(const TOther& other) const{
+        [[nodiscard]] constexpr bool Compare(const TOther& other) const{
             const auto otherView = StringView::ViewOf(other);
             if constexpr (Type == StringComparisonType::Equals)
                 return StringView::Equals(*this, otherView);

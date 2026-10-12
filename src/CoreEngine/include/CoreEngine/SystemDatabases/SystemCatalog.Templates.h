@@ -51,7 +51,7 @@ namespace CoreEngine{
 
     template <Catalog::CatalogRow TRow>
     Errors::RuntimeStatus SystemCatalog::Insert(const ExecutionContext& context, const TRow& row) const{
-        auto* table = this->masterDb->OpenTable(Catalog::TableOrdinalOf<TRow>);
+        auto* table = this->CatalogTable(Catalog::TableOrdinalOf<TRow>);
         return table->SystemInsertRow(context, Rows::ToValues(row, context.GetAllocator()));
     }
 
@@ -62,7 +62,7 @@ namespace CoreEngine{
     ) const{
         static_assert(sizeof...(TKey) <= Rows::KeyColumnsOf<TRow>().size(), "SystemCatalog::Select: more key values than key columns");
 
-        auto* table = this->masterDb->OpenTable(Catalog::TableOrdinalOf<TRow>);
+        auto* table = this->CatalogTable(Catalog::TableOrdinalOf<TRow>);
 
         DataStructures::PolymorphicArray<StorageTypes::RID> rids(allocator);
         const DataTypes::Indexing::Key key(allocator, keyPrefix...);
@@ -96,7 +96,7 @@ namespace CoreEngine{
         static_assert(((std::meta::parent_of(Fields) == ^^TRow) && ...), "SystemCatalog::Update: a field is not a member of the row type");
         static_assert((!::Reflection::HasAnnotation<Rows::PrimaryKey>(Fields) && ...), "SystemCatalog::Update: primary key columns can't be updated");
 
-        auto* table = this->masterDb->OpenTable(Catalog::TableOrdinalOf<TRow>);
+        auto* table = this->CatalogTable(Catalog::TableOrdinalOf<TRow>);
 
         DataStructures::PolymorphicArray<Value> updates(allocator);
         if constexpr (sizeof...(Fields) == 0)

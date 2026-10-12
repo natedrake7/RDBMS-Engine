@@ -27,20 +27,16 @@ namespace CoreEngine {
             dbName
         );
 
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
-            this->masterDb->SystemFileKey(),
-            Constants::HEADER_PAGE_ID
-        );
+        this->masterDb->BootstrapSystem(allocator, dbName, false);
+        this->BindCatalogTables();
+    }
 
-        for (const auto& table: Catalog::SYSTEM_TABLES){
-            auto allocationStep = allocator->RecordAllocationStart();
-
-            const auto tableDefinition = SystemTableDefinition(allocator, table);
-            const auto* schema = Schemas::TableSchema::Build(tableDefinition, 1);
-
-            const auto* _ = this->masterDb->AttachTable(schema, *headerPage.GetTableHeaderPtr(table.ordinal));
-
-            allocator->ReleaseFromAllocationStep(allocationStep);
+    void SystemCatalog::BindCatalogTables(){
+        for (const auto& systemTable : Catalog::SYSTEM_TABLES){
+            auto* table = this->masterDb->OpenTableByOrdinal(systemTable.ordinal);
+            if (table == nullptr)
+                throw std::runtime_error("SystemCatalog::BindCatalogTables: catalog table missing after bootstrap");
+            this->_catalogTables[systemTable.ordinal] = table;
         }
     }
 
@@ -51,6 +47,9 @@ namespace CoreEngine {
             Constants::SYSTEM_CATALOG_ID,
             dbName
         );
+
+        this->masterDb->BootstrapSystem(allocator, dbName, true);
+        this->BindCatalogTables();
 
         auto executionContext = ExecutionContext::BaseContext();
         //
@@ -654,7 +653,7 @@ namespace CoreEngine {
         const Int version,
         const bool isDeleted
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+        auto* table = this->CatalogTable(CatalogTables::SysDatabases);
 
         const auto currentDate = DataTypes::DateTime::Now();
 
@@ -684,7 +683,7 @@ namespace CoreEngine {
         const Int version,
         const bool isDeleted
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
+        auto* table = this->CatalogTable(CatalogTables::SysSchemas);
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -717,7 +716,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-        StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysTables);
+        StorageTypes::Table* table = this->CatalogTable(CatalogTables::SysTables);
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -756,7 +755,7 @@ namespace CoreEngine {
         const Int version,
         const bool isDeleted
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        auto* table = this->CatalogTable(CatalogTables::SysColumns);
 
         const auto currentDate = DataTypes::DateTime::Now();
 
@@ -802,7 +801,7 @@ namespace CoreEngine {
         const Int version,
         const bool isDeleted
     ) const{
-        StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexes);
+        StorageTypes::Table* table = this->CatalogTable(CatalogTables::SysIndexes);
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -833,7 +832,7 @@ namespace CoreEngine {
     const bool  isIncluded,
     const Int version,
     const bool isDeleted) const{
-    StorageTypes::Table* table = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
+    StorageTypes::Table* table = this->CatalogTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -865,7 +864,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraints);
+    auto* table = this->CatalogTable(CatalogTables::SysConstraints);
 
     const auto currentDate = DataTypes::DateTime::Now();
 
@@ -903,7 +902,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-    auto* table = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
+    auto* table = this->CatalogTable(CatalogTables::SysConstraintColumns);
     const auto currentDate = DataTypes::DateTime::Now();
 
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -935,7 +934,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
+        auto* table = this->CatalogTable(CatalogTables::SysIdentityColumns);
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -965,7 +964,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
+        auto* table = this->CatalogTable(CatalogTables::SysDefaultValues);
         const auto currentDate = DataTypes::DateTime::Now();
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
@@ -993,7 +992,7 @@ namespace CoreEngine {
         const Int rowSize,
         const Int pageCount
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+        auto* table = this->CatalogTable(CatalogTables::SysTableStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(tableId, static_cast<column_index_t>(SysTableStats::TableId)),
@@ -1015,7 +1014,7 @@ namespace CoreEngine {
     const BigInt distinctCount,
     const BigInt nullCount
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+        auto* table = this->CatalogTable(CatalogTables::SysColumnStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(columnId, static_cast<column_index_t>(SysColumnStats::ColumnId)),
@@ -1039,7 +1038,7 @@ namespace CoreEngine {
         const Int rowCount,
         const BigInt distinctCount
     ) const {
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+        auto* table = this->CatalogTable(CatalogTables::SysColumnHistograms);
 
         const auto* allocator = executionContext.GetAllocator();
 
@@ -1067,7 +1066,7 @@ namespace CoreEngine {
         const TinyInt depth,
         const DataTypes::Decimal &averageFragmentation
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+        auto* table = this->CatalogTable(CatalogTables::SysIndexStats);
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(tableId, static_cast<column_index_t>(SysIndexStats::TableId)),
@@ -1092,7 +1091,7 @@ namespace CoreEngine {
         const Int version,
         const bool isDeleted
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
+        auto* table = this->CatalogTable(CatalogTables::SysRoles);
         const auto currentDate = DataTypes::DateTime::Now();
 
         static constexpr DataTypes::StringView LAST_MODIFIED_BY = "system";
@@ -1124,7 +1123,7 @@ namespace CoreEngine {
         const bool isDeleted
     ) const{
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
+        auto* table = this->CatalogTable(CatalogTables::SysUsers);
         const auto currentDate = DataTypes::DateTime::Now();
 
         static constexpr DataTypes::StringView LAST_MODIFIED_BY = "system";
@@ -1151,7 +1150,7 @@ namespace CoreEngine {
     DataStructures::PolymorphicArray<Security::Role> SystemCatalog::SelectRoles(const ::Memory::IAllocator* allocator) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator);
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysRoles);
+        auto* table = this->CatalogTable(CatalogTables::SysRoles);
         table->SystemClusteredIndexScan(allocator, &rows, nullptr);
 
         DataStructures::PolymorphicArray<Security::Role> roles(allocator, rows.Size());
@@ -1178,7 +1177,7 @@ namespace CoreEngine {
     DataStructures::PolymorphicArray<Security::User> SystemCatalog::SelectUsers(const ::Memory::IAllocator* allocator) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator);
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
+        auto* table = this->CatalogTable(CatalogTables::SysUsers);
         table->SystemClusteredIndexScan(allocator, &rows, nullptr);
 
         DataStructures::PolymorphicArray<Security::User> users(allocator, rows.Size());
@@ -1206,7 +1205,7 @@ namespace CoreEngine {
     }
 
     bool SystemCatalog::DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const{
-        auto* sysDatabases = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+        auto* sysDatabases = this->CatalogTable(CatalogTables::SysDatabases);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
 
         auto columnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysDatabases::Name), DataType::String);
@@ -1230,7 +1229,7 @@ namespace CoreEngine {
         );
         Expressions::BindExpressionRowKernel(&binaryExpr);
 
-        auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+        auto* tablePtr = this->CatalogTable(CatalogTables::SysDatabases);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
 
         tablePtr->SystemClusteredIndexScan(allocator, &selectedDatabases, &binaryExpr);
@@ -1241,7 +1240,7 @@ namespace CoreEngine {
     }
 
 Catalog::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAllocator* allocator, const Int databaseId) const{
-    auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysDatabases);
+    auto* tablePtr = this->CatalogTable(CatalogTables::SysDatabases);
     DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
 
     const DataTypes::Indexing::Key key(allocator, databaseId);
@@ -1256,7 +1255,7 @@ Catalog::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAlloc
 }
 
 DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int databaseId) const{
-    auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysSchemas);
+    auto* tablePtr = this->CatalogTable(CatalogTables::SysSchemas);
     DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 2);
 
     const DataTypes::Indexing::Key key(allocator, databaseId);
@@ -1289,7 +1288,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         Int* schemaId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 1);
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysSchemas);
+        auto* table = this->CatalogTable(CatalogTables::SysSchemas);
 
         Expressions::ColumnExpression columnExpr(static_cast<column_index_t>(SysSchemas::Name), DataType::String);
         Expressions::ConstantExpression constantExpr(Value(schema, allocator, static_cast<column_index_t>(SysSchemas::Name)));
@@ -1321,7 +1320,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator, 10);
 
-        auto* tablePtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+        auto* tablePtr = this->CatalogTable(CatalogTables::SysTables);
 
         const DataTypes::Indexing::Key key(allocator, databaseId);
 
@@ -1349,7 +1348,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
-        auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+        auto* sysTablesPtr = this->CatalogTable(CatalogTables::SysTables);
 
         const DataTypes::Indexing::Key key(allocator, databaseId, tableId);
         sysTablesPtr->SystemClusteredIndexSeek(allocator, &selectedTables, key, nullptr);
@@ -1380,7 +1379,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             return {};
 
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
-        auto* sysTablesPtr = this->masterDb->OpenTable(CatalogTables::SysTables);
+        auto* sysTablesPtr = this->CatalogTable(CatalogTables::SysTables);
 
         auto leftColumnExpr = Expressions::ColumnExpression(static_cast<column_index_t>(SysTables::SchemaId), DataType::Int);
         auto leftConstantExpr = Expressions::ConstantExpression(Value(schemaId, static_cast<column_index_t>(SysTables::SchemaId)));
@@ -1448,7 +1447,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedConstraints(allocator);
-        auto* constraintsTable = this->masterDb->OpenTable(CatalogTables::SysConstraints);
+        auto* constraintsTable = this->CatalogTable(CatalogTables::SysConstraints);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
         constraintsTable->SystemClusteredIndexSeek(allocator, &selectedConstraints, key, nullptr);
@@ -1483,7 +1482,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int columnId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedColumns(allocator, 1);
-        auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        auto* sysColumns = this->CatalogTable(CatalogTables::SysColumns);
 
 
         const DataTypes::Indexing::Key key(allocator, tableId, columnId);
@@ -1500,7 +1499,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedColumns(allocator, 10);
-        auto* sysColumns = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        auto* sysColumns = this->CatalogTable(CatalogTables::SysColumns);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
         sysColumns->SystemClusteredIndexSeek(allocator, &selectedColumns, key, nullptr);
@@ -1537,7 +1536,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
-        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
+        auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedIndexes(allocator);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
@@ -1556,7 +1555,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
     }
 
     Catalog::IndexHeader SystemCatalog::SelectIndexById(const ::Memory::IAllocator* allocator, const Int indexId) const{
-        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexes);
+        auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedIndexes(allocator, 1);
 
         const DataTypes::Indexing::Key key(allocator, indexId);
@@ -1576,7 +1575,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int indexId
     ) const{
-        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysIndexColumns);
+        auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator);
 
         const DataTypes::Indexing::Key key(allocator, indexId);
@@ -1615,7 +1614,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
+        auto* table = this->CatalogTable(CatalogTables::SysIdentityColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 10);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
@@ -1653,7 +1652,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int constraintId
     ) const{
-        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysConstraintColumns);
+        auto* sysIndexes = this->CatalogTable(CatalogTables::SysConstraintColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 2);
 
         const DataTypes::Indexing::Key key(allocator, constraintId);
@@ -1691,7 +1690,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int columnId
     ) const{
-        auto* sysValues = this->masterDb->OpenTable(CatalogTables::SysDefaultValues);
+        auto* sysValues = this->CatalogTable(CatalogTables::SysDefaultValues);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 1);
 
         const DataTypes::Indexing::Key key(allocator, columnId);
@@ -1706,7 +1705,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const ::Memory::IAllocator* allocator,
         const Int tableId
     ) const{
-        auto* sysIndexes = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+        auto* sysIndexes = this->CatalogTable(CatalogTables::SysTableStats);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 1);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
@@ -1723,7 +1722,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int columnId,
         const DataType columnType
     ) const{
-        auto* sysColumnStats = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+        auto* sysColumnStats = this->CatalogTable(CatalogTables::SysColumnStats);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 1);
 
         const DataTypes::Indexing::Key key(allocator, columnId);
@@ -1742,7 +1741,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         auto columnHeader = this->SelectColumnById(allocator, tableId, columnId);
 
         DataStructures::PolymorphicArray<Catalog::ColumnHistograms> result(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+        auto* table = this->CatalogTable(CatalogTables::SysColumnHistograms);
 
         const DataTypes::Indexing::Key key(allocator, columnId);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, NUMBER_OF_HISTOGRAM_BUCKETS);
@@ -1759,7 +1758,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int tableId
     ) const {
         DataStructures::PolymorphicArray<Catalog::IndexStatistics> result(allocator);
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+        auto* table = this->CatalogTable(CatalogTables::SysIndexStats);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator);
@@ -1778,7 +1777,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int columnId,
         const BigInt lastValue
     )const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIdentityColumns);
+        auto* table = this->CatalogTable(CatalogTables::SysIdentityColumns);
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             allocator,
@@ -1805,7 +1804,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysTableStats::LastUpdatedAt))
         );
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysTableStats);
+        auto* table = this->CatalogTable(CatalogTables::SysTableStats);
 
         const DataTypes::Indexing::Key key(allocator, tableId);
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -1839,7 +1838,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             )
         );
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnStats);
+        auto* table = this->CatalogTable(CatalogTables::SysColumnStats);
 
         const DataTypes::Indexing::Key key(allocator, columnId);
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -1861,7 +1860,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             Value(DataTypes::DateTime::Now(), static_cast<column_index_t>(SysIndexStats::LastUpdated))
         );
 
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysIndexStats);
+        auto* table = this->CatalogTable(CatalogTables::SysIndexStats);
 
         const DataTypes::Indexing::Key key(allocator, tableId, indexId);
         const auto _ = table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -1876,7 +1875,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int rowCount,
         const BigInt& distinctCount
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumnHistograms);
+        auto* table = this->CatalogTable(CatalogTables::SysColumnHistograms);
 
         const auto minStr = min.AsString(allocator);
         const auto maxStr = max.AsString(allocator);
@@ -1909,7 +1908,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int columnId,
         const DataStructures::PolymorphicArray<Value> &updates
     ) const{
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysColumns);
+        auto* table = this->CatalogTable(CatalogTables::SysColumns);
 
         const DataTypes::Indexing::Key key(allocator, columnId);
         return table->SystemClusteredIndexSeekUpdate(allocator, key, updates);
@@ -1921,7 +1920,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         const Int userId,
         const Int roleId
     ) const {
-        auto* table = this->masterDb->OpenTable(CatalogTables::SysUsers);
+        auto* table = this->CatalogTable(CatalogTables::SysUsers);
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
             context.GetAllocator(),

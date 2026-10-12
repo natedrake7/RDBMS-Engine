@@ -10,6 +10,8 @@
 #include <CoreEngine/Memory/Allocator.h>
 #include <CoreEngine/Memory/PersistentAllocator.h>
 
+#include "CoreEngine/Directory/DirectoryEntries.h"
+
 namespace Expressions
 {
     struct EvaluationContext;
@@ -75,7 +77,14 @@ namespace CoreEngine::StorageTypes{
     class Table final{
         TableHeader _physicalHeader;
 
+        MultiThreading::Mutex _schemaMutex;
         const Schemas::TableSchema* _schema;
+
+        std::atomic<Int> _pins;
+        std::atomic<bool> _dropped;
+
+        DataTypes::String _lowerName;
+        Int _schemaId;
 
         DataStructures::PolymorphicArray<IdentityManager> _identities;
         DataStructures::PolymorphicArray<Indexing::BTree*> _nonClusteredTrees;
@@ -184,7 +193,7 @@ namespace CoreEngine::StorageTypes{
                 const TableHeader& physicalHeader,
                 Database *database
             );
-            void Destroy()const;
+            void Destroy();
 
         /** @} End of: Class Constructors and Destructors*/
 
@@ -194,21 +203,54 @@ namespace CoreEngine::StorageTypes{
         * @{
         */
 
-        [[nodiscard]] const Schemas::TableSchema* Schema()const { return this->_schema; }
+        void ReplaceSchema(const Schemas::TableSchema* newSchema);
+
+        [[nodiscard]] Directory::TableKey Key(){
+            return Directory::TableKey(this->_schemaId, {this->_lowerName.Data(), this->_lowerName.Size()});
+        }
+
+        [[nodiscard]] MultiThreading::Mutex& SchemaMutex(){
+            return this->_schemaMutex;
+        }
+
+        void Pin(){
+            this->_pins.fetch_add(1, std::memory_order_relaxed);
+        }
+
+        [[nodiscard]] bool Unpin(){
+            return this->_pins.fetch_sub(1, std::memory_order_acquire) == 1;
+        }
+
+        void MarkDropped(){
+            this->_dropped.store(true, std::memory_order_relaxed);
+        }
+
+        [[nodiscard]] bool IsDropped()const{
+            return this->_dropped.load(std::memory_order_acquire);
+        }
+
+        [[nodiscard]] const Schemas::TableSchema* Schema()const{
+            return this->_schema;
+        }
+
         [[nodiscard]] const Schemas::ColumnSchema* Column(const column_index_t ordinal) const{
             return &this->_schema->_columns[ordinal];
         }
+
         [[nodiscard]] std::span<const Schemas::ColumnSchema> Columns() const{
             return {this->_schema->_columns, this->_schema->_columnCount};
         }
+
         [[nodiscard]] column_number_t ColumnCount()const{
             return this->_schema->_columnCount;
         }
+
         [[nodiscard]] bool HasIdentity(const column_index_t ordinal)const{
             return this->_schema->_columns[ordinal]._identity != nullptr;
         }
 
         void PersistIdentities()const;
+
         /** @} End of: Schema Functions*/
 
         /**
@@ -548,14 +590,6 @@ namespace CoreEngine::StorageTypes{
             void PopulateColumnByHeap(column_index_t index, const Value& defaultValue);
 
             void Rollback(const Snapshot& snapshot, const DataTypes::RowIdentifier& rowId)const;
-        /**
-        * @name Table Altering Functions
-        * Functions that alter the structure of the table.
-        * @{
-        */
-            void ReplaceSchema(const Schemas::TableSchema* newSchema);
-
-        /** @} End of System Catalog Integration Functions */
 
         /**
         * @name System Catalog Integration Functions

@@ -79,7 +79,7 @@ namespace CoreEngine{
             return;
 
         if (Logging::RowAffectedOperationTypes.Contains(logEntry.operation)) {
-            auto* table = this->_tables[logEntry.tableOrdinalPosition];
+            // auto* table = this->_tables[logEntry.tableOrdinalPosition];
 
             // auto row = logEntry.GetRow();
 
@@ -114,7 +114,7 @@ namespace CoreEngine{
     }
 
     Pages::AllocationPageView Database::FindOrRollToNewAllocationPage(
-        StorageTypes::Table* tablePtr,
+        const StorageTypes::Table* table,
         page_id_t currentAllocationPageId,
         const page_id_t gamPageId,
         const page_id_t newAllocationPageId
@@ -126,7 +126,7 @@ namespace CoreEngine{
                 gamPageId
             );
 
-            tablePtr->UpdateAllocationPageId(page.PageId());
+            table->UpdateAllocationPageId(page.PageId());
             return page;
         }
 
@@ -161,7 +161,7 @@ namespace CoreEngine{
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::StringView& dbName
-    ) {
+    ){
         this->id = databaseId;
         DataTypes::String file,sysFile;
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
@@ -174,31 +174,18 @@ namespace CoreEngine{
         this->header = *headerPage.GetDatabaseHeaderPtr();
 
         this->_tables.SetAllocator(&this->_allocator);
+        this->_schemas.SetAllocator(&this->_allocator);
     }
 
-    void Database::Bootstrap(const ::Memory::IAllocator* allocator){
-        static auto& catalog = SystemCatalog::Get();
-
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
-            this->systemFileKey,
-            Constants::HEADER_PAGE_ID
-        );
-
-        for (const auto& tableHeader : catalog.SelectTables(allocator, this->id)){
-            const auto tableDefinition = catalog.SelectTableDefinition(allocator, tableHeader);
-            const auto* schema = CoreEngine::Schemas::TableSchema::Build(tableDefinition, 1);
-            const auto* _ = this->AttachTable(schema, *headerPage.GetTableHeaderPtr(tableHeader.ordinalPosition));
-        }
-    }
-
-    void Database::Destroy(){
+    void Database::Destroy() const{
         // save db header;
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
 
-        for (const auto* dbTable : this->_tables){
-            headerPage.SetTableHeader(dbTable->GetPhysicalHeader(), dbTable->GetOrdinalPosition());
-            dbTable->Destroy();
+        for (auto& [key, table] : this->_tables){
+            headerPage.SetTableHeader(table->GetPhysicalHeader(), table->GetOrdinalPosition());
+            table->Destroy();
+            delete table;
         }
 
         this->_allocator.Release();
@@ -273,22 +260,6 @@ namespace CoreEngine{
         return static_cast<byte_t>(freeSpacePercentage * 7);
     }
 
-    StorageTypes::Table* Database::CreateTable(const Schemas::TableSchema* schema){
-        auto* table = this->AttachTable(schema, StorageTypes::TableHeader());
-        this->header.numberOfTables++;
-        this->header.lastTableId = schema->_id;
-        return table;
-    }
-
-    StorageTypes::Table* Database::AttachTable(
-        const Schemas::TableSchema* schema,
-        const StorageTypes::TableHeader& physicalHeader
-    ){
-        auto* table = this->_allocator.Allocate<StorageTypes::Table>(schema, physicalHeader, this);
-        this->_tables.Push(table);
-        return table;
-    }
-
     page_id_t Database::CalculateExtentFirstPageId(const extent_id_t extentId){
         return extentId * Constants::EXTENT_SIZE;
     }
@@ -301,8 +272,14 @@ namespace CoreEngine{
         return pageId / 8;
     }
 
-    StorageTypes::Table * Database::OpenTable(const table_id_t tableId) const{
-        return this->_tables[tableId];
+    StorageTypes::Table * Database::OpenTableByOrdinal(const table_id_t tableId) const{
+        for (Int i  = 0;i < this->_tables.Size(); i++){
+            const auto& entry = this->_tables[i];
+            if (entry._table->GetOrdinalPosition() == tableId)
+                return entry._table;
+        }
+
+        return nullptr;
     }
 
     DatabaseHeader::DatabaseHeader()
@@ -315,12 +292,6 @@ namespace CoreEngine{
         const page_id_t lastGamPageId
     ):  numberOfTables(numberOfTables), lastTableId(0),
         lastPfsPageId(lastPfsPageId), lastGamPageId(lastGamPageId){}
-
-    const StorageTypes::Table *Database::GetTable(const table_id_t tableId) const{
-        if (tableId >= this->_tables.Size())
-            throw std::out_of_range("No table with ID: " + std::to_string(tableId) + " exists");
-        return this->_tables[tableId];
-    }
 
     Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(
         const Storage::FileKey sysFileKey,
@@ -373,7 +344,7 @@ namespace CoreEngine{
     }
 
     void Database::TruncateTable(const table_id_t  tableId) const{
-        auto* table = this->_tables[tableId];
+        // auto* table = this->_tables[tableId];
 
         // auto indexAllocationMapPageId = table->GetHeader()._allocationPageId;
 
@@ -409,16 +380,41 @@ namespace CoreEngine{
         //     }
         // }
 
-        table->UpdateAllocationPageId(INVALID_PAGE_ID);
+        // table->UpdateAllocationPageId(INVALID_PAGE_ID);
+    }
+
+    void Database::PublishSchema(
+        StorageTypes::Table* table,
+        const Schemas::TableSchema* newSchema
+    ){
+        const auto* oldSchema = table->Schema();
+        const auto oldKey = table->Key();
+
+        const Directory::TableKey newKey(newSchema->_schemaId, newSchema->_lowerName);
+
+        {
+            MultiThreading::WriterGuard guard(&this->_directoryMutex);
+
+            if (oldKey == newKey)
+                this->_tables.ReKey(oldKey, newKey);     // same position: just repoint the string_view
+            else{
+                this->_tables.Remove(oldKey);            // RENAME / schema move: changes sort position
+                this->_tables.Insert(Directory::TableEntry(table, newKey));
+            }
+
+            table->ReplaceSchema(newSchema);
+        }
+
+        Schemas::TableSchema::Destroy(oldSchema);
+
     }
 
     StorageTypes::ExtentReservation Database::ReserveExtents(
         const ::Memory::IAllocator* allocator,
-        const Int requiredPages,
-        const Int tableOrdinalPos
+        const StorageTypes::Table* table,
+        const Int requiredPages
     ){
         const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(requiredPages);
-        auto* table = this->_tables[tableOrdinalPos];
 
         //pre account for required allocation page
         DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> segmentsRuns(allocator, extentsToAllocate);
@@ -509,7 +505,7 @@ namespace CoreEngine{
             }
         }
 
-        return StorageTypes::ExtentReservation(segmentsRuns, this, tableOrdinalPos);
+        return StorageTypes::ExtentReservation(segmentsRuns, this, table);
     }
 
     Storage::FileKey Database::DataFileKey() const{ return this->dataFileKey; }
@@ -517,11 +513,9 @@ namespace CoreEngine{
     Storage::FileKey Database::SystemFileKey() const{ return this->systemFileKey; }
 
     void Database::UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const{
-        for(const auto& table: this->_tables)
+        for(const auto& [key, table]: this->_tables)
             table->UpdateSystemCatalog(allocator);
     }
-
-    const DataStructures::PolymorphicArray<StorageTypes::Table*>&  Database::GetTables() const{ return this->_tables; }
 
     void CreateDatabase(
         const ::Memory::IAllocator* allocator,

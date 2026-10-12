@@ -11,6 +11,8 @@
 #include <CoreEngine/Pages/PageFreeSpaceView.h>
 #include <CoreEngine/BufferPool/FileKey.h>
 
+#include "Systemic/DataStructures/SortedDirectory.h"
+
 namespace Memory{
     class IAllocator;
 }
@@ -26,8 +28,18 @@ namespace CoreEngine::StorageTypes {
 } // namespace DatabaseEngine::StorageTypes
 
 namespace CoreEngine {
+    struct SystemTable;
+
+    namespace Directory
+    {
+        struct TableEntry;
+        struct TableKey;
+        struct SchemaEntry;
+    }
+
     namespace Catalog
     {
+        struct DatabaseHeader;
         struct TableHeader;
     }
 
@@ -60,9 +72,15 @@ class Database final{
 
     Memory::PersistentAllocator _allocator;
 
-    DataTypes::String name;
+    DataTypes::StringView _lowerName;
 
-    DataStructures::PolymorphicArray<StorageTypes::Table*> _tables;
+    // DataStructures::PolymorphicArray<StorageTypes::Table*> _tables;
+
+    MultiThreading::Mutex _directoryMutex;
+    MultiThreading::Mutex _ddlMutex;
+    DataStructures::SortedDirectory<std::string_view, Directory::SchemaEntry> _schemas;
+    DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry> _tables;
+
 
     DatabaseHeader header;
 
@@ -81,8 +99,6 @@ class Database final{
 
     void WriteHeaderToFile() const;
 
-    [[nodiscard]] const StorageTypes::Table *GetTable(table_id_t tableId) const;
-
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
 
     [[nodiscard]] static Int CalculateExtentsToAllocate(Int pagesToAllocate);
@@ -91,7 +107,7 @@ class Database final{
 
     Pages::GlobalAllocationPageView RollToNewGamPageNoLock();
     Pages::AllocationPageView FindOrRollToNewAllocationPage(
-        StorageTypes::Table* tablePtr,
+        const StorageTypes::Table* table,
         page_id_t currentAllocationPageId,
         page_id_t gamPageId,
         page_id_t newAllocationPageId
@@ -104,9 +120,20 @@ public:
         const DataTypes::StringView& dbName
     );
 
-    void Bootstrap(const ::Memory::IAllocator* allocator);
+    void Bootstrap(
+        const ::Memory::IAllocator* allocator,
+        const Catalog::DatabaseHeader& header
+    );
 
-    void Destroy();
+    // The catalog database cannot read its own tables from the catalog: they come from SYSTEM_TABLES.
+    // isNew: the files were just created, so every table starts with an empty physical header.
+    void BootstrapSystem(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::StringView& name,
+        bool isNew
+    );
+
+    void Destroy() const;
 
     static std::vector<Logging::LogEntry> RecoverLogs();
 
@@ -141,12 +168,12 @@ public:
     StorageTypes::Table* CreateTable(const Schemas::TableSchema* schema);
 
     [[nodiscard]]
-    StorageTypes::Table* AttachTable(
+    StorageTypes::Table* CreateTablePtr(
         const Schemas::TableSchema* schema,
         const StorageTypes::TableHeader& physicalHeader
     );
 
-    [[nodiscard]] StorageTypes::Table *OpenTable(table_id_t tableId) const;
+    [[nodiscard]] StorageTypes::Table *OpenTableByOrdinal(table_id_t tableId) const;
 
     void DeleteTable(const DataTypes::String& tableName);
 
@@ -154,24 +181,29 @@ public:
 
     void TruncateTable(table_id_t tableId) const;
 
+    void PublishSchema(
+        StorageTypes::Table* table,
+        const Schemas::TableSchema* newSchema
+    );
+
     [[nodiscard]]
     StorageTypes::ExtentReservation ReserveExtents(
         const ::Memory::IAllocator* allocator,
-        Int requiredPages,
-        Int tableOrdinalPos
+        const StorageTypes::Table* table,
+        Int requiredPages
     );
 
     template <typename TView>
     [[nodiscard]] TView LazyAllocateSinglePage(
         const ::Memory::IAllocator* allocator,
-        table_id_t ordinalPos
+        const StorageTypes::Table* table
     );
 
     template<typename TVIew>
     [[nodiscard]]
     TVIew LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        table_id_t ordinalPos
+        const StorageTypes::Table* table
     );
 
     [[nodiscard]] Storage::FileKey DataFileKey() const;
@@ -185,7 +217,9 @@ public:
 
     void UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const;
 
-    const DataStructures::PolymorphicArray<StorageTypes::Table*>& GetTables() const;
+    const DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry>& GetTables() const{
+        return this->_tables;
+    }
 };
 
 void CreateDatabase(

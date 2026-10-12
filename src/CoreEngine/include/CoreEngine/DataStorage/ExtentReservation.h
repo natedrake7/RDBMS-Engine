@@ -8,6 +8,8 @@ namespace CoreEngine{
 }
 
 namespace CoreEngine::StorageTypes{
+    class Table;
+
     struct AllocationCursor{
         extent_id_t _extentId;
         UnsignedInt _offset;
@@ -32,22 +34,23 @@ namespace CoreEngine::StorageTypes{
     class ExtentReservation{
         DataStructures::PolymorphicArray<ExtentSegment> _segments;
         Database* _db;
+        const Table* _table;
+
         UnsignedSmallInt _segmentIndex;
         UnsignedSmallInt _segmentOffset;
         UnsignedSmallInt _extentIndex;
-        table_id_t _tableOrdinalPos;
 
         public:
             explicit ExtentReservation();
             explicit ExtentReservation(
                 const ::Memory::IAllocator* allocator,
                 Database* db,
-                table_id_t tableOrdinalPos
+                const Table* table
             );
             explicit ExtentReservation(
                 DataStructures::PolymorphicArray<ExtentSegment>& segments,
                 Database* db,
-                table_id_t tableOrdinalPos
+                const Table* table
             );
 
             ExtentReservation(const ExtentReservation& other) = delete;
