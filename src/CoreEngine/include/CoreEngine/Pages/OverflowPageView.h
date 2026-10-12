@@ -16,8 +16,8 @@ namespace Pages{
         OverflowPageView();
         explicit OverflowPageView(Frame* frame);
 
-        OverflowPageView(OverflowPageView&& other) noexcept;
-        OverflowPageView& operator=(OverflowPageView&& other) noexcept;
+        OverflowPageView(OverflowPageView&& other) noexcept = default;
+        OverflowPageView& operator=(OverflowPageView&& other) noexcept = default;
 
         [[nodiscard]] OverflowPtr Insert(const object_t* data, Int size) const;
         [[nodiscard]] const object_t* Get(Int index, Int& outSize) const;

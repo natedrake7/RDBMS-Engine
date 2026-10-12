@@ -30,8 +30,8 @@ namespace Pages{
         public:
             AllocationPageView();
             explicit AllocationPageView(Frame* framePtr);
-            AllocationPageView(AllocationPageView&& other) noexcept;
-            AllocationPageView& operator=(AllocationPageView&& other) noexcept;
+            AllocationPageView(AllocationPageView&& other) noexcept = default;
+            AllocationPageView& operator=(AllocationPageView&& other) noexcept = default;
 
             [[nodiscard]] extent_id_t SetExtentsAllocatedNoLock(
                 const DataStructures::PolymorphicArray<extent_id_t>& extentIds,

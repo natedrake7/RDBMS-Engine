@@ -66,22 +66,6 @@ namespace Pages{
         this->initialOffset = Constants::GAM_METADATA_SIZE;
     }
 
-    GlobalAllocationPageView::GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept{
-        this->_frame = other._frame;
-        other._frame = nullptr;
-    }
-
-    GlobalAllocationPageView& GlobalAllocationPageView::operator=(GlobalAllocationPageView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-
-        other._frame = nullptr;
-        return *this;
-    }
-
     UnsignedInt GlobalAllocationPageView::ReserveExtentsNoLock(
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,
         const UnsignedInt neededExtents

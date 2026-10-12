@@ -21,8 +21,8 @@ namespace Pages{
         public:
             explicit PageFreeSpaceView(Frame* frame);
 
-            PageFreeSpaceView(PageFreeSpaceView&& other) noexcept;
-            PageFreeSpaceView& operator=(PageFreeSpaceView&& other) noexcept;
+            PageFreeSpaceView(PageFreeSpaceView&& other) noexcept = default;
+            PageFreeSpaceView& operator=(PageFreeSpaceView&& other) noexcept = default;
 
             [[nodiscard]] bool IsPageAllocated(page_id_t pageId) const;
             [[nodiscard]] Constants::PageType GetPageType(page_id_t pageId) const;
@@ -33,5 +33,7 @@ namespace Pages{
             void SetPageAllocated(page_id_t pageId)const;
             void SetPageAllocationStatus(page_id_t pageId, page_size_t bytesLeft) const;
             void SetPageType(page_id_t pageId, Constants::PageType pageType) const;
+
+            [[nodiscard]] bool IsAllocatedAs(page_id_t pageId, Constants::PageType pageType) const;
     };
 }

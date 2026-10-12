@@ -15,8 +15,8 @@ namespace Pages{
             IndexPageView& operator=(const IndexPageView& other) = delete;
             IndexPageView(const IndexPageView& other) = delete;
         
-            IndexPageView(IndexPageView&& other) noexcept;
-            IndexPageView& operator=(IndexPageView&& other) noexcept;
+            IndexPageView(IndexPageView&& other) noexcept = default;
+            IndexPageView& operator=(IndexPageView&& other) noexcept = default;
 
             [[nodiscard]] IndexPageAdditionalHeader* GetAdditionalHeader() const;
 

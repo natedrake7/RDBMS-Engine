@@ -35,27 +35,6 @@ namespace Pages{
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
-    IndexPageView::IndexPageView(IndexPageView&& other) noexcept{
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-
-        other._frame = nullptr;
-    }
-
-    IndexPageView& IndexPageView::operator=(IndexPageView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        if (this->IsValid())
-            this->_frame->pinCount.fetch_sub(1, std::memory_order_relaxed);
-
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-
-        other._frame = nullptr;
-        return *this;
-    }
-
     IndexPageAdditionalHeader* IndexPageView::GetAdditionalHeader() const{
         return reinterpret_cast<IndexPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
     }

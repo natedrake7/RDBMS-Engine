@@ -29,6 +29,9 @@ namespace Pages{
         if (this == &other)
             return *this;
 
+        if (this->IsValid())
+            this->_frame->Unpin();
+
         this->databaseHeaderPtr = other.databaseHeaderPtr;
         this->_frame = other._frame;
 

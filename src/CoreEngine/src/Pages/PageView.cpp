@@ -10,12 +10,10 @@
 #include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
 namespace Pages{
-    PageHeader::PageHeader(){
-        this->pageId = INVALID_PAGE_ID;
-        this->size = 0;
-        this->bytesLeft = static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE);
-        this->type = static_cast<page_size_t>(Constants::PageType::DATA);
-    }
+    PageHeader::PageHeader()
+        :   pageId(INVALID_PAGE_ID), size(0),
+            type(static_cast<page_size_t>(Constants::PageType::DATA)),
+            bytesLeft(static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE)){}
 
     Constants::PageType PageHeader::Type() const{
         return static_cast<Constants::PageType>(this->type);
@@ -37,11 +35,11 @@ namespace Pages{
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){
-        return Constants::PAGE_SIZE - (indexPosition + 1) * SlotDirectory::SIZE;
+        return static_cast<Int>(Constants::PAGE_SIZE) - (indexPosition + 1) * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-        return Constants::PAGE_SIZE - (indexPosition + slotToMove) * SlotDirectory::SIZE;
+        return static_cast<Int>(Constants::PAGE_SIZE) - (indexPosition + slotToMove) * SlotDirectory::SIZE;
     }
 
     void PageView::UpdateSlotDirectory(
@@ -112,8 +110,9 @@ namespace Pages{
 
     PageView::PageView(PageView&& other) noexcept
         :   _frame(other._frame),
-            initialOffset(Constants::PAGE_HEADER_SIZE){
+            initialOffset(other.initialOffset){
         other._frame = nullptr;
+        other.initialOffset = 0;
     }
 
     PageView& PageView::operator=(PageView&& other) noexcept{
@@ -124,7 +123,10 @@ namespace Pages{
             this->_frame->Unpin();
 
         this->_frame = other._frame;
+        this->initialOffset = other.initialOffset;
+
         other._frame = nullptr;
+        other.initialOffset = 0;
         return *this;
     }
 

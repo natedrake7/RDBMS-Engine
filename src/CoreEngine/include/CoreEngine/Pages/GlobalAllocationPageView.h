@@ -27,8 +27,8 @@ namespace Pages{
         public:
             explicit GlobalAllocationPageView(Frame* frame);
 
-            GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept;
-            GlobalAllocationPageView& operator=(GlobalAllocationPageView&& other) noexcept;
+            GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept = default;
+            GlobalAllocationPageView& operator=(GlobalAllocationPageView&& other) noexcept = default;
 
             [[nodiscard]] UnsignedInt ReserveExtentsNoLock(
                 DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,

@@ -11,21 +11,15 @@
 #include <CoreEngine/Managers/GlobalMemoryManager.h>
 
 namespace CoreEngine{
+    static_assert(Constants::PAGE_FREE_SPACE_SIZE % Constants::EXTENT_SIZE == 0);
+
     template <typename TView>
     TView Database::LazyAllocateSinglePage(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::Table* table
     ){
         auto extentReservation = this->ReserveExtents(allocator, table, 1);
-        auto page = extentReservation.Next<TView>();
-
-        {
-            const auto pfs = Database::GetAssociatedPfsPage(this->systemFileKey, page.PageId());
-            MultiThreading::WriterGuard lock(&pfs.Latch());
-            pfs.SetPageMetaData(&page);
-        }
-
-        return page;
+        return extentReservation.Next<TView>();
     }
 
     template Pages::PageView Database::LazyAllocateSinglePage<Pages::PageView>(const ::Memory::IAllocator* allocator, const StorageTypes::Table* table);
@@ -41,7 +35,6 @@ namespace CoreEngine{
 
         const auto allocationPageId = table->GetAllocationPageId();
 
-        TVIew page;
         if (allocationPageId == INVALID_PAGE_ID)
             return this->LazyAllocateSinglePage<TVIew>(allocator, table);
 
@@ -58,24 +51,23 @@ namespace CoreEngine{
             const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
                 const auto pfs = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
+                //
+                // {
+                //     MultiThreading::ReaderGuard lock(&pfs.Latch());
+                //     if (pfs.GetPageType(pageId) != PAGE_TYPE)
+                //         break;
+                //
+                //     if (pfs.IsPageAllocated(pageId))
+                //         continue;
+                // }
 
-                {
-                    MultiThreading::ReaderGuard lock(&pfs.Latch());
-                    if (pfs.GetPageType(pageId) != PAGE_TYPE)
-                        break;
+                MultiThreading::WriterGuard lock(&pfs.Latch());
+                if (pfs.IsPageAllocated(pageId))
+                    continue;
 
-                    if (pfs.IsPageAllocated(pageId))
-                        continue;
-                }
-
-                {
-                    MultiThreading::WriterGuard lock(&pfs.Latch());
-                    if (pfs.IsPageAllocated(pageId))
-                        continue;
-
-                    page = Storage::StorageManager::Get().CreatePage<TVIew>(this->dataFileKey, pageId);
-                    pfs.SetPageMetaData(&page);
-                }
+                auto page = Storage::StorageManager::Get().CreatePage<TVIew>(this->dataFileKey, pageId);
+                pfs.SetPageMetaData(&page);
+                return page;
             }
         }
 

@@ -18,24 +18,6 @@ namespace Pages{
         this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
-    AllocationPageView::AllocationPageView(AllocationPageView&& other) noexcept{
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-
-        other._frame = nullptr;
-    }
-
-    AllocationPageView& AllocationPageView::operator=(AllocationPageView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-
-        other._frame = nullptr;
-        return *this;
-    }
-
     extent_id_t AllocationPageView::SetExtentsAllocatedNoLock(
         const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
         const page_id_t globalAllocationMapPageId

@@ -14,23 +14,6 @@ namespace Pages{
 
     PageFreeSpaceView::PageFreeSpaceView(Frame* frame) : PageView(frame){}
 
-    PageFreeSpaceView::PageFreeSpaceView(PageFreeSpaceView&& other) noexcept{
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-        other._frame = nullptr;
-    }
-
-    PageFreeSpaceView& PageFreeSpaceView::operator=(PageFreeSpaceView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        this->_frame = other._frame;
-        this->initialOffset = other.initialOffset;
-        other._frame = nullptr;
-
-        return *this;
-    }
-
     bool PageFreeSpaceView::IsPageAllocated(const page_id_t pageId) const{
         return PackedByte::ExtractBits<bool, ALLOCATION_SHIFT, ALLOCATION_SINGLE_BIT_MASK>(*this->GetByte(pageId));
     }
@@ -71,5 +54,9 @@ namespace Pages{
 
     void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
         PackedByte::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(this->GetByte(pageId), static_cast<byte_t>(pageType));
+    }
+
+    bool PageFreeSpaceView::IsAllocatedAs(const page_id_t pageId, const Constants::PageType pageType) const{
+        return this->IsPageAllocated(pageId) && this->GetPageType(pageId) == pageType;
     }
 }
