@@ -533,10 +533,11 @@ namespace CoreEngine::StorageTypes {
 
             MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
             for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + StorageLayout::EXTENT_SIZE; currentPageId++){
-                if (
-                    pfs.GetPageType(currentPageId) != Constants::PageType::DATA
-                    || !pfs.IsPageAllocated(currentPageId)
-                ) break;
+                if (!pfs.IsPageAllocated(currentPageId))
+                    continue;
+
+                if (pfs.GetPageType(currentPageId) != Constants::PageType::DATA)
+                    break;
 
                 auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, currentPageId);
 

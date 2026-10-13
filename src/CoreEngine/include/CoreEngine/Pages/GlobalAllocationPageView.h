@@ -14,7 +14,7 @@ namespace Pages{
         byte_t _reserved[CoreEngine::StorageLayout::GAM_HEADER_RESERVED_SPACE];
     };
     static_assert(sizeof(GlobalAllocationPageAdditionalHeader) == CoreEngine::StorageLayout::GAM_HEADER_SIZE);
-    static_assert(CoreEngine::StorageLayout::GAM_METADATA_SIZE + CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE / 8 == CoreEngine::StorageLayout::PAGE_SIZE);
+    static_assert(CoreEngine::StorageLayout::GAM_METADATA_SIZE + CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE / 8 == CoreEngine::StorageLayout::PAGE_SIZE);
 
     class GlobalAllocationPageView final: public PageView{
         [[nodiscard]] inline GlobalAllocationPageAdditionalHeader* GetAdditionalHeader() const{
@@ -47,5 +47,7 @@ namespace Pages{
             [[nodiscard]] gam_index_t GamIndex() const{
                 return this->GetAdditionalHeader()->_gamIndex;
             }
+
+            void RecountFreeExtentsNoLock()const;
     };
 }

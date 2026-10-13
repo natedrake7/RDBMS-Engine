@@ -49,7 +49,7 @@ namespace Pages{
         const auto base = CoreEngine::StorageLayout::GamBaseExtent(this->GamIndex());
         const auto lastExtentId = this->GetAdditionalHeader()->_lastAllocatedExtentId;
 
-        if(startingExtentIndex >= CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE)
+        if(startingExtentIndex >= CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE)
             return;
 
         MultiThreading::ReaderGuard lock(&this->_frame->_latch);

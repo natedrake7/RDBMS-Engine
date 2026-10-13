@@ -249,7 +249,7 @@ Pages::GlobalAllocationPageView StorageManager::CreateGlobalAllocationMapPage(co
     header->_gamIndex = gamIndex;
     header->_appendBitId = 0;
     header->_firstFreeBitId = 0;
-    header->_freeExtentCount = CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE;
+    header->_freeExtentCount = CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE;
 
     std::memset(header->_reserved, 0, CoreEngine::StorageLayout::GAM_HEADER_RESERVED_SPACE);
 

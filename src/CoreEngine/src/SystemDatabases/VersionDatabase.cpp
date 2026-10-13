@@ -79,7 +79,7 @@ namespace CoreEngine {
         //
         //     auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
         //         this->systemFileKey,
-        //         this->header.lastGamPageId
+        //         StorageLayout::GamPageId(this->header._lastGamIndex)
         //     );
         //
         //     if (gamPage.IsFull()){
@@ -184,7 +184,7 @@ namespace CoreEngine {
     ) {
         const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
             this->systemFileKey,
-            this->header._lastGamIndex
+            StorageLayout::GamPageId(this->header._lastGamIndex)
         );
 
         auto cachedPage = this->TryGetLastUndoPage(size);
@@ -274,7 +274,7 @@ namespace CoreEngine {
     std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
         const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
             this->systemFileKey,
-            this->header._lastGamIndex
+            StorageLayout::GamPageId(this->header._lastGamIndex)
         );
 
         // return gamPage.GetAllocatedExtents(startingExtentId);
@@ -338,7 +338,7 @@ namespace CoreEngine {
             if (isExtentEmpty) {
                 auto gamPage = storageManager.GetPage<Pages::GlobalAllocationPageView>(
                     this->systemFileKey,
-                    this->header._lastGamIndex
+                    StorageLayout::GamPageId(this->header._lastGamIndex)
                 );
 
                 MultiThreading::WriterGuard gamLock(&gamPage.Latch());

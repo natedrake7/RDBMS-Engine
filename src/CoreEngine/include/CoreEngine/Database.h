@@ -53,7 +53,7 @@ namespace CoreEngine {
     struct sysTable;
 
     struct DatabaseHeader {
-        UnsignedInt _formatVersion;       // StorageLayout::FILE_FORMAT_VERSION of the code that created the file
+        // UnsignedInt _formatVersion;       // StorageLayout::FILE_ORMAT_VERSION of the code that created the file
         page_id_t _lastPfsPageId;
         gam_index_t _lastGamIndex;
 

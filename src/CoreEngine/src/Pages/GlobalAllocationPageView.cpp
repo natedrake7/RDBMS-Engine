@@ -73,7 +73,7 @@ namespace Pages{
         //fast path:
         const auto base = CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
         UnsignedInt remaining = neededExtents;
-        const auto tailAvailable = static_cast<UnsignedInt>(CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE - additionalHeader->_appendBitId);
+        const auto tailAvailable = static_cast<UnsignedInt>(CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE - additionalHeader->_appendBitId);
         if (tailAvailable > 0){
             const auto bitsToTake = Math::Min(remaining, tailAvailable);
             this->SetBits(additionalHeader->_appendBitId, bitsToTake);
@@ -131,5 +131,21 @@ namespace Pages{
 
     bool GlobalAllocationPageView::IsFull() const{
         return this->GetAdditionalHeader()->_freeExtentCount == 0;
+    }
+
+    void GlobalAllocationPageView::RecountFreeExtentsNoLock() const{
+        constexpr auto BITMAP_WORDS = CoreEngine::StorageLayout::GAM_BITMAP_BYTES / sizeof(UnsignedBigInt);
+        static_assert(BITMAP_WORDS % alignof(UnsignedBigInt) == 0, "GAM Bitmap must be word aligned");
+
+        const auto* wordMap = this->_frame->_data + this->initialOffset;
+        UnsignedInt usedExtents = 0;
+        for (Int i = 0;i < BITMAP_WORDS;i++){
+            UnsignedBigInt word = 0;
+            std::memcpy(&word, wordMap + i * sizeof(UnsignedBigInt), sizeof(UnsignedBigInt));
+            usedExtents += static_cast<UnsignedInt>(std::popcount(word));
+        }
+
+        this->GetAdditionalHeader()->_freeExtentCount = static_cast<UnsignedInt>(CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE - usedExtents);
+        this->_frame->MarkDirty();
     }
 }

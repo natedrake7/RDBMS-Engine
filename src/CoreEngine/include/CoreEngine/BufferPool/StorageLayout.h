@@ -34,11 +34,12 @@ namespace CoreEngine::StorageLayout{
      * pages (1 byte each).
      * @{
      */
-    inline constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
-    inline constexpr UnsignedInt GAM_NUMBER_OF_PAGES = EXTENT_BIT_MAP_SIZE * EXTENT_SIZE;
+    inline constexpr size_t GAM_BIT_MAP_SIZE = 64000;
+    inline constexpr size_t GAM_BITMAP_BYTES = GAM_BIT_MAP_SIZE / EXTENT_SIZE;
+    inline constexpr UnsignedInt GAM_NUMBER_OF_PAGES = GAM_BIT_MAP_SIZE * EXTENT_SIZE;
     inline constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE;
 
-    static_assert(EXTENT_BIT_MAP_SIZE % 8 == 0, "the GAM bitmap is a whole number of bytes");
+    static_assert(GAM_BIT_MAP_SIZE % EXTENT_SIZE == 0, "the GAM bitmap is a whole number of bytes");
     static_assert(PAGE_FREE_SPACE_SIZE % EXTENT_SIZE == 0, "an extent never straddles two PFS pages");
     /** @} End of: Allocation maps */
 
@@ -47,7 +48,7 @@ namespace CoreEngine::StorageLayout{
 
 
     // The GAM header fills the space between the page header and the bitmap, which ends the page
-    inline constexpr size_t GAM_HEADER_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - EXTENT_BIT_MAP_SIZE / 8;
+    inline constexpr size_t GAM_HEADER_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - GAM_BIT_MAP_SIZE / 8;
     inline constexpr size_t GAM_HEADER_RESERVED_SPACE =
         GAM_HEADER_SIZE - sizeof(gam_index_t) - sizeof(UnsignedInt) - 2 * sizeof(extent_id_t);
 
@@ -90,11 +91,11 @@ namespace CoreEngine::StorageLayout{
     }
 
     [[nodiscard]] constexpr gam_index_t GamIndexOfExtent(const extent_id_t extentId){
-        return extentId / EXTENT_BIT_MAP_SIZE;
+        return extentId / GAM_BIT_MAP_SIZE;
     }
 
     [[nodiscard]] constexpr extent_id_t GamBaseExtent(const gam_index_t gamIndex){
-        return gamIndex * EXTENT_BIT_MAP_SIZE;
+        return gamIndex * GAM_BIT_MAP_SIZE;
     }
 
     [[nodiscard]] constexpr page_id_t GamPageId(const gam_index_t gamIndex){

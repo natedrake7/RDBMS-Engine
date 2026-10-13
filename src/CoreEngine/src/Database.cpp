@@ -408,12 +408,14 @@ namespace CoreEngine{
 
             auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
                 this->systemFileKey,
-                this->header._lastGamIndex
+                StorageLayout::GamPageId(this->header._lastGamIndex)
             );
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
             bool newAllocationPageRequired = currentAllocationPageId == INVALID_PAGE_ID;
             UnsignedInt remainingExtents = extentsToAllocate + newAllocationPageRequired;
+
+            auto recounted = false;
             while (remainingExtents > 0) {
                 if (gamPage.IsFull()){
                     gamPage = this->RollToNewGamPageNoLock();
@@ -427,8 +429,14 @@ namespace CoreEngine{
                 const auto extentsAllocated = gamPage.ReserveExtentsNoLock(localRuns, remainingExtents);
                 remainingExtents-= extentsAllocated;
 
-                if (extentsAllocated == 0)
+                if (extentsAllocated == 0){
+                    if (recounted)
+                        throw std::runtime_error("Database::ReserveExtents: GAM reports free extents but no free run exists");
+
+                    gamPage.RecountFreeExtentsNoLock();
                     continue;
+                }
+                recounted = false;
 
                 {
                     page_id_t newAllocationPageId = INVALID_PAGE_ID;
