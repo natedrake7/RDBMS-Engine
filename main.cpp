@@ -13,12 +13,13 @@
 #include <iostream>
 #include <string>
 
-#include <CoreEngine/BufferPool/BufferPoolMemoryManager.h>
 #include <CoreEngine/Evaluators/Kernels/Row/RowKernels.h>
 #include <CoreEngine/Managers/GlobalMemoryManager.h>
 #include <QueryPipeline/RowCursor.h>
 #include <Systemic/Coercions/Coercions.h>
 #include <Systemic/Memory/Functions.h>
+
+#include <CoreEngine/BufferPool/StorageManager.h>
 #include "UnitTests/include/UnitTests.h"
 
 //TODO
@@ -121,10 +122,10 @@ int main(){
     static auto& globalMemoryManager = CoreEngine::GlobalMemoryManager::Get();
     globalMemoryManager.Initialize(memoryInfo);
 
-    globalMemoryManager.Log(std::cout, Memory::MemoryLogLevel::Bytes);
+    globalMemoryManager.Log<::Memory::MemoryLogLevel::Bytes>(std::cout);
 
-    static auto& bufferPoolMemoryManager = CoreEngine::BufferPoolMemoryManager::Get();
-    bufferPoolMemoryManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
+    static auto& storageManager = Storage::StorageManager::Get();
+    storageManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // Tests::InitializeTester();
     // Tests::RunTest(&Tests::IndexPageUpdate);
@@ -158,7 +159,7 @@ int main(){
 
     CommandLineInterface(server);
 
-    globalMemoryManager.Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
+    globalMemoryManager.Log<::Memory::MemoryLogLevel::Bytes>(std::cout);
     serverRunning.store(false, std::memory_order_relaxed);
 
     CoreEngine::GarbageCollector::Stop();
@@ -168,6 +169,7 @@ int main(){
     // statisticsThread.join();
     garbageCollectorThread.join();
 
+    std::cout << "Server shutting down..." << std::endl;
     server.Shutdown();
     return 0;
 }
@@ -178,11 +180,8 @@ void CommandLineInterface(Network::Server& server) {
     constexpr DataTypes::StringView DEBUG_PASSWORD = "admin";
 
     const auto* user = server.Authenticate(DEBUG_USERNAME, DEBUG_PASSWORD);
-
-    if (user == nullptr) {
-        server.Shutdown();
+    if (user == nullptr)
         return;
-    }
 
     const auto* session = server.CreateSession(user);
 
@@ -254,16 +253,12 @@ void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
     std::cout << "Time: " << elapsed.count() << " ms" << std::endl;
 }
 
-void shutdownClient(int signal) {
+void ShutdownServer(int) {
     serverRunning.store(false, std::memory_order_relaxed);
-
-    std::cout << "Server shutting down..." << std::endl;
-    Network::Server::Get().Shutdown();
-    exit(0);
 }
 
 void RegisterSignalHandlers(){
-    signal(SIGINT, shutdownClient);   // Ctrl+C
-    signal(SIGTERM, shutdownClient);  // kill command
-    signal(SIGABRT, shutdownClient);  // abort()
+    signal(SIGINT, ShutdownServer);   // Ctrl+C
+    signal(SIGTERM, ShutdownServer);  // kill command
+    // signal(SIGABRT, ShutdownServer);  // abort()
 }

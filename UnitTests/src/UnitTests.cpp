@@ -93,11 +93,11 @@ namespace Tests{
         // table.AddColumn(column1);
         // table.AddColumn(column2);
         //
-        // auto* frameData = static_cast<object_t*>(allocator.AllocateRaw(Constants::PAGE_SIZE));
+        // auto* frameData = static_cast<object_t*>(allocator.AllocateRaw(CoreEngine::Layout::PAGE_SIZE));
         // auto frame = Pages::Frame(frameData);
         // frame.Header()->pageId = 0;
         // frame.Header()->size = 0;
-        // frame.Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
+        // frame.Header()->bytesLeft = CoreEngine::Layout::INDEX_PAGE_DEFAULT_SIZE;
         // Pages::IndexPageView page(&frame);
         //
         // Errors::RuntimeStatus status;
@@ -137,7 +137,7 @@ namespace Tests{
         //
         // // std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
         //
-        // // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
+        // // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << CoreEngine::Layout::INDEX_PAGE_DEFAULT_SIZE << std::endl;
         //
         // auto updates = DataStructures::PolymorphicArray<Value>(&allocator, 1);
         // updates.Push(Value(DataTypes::StringView("Hello my name is bigger bro"), &allocator, 1));
@@ -173,7 +173,7 @@ namespace Tests{
         // // usedBytes = page.PageSize() * (tuple.payload->Size() + key.size + Pages::SlotDirectory::SIZE);
         //
         // // std::cout << "Used bytes: " << usedBytes << ", bytes left: " << page.BytesLeft() << std::endl;
-        // // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << Constants::INDEX_PAGE_DEFAULT_SIZE << std::endl;
+        // // std::cout << "Total page size: " << usedBytes + page.BytesLeft() << " = " << CoreEngine::Layout::INDEX_PAGE_DEFAULT_SIZE << std::endl;
     }
 
     void PageUpdate(){

@@ -14,7 +14,9 @@ namespace Network{
     #define IS_DEBUG
 #endif
 
-void shutdownClient(int signal);
+void ShutdownClient(int);
+void ShutdownServer(int);
+
 void RegisterSignalHandlers();
 void ExecuteQuery(const std::string& query, session_id_t sessionId);
 void CommandLineInterface(Network::Server& server);

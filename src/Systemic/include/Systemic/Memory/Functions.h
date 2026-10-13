@@ -10,9 +10,9 @@ namespace Memory{
         GigaBytes = 3
     };
 
-    constexpr Int BYTES_TO_KB = 1024;
-    constexpr Int BYTES_TO_MB = 1024 * 1024;
-    constexpr Int BYTES_TO_GB = 1024 * 1024 * 1024;
+    inline constexpr Int BYTES_TO_KB = 1024;
+    inline constexpr Int BYTES_TO_MB = 1024 * 1024;
+    inline constexpr Int BYTES_TO_GB = 1024 * 1024 * 1024;
 
     struct OSMemoryInfo{
         UnsignedBigInt totalPhysicalBytes;

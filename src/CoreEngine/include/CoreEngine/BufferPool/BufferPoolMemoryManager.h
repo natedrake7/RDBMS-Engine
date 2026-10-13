@@ -11,15 +11,19 @@ namespace CoreEngine{
 
         Int _capacity;
 
-        explicit BufferPoolMemoryManager();
-        ~BufferPoolMemoryManager();
 
         void AllocatePagePool();
         void AllocateFramePool();
         void AllocateFreeStack();
 
         public:
-            static BufferPoolMemoryManager& Get();
+            explicit BufferPoolMemoryManager() = default;
+            ~BufferPoolMemoryManager();
+
+            BufferPoolMemoryManager(const BufferPoolMemoryManager& other) = delete;
+            BufferPoolMemoryManager& operator=(const BufferPoolMemoryManager& other) = delete;
+            BufferPoolMemoryManager(BufferPoolMemoryManager&& other) = delete;
+            BufferPoolMemoryManager& operator=(BufferPoolMemoryManager&& other) = delete;
 
             void Initialize(UnsignedBigInt size);
 

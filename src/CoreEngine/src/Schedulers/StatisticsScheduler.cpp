@@ -256,7 +256,7 @@ namespace CoreEngine {
 
         const Memory::Allocator allocator;
         for (const auto& extentId : extents) {
-            const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
+            const page_id_t extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
 
             const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
                 systemKey,
@@ -270,7 +270,7 @@ namespace CoreEngine {
             bool successfulPfsLock = false;
             auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
 
-            for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+            for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
                 if (successfulPfsLock
                     && pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA
                 ) break;

@@ -9,6 +9,8 @@
 #include <CoreEngine/Contexts/ExecutionContext.h>
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
+#include "CoreEngine/BufferPool/StorageLayout.h"
+
 namespace CoreEngine {
     VersionDatabase& VersionDatabase::Get(){
         static VersionDatabase instance;
@@ -29,7 +31,7 @@ namespace CoreEngine {
         Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
 
         this->lastUsedPageId = INVALID_PAGE_ID;
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
         this->header = *headerPage.GetDatabaseHeaderPtr();
     }
 
@@ -63,7 +65,7 @@ namespace CoreEngine {
     }
 
     void VersionDatabase::WriteHeaderToFile() const{
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, Constants::HEADER_PAGE_ID);
+        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
     }
 
@@ -154,7 +156,7 @@ namespace CoreEngine {
             this->lastUsedPageId = newPageId;
         }
 
-        for (page_id_t pageId = newPageId; pageId < newPageId + Constants::EXTENT_SIZE; pageId++){
+        for (page_id_t pageId = newPageId; pageId < newPageId + StorageLayout::EXTENT_SIZE; pageId++){
             auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
                 this->systemFileKey,
                 pageId
@@ -182,7 +184,7 @@ namespace CoreEngine {
     ) {
         const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
             this->systemFileKey,
-            this->header.lastGamPageId
+            this->header._lastGamIndex
         );
 
         auto cachedPage = this->TryGetLastUndoPage(size);
@@ -192,9 +194,9 @@ namespace CoreEngine {
         for (const auto extentId : gamPage.GetAllocatedExtents(allocator)){
             const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
 
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 {
-                    const page_id_t correspondingPfsPageId = Database::GetPfsAssociatedPage(pageId);
+                    const page_id_t correspondingPfsPageId = CoreEngine::StorageLayout::PfsPageId(pageId);
                     const auto pageFreeSpace = Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(
                         this->systemFileKey,
                         correspondingPfsPageId
@@ -272,7 +274,7 @@ namespace CoreEngine {
     std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
         const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
             this->systemFileKey,
-            this->header.lastGamPageId
+            this->header._lastGamIndex
         );
 
         // return gamPage.GetAllocatedExtents(startingExtentId);
@@ -288,10 +290,10 @@ namespace CoreEngine {
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto extentId : extents){
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * Constants::EXTENT_SIZE);
+            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * StorageLayout::EXTENT_SIZE);
 
             bool isExtentEmpty = true;
-            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + Constants::EXTENT_SIZE; pageId++){
+            for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 auto pfsPage = Database::GetAssociatedPfsPage(
                     this->systemFileKey,
                     pageId
@@ -336,7 +338,7 @@ namespace CoreEngine {
             if (isExtentEmpty) {
                 auto gamPage = storageManager.GetPage<Pages::GlobalAllocationPageView>(
                     this->systemFileKey,
-                    this->header.lastGamPageId
+                    this->header._lastGamIndex
                 );
 
                 MultiThreading::WriterGuard gamLock(&gamPage.Latch());

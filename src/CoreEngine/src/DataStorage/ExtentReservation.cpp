@@ -33,7 +33,7 @@ namespace CoreEngine::StorageTypes{
             );
             // const auto subReserve = this->_db->ReserveExtents(
             //     this->_segments.GetAllocator(),
-            //     Constants::EXTENT_SIZE,
+            //     StorageLayout::EXTENT_SIZE,
             //     this->_tableOrdinalPos
             // );
             //
@@ -43,9 +43,9 @@ namespace CoreEngine::StorageTypes{
 
         const auto& [_firstExtentId, _count] = this->_segments[this->_segmentIndex];
 
-        const page_id_t pageId = (_firstExtentId + this->_segmentOffset) * Constants::EXTENT_SIZE + this->_extentIndex++;
+        const page_id_t pageId = (_firstExtentId + this->_segmentOffset) * StorageLayout::EXTENT_SIZE + this->_extentIndex++;
 
-        if (this->_extentIndex == Constants::EXTENT_SIZE){
+        if (this->_extentIndex == StorageLayout::EXTENT_SIZE){
             this->_segmentOffset++;
             this->_extentIndex = 0;
         }

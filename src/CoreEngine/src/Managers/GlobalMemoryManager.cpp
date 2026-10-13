@@ -71,46 +71,19 @@ namespace CoreEngine{
     }
 
     void GlobalMemoryManager::Log(std::ostream& os, const ::Memory::MemoryLogLevel level) const{
-        const UnsignedBigInt executionUsed = this->_executionUsed.load(std::memory_order_relaxed);
-        const UnsignedBigInt miscUsed = this->_miscUsed.load(std::memory_order_relaxed);
-
         switch (level){
-            case ::Memory::MemoryLogLevel::Bytes:{
-                os << "Total Database Memory: " << this->_dbCapacity << " Bytes\n";
-                os << "Total Buffer Pool Memory: " << this->_bufferPoolCapacity << " Bytes\n";
-                os << "Total Execution Pipeline Memory: " << this->_executionCapacity << " Bytes\n";
-                os << "Total Execution Pipeline Memory Used: " << executionUsed << " Bytes\n";
-                os << "Total Miscellaneous Memory: " << this->_miscCapacity << " Bytes\n";
-                os << "Total Miscellaneous Memory Used: " << miscUsed << " Bytes\n";
+            case ::Memory::MemoryLogLevel::Bytes:
+                this->Log<::Memory::MemoryLogLevel::Bytes>(os);
                 break;
-            }
-            case ::Memory::MemoryLogLevel::KiloBytes:{
-                os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
+            case ::Memory::MemoryLogLevel::KiloBytes:
+                this->Log<::Memory::MemoryLogLevel::KiloBytes>(os);
                 break;
-            }
-            case ::Memory::MemoryLogLevel::MegaBytes:{
-                os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
+            case ::Memory::MemoryLogLevel::MegaBytes:
+                this->Log<::Memory::MemoryLogLevel::MegaBytes>(os);
                 break;
-            }
-            case ::Memory::MemoryLogLevel::GigaBytes:{
-                os << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
-                os << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
+            case ::Memory::MemoryLogLevel::GigaBytes:
+                this->Log<::Memory::MemoryLogLevel::GigaBytes>(os);
                 break;
-            }
             default: break;
         }
     }

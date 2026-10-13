@@ -434,7 +434,7 @@ namespace Indexing{
     )const{
         if(treeType == Constants::TreeType::Clustered){
             const auto tupleCost = this->keySize + otherTable->WorstCaseRowSize() + Pages::SlotDirectory::SIZE;
-            const Int calculatedDegree = Constants::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
+            const Int calculatedDegree = CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
             assert(calculatedDegree >= MIN_TREE_DEGREE && "BTree::CalculateTreeDegree: Tree Degree out of bounds");
             return calculatedDegree;
         }
@@ -452,7 +452,7 @@ namespace Indexing{
         //     computedKeySize += column->Size();
         // }
 
-        return static_cast<Int>(Constants::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
+        return static_cast<Int>(CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
     }
 
     void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex) {

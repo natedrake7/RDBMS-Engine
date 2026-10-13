@@ -1,5 +1,4 @@
 #pragma once
-#include <atomic>
 #include <condition_variable>
 #include <vector>
 #include <queue>
@@ -7,30 +6,41 @@
 #include <thread>
 #include <Systemic/DataTypes/DataTypes.h>
 
-class ThreadPool {
-  std::mutex queueMutex;
-  std::condition_variable condition;
-  std::vector<std::thread> workers;
-  std::queue<std::function<void()>> tasks;
+using Task = std::function<void()>;
 
-  public:
+class ThreadPool {
+    std::mutex _queueMutex;
+    std::condition_variable _condition;
+    std::vector<std::thread> workers;
+    std::queue<Task> _tasks{};
+
+    bool _isStopping;
+
+    [[nodiscard]] static Int DefaultWorkerCount();
+
+    void WorkerLoop();
+
+public:
+    inline static constexpr Int DEFAULT_WORKER_COUNT = -1;
+
     ThreadPool();
     ~ThreadPool();
-    void InitializeWorkers(const std::atomic<bool> &isServerRunning, Int numberOfThreads);
-    template<class F>
-    void Enqueue(F&& task);
+
+    void Start(Int numberOfThreads = DEFAULT_WORKER_COUNT);
+    void Stop();
+
+    template<class Function>
+    void Enqueue(Function&& task);
 };
 
-template <class F>
-void ThreadPool::Enqueue(F &&task)
-{
+template <class Function>
+void ThreadPool::Enqueue(Function &&task){
   {
-    std::unique_lock lock(this->queueMutex);
-
-    this->tasks.emplace(std::forward<F>(task));
+    std::unique_lock lock(this->_queueMutex);
+    this->_tasks.emplace(std::forward<Function>(task));
   }
 
-  this->condition.notify_one();
+  this->_condition.notify_one();
 }
 
 

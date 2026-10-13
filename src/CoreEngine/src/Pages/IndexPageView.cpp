@@ -32,11 +32,11 @@ namespace Pages{
     }
 
     IndexPageView::IndexPageView(Frame* framePtr) : PageView(framePtr) {
-        this->initialOffset = Constants::PAGE_HEADER_SIZE + Constants::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
+        this->initialOffset = CoreEngine::StorageLayout::PAGE_HEADER_SIZE + CoreEngine::StorageLayout::INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
     }
 
     IndexPageAdditionalHeader* IndexPageView::GetAdditionalHeader() const{
-        return reinterpret_cast<IndexPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+        return reinterpret_cast<IndexPageAdditionalHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
     }
 
     void IndexPageView::SetTreeType(const Constants::TreeType treeType) const{

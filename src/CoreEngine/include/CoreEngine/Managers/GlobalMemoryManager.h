@@ -45,13 +45,55 @@ namespace CoreEngine{
             [[nodiscard]] bool TryReserveForMisc(UnsignedBigInt size);
             void ReleaseMiscReservation(UnsignedBigInt size);
 
-            UnsignedBigInt GetDbCapacity()const;
-            UnsignedBigInt GetBufferPoolCapacity()const;
-            UnsignedBigInt GetMiscCapacity()const;
-            UnsignedBigInt GetMiscReservation()const;
-            UnsignedBigInt GetExecutionCapacity()const;
-            UnsignedBigInt GetExecutionReservation()const;
+            [[nodiscard]] UnsignedBigInt GetDbCapacity()const;
+            [[nodiscard]] UnsignedBigInt GetBufferPoolCapacity()const;
+            [[nodiscard]] UnsignedBigInt GetMiscCapacity()const;
+            [[nodiscard]] UnsignedBigInt GetMiscReservation()const;
+            [[nodiscard]] UnsignedBigInt GetExecutionCapacity()const;
+            [[nodiscard]] UnsignedBigInt GetExecutionReservation()const;
+
+            template<::Memory::MemoryLogLevel LEVEL>
+            void Log(std::ostream& os)const;
 
             void Log(std::ostream& os, ::Memory::MemoryLogLevel level)const;
     };
+
+    template <::Memory::MemoryLogLevel LEVEL>
+    void GlobalMemoryManager::Log(std::ostream& os) const{
+        const auto executionUsed = this->_executionUsed.load(std::memory_order_relaxed);
+        const auto miscUsed = this->_miscUsed.load(std::memory_order_relaxed);
+
+        if constexpr(LEVEL == ::Memory::MemoryLogLevel::Bytes){
+            os  << "Total Database Memory: " << this->_dbCapacity << " Bytes\n"
+                << "Total Buffer Pool Memory: " << this->_bufferPoolCapacity << " Bytes\n"
+                << "Total Execution Pipeline Memory: " << this->_executionCapacity << " Bytes\n"
+                << "Total Execution Pipeline Memory Used: " << executionUsed << " Bytes\n"
+                << "Total Miscellaneous Memory: " << this->_miscCapacity << " Bytes\n"
+                << "Total Miscellaneous Memory Used: " << miscUsed << " Bytes\n";
+        }
+        else if constexpr(LEVEL == ::Memory::MemoryLogLevel::KiloBytes){
+            os  << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n"
+                << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n"
+                << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n"
+                << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n"
+                << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_KB) << " KiloBytes\n"
+                << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_KB) << " KiloBytes\n";
+        }
+        else if (LEVEL == ::Memory::MemoryLogLevel::MegaBytes){
+            os  << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n"
+                << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n"
+                << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n"
+                << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n"
+                << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_MB) << " MegaBytes\n"
+                << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_MB) << " MegaBytes\n";
+        }
+        else{
+            os  << "Total Database Memory: " << (this->_dbCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n"
+                << "Total Buffer Pool Memory: " << (this->_bufferPoolCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n"
+                << "Total Execution Pipeline Memory: " << (this->_executionCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n"
+                << "Total Execution Pipeline Memory Used: " << (executionUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n"
+                << "Total Miscellaneous Memory: " << (this->_miscCapacity / ::Memory::BYTES_TO_GB) << " GigaBytes\n"
+                << "Total Miscellaneous Memory Used: " << (miscUsed / ::Memory::BYTES_TO_GB) << " GigaBytes\n";
+        }
+    }
 }

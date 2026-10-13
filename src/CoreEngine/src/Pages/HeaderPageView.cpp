@@ -7,13 +7,13 @@ namespace Pages{
     object_t* HeaderPageView::GetTableHeaderDataOffset(const Int ordinalPosition) const{
         return this->_frame->_data
             + sizeof(CoreEngine::DatabaseHeader)
-            + Constants::PAGE_HEADER_SIZE
+            + CoreEngine::StorageLayout::PAGE_HEADER_SIZE
             + (ordinalPosition * sizeof(CoreEngine::StorageTypes::TableHeader));
     }
 
     HeaderPageView::HeaderPageView(Frame* framePtr) : PageView(framePtr){
         this->databaseHeaderPtr = reinterpret_cast<CoreEngine::DatabaseHeader*>(
-            framePtr->_data + Constants::PAGE_HEADER_SIZE
+            framePtr->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE
         );
     }
 

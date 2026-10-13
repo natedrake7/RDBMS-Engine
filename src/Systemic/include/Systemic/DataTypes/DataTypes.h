@@ -1,5 +1,5 @@
-#pragma once
 #include <cassert>
+#pragma once
 #include <cstdint>
 #include <string>
 #include <type_traits>
@@ -76,6 +76,7 @@ typedef unsigned char object_t;
 typedef uint32_t extent_id_t;
 typedef uint32_t extent_num_t;
 
+typedef uint32_t gam_index_t;
 // Page types
 typedef uint32_t page_id_t;
 typedef int16_t page_size_t;

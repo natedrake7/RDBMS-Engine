@@ -56,7 +56,7 @@ namespace Network {
 
     void ConnectionManager::HandleNewConnections(const std::atomic<bool>& isServerRunning){
         this->InitializeServerSocket();
-        this->_threadPool.InitializeWorkers(isServerRunning, 20);
+        this->_threadPool.Start();
 
         while (isServerRunning.load(std::memory_order_relaxed)){
             this->BuildEventsSet();
@@ -123,6 +123,8 @@ namespace Network {
         }
 
         std::cout << "Closing connections" << std::endl;
+
+        this->_threadPool.Stop();
         this->CloseServerConnection();
   }
 
@@ -415,7 +417,7 @@ void ConnectionManager::CloseServerConnection() const
 
     void ConnectionManager::ExecuteQuery(
         const std::shared_ptr<ClientConnection>& connection,
-        request_id_t requestId,
+        const request_id_t requestId,
         std::string query
     ){
         const QueryGuard queryGuard(connection);

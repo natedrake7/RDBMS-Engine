@@ -94,7 +94,7 @@ namespace CoreEngine::StorageTypes {
         // const auto& indexedColumns = this->nonClusteredHeaders[indexPos].columns;
         //
         // for (const auto& extentId : tableExtentIds){
-        //     const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
+        //     const page_id_t extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
         //
         //     const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
         //         this->_db->SystemFileKey(),
@@ -105,7 +105,7 @@ namespace CoreEngine::StorageTypes {
         //                                  ? extentFirstPageId
         //                                  : extentFirstPageId + 1;
         //
-        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++)
+        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++)
         //     {
         //         if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
         //             break;
@@ -349,8 +349,8 @@ namespace CoreEngine::StorageTypes {
         );
 
         const auto pageSize = this->IsClustered()
-           ? static_cast<float>(Constants::INDEX_PAGE_DEFAULT_SIZE)
-           : static_cast<float>(Constants::PAGE_SIZE_WITHOUT_HEADER);
+           ? static_cast<float>(StorageLayout::INDEX_PAGE_DEFAULT_SIZE)
+           : static_cast<float>(StorageLayout::PAGE_SIZE_WITHOUT_HEADER);
 
         const auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
 
@@ -474,7 +474,7 @@ namespace CoreEngine::StorageTypes {
         for (const auto extentId : tableExtentIds){
             const auto extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
 
-            for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + Constants::EXTENT_SIZE; pageId++){
+            for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 auto pfs = Database::GetAssociatedPfsPage(systemFileKey, pageId);
 
                 MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
@@ -532,7 +532,7 @@ namespace CoreEngine::StorageTypes {
             const auto pfs = Database::GetAssociatedPfsPage(systemFileKey, firstPageId);
 
             MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
-            for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + Constants::EXTENT_SIZE; currentPageId++){
+            for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + StorageLayout::EXTENT_SIZE; currentPageId++){
                 if (
                     pfs.GetPageType(currentPageId) != Constants::PageType::DATA
                     || !pfs.IsPageAllocated(currentPageId)
@@ -593,7 +593,7 @@ namespace CoreEngine::StorageTypes {
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
-            const auto extentFirstPageId = extentId * Constants::EXTENT_SIZE;
+            const auto extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
 
             const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
 
@@ -606,7 +606,7 @@ namespace CoreEngine::StorageTypes {
                 &executionContext
             );
 
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
@@ -651,7 +651,7 @@ namespace CoreEngine::StorageTypes {
         tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto extentId : tableExtentIds){
-            const page_id_t extentFirstPageId = extentId * Constants::EXTENT_SIZE;
+            const page_id_t extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
 
             const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
 
@@ -663,7 +663,7 @@ namespace CoreEngine::StorageTypes {
                 Expressions::EvaluationContext::EvaluationContextType::SingleRow,
                 &executionContext
             );
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
                 if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
                     break;
 
@@ -890,7 +890,7 @@ namespace CoreEngine::StorageTypes {
         // Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
         //
         // for (const auto &extentId : tableExtentIds){
-        //     const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * Constants::EXTENT_SIZE);
+        //     const auto extentFirstPageId = Database::CalculateSystemPageOffset(extentId * StorageLayout::EXTENT_SIZE);
         //
         //     auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
         //
@@ -898,7 +898,7 @@ namespace CoreEngine::StorageTypes {
         //            ? extentFirstPageId
         //            : extentFirstPageId + 1;
         //
-        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + Constants::EXTENT_SIZE; extentPageId++){
+        //     for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
         //         if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
         //             break;
         //
@@ -1069,7 +1069,7 @@ namespace CoreEngine::StorageTypes {
                                                   ? extentFirstPageId
                                                   : extentFirstPageId + 1;
 
-            for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + Constants::EXTENT_SIZE; pageId++)
+            for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++)
             {
                 auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemKey, pageId);
 

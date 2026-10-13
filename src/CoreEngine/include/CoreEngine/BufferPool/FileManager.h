@@ -31,7 +31,12 @@ namespace Storage{
 
         public:
             explicit FileManager();
+
             FileManager(const FileManager& other) = delete;
+            FileManager& operator=(const FileManager& other) = delete;
+            FileManager(FileManager&& other) = delete;
+            FileManager& operator=(FileManager&& other) = delete;
+
             ~FileManager();
             void CreateFile_(
                 FileKey key,
@@ -44,5 +49,7 @@ namespace Storage{
 
             [[nodiscard]] static bool FileExists(const DataTypes::StringView& fileName);
             static void RemoveFile(const DataTypes::StringView& fileName);
+
+            void CloseAllFiles();
     };
 }

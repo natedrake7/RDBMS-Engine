@@ -85,52 +85,13 @@ namespace Constants{
          "MAX_TABLE_COLUMNS must fit in column_index_t"
     );
 
-    inline constexpr UnsignedSmallInt OBJECT_METADATA_SIZE_T = sizeof(page_size_t) + sizeof(page_id_t) + sizeof(large_page_index_t);
-    inline constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
-    inline constexpr UnsignedSmallInt ALLOCATION_PAGE_ADDITIONAL_HEADER_SIZE = sizeof(extent_id_t) + 2 * sizeof(page_id_t);
-    inline constexpr UnsignedSmallInt OVERFLOW_POINTER_SIZE = sizeof(page_offset_t) + sizeof(page_id_t);
-
-    inline constexpr size_t PAGE_SIZE = 8 * KB;
-    inline constexpr size_t MAX_NUMBER_OF_PAGES = 100000;
-    inline constexpr size_t MAX_NUMBER_SYSTEM_PAGES = 1000000;
-    inline constexpr size_t EXTENT_SIZE = 8;
-    inline constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
-    inline constexpr size_t EXTENT_BIT_MAP_SIZE = 64000;
-    inline constexpr size_t GAM_HEADER_SIZE = PAGE_SIZE - (EXTENT_BIT_MAP_SIZE / 8) - PAGE_HEADER_SIZE;
-    inline constexpr size_t GAM_HEADER_RESERVED_SPACE = PAGE_SIZE - (EXTENT_BIT_MAP_SIZE / 8) - PAGE_HEADER_SIZE - 2 * sizeof(extent_id_t) - sizeof(UnsignedInt);
-    inline constexpr size_t GAM_METADATA_SIZE = PAGE_HEADER_SIZE + GAM_HEADER_SIZE;
-
-    inline constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE;
-    inline constexpr UnsignedSmallInt NEXT_PAGE_FREE_SPACE = PAGE_FREE_SPACE_SIZE + 1;
-    inline constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
-
-    inline constexpr page_size_t INDEX_PAGE_SIBLINGS_SIZE = 2 * sizeof(page_id_t);
-    inline constexpr UnsignedSmallInt LARGE_OBJECT_PAGE_SIZE = PAGE_SIZE_WITHOUT_HEADER - 2 * sizeof(page_id_t);
-
-    inline constexpr size_t LOB_ROOT_HEADER_SIZE =
-            sizeof(UnsignedBigInt) + sizeof(page_id_t)
-            + 2 * sizeof(UnsignedInt) + 2 * sizeof(UnsignedTinyInt)
-            + sizeof(UnsignedSmallInt);
-
-    inline constexpr size_t LOB_INDEX_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
-    inline constexpr size_t LOB_DATA_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
-
-    inline constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = INDEX_PAGE_SIBLINGS_SIZE + PackedByte::SIZE + 3; //3 stands for alignment and reserved space
-    inline constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
-
-    inline constexpr UnsignedSmallInt GAM_PAGE_SIZE = 64000;
-    inline constexpr UnsignedInt GAM_NUMBER_OF_PAGES = 64000 * 8;
-    inline constexpr page_id_t HEADER_PAGE_ID = 0;
+    // Page and file layout constants live in <CoreEngine/BufferPool/StorageLayout.h>
 
     inline constexpr Int TEMPORARY_DATABASE_ID = 0;
     inline constexpr Int VERSION_DATABASE_ID = 1;
     inline constexpr Int SYSTEM_CATALOG_ID = 2;
 
     inline constexpr Int SYSTEM_SCHEMA_ID = 1;
-
-    inline constexpr page_id_t NEXT_GAM_PAGE_ID_OFFSET = (GAM_NUMBER_OF_PAGES + PAGE_FREE_SPACE_SIZE - 1) / PAGE_FREE_SPACE_SIZE + 1;
-
-    inline constexpr Int OVERFLOW_POINTER_TOTAL_SIZE = sizeof(page_id_t) + sizeof(page_offset_t);
 
     enum class FunctionType : UnsignedTinyInt {
         // -----------------------

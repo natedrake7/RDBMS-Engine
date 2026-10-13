@@ -11,6 +11,8 @@
 
 #include <Server/ValidationMessages.h>
 
+#include "CoreEngine/BufferPool/StorageManager.h"
+
 namespace Network {
     Server::Server(){
         this->temporaryDatabase = nullptr;
@@ -212,19 +214,22 @@ namespace Network {
         return this->sessionManager.CloseCursor(id, cursorId);
     }
 
-  void Server::Shutdown(){
-    const CoreEngine::Memory::Allocator allocator;
-    for (auto* database: this->databases | std::views::values){
-        database->UpdateSystemCatalog(&allocator);
-        database->Destroy();
+    void Server::Shutdown(){
+        const CoreEngine::Memory::Allocator allocator;
+        for (const auto* database: this->databases | std::views::values){
+            database->UpdateSystemCatalog(&allocator);
+            database->Destroy();
+            delete database;
+        }
 
-        delete database;
+        this->temporaryDatabase->Shutdown();
+        this->systemCatalog->Shutdown();
+        // this->versionDatabase->
+
+        auto& storageManager = Storage::StorageManager::Get();
+        storageManager.FlushAll();
+        storageManager.CloseAllFiles();
     }
-
-    this->temporaryDatabase->Shutdown();
-    this->systemCatalog->Shutdown();
-    // this->versionDatabase->
-  }
 
     CoreEngine::Database* Server::UseDatabase(
         const CoreEngine::ExecutionContext& context,

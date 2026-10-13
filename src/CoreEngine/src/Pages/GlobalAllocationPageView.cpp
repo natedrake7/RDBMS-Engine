@@ -1,14 +1,10 @@
 ﻿#include <CoreEngine/Pages/GlobalAllocationPageView.h>
-
 #include <CoreEngine/DataStorage/ExtentReservation.h>
 #include <CoreEngine/Pages/AllocationPageView.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
+#include <CoreEngine/BufferPool/StorageLayout.h>
 
 namespace Pages{
-    GlobalAllocationPageAdditionalHeader* GlobalAllocationPageView::GetAdditionalHeader() const{
-        return reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
-    }
-
     void GlobalAllocationPageView::SetBits(const UnsignedInt startIndex, const UnsignedInt numberOfBits) const{
         for (auto i = startIndex; i < startIndex + numberOfBits; i++)
             this->SetBit(i);
@@ -63,7 +59,7 @@ namespace Pages{
     }
 
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame){
-        this->initialOffset = Constants::GAM_METADATA_SIZE;
+        this->initialOffset = CoreEngine::StorageLayout::GAM_METADATA_SIZE;
     }
 
     UnsignedInt GlobalAllocationPageView::ReserveExtentsNoLock(
@@ -75,9 +71,9 @@ namespace Pages{
             return 0;
 
         //fast path:
-        const auto base = AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        const auto base = CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
         UnsignedInt remaining = neededExtents;
-        const auto tailAvailable = static_cast<UnsignedInt>(Constants::EXTENT_BIT_MAP_SIZE - additionalHeader->_appendBitId);
+        const auto tailAvailable = static_cast<UnsignedInt>(CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE - additionalHeader->_appendBitId);
         if (tailAvailable > 0){
             const auto bitsToTake = Math::Min(remaining, tailAvailable);
             this->SetBits(additionalHeader->_appendBitId, bitsToTake);
@@ -121,7 +117,7 @@ namespace Pages{
     }
 
     void GlobalAllocationPageView::DeallocateExtentNoLock(const extent_id_t extentId) const{
-        const auto bitIndex = extentId - AllocationPageView::CalculateExtentIdOffsetByGamPageId(this->_frame->Header()->pageId);
+        const auto bitIndex = extentId - CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
         this->ClearBit(bitIndex);
         this->_frame->isDirty = true;
 

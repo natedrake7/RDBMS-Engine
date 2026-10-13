@@ -2,6 +2,7 @@
 #include <cassert>
 
 #include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/BufferPool/StorageLayout.h>
 #include <Systemic/DataTypes/DataTypes.h>
 
 namespace Pages{
@@ -19,7 +20,7 @@ namespace Pages{
         LobRootHeader() = default;
     };
 
-    static_assert(sizeof(LobRootHeader) == Constants::LOB_ROOT_HEADER_SIZE);
+    static_assert(sizeof(LobRootHeader) == CoreEngine::StorageLayout::LOB_ROOT_HEADER_SIZE);
 
     struct LobIndexHeader{
         page_id_t _rootPageId;
@@ -28,7 +29,7 @@ namespace Pages{
         LobIndexHeader() = default;
     };
 
-    static_assert(sizeof(LobIndexHeader) == Constants::LOB_INDEX_HEADER_SIZE);
+    static_assert(sizeof(LobIndexHeader) == CoreEngine::StorageLayout::LOB_INDEX_HEADER_SIZE);
 
     struct LobDataHeader{
         page_id_t _rootPageId;
@@ -37,12 +38,12 @@ namespace Pages{
         LobDataHeader() = default;
     };
 
-    static_assert(sizeof(LobDataHeader) == Constants::LOB_DATA_HEADER_SIZE);
+    static_assert(sizeof(LobDataHeader) == CoreEngine::StorageLayout::LOB_DATA_HEADER_SIZE);
 
     namespace LobLayout{
-        inline constexpr UnsignedInt ROOT_PAYLOAD = Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE - Constants::LOB_ROOT_HEADER_SIZE;
-        inline constexpr UnsignedInt INDEX_PAYLOAD = Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE - Constants::LOB_INDEX_HEADER_SIZE;
-        inline constexpr UnsignedInt DATA_CAPACITY = Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE - Constants::LOB_DATA_HEADER_SIZE;
+        inline constexpr UnsignedInt ROOT_PAYLOAD = CoreEngine::StorageLayout::PAGE_SIZE - CoreEngine::StorageLayout::PAGE_HEADER_SIZE - CoreEngine::StorageLayout::LOB_ROOT_HEADER_SIZE;
+        inline constexpr UnsignedInt INDEX_PAYLOAD = CoreEngine::StorageLayout::PAGE_SIZE - CoreEngine::StorageLayout::PAGE_HEADER_SIZE - CoreEngine::StorageLayout::LOB_INDEX_HEADER_SIZE;
+        inline constexpr UnsignedInt DATA_CAPACITY = CoreEngine::StorageLayout::PAGE_SIZE - CoreEngine::StorageLayout::PAGE_HEADER_SIZE - CoreEngine::StorageLayout::LOB_DATA_HEADER_SIZE;
 
         inline constexpr UnsignedInt INLINE_CAPACITY = ROOT_PAYLOAD;
         inline constexpr UnsignedInt ROOT_FANOUT = ROOT_PAYLOAD / sizeof(page_id_t);

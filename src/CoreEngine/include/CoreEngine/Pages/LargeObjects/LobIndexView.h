@@ -5,11 +5,11 @@
 namespace Pages{
     class LobIndexView : public PageView{
         [[nodiscard]] LobIndexHeader* GetAdditionalHeader() const{
-            return reinterpret_cast<LobIndexHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+            return reinterpret_cast<LobIndexHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
         }
 
         [[nodiscard]] object_t* Payload()const{
-            return this->_frame->_data + Constants::PAGE_HEADER_SIZE + sizeof(LobIndexHeader);
+            return this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE + sizeof(LobIndexHeader);
         }
 
     public:

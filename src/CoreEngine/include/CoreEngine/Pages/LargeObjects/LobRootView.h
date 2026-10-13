@@ -6,11 +6,11 @@
 namespace Pages{
     class LobRootView : public PageView{
         [[nodiscard]] LobRootHeader* GetAdditionalHeader() const{
-            return reinterpret_cast<LobRootHeader*>(this->_frame->_data + Constants::PAGE_HEADER_SIZE);
+            return reinterpret_cast<LobRootHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
         }
 
         [[nodiscard]] object_t* Payload()const{
-            return this->_frame->_data + Constants::PAGE_HEADER_SIZE + sizeof(LobRootHeader);
+            return this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE + sizeof(LobRootHeader);
         }
 
         public:

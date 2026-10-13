@@ -26,13 +26,13 @@ namespace CoreEngine::StorageTypes{
     row_size_t Table::MaxInlineRowSize() const{
         if (this->IsClustered()){
             return static_cast<row_size_t>(
-                (Constants::INDEX_PAGE_DEFAULT_SIZE / (2 * Indexing::BTree::MIN_TREE_DEGREE))
+                (StorageLayout::INDEX_PAGE_DEFAULT_SIZE / (2 * Indexing::BTree::MIN_TREE_DEGREE))
                 - this->ClusteredKeySize()
                 - Pages::SlotDirectory::SIZE
             );
         }
 
-        return Constants::PAGE_SIZE_WITHOUT_HEADER - Pages::SlotDirectory::SIZE;
+        return StorageLayout::PAGE_SIZE_WITHOUT_HEADER - Pages::SlotDirectory::SIZE;
     }
 
     row_size_t Table::ClusteredKeySize() const{

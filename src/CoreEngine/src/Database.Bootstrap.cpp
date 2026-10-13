@@ -28,9 +28,6 @@ namespace CoreEngine{
         const Schemas::TableSchema* schema
     ){
         auto* table = this->CreateTablePtr(schema, StorageTypes::TableHeader());
-        this->header.numberOfTables++;
-        this->header.lastTableId = schema->_id;
-
         this->_tables.Insert(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
         return table;
     }
@@ -50,7 +47,7 @@ namespace CoreEngine{
 
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
             this->systemFileKey,
-            Constants::HEADER_PAGE_ID
+           StorageLayout::HEADER_PAGE_ID
         );
 
         const auto tableHeaders = catalog.SelectTables(allocator, this->id);
@@ -94,7 +91,7 @@ namespace CoreEngine{
     ){
         const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
             this->systemFileKey,
-            Constants::HEADER_PAGE_ID
+            StorageLayout::HEADER_PAGE_ID
         );
 
         auto* cursor = this->_allocator.AllocateRaw<char>(name.Size() + SYSTEM_SCHEMA_NAME.Size());
@@ -119,11 +116,6 @@ namespace CoreEngine{
 
             auto* table = this->CreateTablePtr(schema, physicalHeader);
             this->_tables.Append(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
-
-            if (isNew){
-                this->header.numberOfTables++;
-                this->header.lastTableId = schema->_id;
-            }
         }
 
         if (!this->_tables.Seal())

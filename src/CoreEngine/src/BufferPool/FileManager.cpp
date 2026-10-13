@@ -51,8 +51,7 @@ namespace Storage{
     FileManager::FileManager() = default;
 
     FileManager::~FileManager(){
-        for(const auto& file : this->_fileTable | std::views::values)
-            ::close(file._fd);
+        this->CloseAllFiles();
     }
 
     void FileManager::CreateFile_(
@@ -147,4 +146,9 @@ namespace Storage{
         std::filesystem::remove_all(path);
     }
 
+    void FileManager::CloseAllFiles(){
+        MultiThreading::WriterGuard lock(&this->tableMutex);
+        for(const auto& file : this->_fileTable | std::views::values)
+            ::close(file._fd);
+    }
 };

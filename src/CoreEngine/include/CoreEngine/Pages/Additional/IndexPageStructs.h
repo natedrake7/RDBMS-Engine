@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/BufferPool/StorageLayout.h>
 #include <CoreEngine/Indexing/Key.h>
 #include <Systemic/RowIdentifier.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
@@ -24,7 +25,7 @@ namespace Pages{
 		page_id_t nextNode;
 
 		UnsignedTinyInt _flags;
-        byte_t _reserved[Constants::GAM_HEADER_RESERVED_SPACE];
+        byte_t _reserved[3];
 
         [[nodiscard]] Constants::TreeType GetTreeType() const{
             return PackedByte::ExtractBits<Constants::TreeType>(_flags, TREE_TYPE_BIT_POS, TREE_TYPE_BIT_MASK);
@@ -68,6 +69,10 @@ namespace Pages{
             this->SetIsEmpty(true);
         }
 	};
+    static_assert(sizeof(IndexPageAdditionalHeader) == CoreEngine::StorageLayout::INDEX_PAGE_ADDITIONAL_HEADER_SIZE);
+}
+
+namespace Pages{
 
     struct IndexInsertTuple{
         DataTypes::Indexing::Key key;

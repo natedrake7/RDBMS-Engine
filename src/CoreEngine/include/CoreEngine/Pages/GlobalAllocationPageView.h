@@ -1,21 +1,25 @@
 ﻿#pragma once
 #include <CoreEngine/Pages/PageView.h>
 
-namespace CoreEngine::StorageTypes
-{
+namespace CoreEngine::StorageTypes{
     struct ExtentSegment;
 }
 
 namespace Pages{
     struct GlobalAllocationPageAdditionalHeader{
+        gam_index_t _gamIndex;
         UnsignedInt _freeExtentCount;
         extent_id_t _firstFreeBitId;
         extent_id_t _appendBitId;
-        byte_t _reserved[Constants::GAM_HEADER_RESERVED_SPACE];
+        byte_t _reserved[CoreEngine::StorageLayout::GAM_HEADER_RESERVED_SPACE];
     };
+    static_assert(sizeof(GlobalAllocationPageAdditionalHeader) == CoreEngine::StorageLayout::GAM_HEADER_SIZE);
+    static_assert(CoreEngine::StorageLayout::GAM_METADATA_SIZE + CoreEngine::StorageLayout::EXTENT_BIT_MAP_SIZE / 8 == CoreEngine::StorageLayout::PAGE_SIZE);
 
-    class GlobalAllocationPageView final : public PageView{
-        [[nodiscard]] GlobalAllocationPageAdditionalHeader* GetAdditionalHeader() const;
+    class GlobalAllocationPageView final: public PageView{
+        [[nodiscard]] inline GlobalAllocationPageAdditionalHeader* GetAdditionalHeader() const{
+            return reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
+        }
 
         void SetBits(UnsignedInt startIndex, UnsignedInt numberOfBits) const;
         void CollectRunsNoLock(
@@ -39,5 +43,9 @@ namespace Pages{
 
             void DeallocateExtentNoLock(extent_id_t extentId) const;
             [[nodiscard]] bool IsFull() const;
+
+            [[nodiscard]] gam_index_t GamIndex() const{
+                return this->GetAdditionalHeader()->_gamIndex;
+            }
     };
 }

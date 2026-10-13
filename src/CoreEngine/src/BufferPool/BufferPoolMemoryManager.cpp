@@ -5,51 +5,17 @@
 #include <CoreEngine/Managers/GlobalMemoryManager.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 
+#include <CoreEngine/BufferPool/StorageLayout.h>
+
 namespace CoreEngine{
-    BufferPoolMemoryManager::BufferPoolMemoryManager(){
-        this->_data = nullptr;
-        this->_framesData = nullptr;
-        this->_capacity = 0;
-        this->_freeStack = nullptr;
-        this->_freeTopId = 0;
-    }
-
-    BufferPoolMemoryManager::~BufferPoolMemoryManager(){
-        // Frames are intentionally not destroyed: this singleton only dies at process exit, and
-        // destroying ~500k winpthreads mutexes/condvars is one CloseHandle round-trip each
-        // (~0.25 s normally, ~50 s with a debugger attached). The OS reclaims the handles.
-#ifdef _WIN32
-        _aligned_free(this->_data);
-        _aligned_free(this->_framesData);
-#else
-        std::free(this->_data);
-        std::free(this->_framesData);
-#endif
-    }
-
-    BufferPoolMemoryManager& BufferPoolMemoryManager::Get(){
-        static BufferPoolMemoryManager _instance;
-        return _instance;
-    }
-
-    void BufferPoolMemoryManager::Initialize(const UnsignedBigInt size){
-        this->_capacity = static_cast<Int>(size / (Constants::PAGE_SIZE + sizeof(Pages::Frame)));
-
-        this->AllocatePagePool();
-        this->AllocateFramePool();
-        this->AllocateFreeStack();
-    }
-
-    Int BufferPoolMemoryManager::Capacity() const{ return this->_capacity; }
-
     void BufferPoolMemoryManager::AllocatePagePool(){
 #ifdef _WIN32
-        this->_data =  static_cast<object_t*>(_aligned_malloc(this->_capacity * Constants::PAGE_SIZE, Constants::PAGE_SIZE));
+        this->_data =  static_cast<object_t*>(_aligned_malloc(this->_capacity * StorageLayout::PAGE_SIZE, StorageLayout::PAGE_SIZE));
 #else
-        this->_data = static_cast<object_t*>(std::aligned_alloc(Constants::PAGE_SIZE, this->_capacity * Constants::PAGE_SIZE));
+        this->_data = static_cast<object_t*>(std::aligned_alloc(StorageLayout::PAGE_SIZE, this->_capacity * StorageLayout::PAGE_SIZE));
 #endif
 
-        std::memset(this->_data, 0, this->_capacity * Constants::PAGE_SIZE);
+        std::memset(this->_data, 0, this->_capacity * StorageLayout::PAGE_SIZE);
     }
 
     void BufferPoolMemoryManager::AllocateFramePool(){
@@ -75,6 +41,29 @@ namespace CoreEngine{
         this->_freeTopId = this->_capacity;
     }
 
+    BufferPoolMemoryManager::~BufferPoolMemoryManager(){
+        // Frames are intentionally not destroyed: this singleton only dies at process exit, and
+        // destroying ~500k winpthreads mutexes/condvars is one CloseHandle round-trip each
+        // (~0.25 s normally, ~50 s with a debugger attached). The OS reclaims the handles.
+#ifdef _WIN32
+        _aligned_free(this->_data);
+        _aligned_free(this->_framesData);
+#else
+        std::free(this->_data);
+        std::free(this->_framesData);
+#endif
+    }
+
+    void BufferPoolMemoryManager::Initialize(const UnsignedBigInt size){
+        this->_capacity = static_cast<Int>(size / (StorageLayout::PAGE_SIZE + sizeof(Pages::Frame)));
+
+        this->AllocatePagePool();
+        this->AllocateFramePool();
+        this->AllocateFreeStack();
+    }
+
+    Int BufferPoolMemoryManager::Capacity() const{ return this->_capacity; }
+
     object_t* BufferPoolMemoryManager::Data() const{
         return this->_data;
     }
@@ -85,7 +74,7 @@ namespace CoreEngine{
 
     object_t* BufferPoolMemoryManager::CopyToMemory(const char* buffer, const UnsignedBigInt offset, const page_offset_t bufferOffset) const{
         auto* destination = this->_data + offset;
-        std::memcpy(destination, buffer + bufferOffset, Constants::PAGE_SIZE);
+        std::memcpy(destination, buffer + bufferOffset, StorageLayout::PAGE_SIZE);
         return destination;
     }
 

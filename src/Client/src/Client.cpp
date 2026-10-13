@@ -20,12 +20,12 @@
   #include <unistd.h>
 #endif
 
-void ShutdownClient(int signal) {
+static void ShutdownClient(int) {
   std::cout << "Client shutting down..." << std::endl;
   exit(0);
 }
 
-void RegisterSignals() {
+static void RegisterSignals() {
   std::signal(SIGINT, ShutdownClient);   // Ctrl+C
   std::signal(SIGTERM, ShutdownClient);  // kill command
   std::signal(SIGABRT, ShutdownClient);  // abort()

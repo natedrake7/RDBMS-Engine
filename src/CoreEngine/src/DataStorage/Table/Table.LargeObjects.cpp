@@ -13,7 +13,7 @@ namespace CoreEngine::StorageTypes {
         // if (numOfPages == 1)
         //     reservation = this->LazyReservation(allocator);
         // else{
-        //     const auto numExtents = Math::Ceil<Int>(static_cast<float>(numOfPages) / Constants::EXTENT_SIZE);
+        //     const auto numExtents = Math::Ceil<Int>(static_cast<float>(numOfPages) / CoreEngine::Layout::EXTENT_SIZE);
         //     reservation = this->ReserveExtents(allocator, numExtents);
         // }
 

@@ -9,13 +9,13 @@ namespace QueryPipeline{
 }
 
 namespace Network::Sessions {
-  class SessionManager {
-    Dictionary<session_id_t, std::shared_ptr<Session>> _sessions;
-    mutable MultiThreading::Mutex mutex;
-    std::atomic<session_id_t> _nextSessionId;
+    class SessionManager {
+        Dictionary<session_id_t, std::shared_ptr<Session>> _sessions;
+        mutable MultiThreading::Mutex mutex;
+        std::atomic<session_id_t> _nextSessionId;
 
-    [[nodiscard]] Session* TryGetSessionWithoutLock(session_id_t id)const;
-    [[nodiscard]] session_id_t NextSessionId();
+        [[nodiscard]] Session* TryGetSessionWithoutLock(session_id_t id)const;
+        [[nodiscard]] session_id_t NextSessionId();
 
     public:
         SessionManager();
@@ -34,5 +34,5 @@ namespace Network::Sessions {
             QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
         )const;
         [[nodiscard]] bool CloseCursor(session_id_t id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
-  };
+    };
 }

@@ -5,7 +5,8 @@
 
 namespace Pages{
     page_offset_t PageFreeSpaceView::GetOffset(const page_id_t pageId) const{
-        return this->initialOffset + pageId % Constants::PAGE_FREE_SPACE_SIZE;
+        // PFS ranges restart at every GAM boundary, so the slot is relative to the page's GAM interval
+        return this->initialOffset + CoreEngine::StorageLayout::PfsSlot(pageId);
     }
 
     byte_t* PageFreeSpaceView::GetByte(const page_id_t pageId) const{
@@ -48,7 +49,7 @@ namespace Pages{
     }
 
     void PageFreeSpaceView::SetPageAllocationStatus(const page_id_t pageId, const page_size_t bytesLeft) const{
-        const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / Constants::PAGE_SIZE);
+        const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / CoreEngine::StorageLayout::PAGE_SIZE);
         PackedByte::SetBits<SIZE_SHIFT, SIZE_MASK>(this->GetByte(pageId), pageAllocationStatus);
     }
 

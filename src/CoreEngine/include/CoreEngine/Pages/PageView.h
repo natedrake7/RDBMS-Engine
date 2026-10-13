@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/BufferPool/StorageLayout.h>
 #include <Systemic/MaterializedRow.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
@@ -32,7 +33,7 @@ namespace Pages{
         [[nodiscard]] Constants::PageType Type() const;
         void SetType(Constants::PageType pageType);
     };
-    static_assert(sizeof(PageHeader) == Constants::PAGE_HEADER_SIZE);
+    static_assert(sizeof(PageHeader) == CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
 
     class PageView{
     protected:

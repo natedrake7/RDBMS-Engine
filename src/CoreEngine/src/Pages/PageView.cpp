@@ -13,7 +13,7 @@ namespace Pages{
     PageHeader::PageHeader()
         :   pageId(INVALID_PAGE_ID), size(0),
             type(static_cast<page_size_t>(Constants::PageType::DATA)),
-            bytesLeft(static_cast<page_size_t>(Constants::PAGE_SIZE - Constants::PAGE_HEADER_SIZE)){}
+            bytesLeft(static_cast<page_size_t>(CoreEngine::StorageLayout::PAGE_SIZE - CoreEngine::StorageLayout::PAGE_HEADER_SIZE)){}
 
     Constants::PageType PageHeader::Type() const{
         return static_cast<Constants::PageType>(this->type);
@@ -29,17 +29,17 @@ namespace Pages{
 
     page_offset_t PageView::NewInsertOffset() const{
         const auto* headerPtr = this->_frame->Header();
-        return Constants::PAGE_SIZE
+        return CoreEngine::StorageLayout::PAGE_SIZE
             - headerPtr->bytesLeft
             - headerPtr->size * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoryOffSet(const Int indexPosition){
-        return static_cast<Int>(Constants::PAGE_SIZE) - (indexPosition + 1) * SlotDirectory::SIZE;
+        return static_cast<Int>(CoreEngine::StorageLayout::PAGE_SIZE) - (indexPosition + 1) * SlotDirectory::SIZE;
     }
 
     Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-        return static_cast<Int>(Constants::PAGE_SIZE) - (indexPosition + slotToMove) * SlotDirectory::SIZE;
+        return static_cast<Int>(CoreEngine::StorageLayout::PAGE_SIZE) - (indexPosition + slotToMove) * SlotDirectory::SIZE;
     }
 
     void PageView::UpdateSlotDirectory(
@@ -80,8 +80,8 @@ namespace Pages{
 
     Int PageView::RawDataSize() const{
         return this->IsIndexPage()
-                   ? Constants::INDEX_PAGE_DEFAULT_SIZE
-                   : Constants::PAGE_SIZE_WITHOUT_HEADER;
+                   ? CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE
+                   : CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
     }
 
     void PageView::InsertFirstRow(const CoreEngine::StorageTypes::SerializedRow& payload) const{
@@ -103,10 +103,10 @@ namespace Pages{
     }
 
     PageView::PageView()
-        : _frame(nullptr), initialOffset(Constants::PAGE_HEADER_SIZE){}
+        : _frame(nullptr), initialOffset(CoreEngine::StorageLayout::PAGE_HEADER_SIZE){}
 
     PageView::PageView(Frame* framePtr)
-        : _frame(framePtr), initialOffset(Constants::PAGE_HEADER_SIZE){}
+        : _frame(framePtr), initialOffset(CoreEngine::StorageLayout::PAGE_HEADER_SIZE){}
 
     PageView::PageView(PageView&& other) noexcept
         :   _frame(other._frame),
@@ -195,7 +195,7 @@ namespace Pages{
         }
 
         const auto usedBytes = offset + (header->size * SlotDirectory::SIZE);
-        header->bytesLeft = Constants::PAGE_SIZE - usedBytes;
+        header->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE - usedBytes;
         this->_frame->isDirty = true;
     }
 
@@ -501,7 +501,7 @@ namespace Pages{
     }
 
     MultiThreading::Mutex& PageView::Latch() const{
-        return this->_frame->latch;
+        return this->_frame->_latch;
     }
 
     bool PageView::IsValid() const{

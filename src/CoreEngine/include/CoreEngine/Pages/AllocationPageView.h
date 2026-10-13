@@ -12,20 +12,22 @@ namespace DataStructures{
 }
 
 namespace Pages{
-    struct IndexAllocationPageAdditionalHeader {
-        page_id_t gamPageId;
-        extent_id_t lastAllocatedExtentId;
-        page_id_t nextPageId;
+    struct AllocationPageAdditionalHeader {
+        gam_index_t _gamIndex;
+        extent_id_t _lastAllocatedExtentId;
+        page_id_t _nextPageId;
 
-        IndexAllocationPageAdditionalHeader(
-            const page_id_t gamPageId,
+        AllocationPageAdditionalHeader(
+            const gam_index_t gamIndex,
             const extent_id_t extentId,
             const page_id_t nextPageId
-        ): gamPageId(gamPageId), lastAllocatedExtentId(extentId), nextPageId(nextPageId){}
+        ): _gamIndex(gamIndex), _lastAllocatedExtentId(extentId), _nextPageId(nextPageId){}
     };
 
     class AllocationPageView final : public PageView{
-        [[nodiscard]] IndexAllocationPageAdditionalHeader* GetAdditionalHeader() const;
+        [[nodiscard]] inline AllocationPageAdditionalHeader* GetAdditionalHeader() const{
+            return reinterpret_cast<AllocationPageAdditionalHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
+        }
 
         public:
             AllocationPageView();
@@ -33,18 +35,20 @@ namespace Pages{
             AllocationPageView(AllocationPageView&& other) noexcept = default;
             AllocationPageView& operator=(AllocationPageView&& other) noexcept = default;
 
-            [[nodiscard]] extent_id_t SetExtentsAllocatedNoLock(
-                const DataStructures::PolymorphicArray<extent_id_t>& extentIds,
-                page_id_t globalAllocationMapPageId
-            ) const;
-
             void ReserveExtentsNoLock(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segments) const;
             void SetDeallocatedExtent(extent_id_t extentId) const;
             void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents) const;
             void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;
-            void SetNextPageId(page_id_t nextPageId) const;
-            [[nodiscard]] page_id_t NextPageId() const;
-            [[nodiscard]] page_id_t GamPageId() const;
-            static extent_id_t CalculateExtentIdOffsetByGamPageId(page_id_t gamPageId);
+            void SetNextPageId(const page_id_t nextPageId) const{
+                this->GetAdditionalHeader()->_nextPageId = nextPageId;
+            }
+
+            [[nodiscard]] page_id_t NextPageId() const{
+                return this->GetAdditionalHeader()->_nextPageId;
+            }
+
+            [[nodiscard]] gam_index_t GamIndex() const{
+                return this->GetAdditionalHeader()->_gamIndex;
+            }
     };
 }

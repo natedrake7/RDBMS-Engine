@@ -61,20 +61,21 @@ namespace Storage {
     };
 
     class StorageManager final{
-        FileManager fileManager;
-        mutable MultiThreading::Mutex tableMutex; // protects pageTable_ and frame insertion
-
         std::atomic<DatabaseTable*> _pageTable[MAX_DATABASES];
-        const CoreEngine::Memory::PersistentAllocator _allocator;
-        CoreEngine::BufferPoolMemoryManager* _memoryManager;
 
-        Int capacity;
-        Int clockHand;
+        FileManager _fileManager;
+        CoreEngine::BufferPoolMemoryManager _memoryManager;
+
+        mutable MultiThreading::Mutex _tableMutex; // protects pageTable_ and frame insertion
+        const CoreEngine::Memory::PersistentAllocator _allocator;
+
+        Int _capacity;
+        Int _clockHand;
 
         explicit StorageManager();
 
         void EvictPageNoLock();
-        void TryFlushFrameToDiskNoLock(const Pages::Frame* framePtr);
+        void TryFlushFrameToDiskNoLock(Pages::Frame* framePtr);
         Pages::Frame* OpenExtentNoLock(
             FileKey fileKey,
             page_id_t pageId,
@@ -109,6 +110,9 @@ namespace Storage {
     public:
         static StorageManager& Get();
         ~StorageManager();
+
+        void Initialize(UnsignedBigInt size);
+
         void CreateFile_(
             FileKey key,
             const DataTypes::StringView& filename,
@@ -120,8 +124,12 @@ namespace Storage {
             const DataTypes::StringView& filename
         );
 
+        void CloseAllFiles();
+
+        void FlushAll();
+
         Pages::HeaderPageView CreateHeaderPage(FileKey fileKey);
-        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(FileKey fileKey, page_id_t pageId);
+        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(FileKey fileKey, gam_index_t gamIndex);
         Pages::AllocationPageView CreateAllocationPage(
             FileKey fileKey,
             page_id_t pageId,
@@ -171,10 +179,10 @@ namespace Storage {
     ){
         auto* frame = this->CreateFrame(fileKey, pageId, StorageManager::DeducePageType<TView>());
         if constexpr (std::is_same_v<TView, Pages::PageView>)
-            frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
+            frame->Header()->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
         else if constexpr (std::is_same_v<TView, Pages::IndexPageView>){
-            frame->Header()->bytesLeft = Constants::INDEX_PAGE_DEFAULT_SIZE;
-            auto* additionalHeader = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->_data + Constants::PAGE_HEADER_SIZE);
+            frame->Header()->bytesLeft = CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE;
+            auto* additionalHeader = reinterpret_cast<Pages::IndexPageAdditionalHeader*>(frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
             additionalHeader->nextNode = INVALID_PAGE_ID;
             additionalHeader->previousNode = INVALID_PAGE_ID;
         }
@@ -185,7 +193,7 @@ namespace Storage {
             || std::is_same_v<TView, Pages::LobRootView>
         ) frame->Header()->bytesLeft = 0;
         else if constexpr (std::is_same_v<TView, Pages::OverflowPageView>)
-            frame->Header()->bytesLeft = Constants::PAGE_SIZE_WITHOUT_HEADER;
+            frame->Header()->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
         else
             static_assert(DataTypes::AlwaysFalse<TView>, "Invalid Page Type");
 

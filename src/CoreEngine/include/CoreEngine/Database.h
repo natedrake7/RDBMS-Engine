@@ -53,17 +53,18 @@ namespace CoreEngine {
     struct sysTable;
 
     struct DatabaseHeader {
-        table_number_t numberOfTables;
-        table_id_t lastTableId;
-        page_id_t lastPfsPageId;
-        page_id_t lastGamPageId;
+        UnsignedInt _formatVersion;       // StorageLayout::FILE_FORMAT_VERSION of the code that created the file
+        page_id_t _lastPfsPageId;
+        gam_index_t _lastGamIndex;
 
         DatabaseHeader();
         DatabaseHeader(
-            table_number_t numberOfTables,
-            page_id_t lastPfsPageId,
-            page_id_t lastGamPageId
+            page_id_t pfsPageId,
+            gam_index_t gamIndex
         );
+
+        // Throws when the file was written with another layout version
+        void ValidateFormatVersion(const DataTypes::StringView& databaseName) const;
     };
 
 class Database final{
@@ -109,7 +110,7 @@ class Database final{
     Pages::AllocationPageView FindOrRollToNewAllocationPage(
         const StorageTypes::Table* table,
         page_id_t currentAllocationPageId,
-        page_id_t gamPageId,
+        gam_index_t gamIndex,
         page_id_t newAllocationPageId
     ) const;
 
@@ -159,9 +160,6 @@ public:
         page_id_t pageId
     );
 
-    static page_id_t GetGamAssociatedPage(page_id_t pageId);
-    static page_id_t GetPfsAssociatedPage(page_id_t pageId);
-    static page_id_t CalculateNextGamPageId(page_id_t currentGamPageId);
     static byte_t GetObjectSizeToCategory(const row_size_t &size);
 
     [[nodiscard]]
@@ -210,8 +208,6 @@ public:
     [[nodiscard]] Storage::FileKey SystemFileKey() const;
 
     static page_id_t CalculateExtentFirstPageId(extent_id_t extentId);
-
-    static page_id_t CalculateGamPageId(const extent_id_t &extentId);
 
     static extent_id_t CalculateExtentId(page_id_t pageId);
 
