@@ -402,7 +402,7 @@ namespace CoreEngine{
         // Step 1: Allocate extents from GAM page
         {
             DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> localRuns(allocator, extentsToAllocate);
-            const page_id_t currentAllocationPageId = table->GetAllocationPageId();
+            auto currentAllocationPageId = table->GetAllocationPageId();
 
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
@@ -444,6 +444,8 @@ namespace CoreEngine{
                         auto* localRunsFront = localRuns.Front();
                         newAllocationPageId = localRunsFront->_firstExtentId++ * StorageLayout::EXTENT_SIZE;
                         localRunsFront->_count--;
+                        if (localRunsFront->_count == 0)
+                            localRuns.Remove(0);
                     }
 
                     auto allocPage = this->FindOrRollToNewAllocationPage(
@@ -452,9 +454,13 @@ namespace CoreEngine{
                         gamPage.GamIndex(),
                         newAllocationPageId
                     );
+                    currentAllocationPageId = table->GetAllocationPageId();
+                    newAllocationPageRequired = false;
 
-                    MultiThreading::WriterGuard allocPageLock(&allocPage.Latch());
-                    allocPage.ReserveExtentsNoLock(localRuns);
+                    if (!localRuns.Empty()){
+                        MultiThreading::WriterGuard allocPageLock(&allocPage.Latch());
+                        allocPage.ReserveExtentsNoLock(localRuns);
+                    }
                 }
 
                 for (const auto& localRun : localRuns)
@@ -465,8 +471,6 @@ namespace CoreEngine{
 
             if (segmentsRuns.Empty())
                 throw std::runtime_error("Failed to allocate any extents");
-
-            newAllocationPageRequired = false;
         }
 
         // Step 4: Ensure PFS pages exist for all allocated extents

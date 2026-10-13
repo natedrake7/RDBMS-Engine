@@ -479,10 +479,8 @@ namespace CoreEngine::StorageTypes {
 
                 MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
 
-                if (
-                    pfs.GetPageType(pageId) != Constants::PageType::DATA
-                    || !pfs.IsPageAllocated(pageId)
-                ) break;
+                if (!pfs.IsAllocatedAs(pageId, Constants::PageType::DATA))
+                    continue;
 
                 const auto pageSizeCategory = pfs.GetPageSizeCategory(pageId);
                 if (rowCategory > pageSizeCategory)
@@ -533,11 +531,8 @@ namespace CoreEngine::StorageTypes {
 
             MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
             for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + StorageLayout::EXTENT_SIZE; currentPageId++){
-                if (!pfs.IsPageAllocated(currentPageId))
+                if (!pfs.IsAllocatedAs(currentPageId, Constants::PageType::DATA))
                     continue;
-
-                if (pfs.GetPageType(currentPageId) != Constants::PageType::DATA)
-                    break;
 
                 auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, currentPageId);
 

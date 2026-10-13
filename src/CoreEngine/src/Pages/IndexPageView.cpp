@@ -21,7 +21,7 @@ namespace Pages{
 
         auto* headerPtr = this->_frame->Header();
         headerPtr->size++;
-        headerPtr->bytesLeft -= newSlot.Size() + SlotDirectory::SIZE;
+        headerPtr->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -98,7 +98,7 @@ namespace Pages{
 
         headerPtr->size++;
         this->_frame->isDirty = true;
-        headerPtr->bytesLeft -= (static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytes(static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
     }
 
     void IndexPageView::InsertChild(
@@ -121,7 +121,7 @@ namespace Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->Size());
 
 
-        this->_frame->Header()->bytesLeft -= (sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->ConsumeBytes(sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
         this->_frame->Header()->size++;
         this->_frame->isDirty = true;
     }
@@ -136,7 +136,7 @@ namespace Pages{
 
         this->_frame->Header()->size++;
         this->_frame->isDirty = true;
-        this->_frame->Header()->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
     }
 
     void IndexPageView::SetLeftSibling(const page_id_t previousPage) const{
@@ -182,7 +182,7 @@ namespace Pages{
 
         auto* headerPtr = this->_frame->Header();
         headerPtr->size++;
-        headerPtr->bytesLeft -= (newSlot.Size() + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -204,7 +204,7 @@ namespace Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.Size());
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->bytesLeft -= (size + tuple.key.Size() + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytes(size + tuple.key.Size() + SlotDirectory::SIZE);
         headerPtr->size++;
         this->_frame->isDirty = true;
     }

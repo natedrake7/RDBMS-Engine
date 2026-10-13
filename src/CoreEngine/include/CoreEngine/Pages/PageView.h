@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include <cassert>
+
 #include <CoreEngine/DatabaseConstants.h>
 #include <CoreEngine/BufferPool/StorageLayout.h>
 #include <Systemic/MaterializedRow.h>
@@ -32,6 +34,26 @@ namespace Pages{
 
         [[nodiscard]] Constants::PageType Type() const;
         void SetType(Constants::PageType pageType);
+
+        // Usable bytes of a page of this type. Read from the header, not the view type: the shared PageView
+        // functions (InsertRow, Resize, DistributeFromPage, ...) also run on index pages.
+        [[nodiscard]] page_size_t Capacity() const{
+            return static_cast<Constants::PageType>(this->type) == Constants::PageType::INDEXED
+                ? CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE
+                : CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
+        }
+
+        // Every change to bytesLeft goes through these two: page_size_t is unsigned, so an overdraw would
+        // silently wrap around and make a full page look empty
+        void ConsumeBytes(const UnsignedInt bytes){
+            assert(bytes <= this->bytesLeft && "PageHeader::ConsumeBytes: not enough free space in the page");
+            this->bytesLeft = static_cast<page_size_t>(this->bytesLeft - bytes);
+        }
+
+        void ReleaseBytes(const UnsignedInt bytes){
+            assert(this->bytesLeft + bytes <= this->Capacity() && "PageHeader::ReleaseBytes: more free space than the page holds");
+            this->bytesLeft = static_cast<page_size_t>(this->bytesLeft + bytes);
+        }
     };
     static_assert(sizeof(PageHeader) == CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
 

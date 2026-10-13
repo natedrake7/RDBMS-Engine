@@ -20,8 +20,8 @@ namespace Pages{
         public:
             explicit HeaderPageView(Frame* framePtr);
 
-            HeaderPageView(HeaderPageView&& other) noexcept;
-            HeaderPageView& operator=(HeaderPageView&& other) noexcept;
+            HeaderPageView(HeaderPageView&& other) noexcept = default;
+            HeaderPageView& operator=(HeaderPageView&& other) noexcept = default;
 
             [[nodiscard]] CoreEngine::DatabaseHeader* GetDatabaseHeaderPtr() const;
 

@@ -17,30 +17,6 @@ namespace Pages{
         );
     }
 
-    HeaderPageView::HeaderPageView(HeaderPageView&& other) noexcept{
-        this->databaseHeaderPtr = other.databaseHeaderPtr;
-        this->_frame = other._frame;
-
-        other.databaseHeaderPtr = nullptr;
-        other._frame = nullptr;
-    }
-
-    HeaderPageView& HeaderPageView::operator=(HeaderPageView&& other) noexcept{
-        if (this == &other)
-            return *this;
-
-        if (this->IsValid())
-            this->_frame->Unpin();
-
-        this->databaseHeaderPtr = other.databaseHeaderPtr;
-        this->_frame = other._frame;
-
-        other.databaseHeaderPtr = nullptr;
-        other._frame = nullptr;
-
-        return *this;
-    }
-
     CoreEngine::DatabaseHeader* HeaderPageView::GetDatabaseHeaderPtr() const{
         return this->databaseHeaderPtr;
     }

@@ -107,7 +107,7 @@ namespace Pages{
 
         const auto bitsReserved = neededExtents - remaining;
         additionalHeader->_freeExtentCount -= bitsReserved;
-        this->_frame->isDirty = true;
+        this->_frame->MarkDirty();
 
         return bitsReserved;
     }
@@ -118,8 +118,12 @@ namespace Pages{
 
     void GlobalAllocationPageView::DeallocateExtentNoLock(const extent_id_t extentId) const{
         const auto bitIndex = extentId - CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
+
+        if (!this->GetBit(bitIndex))
+            return;
+
         this->ClearBit(bitIndex);
-        this->_frame->isDirty = true;
+        this->_frame->MarkDirty();
 
         auto* additionalHeader = this->GetAdditionalHeader();
         if (bitIndex == additionalHeader->_appendBitId - 1)

@@ -18,7 +18,7 @@ namespace Pages{
         auto* header = this->_frame->Header();
 
         header->size++;
-        header->bytesLeft -= (size + SlotDirectory::SIZE);
+        header->ConsumeBytes(size + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
 
         return OverflowPtr(header->pageId, header->size - 1);

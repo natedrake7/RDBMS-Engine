@@ -95,7 +95,7 @@ namespace Pages{
 
         this->_frame->Header()->size++;
         this->_frame->isDirty = true;
-        this->_frame->Header()->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        this->_frame->Header()->ConsumeBytes(rowSize + SlotDirectory::SIZE);
     }
 
     bool PageView::IsIndexPage() const{
@@ -195,14 +195,15 @@ namespace Pages{
         }
 
         const auto usedBytes = offset + (header->size * SlotDirectory::SIZE);
-        header->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE - usedBytes;
+        assert(usedBytes <= CoreEngine::StorageLayout::PAGE_SIZE && "PageView::Defragment: slots exceed the page");
+        header->bytesLeft = static_cast<page_size_t>(CoreEngine::StorageLayout::PAGE_SIZE - usedBytes);
         this->_frame->isDirty = true;
     }
 
     void PageView::Resize(const Int size) const{
         for (int i = size; i < this->_frame->Header()->size; i++){
             const auto slot = this->GetSlotDirectory(i);
-            this->_frame->Header()->bytesLeft += slot.Size() + SlotDirectory::SIZE;
+            this->_frame->Header()->ReleaseBytes(slot.Size() + SlotDirectory::SIZE);
         }
 
         this->_frame->Header()->size = size;
@@ -234,7 +235,7 @@ namespace Pages{
             this->_frame->Header()->size++;
         }
 
-        this->_frame->Header()->bytesLeft -= this->_frame->Header()->size * SlotDirectory::SIZE + (offset - startOffset);;
+        this->_frame->Header()->ConsumeBytes(this->_frame->Header()->size * SlotDirectory::SIZE + (offset - startOffset));
         this->_frame->isDirty = true;
 
         donorPage->Resize(donorNewSize);
@@ -264,7 +265,7 @@ namespace Pages{
 
             offset += leftSize;
             this->_frame->Header()->size++;
-            this->_frame->Header()->bytesLeft -= leftSize + SlotDirectory::SIZE;
+            this->_frame->Header()->ConsumeBytes(leftSize + SlotDirectory::SIZE);
         }
 
         this->_frame->isDirty = true;
@@ -288,7 +289,7 @@ namespace Pages{
         auto* header = this->_frame->Header();
 
         header->size++;
-        header->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        header->ConsumeBytes(rowSize + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
 
         return header->size - 1;
@@ -314,7 +315,7 @@ namespace Pages{
         auto* header = this->_frame->Header();
 
         header->size++;
-        header->bytesLeft -= (rowSize + SlotDirectory::SIZE);
+        header->ConsumeBytes(rowSize + SlotDirectory::SIZE);
         this->_frame->isDirty = true;
     }
 
@@ -343,7 +344,7 @@ namespace Pages{
             );
             this->UpdateSlotDirectory(updatedSlot, indexPosition);
 
-            header->bytesLeft += (slot.DataSize() - newSize);
+            header->ReleaseBytes(slot.DataSize() - newSize);
             this->_frame->isDirty = true;
             return true;
         }
@@ -361,7 +362,7 @@ namespace Pages{
             this->UpdateSlotDirectory(slot, indexPosition);
 
             // Reclaim the old slot's bytes so defragment has accurate bytesLeft
-            header->bytesLeft += slot.Size();
+            header->ReleaseBytes(slot.Size());
             this->Defragment(allocator);
 
             if (header->bytesLeft < requiredSpace)
@@ -391,7 +392,7 @@ namespace Pages{
         );
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
-        header->bytesLeft -= requiredSpace;
+        header->ConsumeBytes(requiredSpace);
         this->_frame->isDirty = true;
         return true;
     }

@@ -38,7 +38,7 @@ namespace Pages{
             void ReserveExtentsNoLock(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segments) const;
             void SetDeallocatedExtent(extent_id_t extentId) const;
             void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents) const;
-            void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentIndex) const;
+            void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentId) const;
             void SetNextPageId(const page_id_t nextPageId) const{
                 this->GetAdditionalHeader()->_nextPageId = nextPageId;
             }
