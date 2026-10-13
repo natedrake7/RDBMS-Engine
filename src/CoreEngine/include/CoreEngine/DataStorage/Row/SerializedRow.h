@@ -30,8 +30,8 @@ namespace CoreEngine::StorageTypes{
         UnsignedInt offset;
 
     public:
-        SerializedRow();
-        SerializedRow(
+        explicit SerializedRow();
+        explicit SerializedRow(
             object_t* buffer,
             UnsignedSmallInt capacity,
             UnsignedSmallInt startingOffset

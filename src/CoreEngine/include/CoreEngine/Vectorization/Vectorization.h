@@ -29,7 +29,7 @@ namespace CoreEngine{
         UnsignedBigInt* _validity;
         const UnsignedInt* _selection;
 
-        Int _count;
+        UnsignedInt _count;
 
         DataType _type;
         DataVectorKind _kind;
@@ -50,12 +50,12 @@ namespace CoreEngine{
             return EngineBitmap::GetBitmapBit(this->_validity, index);
         }
 
-        [[nodiscard]] Int ValidityBytes()const;
-        [[nodiscard]] Int WordsCount()const;
+        [[nodiscard]] UnsignedInt ValidityBytes()const;
+        [[nodiscard]] UnsignedInt WordsCount()const;
 
 
-        [[nodiscard]] static Int WordsCount(Int count);
-        [[nodiscard]] static Int BitSizeFromBool(Int count);
+        [[nodiscard]] static UnsignedInt WordsCount(UnsignedInt count);
+        [[nodiscard]] static UnsignedInt BitSizeFromBool(UnsignedInt count);
 
         template<typename T>
         T* SlotAt(const UnsignedInt physicalIndex){
@@ -84,7 +84,7 @@ namespace CoreEngine{
         static DataVector* FlatVector(
             const ::Memory::IAllocator* allocator,
             DataType type,
-            Int count
+            UnsignedInt count
         );
 
         static DataVector* ConstantVector(

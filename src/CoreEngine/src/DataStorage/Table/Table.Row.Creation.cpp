@@ -10,19 +10,9 @@
 namespace CoreEngine::StorageTypes{
     template <typename ValueProvider>
     void Table::EvaluateRow(RowSerializationContext& context, ValueProvider&& provider){
-        Int autoComputed = 0;
-
         auto* __restrict__ values = context._values;
-
-        for (auto& column: this->Columns()){
-            if (column._identity != nullptr){
-                values[column._ordinalPosition] = this->GenerateIdentityValue(context._allocator, column._ordinalPosition);
-                autoComputed++;
-                continue;
-            }
-
-            values[column._ordinalPosition] = provider(column._ordinalPosition, autoComputed);
-        }
+        for (auto& column: this->Columns())
+            values[column._ordinalPosition] = std::move(provider(column));
     }
 
     Errors::RuntimeStatus Table::PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize) const{
@@ -167,9 +157,16 @@ namespace CoreEngine::StorageTypes{
         RowSerializationContext& rowContext,
         const DataStructures::PolymorphicArray<Value>& values
     ){
+        const auto explicitIdentity = values.Size() == this->ColumnCount();
+        auto generated = 0;
         return this->SerializeRowGeneric(status, rowContext,
-        [&](const Int ordinalPosition, const Int autoComputedColumns) -> const Value&{
-            return values[ordinalPosition - autoComputedColumns];
+        [&](const Schemas::ColumnSchema& column) -> Value{
+            if (explicitIdentity &&  column._identity != nullptr){
+                generated++;
+                return this->GenerateIdentityValue(rowContext._allocator, column._ordinalPosition);
+            }
+
+            return values[column._ordinalPosition - generated];
         });
     }
 }

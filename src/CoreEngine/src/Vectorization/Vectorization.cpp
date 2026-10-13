@@ -36,26 +36,26 @@ namespace CoreEngine{
         return this->_selection[logicalIndex];
     }
 
-    Int DataVector::ValidityBytes() const{
+    UnsignedInt DataVector::ValidityBytes() const{
         return this->WordsCount() * sizeof(UnsignedBigInt);
     }
 
-    Int DataVector::WordsCount() const{
+    UnsignedInt DataVector::WordsCount() const{
         return DataVector::WordsCount(this->_count);
     }
 
-    Int DataVector::WordsCount(const Int count){
+    UnsignedInt DataVector::WordsCount(const UnsignedInt count){
         return (count + 63) / 64;
     }
 
-    Int DataVector::BitSizeFromBool(const Int count){
+    UnsignedInt DataVector::BitSizeFromBool(const UnsignedInt count){
         return (count * sizeof(bool) + 7) / 8;
     }
 
     DataVector* DataVector::FlatVector(
         const Memory::IAllocator* allocator,
         const DataType type,
-        const Int count
+        const UnsignedInt count
     ){
         auto* dataVector = allocator->Allocate<DataVector>(type);
         dataVector->_count = count;

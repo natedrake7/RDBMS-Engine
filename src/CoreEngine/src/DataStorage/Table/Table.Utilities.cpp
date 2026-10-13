@@ -2,7 +2,6 @@
 #include <CoreEngine/Messages.h>
 
 namespace CoreEngine::StorageTypes{
-
     Errors::RuntimeStatus Table::ValidateTableLayout(const ::Memory::IAllocator* allocator) const{
         UnsignedInt minimum = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
 

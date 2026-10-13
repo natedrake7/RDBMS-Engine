@@ -303,7 +303,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::Destroy(){
-        this->Unpin();
+        const auto pinStatus = this->Unpin();
         this->_allocator.Release();
     }
 
