@@ -3,6 +3,7 @@
 #include <fstream>
 
 #include <CoreEngine/SystemDatabases/CatalogRows.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.Templates.h>
 #include <CoreEngine/Database.h>
 
 #include <iostream>
@@ -29,6 +30,7 @@ namespace CoreEngine {
 
         this->masterDb->BootstrapSystem(allocator, dbName, false);
         this->BindCatalogTables();
+        this->ReseedSystemIdentities(allocator);
     }
 
     void SystemCatalog::BindCatalogTables(){
@@ -50,34 +52,165 @@ namespace CoreEngine {
 
         this->masterDb->BootstrapSystem(allocator, dbName, true);
         this->BindCatalogTables();
-
-        auto executionContext = ExecutionContext::BaseContext();
-        //
-        // for (const auto& table: Catalog::SYSTEM_TABLES){
-        //     auto allocationStep = allocator->RecordAllocationStart();
-        //
-        //     const auto tableDefinition = SystemTableDefinition(allocator, table);
-        //     const auto* schema = Schemas::TableSchema::Build(tableDefinition, 1);
-        //
-        //     const auto* _ = this->masterDb->CreateTable(schema);
-        //
-        //     allocator->ReleaseFromAllocationStep(allocationStep);
-        //
-        //     this->InsertTableToMasterDb(
-        //         executionContext,
-        //
-        //     );
-        // }
-
-
     }
 
+    // Describes the catalog inside itself on first start: its database, its schema, and for every SYSTEM_TABLES entry
+    // the table, columns, primary key (index + constraint), identities and defaults. Every row carries an explicit
+    // reserved id (below FIRST_USER_OBJECT_ID), so no identity value is generated here; the identity rows written
+    // below are what the counters persist into from then on (IdentityManager::ReserveBlock).
     void SystemCatalog::StoreSystemTablesToCatalog(
         const ExecutionContext& baseContext,
         const DataTypes::StringView& dbNameView,
         const DataTypes::StringView& dbPathView
     )const {
+        const auto* allocator = baseContext.GetAllocator();
+        const auto now = DataTypes::DateTime::Now();
+        const auto modifiedBy = DataTypes::String(Constants::ADMIN_NAME, allocator);
 
+        const auto store = [](const Errors::RuntimeStatus& status, const char* what){
+            if (!status.IsOk())
+                throw std::runtime_error(std::string("SystemCatalog::StoreSystemTablesToCatalog: could not store ") + what);
+        };
+
+        store(this->Insert(baseContext, Catalog::SysDatabaseRow{
+            .databaseId = Constants::SYSTEM_CATALOG_ID,
+            .name = DataTypes::String(dbNameView, allocator),
+            .filepath = DataTypes::String(dbPathView, allocator),
+            .isSystem = true,
+            .createdAt = now,
+            .lastModified = now,
+            .lastModifiedBy = modifiedBy,
+        }), "the catalog database row");
+
+        store(this->Insert(baseContext, Catalog::SysSchemaRow{
+            .databaseId = Constants::SYSTEM_CATALOG_ID,
+            .schemaId = SYSTEM_SCHEMA_ID,
+            .name = DataTypes::String(SYSTEM_SCHEMA_NAME, allocator),
+            .createdAt = now,
+            .lastModified = now,
+            .lastModifiedBy = modifiedBy,
+        }), "the catalog schema row");
+
+        for (const auto& table : Catalog::SYSTEM_TABLES){
+            const auto tableId = static_cast<Int>(table.id);
+
+            store(this->Insert(baseContext, Catalog::SysTableRow{
+                .databaseId = Constants::SYSTEM_CATALOG_ID,
+                .tableId = tableId,
+                .schemaId = SYSTEM_SCHEMA_ID,
+                .name = DataTypes::String(table.name, allocator),
+                .ordinalPosition = static_cast<SmallInt>(table.ordinal),
+                .isSystem = true,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            }), "a catalog table row");
+
+            for (column_index_t ordinal = 0; ordinal < static_cast<column_index_t>(table.columns.size()); ordinal++){
+                const auto& column = table.columns[ordinal];
+                const auto columnId = SystemColumnId(table.id, ordinal);
+                const auto fixedSize = DataTypes::FixedColumnSize(column.type);
+
+                store(this->Insert(baseContext, Catalog::SysColumnRow{
+                    .tableId = tableId,
+                    .columnId = columnId,
+                    .name = DataTypes::String(column.name, allocator),
+                    .dataType = static_cast<TinyInt>(column.type),
+                    .recordSize = static_cast<Int>(fixedSize != 0 ? fixedSize : column.size),
+                    .precision = std::nullopt,
+                    .scale = std::nullopt,
+                    .isNullable = column.nullable,
+                    .ordinalPosition = static_cast<SmallInt>(ordinal),
+                    .isSystem = true,
+                    .createdAt = now,
+                    .lastModified = now,
+                    .lastModifiedBy = modifiedBy,
+                }), "a catalog column row");
+
+                if (column.identity)
+                    store(this->Insert(baseContext, Catalog::SysIdentityColumnRow{
+                        .tableId = tableId,
+                        .columnId = columnId,
+                        .seedValue = static_cast<Int>(column.identityStart),
+                        .increment = Constants::DEFAULT_IDENTITY_INCREMENT,
+                        .lastValue = column.identityStart,
+                        .isCached = true,
+                        .cacheBlock = Constants::DEFAULT_IDENTITY_CACHE_BLOCK,
+                    }), "a catalog identity row");
+
+                if (!column.defaultValue.Empty())
+                    store(this->Insert(baseContext, Catalog::SysDefaultValueRow{
+                        .columnId = columnId,
+                        .value = DataTypes::String(column.defaultValue, allocator),
+                    }), "a catalog default value row");
+            }
+
+            // Primary key: one clustered index and its constraint, with the same ids SystemTableDefinition uses
+            const auto indexId = SystemPrimaryKeyIndexId(table.id);
+            const auto constraintId = SystemPrimaryKeyConstraintId(table.id);
+            const auto keyName = DataTypes::String::Concat(allocator, "PK_", table.name);
+
+            store(this->Insert(baseContext, Catalog::SysIndexRow{
+                .tableId = tableId,
+                .indexId = indexId,
+                .name = keyName,
+                .isClustered = true,
+                .isDisabled = false,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            }), "a catalog index row");
+
+            store(this->Insert(baseContext, Catalog::SysConstraintRow{
+                .tableId = tableId,
+                .constraintId = constraintId,
+                .name = keyName,
+                .constraintType = static_cast<TinyInt>(Schemas::ConstraintType::PrimaryKey),
+                .isDisabled = false,
+                .constraintIndexId = indexId,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            }), "a catalog constraint row");
+
+            for (SmallInt position = 0; position < static_cast<SmallInt>(table.primaryKey.size()); position++){
+                const auto columnId = SystemColumnId(table.id, table.primaryKey[position]);
+
+                store(this->Insert(baseContext, Catalog::SysIndexColumnRow{
+                    .indexId = indexId,
+                    .columnId = columnId,
+                    .ordinalPosition = position,
+                    .isIncluded = false,
+                }), "a catalog index column row");
+
+                store(this->Insert(baseContext, Catalog::SysConstraintColumnRow{
+                    .constraintId = constraintId,
+                    .columnId = columnId,
+                    .ordinalPosition = position,
+                }), "a catalog constraint column row");
+            }
+        }
+    }
+
+    void SystemCatalog::ReseedSystemIdentities(const ::Memory::IAllocator* allocator) const{
+        for (const auto& systemTable : Catalog::SYSTEM_TABLES){
+            auto* table = this->_catalogTables[systemTable.ordinal];
+
+            for (column_index_t ordinal = 0; ordinal < static_cast<column_index_t>(systemTable.columns.size()); ordinal++){
+                if (!systemTable.columns[ordinal].identity)
+                    continue;
+
+                const auto row = this->SelectOne<Catalog::SysIdentityColumnRow>(
+                    allocator,
+                    static_cast<Int>(systemTable.id),
+                    SystemColumnId(systemTable.id, ordinal)
+                );
+                if (!row)
+                    throw std::runtime_error("SystemCatalog: missing identity row for a catalog table");
+
+                table->ReseedIdentity(ordinal, row->lastValue);
+            }
+        }
     }
 
     Catalog::DatabaseHeader SystemCatalog::ToDatabaseHeader(
@@ -474,8 +607,7 @@ namespace CoreEngine {
         }
 
         this->CreateCatalogDatabase(allocator, sysDbName);
-        this->StoreSystemTablesToCatalog(baseContext, DataTypes::StringView::ViewOf(sysDbName), DataTypes::StringView::ViewOf(sysDbPath));
-
+        this->StoreSystemTablesToCatalog(baseContext, sysDbName, sysDbPath);
         return true;
     }
 

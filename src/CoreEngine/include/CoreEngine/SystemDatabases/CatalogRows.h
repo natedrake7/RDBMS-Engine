@@ -24,7 +24,7 @@ namespace CoreEngine::Catalog{
     using Rows::Default;
 
     struct [[=TableInfo{ .name = "sys_databases", .id = 1, .ordinal = CatalogTables::SysDatabases }]] SysDatabaseRow{
-        [[=PrimaryKey{}, =Identity{ Constants::SYSTEM_CATALOG_ID }]] Int databaseId;
+        [[=PrimaryKey{}, =Identity{ Constants::SYSTEM_CATALOG_ID + 1 }]] Int databaseId;   // masterDb itself is SYSTEM_CATALOG_ID
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
         [[=MaxSize{ 100 }]]                                         DataTypes::String filepath;
                                                                     bool isSystem;

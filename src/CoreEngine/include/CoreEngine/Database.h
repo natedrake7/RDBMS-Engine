@@ -89,6 +89,7 @@ class Database final{
     Storage::FileKey systemFileKey;
 
     Int id;
+    UnsignedSmallInt _nextOrdinal;
 
     static void PopulateFilenames(
         const ::Memory::IAllocator* tempAllocator,
@@ -215,6 +216,12 @@ public:
 
     const DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry>& GetTables() const{
         return this->_tables;
+    }
+
+    [[nodiscard]] UnsignedSmallInt ReserveOrdinalNoLock();
+
+    [[nodiscard]] MultiThreading::Mutex* DDLMutex(){
+        return &this->_ddlMutex;
     }
 };
 

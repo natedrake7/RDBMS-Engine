@@ -45,6 +45,8 @@ namespace CoreEngine {
             const DataTypes::StringView& dbPathView
         )const;
 
+        void ReseedSystemIdentities(const ::Memory::IAllocator* allocator) const;
+
         static Catalog::DatabaseHeader ToDatabaseHeader(
             const ::Memory::IAllocator* allocator,
             const StorageTypes::RID* rowPtr,
@@ -107,6 +109,9 @@ namespace CoreEngine {
         // Inserts the row. An Identity member left at 0 is generated; the result carries the new primary key.
         template <Catalog::CatalogRow TRow>
         [[nodiscard]] Errors::RuntimeStatus Insert(const ExecutionContext& context, const TRow& row) const;
+
+        template<Catalog::CatalogRow TRow>
+        [[nodiscard]] Errors::RuntimeStatus Insert(const ExecutionContext& context, TRow& row) const;
 
         // Rows whose primary key starts with keyPrefix, e.g. Select<Catalog::SysColumnRow>(allocator, tableId)
         template <Catalog::CatalogRow TRow, DataTypes::Primitive... TKey> requires (sizeof...(TKey) > 0)

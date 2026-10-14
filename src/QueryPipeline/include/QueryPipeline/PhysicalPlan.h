@@ -49,15 +49,32 @@ namespace QueryPipeline::PhysicalPlan {
         bool canFetchMore;
 
         explicit ExecutionResult(const CoreEngine::ExecutionContext& context);
-        ExecutionResult(const Errors::RuntimeError& code, const DataTypes::String& message);
-        ExecutionResult(
+        explicit ExecutionResult(const Errors::RuntimeError& code, const DataTypes::String& message)
+            :  status(code, message), selectionVector(nullptr),
+                canFetchMore(false) {}
+        explicit ExecutionResult(
             const Errors::RuntimeError& code,
-            const DataTypes::StringView& message,
-            const ::Memory::IAllocator* allocator
-        );
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::StringView& message
+        ):  status(code, DataTypes::String(message, allocator)),
+            selectionVector(nullptr), canFetchMore(false) {}
 
         ExecutionResult(ExecutionResult&& other) noexcept;
         ExecutionResult& operator=(ExecutionResult&& other) noexcept;
+
+        static ExecutionResult Ok(
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::StringView& message
+        ){
+            return ExecutionResult(Errors::RuntimeError::Ok, allocator, message);
+        }
+
+        static ExecutionResult Error(
+            const ::Memory::IAllocator* allocator,
+            const DataTypes::StringView& message
+        ){
+            return ExecutionResult(Errors::RuntimeError::Error, allocator, message);
+        }
 
         [[nodiscard]] bool IsOk() const;
     };

@@ -7,8 +7,6 @@ namespace CoreEngine{
         const ::Memory::IAllocator* allocator,
         const SystemTable& table
     ){
-        static constexpr Int PRIMARY_KEY_INDEX_ID = 1;
-        static constexpr Int PRIMARY_KEY_CONSTRAINT_ID = 1;
 
         const auto stringCopy = [&](const DataTypes::StringView& view){
             return DataTypes::String(view, allocator);
@@ -65,7 +63,7 @@ namespace CoreEngine{
 
         Catalog::IndexHeader index;
         index.tableId = table.id;
-        index.id = PRIMARY_KEY_INDEX_ID;
+        index.id = SystemPrimaryKeyIndexId(table.id);
         index.name = DataTypes::String::Concat(allocator, "PK_", header->name);
         index.isClustered = true;
         index.isDisabled = false;
@@ -73,11 +71,11 @@ namespace CoreEngine{
 
         Catalog::ConstraintsHeader constraint;
         constraint.tableId = table.id;
-        constraint.constraintId = PRIMARY_KEY_CONSTRAINT_ID;
+        constraint.constraintId = SystemPrimaryKeyConstraintId(table.id);
         constraint.name = index.name;
         constraint.type = Schemas::ConstraintType::PrimaryKey;
         constraint.isDisabled = false;
-        constraint.indexId = PRIMARY_KEY_INDEX_ID;
+        constraint.indexId = index.id;
         constraint.columns = DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader>(allocator, static_cast<Int>(table.primaryKey.size()));
 
         for (SmallInt position = 0; position < static_cast<SmallInt>(table.primaryKey.size()); position++){

@@ -1124,12 +1124,28 @@ namespace CoreEngine::StorageTypes {
         // page.UpdateBytesLeft();
     }
 
-    void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator){
+    void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
         for (Int i = 0;i < this->_schema->_columnCount; i++){
-            if (this->_schema->_columns[i]._identity != nullptr){
-                const auto* manager = this->IdentityOf(i);
-                manager->UpdateMasterDbOnShutdown(allocator);
-            }
+            this->UpdateCatalogIdentityColumn(allocator, i);
         }
+    }
+
+    void Table::UpdateCatalogIdentityColumn(
+        const ::Memory::IAllocator* allocator,
+        const column_index_t ordinal
+    ) const{
+        if (!this->HasIdentity(ordinal))
+            return;
+
+        const auto* manager = this->IdentityOf(ordinal);
+        manager->UpdateMasterDbOnShutdown(allocator);
+    }
+
+    void Table::ReseedIdentity(const column_index_t ordinal, const BigInt value){
+        if (!this->HasIdentity(ordinal))
+            return;
+
+        auto* manager = this->IdentityOf(ordinal);
+        manager->Reseed(value);
     }
 }

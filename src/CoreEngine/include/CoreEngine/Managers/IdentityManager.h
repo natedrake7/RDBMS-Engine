@@ -43,5 +43,7 @@ namespace CoreEngine::StorageTypes{
         void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
         [[nodiscard]] BigInt GetIncrement() const;
+
+        void Reseed(BigInt value);
     };
 }

@@ -100,4 +100,10 @@ namespace CoreEngine::StorageTypes {
     }
 
     BigInt IdentityManager::GetIncrement() const{ return this->_schema->_increment; }
+
+    void IdentityManager::Reseed(const BigInt value){
+        MultiThreading::WriterGuard guard(&this->mutex);
+        this->_reservedUpTo.store(value, std::memory_order_relaxed);
+        this->_counter.store(value, std::memory_order_relaxed);
+    }
 }

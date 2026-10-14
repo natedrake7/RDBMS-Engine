@@ -161,7 +161,7 @@ namespace CoreEngine::StorageTypes{
         auto generated = 0;
         return this->SerializeRowGeneric(status, rowContext,
         [&](const Schemas::ColumnSchema& column) -> Value{
-            if (explicitIdentity &&  column._identity != nullptr){
+            if (!explicitIdentity && column._identity != nullptr){
                 generated++;
                 return this->GenerateIdentityValue(rowContext._allocator, column._ordinalPosition);
             }

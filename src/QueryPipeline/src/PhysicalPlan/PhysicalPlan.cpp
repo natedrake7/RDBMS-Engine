@@ -6,6 +6,7 @@
 #include <QueryPipeline/ValidationMessages.h>
 #include <CoreEngine/Database.h>
 #include <CoreEngine/SystemDatabases/SystemCatalog.h>
+#include <CoreEngine/SystemDatabases/SystemCatalog.Templates.h>
 #include <Server/Server.h>
 #include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
 #include <CoreEngine/ScanState.h>
@@ -19,30 +20,19 @@
 #include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
 #include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
 
+#include "Systemic/Guards/WriterGuard.h"
+
 namespace QueryPipeline::PhysicalPlan {
     ExecutionResult::ExecutionResult(const CoreEngine::ExecutionContext& context)
         :   status(context.GetAllocator()),
             displayColumnNames(context.GetAllocator()),
             selectionVector(context.GetAllocator()->Allocate<CoreEngine::SelectionVector>()), canFetchMore(false){}
 
-    ExecutionResult::ExecutionResult(
-        const Errors::RuntimeError &code,
-        const DataTypes::String& message
-    ):  status(code, message), selectionVector(nullptr),
-        canFetchMore(false) {}
-
-    ExecutionResult::ExecutionResult(
-        const Errors::RuntimeError& code,
-        const DataTypes::StringView& message,
-        const ::Memory::IAllocator* allocator
-    ):  status(code, DataTypes::String(message, allocator)),
-        selectionVector(nullptr), canFetchMore(false) {}
-
     ExecutionResult::ExecutionResult(ExecutionResult&& other) noexcept{
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
         this->dataChunk = std::move(other.dataChunk);
-        this->columns = std::move(other.columns);
+        this->columns = other.columns;
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
     }
@@ -52,7 +42,7 @@ namespace QueryPipeline::PhysicalPlan {
         this->status = std::move(other.status);
         this->canFetchMore = other.canFetchMore;
         this->dataChunk = std::move(other.dataChunk);
-        this->columns = std::move(other.columns);
+        this->columns = other.columns;
         this->displayColumnNames = std::move(other.displayColumnNames);
         this->selectionVector = other.selectionVector;
         return *this;
@@ -204,7 +194,10 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
       if (this->session == nullptr || this->session->user == nullptr)
-          return ExecutionResult(Errors::RuntimeError::Error, Messages::FAILED_TO_RETRIEVE_USER_SESSION, context.GetAllocator());
+          return ExecutionResult::Error(
+              context.GetAllocator(),
+              Messages::FAILED_TO_RETRIEVE_USER_SESSION
+          );
 
       const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
 
@@ -253,10 +246,9 @@ namespace QueryPipeline::PhysicalPlan {
 
   ExecutionResult PhysicalSchemaCreate::Execute(CoreEngine::ExecutionContext& context){
       if (this->session == nullptr || this->session->user == nullptr)
-          return ExecutionResult(
-              Errors::RuntimeError::Error,
-              Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-              context.GetAllocator()
+          return ExecutionResult::Error(
+              context.GetAllocator(),
+              Messages::FAILED_TO_RETRIEVE_USER_SESSION
           );
 
       const auto insertResult = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(
@@ -279,150 +271,189 @@ namespace QueryPipeline::PhysicalPlan {
 
     ExecutionResult PhysicalTableCreate::Execute(CoreEngine::ExecutionContext& context){
         if (this->session == nullptr || this->session->user == nullptr)
-            return ExecutionResult(
-                Errors::RuntimeError::Error,
-                Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-                 context.GetAllocator()
+            return ExecutionResult::Error(
+                context.GetAllocator(),
+                Messages::FAILED_TO_RETRIEVE_USER_SESSION
             );
 
         const auto* allocator = context.GetAllocator();
 
         auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
-        const auto& tables = CoreEngine::SystemCatalog::Get().SelectTables(allocator, this->table->_databaseId);
+        static auto& catalog = CoreEngine::SystemCatalog::Get();
 
-        const auto index = static_cast<SmallInt>(tables.Empty() ? 0 : tables[tables.Size() - 1].ordinalPosition + 1);
+        MultiThreading::WriterGuard ddlGuard(db->DDLMutex());
 
-        const auto tableResult = CoreEngine::SystemCatalog::Get().InsertTableToMasterDb(
-            context,
-            this->table->_databaseId,
-            this->table->_schemaId,
-            DataTypes::StringView::ViewOf(this->table->name),
-            index,
-            false,
-            DataTypes::StringView::ViewOf(this->session->user->name)
-        );
+        const auto now = DataTypes::DateTime::Now();
+        const auto modifiedBy = DataTypes::String(this->session->user->name, allocator);
+        const auto tableOrdinal = db->ReserveOrdinalNoLock();
 
-        const auto tableId = tableResult.primaryKey.AsInt<Int>(1);
-        const auto _ = CoreEngine::SystemCatalog::Get().InsertTableStatisticsToMasterDb(
-            context,
-            tableId
-        );
+        Errors::RuntimeStatus status;
+        const auto failed = [&]{ return !status.IsOk(); };
+        const auto failure = [&]{ return ExecutionResult(status.code, status.message); };
 
-        Dictionary<Int, Int> columnIdsDict;
-        for (const auto* column: this->columns){
-            const auto columnResult =
-                CoreEngine::SystemCatalog::Get().InsertColumnToMasterDb(
-                      context,
-                      tableId,
-                      DataTypes::StringView::ViewOf(column->name.name),
-                      ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type.name)),
-                      column->type.size,
-                      column->type.decimal.precision,
-                      column->type.decimal.scale,
-                      column->isNullable,
-                      column->index,
-                      false,
-                      DataTypes::StringView::ViewOf(this->session->user->name)
-                );
+        CoreEngine::Catalog::SysTableRow tableRow{
+            .databaseId = this->table->_databaseId,
+            .schemaId = this->table->_schemaId,
+            .name = this->table->name,
+            .ordinalPosition = static_cast<SmallInt>(tableOrdinal),
+            .isSystem = false,
+            .createdAt = now,
+            .lastModified = now,
+            .lastModifiedBy = modifiedBy,
+        };
+        status = catalog.Insert(context, tableRow);
+        if (failed())
+            return failure();
 
-            const auto columnId = columnResult.primaryKey.AsInt<Int>(1);
+        const auto tableId = tableRow.tableId;          // generated, written back by Insert
 
-            const auto _ = CoreEngine::SystemCatalog::Get().InsertColumnStatisticsToMasterDb(context, columnId);
+        status = catalog.Insert(context,
+            CoreEngine::Catalog::SysTableStatsRow{
+            .tableId = tableId,
+            .lastModifiedAt = now
+        });
 
-            if (!column->defaultValue.IsNull() || column->defaultValue.Size() != 0) {
-                const auto _ = CoreEngine::SystemCatalog::Get().InsertDefaultValuesToMasterDb(
-                  context,
-                  columnId,
-                  column->defaultValue
-                );
+        if (failed())
+            return failure();
+
+        DataStructures::PolymorphicArray<column_index_t> columnOrdinals(allocator, this->columns.Size());
+        columnOrdinals.SetNewSize(this->columns.Size());
+
+        for (const auto* column : this->columns){
+            const auto type = ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type.name));
+            const auto fixedSize = DataTypes::FixedColumnSize(type);
+            const bool isDecimal = type == DataType::Decimal;
+
+            CoreEngine::Catalog::SysColumnRow columnRow{
+                .tableId = tableId,
+                .name = column->name.name,
+                .dataType = static_cast<TinyInt>(type),
+                .recordSize = fixedSize != 0 ? static_cast<Int>(fixedSize) : static_cast<Int>(column->type.size),
+                .precision = isDecimal ? std::optional<TinyInt>(column->type.decimal.precision) : std::nullopt,
+                .scale = isDecimal ? std::optional<TinyInt>(column->type.decimal.scale) : std::nullopt,
+                .isNullable = column->isNullable,
+                .ordinalPosition = static_cast<SmallInt>(column->index),
+                .isSystem = false,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            };
+            status = catalog.Insert(context, columnRow);
+            if (failed())
+                return failure();
+
+            const auto columnId = columnRow.columnId;
+            columnOrdinals[column->index] = columnId;
+
+            status = catalog.Insert(context, CoreEngine::Catalog::SysColumnStatsRow{ .columnId = columnId });
+            if (failed())
+                return failure();
+
+            if (!column->defaultValue.IsNull() && column->defaultValue.Size() != 0){
+                status = catalog.Insert(context, CoreEngine::Catalog::SysDefaultValueRow{
+                    .columnId = columnId,
+                    .value = DataTypes::String(
+                        DataTypes::StringView(reinterpret_cast<const char*>(column->defaultValue.Data()), column->defaultValue.Size()),
+                        allocator
+                    ),
+                });
+                if (failed())
+                    return failure();
             }
 
-            //insert identity columns
-            if (column->identity == nullptr)
-                continue;
-
-            const auto _ = CoreEngine::SystemCatalog::Get().InsertIdentityColumnToMasterDb(
-                context,
-                tableId,
-                columnId,
-                column->identity->seed,
-                column->identity->incrementFactor,
-                column->identity->seed,
-                true,
-                static_cast<Int>(column->identity->cacheBlock)
-            );
+            if (column->identity != nullptr){
+                status = catalog.Insert(context, CoreEngine::Catalog::SysIdentityColumnRow{
+                    .tableId = tableId,
+                    .columnId = columnId,
+                    .seedValue = column->identity->seed,
+                    .increment = column->identity->incrementFactor,
+                    .lastValue = column->identity->seed,                 // the first value handed out
+                    .isCached = true,
+                    .cacheBlock = static_cast<Int>(column->identity->cacheBlock),
+                });
+                if (failed())
+                    return failure();
+            }
         }
 
-        DataStructures::PolymorphicArray<Int> primaryKeyColumnIdsArray(allocator, this->primaryKey.columns.Size());
-        for (const auto& column: this->primaryKey.columns) {
-            if (this->constraintName.Empty()){
-                this->constraintName.SetAllocator(allocator);
-                const auto& columnName = this->columns[column]->name.name;
-                this->constraintName = DataTypes::String::Concat(allocator, "PK_", columnName, "_", columnName);
+        // Primary key: a clustered index and its constraint, sharing the name
+        if (!this->primaryKey.columns.Empty()){
+            if (this->constraintName.Empty())
+                this->constraintName = DataTypes::String::Concat(allocator, "PK_", this->table->name);
+
+            CoreEngine::Catalog::SysIndexRow indexRow{
+                .tableId = tableId,
+                .name = this->constraintName,
+                .isClustered = true,
+                .isDisabled = false,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            };
+            status = catalog.Insert(context, indexRow);
+            if (failed())
+                return failure();
+
+            const auto indexId = indexRow.indexId;
+
+            CoreEngine::Catalog::SysConstraintRow constraintRow{
+                .tableId = tableId,
+                .name = this->constraintName,
+                .constraintType = static_cast<TinyInt>(CoreEngine::Schemas::ConstraintType::PrimaryKey),
+                .isDisabled = false,
+                .constraintIndexId = indexId,
+                .createdAt = now,
+                .lastModified = now,
+                .lastModifiedBy = modifiedBy,
+            };
+            status = catalog.Insert(context, constraintRow);
+            if (failed())
+                return failure();
+
+            const auto constraintId = constraintRow.constraintId;
+
+            for (SmallInt position = 0; position < static_cast<SmallInt>(this->primaryKey.columns.Size()); position++){
+                const auto columnId = columnOrdinals[this->primaryKey.columns[position]];
+
+                status = catalog.Insert(context, CoreEngine::Catalog::SysIndexColumnRow{
+                    .indexId = indexId,
+                    .columnId = columnId,
+                    .ordinalPosition = position,               // position within the key, not the column's ordinal
+                    .isIncluded = false,
+                });
+                if (failed())
+                    return failure();
+
+                status = catalog.Insert(context, CoreEngine::Catalog::SysConstraintColumnRow{
+                    .constraintId = constraintId,
+                    .columnId = columnId,
+                    .ordinalPosition = position,
+                });
+                if (failed())
+                    return failure();
             }
 
-            primaryKeyColumnIdsArray.Push(columnIdsDict.Get(column));
+            status = catalog.Insert(context, CoreEngine::Catalog::SysIndexStatsRow{
+                .tableId = tableId,
+                .indexId = indexId,
+                .avgFragmentation = DataTypes::Decimal(),
+                .lastModifiedAt = now,
+            });
+            if (failed())
+                return failure();
         }
 
-        static constexpr DataTypes::StringView TABLE_CREATED_MESSAGE = "Table created successfully";
-        if (primaryKeyColumnIdsArray.Empty()) {
-            // auto* tablePtr = db->CreateTable(tableId, index);
-            return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, allocator);
-        }
+        // In-memory table: built from the rows just written, through the same path Bootstrap uses on restart,
+        // so a table looks identical whether it was created in this run or loaded at startup
+        const auto tableHeader = catalog.SelectTable(allocator, this->table->_databaseId, tableId);
+        const auto definition = catalog.SelectTableDefinition(allocator, tableHeader);
+        const auto* schema = CoreEngine::Schemas::TableSchema::Build(definition, 1);
 
-        const auto indexResult = CoreEngine::SystemCatalog::Get().InsertIndexToMasterDb(
-            context,
-            tableId,
-            DataTypes::StringView::ViewOf(this->constraintName),
-            true,
-            false,
-            DataTypes::StringView::ViewOf(this->session->user->name)
-        );
+        if (db->CreateTable(schema) == nullptr)
+            return ExecutionResult::Error(allocator, Messages::TABLE_CREATION_FAILED);
 
-        const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
-
-        const auto constraintResult = CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
-            context,
-            tableResult.primaryKey.AsInt<Int>(),
-            DataTypes::StringView::ViewOf(this->constraintName),
-            CoreEngine::Schemas::ConstraintType::PrimaryKey,
-            false,
-            &indexId,
-            DataTypes::StringView::ViewOf(this->session->user->name)
-        );
-
-        const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
-
-        for(Int i = 0; i < primaryKeyColumnIdsArray.Size(); i++){
-            auto _ = CoreEngine::SystemCatalog::Get().InsertIndexColumnToMasterDb(
-                context,
-                indexResult.primaryKey.AsInt<Int>(),
-                primaryKeyColumnIdsArray[i],
-                this->primaryKey.columns[i],
-                true
-            );
-
-
-            _ = CoreEngine::SystemCatalog::Get().InsertConstraintColumnToMasterDb(
-                context,
-                constraintId,
-                primaryKeyColumnIdsArray[i],
-                this->primaryKey.columns[i]
-            );
-        }
-
-        const auto indexStatsResult = CoreEngine::SystemCatalog::Get().InsertIndexStatisticsToMasterDb(
-            context,
-            tableId,
-            indexId
-        );
-
-        // const auto tableHeader = CoreEngine::SystemCatalog::Get().SelectTable();
-
-        // auto* tablePtr = db->CreateTable(tableId, index);
-
-        return ExecutionResult(Errors::RuntimeError::Ok, TABLE_CREATED_MESSAGE, context.GetAllocator());
+        return ExecutionResult::Ok(allocator, Messages::TABLE_CREATED_SUCCESSFULLY);
     }
 
   PhysicalIndexCreate::PhysicalIndexCreate(

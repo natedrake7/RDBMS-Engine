@@ -159,7 +159,7 @@ int main(){
 
     CommandLineInterface(server);
 
-    globalMemoryManager.Log<::Memory::MemoryLogLevel::Bytes>(std::cout);
+    globalMemoryManager.Log<::Memory::MemoryLogLevel::MegaBytes>(std::cout);
     serverRunning.store(false, std::memory_order_relaxed);
 
     CoreEngine::GarbageCollector::Stop();
@@ -216,7 +216,7 @@ void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
     bool hasError = false;
 
     auto count = 0;
-    for (auto* cursor : parseResult.cursors) {
+    for (auto* cursor : parseResult.cursors){
         while (cursor->CanFetch()) {
             auto batch = cursor->FetchNextBatch();
             if (!batch.status.IsOk()) {
@@ -241,7 +241,7 @@ void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
         }
 
         QueryPipeline::Parser::CommitTransaction(sessionId, cursor);
-        CoreEngine::GlobalMemoryManager::Get().Log(std::cout, ::Memory::MemoryLogLevel::KiloBytes);
+        CoreEngine::GlobalMemoryManager::Get().Log<::Memory::MemoryLogLevel::MegaBytes>(std::cout);
     }
 
     parseResult.Release();

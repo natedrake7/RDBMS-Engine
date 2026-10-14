@@ -41,6 +41,16 @@ namespace CoreEngine {
         return static_cast<Int>(tableId) * SYSTEM_COLUMN_ID_STRIDE + ordinal;
     }
 
+    // A system table has exactly one index and one constraint, its primary key, numbered after the table.
+    // sys_index_columns / sys_constraint_columns are keyed by that id alone, so it must differ per table.
+    [[nodiscard]] constexpr Int SystemPrimaryKeyIndexId(const table_id_t tableId){
+        return static_cast<Int>(tableId);
+    }
+
+    [[nodiscard]] constexpr Int SystemPrimaryKeyConstraintId(const table_id_t tableId){
+        return static_cast<Int>(tableId);
+    }
+
     /** @} End of: Reserved ids */
 
     /**

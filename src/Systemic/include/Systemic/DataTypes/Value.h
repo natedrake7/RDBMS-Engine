@@ -69,8 +69,13 @@ class Value{
 
     template<typename T>
     void WriteInline(const T& value){
-        std::memcpy(&this->_data, &value, sizeof(T));
-        this->_size = sizeof(T);
+        std::memcpy(&this->_data, &value, this->_size);
+
+        if constexpr  (DataTypes::IsDecimal<T>)
+            this->_size = value.Size();
+        else
+            this->_size = sizeof(T);
+
         this->_type = DataTypes::DataTypeOf<T>();
         this->_isNull = false;
     }

@@ -143,6 +143,12 @@ namespace CoreEngine::StorageTypes{
             return &this->_identities[identity->_slot];
         }
 
+        [[nodiscard]] const IdentityManager* IdentityOf(const column_index_t ordinal)const{
+            const auto* identity = this->Column(ordinal)->_identity;
+            assert(identity != nullptr && "Table: column has no identity");
+            return &this->_identities[identity->_slot];
+        }
+
         template<DataTypes::IsInteger T>
         [[nodiscard]] T GenerateIdentityValue(const ::Memory::IAllocator* allocator, const column_index_t ordinal){
             auto* manager = this->IdentityOf(ordinal);
@@ -596,10 +602,12 @@ namespace CoreEngine::StorageTypes{
         * Functions to retrieve and update system catalog information related to the table.
         * @{
         */
-            void UpdateSystemCatalog(const ::Memory::IAllocator* allocator);
-            void UpdateCatalogIdentityColumns(const ::Memory::IAllocator* allocator)const;
+            void UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const;
+            void UpdateCatalogIdentityColumn(const ::Memory::IAllocator* allocator, column_index_t ordinal)const;
 
         /** @} End of System Catalog Integration Functions */
+
+        void ReseedIdentity(column_index_t ordinal, BigInt value);
 
         void SetPrimaryKeyIndexedColumns(const column_index_t* _array, Int size);
     };

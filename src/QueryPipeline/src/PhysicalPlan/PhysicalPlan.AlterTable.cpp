@@ -85,10 +85,9 @@ namespace QueryPipeline::PhysicalPlan{
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-        Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-        context.GetAllocator()
+      return ExecutionResult::Error(
+        context.GetAllocator(),
+        Messages::FAILED_TO_RETRIEVE_USER_SESSION
       );
 
     //update master db set isDeleted to 1
@@ -109,11 +108,10 @@ namespace QueryPipeline::PhysicalPlan{
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-        Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-        context.GetAllocator()
-      );
+        return ExecutionResult::Error(
+          context.GetAllocator(),
+          Messages::FAILED_TO_RETRIEVE_USER_SESSION
+        );
 
     const auto* db = Network::Server::Get().UseDatabase(context, this->table->_databaseId);
 
@@ -140,11 +138,10 @@ namespace QueryPipeline::PhysicalPlan{
     auto result = ExecutionResult(context);
 
     if (this->session == nullptr || this->session->user == nullptr)
-      return ExecutionResult(
-        Errors::RuntimeError::Error,
-        Messages::FAILED_TO_RETRIEVE_USER_SESSION,
-        context.GetAllocator()
-      );
+        return ExecutionResult::Error(
+          context.GetAllocator(),
+          Messages::FAILED_TO_RETRIEVE_USER_SESSION
+        );
 
     const auto updates = DataStructures::PolymorphicArray<Value>::From(
       context.GetAllocator(),

@@ -3,7 +3,8 @@
 #include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Directory/DirectoryEntries.h>
 
-#include "CoreEngine/DataStorage/Table.h"
+#include <CoreEngine/DataStorage/Table.h>
+#include <Systemic/Guards/WriterGuard.h>
 
 namespace CoreEngine{
     namespace{
@@ -28,6 +29,9 @@ namespace CoreEngine{
         const Schemas::TableSchema* schema
     ){
         auto* table = this->CreateTablePtr(schema, StorageTypes::TableHeader());
+
+        MultiThreading::WriterGuard guard(&this->_directoryMutex);
+
         this->_tables.Insert(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
         return table;
     }
@@ -78,6 +82,8 @@ namespace CoreEngine{
 
             auto* table = this->CreateTablePtr(schema, *headerPage.GetTableHeaderPtr(tableHeader.ordinalPosition));
             this->_tables.Append(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
+
+            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UnsignedSmallInt>(table->GetOrdinalPosition() + 1));
         }
 
         if (!this->_tables.Seal())
@@ -116,6 +122,8 @@ namespace CoreEngine{
 
             auto* table = this->CreateTablePtr(schema, physicalHeader);
             this->_tables.Append(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
+
+            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UnsignedSmallInt>(table->GetOrdinalPosition() + 1));
         }
 
         if (!this->_tables.Seal())

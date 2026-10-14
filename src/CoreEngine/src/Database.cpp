@@ -144,8 +144,7 @@ namespace CoreEngine{
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::StringView& dbName
-    ){
-        this->id = databaseId;
+    ): id(databaseId), _nextOrdinal(0){
         DataTypes::String file,sysFile;
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
         this->CreateKeys();
@@ -507,6 +506,10 @@ namespace CoreEngine{
     void Database::UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const{
         for(const auto& [key, table]: this->_tables)
             table->UpdateSystemCatalog(allocator);
+    }
+
+    UnsignedSmallInt Database::ReserveOrdinalNoLock(){
+        return this->_nextOrdinal++;
     }
 
     void CreateDatabase(

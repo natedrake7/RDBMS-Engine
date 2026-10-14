@@ -16,6 +16,7 @@
 
 namespace CoreEngine{
     namespace CatalogDetail{
+
         // The primary-key members of a row type, in key (declaration) order
         template <Catalog::CatalogRow TRow>
         [[nodiscard]] consteval auto KeyMembers(){
@@ -24,6 +25,15 @@ namespace CoreEngine{
                 if (::Reflection::HasAnnotation<Rows::PrimaryKey>(member))
                     keys.push_back(member);
             return std::define_static_array(keys);
+        }
+
+        template <typename TRow>
+        consteval Int IdentityKeyPosition(){
+            constexpr auto keys = KeyMembers<TRow>();
+            for (std::size_t i = 0; i < keys.size(); i++)
+                if (::Reflection::HasAnnotation<Rows::Identity>(keys[i]))
+                    return static_cast<Int>(i);
+            return -1;
         }
 
         // The clustered key of a row, encoded exactly like the hand-written Key(allocator, a, b) seeks
@@ -53,6 +63,24 @@ namespace CoreEngine{
     Errors::RuntimeStatus SystemCatalog::Insert(const ExecutionContext& context, const TRow& row) const{
         auto* table = this->CatalogTable(Catalog::TableOrdinalOf<TRow>);
         return table->SystemInsertRow(context, Rows::ToValues(row, context.GetAllocator()));
+    }
+
+    template <Catalog::CatalogRow TRow>
+    Errors::RuntimeStatus SystemCatalog::Insert(const ExecutionContext& context, TRow& row) const{
+        auto status = this->Insert(context, std::as_const(row));
+        if (!status.IsOk())
+            return status;
+
+        constexpr auto position = CatalogDetail::IdentityKeyPosition<TRow>();
+        if constexpr (position >= 0){
+            constexpr auto member = CatalogDetail::KeyMembers<TRow>()[position];
+            using T = [:std::meta::type_of(member):];
+
+            if (row.[:member:] == T{})
+                row.[:member:] = status.primaryKey.template AsInt<T>(position);
+        }
+
+        return status;
     }
 
     template <Catalog::CatalogRow TRow, DataTypes::Primitive... TKey> requires (sizeof...(TKey) > 0)
