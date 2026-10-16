@@ -69,7 +69,9 @@ namespace CoreEngine {
                 return true;
             if (transactionId >= snapshot.maximumTransactionId)
                 return false;
-            return snapshot.activeTransactionIds.Contains(transactionId);
+            if (snapshot.activeTransactionIds.Contains(transactionId))
+                return false;
+            return true;
         }
     };
 

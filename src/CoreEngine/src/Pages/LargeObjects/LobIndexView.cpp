@@ -14,7 +14,7 @@ namespace Pages{
         additionalHeader->_rootPageId = rootPageId;
         additionalHeader->_childCount = 0;
 
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     page_id_t LobIndexView::Child(const UnsignedInt slot) const{
@@ -31,7 +31,7 @@ namespace Pages{
         assert(header->_childCount < LobLayout::INDEX_FANOUT);
         std::memcpy(this->Payload() + header->_childCount * sizeof(page_id_t), &child, sizeof(page_id_t));
         header->_childCount++;
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void LobIndexView::BulkAppendChildren(const page_id_t* children, const UnsignedInt count) const{
@@ -40,7 +40,7 @@ namespace Pages{
         assert(header->_childCount + count <= LobLayout::INDEX_FANOUT);
         std::memcpy(this->Payload() + header->_childCount * sizeof(page_id_t), children, count * sizeof(page_id_t));
         header->_childCount += count;
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     bool LobIndexView::IsConsistent() const{

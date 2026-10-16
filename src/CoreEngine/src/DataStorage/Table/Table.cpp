@@ -468,11 +468,11 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         allocPage.GetAllocatedExtents(&tableExtentIds, 0);
 
-        const auto rowCategory = Database::GetObjectSizeToCategory(payload.Size());
+        const auto rowCategory = Pages::PageFreeSpaceView::ObjectSizeToCategory(payload.Size());
 
         Errors::RuntimeStatus result;
         for (const auto extentId : tableExtentIds){
-            const auto extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
+            const auto extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
             for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 auto pfs = Database::GetAssociatedPfsPage(systemFileKey, pageId);
@@ -526,7 +526,7 @@ namespace CoreEngine::StorageTypes {
         state.canFetchMore = false;
         RID rid;
         for (const auto extentId : tableExtentIds){
-            const auto firstPageId = Database::CalculateExtentFirstPageId(extentId);
+            const auto firstPageId = StorageLayout::ExtentFirstPageId(extentId);
             const auto pfs = Database::GetAssociatedPfsPage(systemFileKey, firstPageId);
 
             MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
@@ -1058,8 +1058,8 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
         tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
 
-        for (const auto& extentId: allocatedExtents) {
-            const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
+        for (const auto extentId: allocatedExtents) {
+            const page_id_t extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
             const page_id_t firstDataPageId = (tableMapPage.PageId() != extentFirstPageId)
                                                   ? extentFirstPageId

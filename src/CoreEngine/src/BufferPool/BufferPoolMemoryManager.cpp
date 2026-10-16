@@ -62,27 +62,11 @@ namespace CoreEngine{
         this->AllocateFreeStack();
     }
 
-    Int BufferPoolMemoryManager::Capacity() const{ return this->_capacity; }
-
-    object_t* BufferPoolMemoryManager::Data() const{
-        return this->_data;
-    }
-
-    object_t* BufferPoolMemoryManager::Data(const UnsignedBigInt offset) const{
-        return this->_data + offset;
-    }
-
     object_t* BufferPoolMemoryManager::CopyToMemory(const char* buffer, const UnsignedBigInt offset, const page_offset_t bufferOffset) const{
         auto* destination = this->_data + offset;
         std::memcpy(destination, buffer + bufferOffset, StorageLayout::PAGE_SIZE);
         return destination;
     }
-
-    Pages::Frame* BufferPoolMemoryManager::AllocateFrame(const Int index) const{
-        return &this->_framesData[index];
-    }
-
-    Pages::Frame* BufferPoolMemoryManager::GetFrame(const Int index) const{ return &this->_framesData[index]; }
 
     bool BufferPoolMemoryManager::PopStackNoLock(Pages::FrameId& frameId){
         if (this->_freeTopId == 0)

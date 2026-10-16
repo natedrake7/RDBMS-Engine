@@ -14,6 +14,7 @@ namespace Memory{
 }
 
 namespace CoreEngine::StorageTypes{
+    class Table;
     class SerializedRow;
 }
 

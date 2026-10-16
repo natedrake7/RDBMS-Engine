@@ -35,5 +35,11 @@ namespace Pages{
             void SetPageType(page_id_t pageId, Constants::PageType pageType) const;
 
             [[nodiscard]] bool IsAllocatedAs(page_id_t pageId, Constants::PageType pageType) const;
+
+            [[nodiscard]] static byte_t inline constexpr ObjectSizeToCategory(const row_size_t size){
+                // Direct mapping to 7levels (0-7)
+                const auto freeSpacePercentage = static_cast<float>(size) / CoreEngine::StorageLayout::PAGE_SIZE;
+                return static_cast<byte_t>(freeSpacePercentage * 7);
+            }
     };
 }

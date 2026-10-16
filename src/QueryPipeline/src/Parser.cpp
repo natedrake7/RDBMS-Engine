@@ -18,84 +18,75 @@
 
 namespace QueryPipeline{
     QueryContext::QueryContext()
-        : _referencedColumns(), status(this->_compileContext.GetAllocator()), _session(nullptr), _virtualId(0),
-          hasMore(false)
+        : _referencedColumns(), status(this->_compileContext.GetAllocator()), _session(nullptr), _nextStatement(0),
+          _virtualId(0), hasMore(false)
     {
         this->cursors.SetAllocator(this->_compileContext.GetAllocator());
     }
 
 
-     void QueryContext::CreateValidationScope(const Network::Session* session){
-        for (const auto& [key, variable] : session->variables){
-            this->_scope.variables.ForceAdd(key, variable->GetType());
-        }
-    }
-
-     const ::Memory::IAllocator* QueryContext::GetAllocator() const{
-        return this->_compileContext.GetAllocator();
-     }
-
-     UnsignedSmallInt QueryContext::NextVirtualId(){
-        return this->_virtualId++;
-     }
-
-     void QueryContext::Release() const{
-        this->_compileContext.GetAllocator()->Release();
-     }
-
      QueryContext::QueryContext(Errors::ParserStatus& error)
          : _referencedColumns(), status(std::move(error)), _session(nullptr),
-           _virtualId(0), hasMore(false)
+           _nextStatement(0), _virtualId(0), hasMore(false)
      {
          this->cursors.SetAllocator(this->_compileContext.GetAllocator());
      }
 
     QueryContext::QueryContext(QueryContext&& other) noexcept
-        :   _referencedColumns(other._referencedColumns),
-            _scope(std::move(other._scope)), _compileContext(std::move(other._compileContext)),
-            cursors(std::move(other.cursors)), status(std::move(other.status)), _session(nullptr),
-            _virtualId(other._virtualId), hasMore(other.hasMore)
+        : _referencedColumns(other._referencedColumns),
+          _scope(std::move(other._scope)),
+          _compileContext(std::move(other._compileContext)),
+          _executionContext(std::move(other._executionContext)),
+          cursors(std::move(other.cursors)),
+          status(std::move(other.status)),
+          _session(std::exchange(other._session, nullptr)),
+          _nextStatement(std::exchange(other._nextStatement, {})),
+          _virtualId(std::exchange(other._virtualId, {})),
+          hasMore(std::exchange(other.hasMore, false))
     {}
 
-    QueryContext& QueryContext::operator=(QueryContext&& other) noexcept{
+    QueryContext& QueryContext::operator=(QueryContext&& other) noexcept {
         if (this == &other)
             return *this;
 
+        this->Release();
+
         this->_referencedColumns = other._referencedColumns;
-        this->status = other.status;
-        this->hasMore = other.hasMore;
         this->_scope = std::move(other._scope);
+        this->_compileContext = std::move(other._compileContext);
+        this->_executionContext = std::move(other._executionContext);
         this->cursors = std::move(other.cursors);
-        this->_session = other._session;
-        this->_virtualId = other._virtualId;
+        this->status = std::move(other.status);
+        this->_session = std::exchange(other._session, nullptr);
+        this->_nextStatement = std::exchange(other._nextStatement, {});
+        this->_virtualId = std::exchange(other._virtualId, {});
+        this->hasMore = std::exchange(other.hasMore, false);
 
         return *this;
     }
 
-    void Parser::Parse(QueryContext& result, const session_id_t sessionId, const std::string& query) {
-        Parsing::Diagnostic diagnostic;
-        DataStructures::PolymorphicArray<Parsing::Token> tokens(result.GetAllocator());
-        const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView(query), tokens, diagnostic);
+    static_assert(std::is_nothrow_move_constructible_v<CompileValidationScope>);
+    static_assert(std::is_nothrow_move_constructible_v<CompileContext>);
+    static_assert(std::is_nothrow_move_constructible_v<CoreEngine::ExecutionContext>);
+    static_assert(std::is_nothrow_move_constructible_v<DataStructures::PolymorphicArray<Cursor*>>);
 
-        if (!tokenizeStatus){
-            result.status = Errors::ParserStatus(true, diagnostic.message, result.GetAllocator());
-            return;
-        }
-
-        static auto& server = Network::Server::Get();
-        const auto* session = server.GetSession(sessionId);
-
-        if (session == nullptr){
-            static constexpr DataTypes::StringView ERROR_MESSAGE = "Session not found";
-            result.status = Errors::ParserStatus(true, ERROR_MESSAGE, result.GetAllocator());
-            return;
-        }
-
-        Parsing::SqlParser parser(tokens, result.GetAllocator(), diagnostic);
-        if (!parser.ParseStatements(result._compileContext.GetStatements(), session->databaseId)){
-            result.status = Errors::ParserStatus(true, diagnostic.message, result.GetAllocator());
-        }
+     void QueryContext::CreateValidationScope(const Network::Session* session){
+         for (const auto& [key, variable] : session->variables){
+             this->_scope.variables.ForceAdd(key, variable->GetType());
+         }
      }
+
+     const ::Memory::IAllocator* QueryContext::GetAllocator() const{
+         return this->_compileContext.GetAllocator();
+     }
+
+     UnsignedSmallInt QueryContext::NextVirtualId(){
+         return this->_virtualId++;
+     }
+
+    void QueryContext::Release() const{
+        this->_compileContext.GetAllocator()->Release();
+    }
 
     LogicalPlan* Parser::BuildLogicalPlan(QueryContext& result, Statements::Statement* statement){
         auto validation = statement->Compile(result);
@@ -126,67 +117,93 @@ namespace QueryPipeline{
         return physicalPlan;
     }
 
-    void Parser::CleanUpPostExecutionObjects(const session_id_t sessionId, const PipelineConstants::cursor_id_t cursorId) {
+    void Parser::CloseCursor(const session_id_t sessionId, const PipelineConstants::cursor_id_t cursorId) {
         static const auto& server = Network::Server::Get();
         const auto _ = server.CloseCursor(sessionId, cursorId);
     }
 
-    QueryContext Parser::StartTransaction(const std::string &query, const session_id_t sessionId){
+    QueryContext Parser::Parse(const session_id_t sessionId, const std::string& query) {
+        static auto& server = Network::Server::Get();
+
+        QueryContext context;
+        context._session = server.GetSession(sessionId);
+        context.CreateValidationScope(context._session);
+
+        const auto* allocator = context.GetAllocator();
+
+        Parsing::Diagnostic diagnostic;
+        DataStructures::PolymorphicArray<Parsing::Token> tokens(allocator);
+        const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView(query), tokens, diagnostic);
+        if (!tokenizeStatus){
+            context.status = Errors::ParserStatus(true, diagnostic.message, allocator);
+            return context;
+        }
+
+        const auto* session = server.GetSession(sessionId);
+
+        if (session == nullptr){
+            static constexpr DataTypes::StringView ERROR_MESSAGE = "Session not found";
+            context.status = Errors::ParserStatus(true, ERROR_MESSAGE, allocator);
+            return context;
+        }
+
+        Parsing::SqlParser parser(tokens, allocator, diagnostic);
+        auto* statements = context._compileContext.GetStatements();
+        if (!parser.ParseStatements(statements, session->databaseId)){
+            context.status = Errors::ParserStatus(true, diagnostic.message, allocator);
+        }
+
+        context.cursors.Reserve(statements->Size());
+        return context;
+    }
+
+    Cursor* Parser::CompileNext(QueryContext& context, session_id_t sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
 
-        QueryContext queryContext;
-        queryContext._session = server.GetSession(sessionId);
-        queryContext.CreateValidationScope(queryContext._session);
-        Parser::Parse(queryContext, sessionId, query);
+        const auto* statements = context._compileContext.GetStatements();
+        if (context._nextStatement >= statements->Size())
+            return nullptr;
 
-        if (queryContext.status.hasError)
-            return queryContext;
+        auto* statement = (*statements)[context._nextStatement++];
+        statement->databaseId = server.GetSession(sessionId)->databaseId;
 
-        queryContext.status.hasError = false;
+        auto* logicalPlan = Parser::BuildLogicalPlan(context, statement);
+        if (context.status.hasError)
+            return nullptr;
 
-        const auto* statements = queryContext._compileContext.GetStatements();
-        queryContext.cursors.Reserve(statements->Size());
-        for (auto* statement: *statements) {
-            auto* logicalPlan = Parser::BuildLogicalPlan(queryContext, statement);
-            if (queryContext.status.hasError)
-                break;
+        auto* physicalPlan = Parser::BuildExecutionPlan(context, logicalPlan);
 
-            auto* physicalPlan = Parser::BuildExecutionPlan(queryContext, logicalPlan);
+        if (context.status.hasError)
+            return nullptr;
 
-            if (queryContext.status.hasError)
-                break;
+        auto snapshot = transactionManager.BeginTransaction(sessionId);
 
-            auto snapshot = transactionManager.BeginTransaction(sessionId);
+        std::cout   << "Executing transaction: " << snapshot.transactionId
+            << " by thread: " << std::this_thread::get_id()
+            << std::endl;
 
-            std::cout   << "Executing transaction: " << snapshot.transactionId
-                        << " by thread: " << std::this_thread::get_id()
-                        << std::endl;
+        //TODO set batch size correctly
+        CoreEngine::ExecutionContext executionContext(
+            snapshot, Constants::DEFAULT_BATCH_SIZE,
+            &context._session->variables
+        );
 
-            //TODO set batch size correctly
-            CoreEngine::ExecutionContext executionContext(
-                snapshot, Constants::DEFAULT_BATCH_SIZE,
-                &queryContext._session->variables
-            );
-
-            queryContext.cursors.Push(server.CreateCursor(
-                sessionId, queryContext._compileContext,
-                executionContext, physicalPlan
-            ));
-        }
-
-        return queryContext;
+        return server.CreateCursor(
+            sessionId, context._compileContext,
+            executionContext, physicalPlan
+        );
     }
 
     void Parser::CommitTransaction(const session_id_t sessionId, const Cursor* cursor) {
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.CommitTransaction(cursor->GetSnapshot());
-        Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
+        Parser::CloseCursor(sessionId, cursor->GetId());
     }
 
     void Parser::RollbackTransaction(const session_id_t sessionId, const Cursor* cursor) {
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
         transactionManager.RollbackTransaction(cursor->GetExecutionContext());
-        Parser::CleanUpPostExecutionObjects(sessionId, cursor->GetId());
+        Parser::CloseCursor(sessionId, cursor->GetId());
     }
 }

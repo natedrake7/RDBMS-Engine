@@ -22,87 +22,116 @@ namespace CoreEngine {
 } // namespace DatabaseEngine
 
 namespace Storage {
-    static constexpr Int MAX_DATABASES = 100;
-    static constexpr Int FILE_TABLE_SIZE = 2;
     static constexpr Int INVALID_FRAME = -1;
+    static constexpr UnsignedInt FILE_TABLE_SIZE = 2;
+    static constexpr UnsignedInt MAX_DATABASES = 100;
 
-    struct PageAddress{
-        static constexpr Int SEGMENT_BITS = 12;
-        static constexpr Int GROUP_BITS = 10;
-        static constexpr Int DIRECTORY_BITS = 10;
+    namespace PageAddress{
+        inline constexpr UnsignedInt SEGMENT_BITS = 12;
+        inline constexpr UnsignedInt GROUP_BITS = 10;
+        inline constexpr UnsignedInt DIRECTORY_BITS = 10;
 
-        static constexpr Int SEGMENT_SIZE = 1 << SEGMENT_BITS;
-        static constexpr Int GROUP_SIZE = 1 << GROUP_BITS;
-        static constexpr Int DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
+        inline constexpr UnsignedInt SEGMENT_SIZE = 1 << SEGMENT_BITS;
+        inline constexpr UnsignedInt GROUP_SIZE = 1 << GROUP_BITS;
+        inline constexpr UnsignedInt DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
 
-        [[nodiscard]] static Int DirectorySlot(page_id_t pageId);
-        [[nodiscard]] static Int GroupSlot(page_id_t pageId);
-        [[nodiscard]] static Int SegmentSlot(page_id_t pageId);
-        [[nodiscard]] static Int PageSlot(page_id_t pageId);
-    };
+        [[nodiscard]] inline constexpr UnsignedInt SegmentSlot(const page_id_t pageId){
+            return pageId >> PageAddress::SEGMENT_BITS;
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt PageSlot(const page_id_t pageId){
+            return pageId & (PageAddress::SEGMENT_SIZE - 1);
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt DirectorySlot(const page_id_t pageId){
+            const auto segmentId = PageAddress::SegmentSlot(pageId);
+            return (segmentId >> PageAddress::GROUP_BITS) & (PageAddress::DIRECTORY_SIZE - 1);
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt GroupSlot(const page_id_t pageId){
+            const auto segmentId = PageAddress::SegmentSlot(pageId);
+            return segmentId & (PageAddress::GROUP_SIZE - 1);
+        }
+    }
 
     struct Segment{
-        std::atomic<Pages::FrameId> frames[PageAddress::SEGMENT_SIZE];
-        Segment();
+        std::atomic<Pages::FrameId> _frames[PageAddress::SEGMENT_SIZE];
+        Segment(){
+            for (auto& slot : this->_frames)
+                slot.store(INVALID_FRAME, std::memory_order_relaxed);
+        }
     };
 
     struct SegmentGroup{
-        std::atomic<Segment*> segments[PageAddress::GROUP_SIZE];
-        SegmentGroup(){ for (auto& slot : segments) slot.store(nullptr, std::memory_order_relaxed); }
+        std::atomic<Segment*> _segments[PageAddress::GROUP_SIZE];
+        SegmentGroup(){ for (auto& slot : _segments) slot.store(nullptr, std::memory_order_relaxed); }
     };
 
     struct FileDirectory{
-        std::atomic<SegmentGroup*> groups[PageAddress::DIRECTORY_SIZE];
-        FileDirectory(){ for (auto& slot : groups) slot.store(nullptr, std::memory_order_relaxed); }
+        std::atomic<SegmentGroup*> _groups[PageAddress::DIRECTORY_SIZE];
+        FileDirectory(){
+            for (auto& slot : this->_groups)
+                slot.store(nullptr, std::memory_order_relaxed);
+        }
     };
 
     struct DatabaseTable{
-        FileDirectory files[FILE_TABLE_SIZE];
+        FileDirectory _files[MAX_OPEN_FILES];
     };
 
     class StorageManager final{
-        std::atomic<DatabaseTable*> _pageTable[MAX_DATABASES];
+        std::atomic<DatabaseTable> _pageTable[MAX_DATABASES];
+        UnsignedTinyInt _freeDbStack[MAX_DATABASES];
+        UnsignedTinyInt _freeTopDbStack;
 
         FileManager _fileManager;
         CoreEngine::BufferPoolMemoryManager _memoryManager;
 
         mutable MultiThreading::Mutex _tableMutex; // protects pageTable_ and frame insertion
+        mutable MultiThreading::Mutex _stackMutex; //protects dbStack
         const CoreEngine::Memory::PersistentAllocator _allocator;
 
-        Int _capacity;
         Int _clockHand;
 
         explicit StorageManager();
 
+        template<FileType Type>
         void EvictPageNoLock();
-        void TryFlushFrameToDiskNoLock(Pages::Frame* framePtr);
-        Pages::Frame* OpenExtentNoLock(
-            FileKey fileKey,
+
+        void FlushFrameToDiskNoLock(Pages::Frame* framePtr);
+
+        template<FileType Type>
+        [[nodiscard]] Pages::Frame* OpenExtentNoLock(
+            buffer_pool_index_t slotIndex,
             page_id_t pageId,
             extent_id_t extentId
         );
 
-        void CacheFrameToPageTableNoLock(FileKey key, page_id_t pageId, Pages::FrameId frameId) const;
-
-        [[nodiscard]]
-        Pages::Frame* CreateFrame(
-            FileKey fileKey,
+        template<FileType Type>
+        [[nodiscard]] Pages::Frame* CreateFrame(
+            buffer_pool_index_t slotIndex,
             page_id_t pageId,
             Constants::PageType type
         );
 
-        Segment* GetSegmentNoLock(FileKey fileKey, page_id_t pageId) const;
+        template<FileType Type>
+        Segment* GetSegmentNoLock(buffer_pool_index_t slotIndex, page_id_t pageId) const;
 
-        void EnsureDatabaseTableExistsNoLock(FileKey fileKey);
-        Segment* EnsureSegmentExistsNoLock(FileKey fileKey, page_id_t pageId) const;
+        template<FileType Type>
+        Segment* EnsureSegmentExistsNoLock(buffer_pool_index_t slotIndex, page_id_t pageId) const;
+
+        template<FileType Type>
         Pages::Frame* HandlePageCacheMiss(
-            FileKey fileKey,
+            buffer_pool_index_t slotIndex,
             page_id_t pageId
         );
 
+        template<FileType Type>
         Pages::FrameId AcquireFrameId();
+
+        template<FileType Type>
         Pages::Frame* GetFrame(
-            FileKey fileKey,
+            buffer_pool_index_t slotIndex,
             page_id_t pageId
         );
         void RemovePage(Pages::Frame* framePtr);
@@ -112,6 +141,10 @@ namespace Storage {
         ~StorageManager();
 
         void Initialize(UnsignedBigInt size);
+
+        [[nodiscard]] bool ReserveDbPageTable(UnsignedTinyInt& outIndex);
+
+        void FreeDbPageTable(SmallInt index);
 
         void CreateFile_(
             FileKey key,
@@ -129,27 +162,27 @@ namespace Storage {
         void FlushAll();
 
         Pages::HeaderPageView CreateHeaderPage(FileKey fileKey);
-        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(FileKey fileKey, gam_index_t gamIndex);
+        Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(buffer_pool_index_t slotIndex, gam_index_t gamIndex);
         Pages::AllocationPageView CreateAllocationPage(
-            FileKey fileKey,
+            buffer_pool_index_t slotIndex,
             page_id_t pageId,
             page_id_t gamPageId
         );
-        Pages::PageFreeSpaceView CreatePageFreeSpacePage(FileKey fileKey, page_id_t pageId);
+        Pages::PageFreeSpaceView CreatePageFreeSpacePage(buffer_pool_index_t slotIndex, page_id_t pageId);
 
         template<typename TView>
         TView CreatePage(
-            FileKey fileKey,
+            buffer_pool_index_t fileKey,
             page_id_t pageId
         );
         template<typename TView>
         TView GetPage(
-            FileKey fileKey,
+            buffer_pool_index_t slotIndex,
             page_id_t pageId
         );
 
         template<typename TView>
-        static constexpr Constants::PageType DeducePageType();
+        inline static constexpr Constants::PageType DeducePageType();
     };
 
     template <typename TView>
@@ -172,12 +205,26 @@ namespace Storage {
         return Constants::PageType::DATA;
     }
 
+    template <typename TView>
+    consteval FileType PageFileType(){
+        constexpr auto isSystem = std::is_same_v<TView, Pages::GlobalAllocationPageView>
+            || std::is_same_v<TView, Pages::HeaderPageView>
+            || std::is_same_v<TView, Pages::PageFreeSpaceView>;
+
+        if constexpr (isSystem)
+            return FileType::System;
+        else
+            return FileType::Data;
+
+        std::unreachable();
+    }
+
     template<typename TView>
     TView StorageManager::CreatePage(
-        const FileKey fileKey,
+        const buffer_pool_index_t fileKey,
         const page_id_t pageId
     ){
-        auto* frame = this->CreateFrame(fileKey, pageId, StorageManager::DeducePageType<TView>());
+        auto* frame = this->CreateFrame<PageFileType<TView>()>(fileKey, pageId, StorageManager::DeducePageType<TView>());
         if constexpr (std::is_same_v<TView, Pages::PageView>)
             frame->Header()->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
         else if constexpr (std::is_same_v<TView, Pages::IndexPageView>){
@@ -202,22 +249,10 @@ namespace Storage {
 
     template <typename TView>
     TView StorageManager::GetPage(
-        const FileKey fileKey,
+        const buffer_pool_index_t slotIndex,
         const page_id_t pageId
     ){
-        auto* frame = this->GetFrame(fileKey, pageId);
+        auto* frame = this->GetFrame<PageFileType<TView>()>(slotIndex, pageId);
         return TView(frame);
     }
-
-    template Pages::PageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::IndexPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::HeaderPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::OverflowPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::GlobalAllocationPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::AllocationPageView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::PageFreeSpaceView StorageManager::GetPage(FileKey, page_id_t);
-
-    template Pages::LobRootView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::LobIndexView StorageManager::GetPage(FileKey, page_id_t);
-    template Pages::LobDataView StorageManager::GetPage(FileKey, page_id_t);
 }

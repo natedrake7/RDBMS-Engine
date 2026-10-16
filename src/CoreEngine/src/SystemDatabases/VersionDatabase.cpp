@@ -48,8 +48,12 @@ namespace CoreEngine {
     }
 
     void VersionDatabase::CreateKeys(){
-        this->dataFileKey = Storage::FileKey(Constants::VERSION_DATABASE_ID, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey(Constants::VERSION_DATABASE_ID, Storage::FileType::System);
+        UnsignedTinyInt slotIndex = 0;
+        if (!Storage::StorageManager::Get().ReserveDbPageTable(slotIndex))
+            throw std::runtime_error("VersionDatabase::CreateKeys: Failed to reserve page slot for version database");
+
+        this->dataFileKey = Storage::FileKey(slotIndex, Storage::FileType::Data);
+        this->systemFileKey = Storage::FileKey(slotIndex, Storage::FileType::System);
     }
 
     void VersionDatabase::PopulateFilenames(
@@ -192,7 +196,7 @@ namespace CoreEngine {
             return cachedPage;
 
         for (const auto extentId : gamPage.GetAllocatedExtents(allocator)){
-            const page_id_t firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+            const page_id_t firstExtentPageId = StorageLayout::ExtentFirstPageId(extentId);
 
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 {
@@ -204,7 +208,7 @@ namespace CoreEngine {
 
                     MultiThreading::ReaderGuard pfsLock(&pageFreeSpace.Latch());
 
-                    const auto categorySize = Database::GetObjectSizeToCategory(size);
+                    const auto categorySize = Pages::PageFreeSpaceView::ObjectSizeToCategory(size);
 
                     if(pageFreeSpace.GetPageSizeCategory(pageId) <= categorySize)
                         continue;
@@ -290,7 +294,7 @@ namespace CoreEngine {
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto extentId : extents){
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId * StorageLayout::EXTENT_SIZE);
+            const auto firstExtentPageId = StorageLayout::ExtentFirstPageId(extentId * StorageLayout::EXTENT_SIZE);
 
             bool isExtentEmpty = true;
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){

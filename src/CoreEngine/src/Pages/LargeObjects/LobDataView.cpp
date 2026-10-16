@@ -13,7 +13,7 @@ namespace Pages{
         additionalHeader->_rootPageId = rootPageId;
         additionalHeader->_pageIndex = pageIndex;
 
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void LobDataView::WriteInline(
@@ -24,6 +24,6 @@ namespace Pages{
         assert(offset + size <= LobLayout::DATA_CAPACITY);
         std::memcpy(this->Payload() + offset, data, size);
 
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 }

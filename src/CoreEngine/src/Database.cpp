@@ -44,8 +44,12 @@ namespace CoreEngine{
     }
 
     void Database::CreateKeys(){
-        this->dataFileKey = Storage::FileKey::Create(this->id, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
+        UnsignedTinyInt slotIndex = 0;
+        if (!Storage::StorageManager::Get().ReserveDbPageTable(slotIndex))
+            throw std::runtime_error("Database::CreateKeys: Db page table is full");
+
+        this->dataFileKey = Storage::FileKey::Create(slotIndex, Storage::FileType::Data);
+        this->systemFileKey = Storage::FileKey::Create(slotIndex, Storage::FileType::System);
     }
 
     void Database::WriteHeaderToFile() const{
@@ -171,6 +175,7 @@ namespace CoreEngine{
             delete table;
         }
 
+        Storage::StorageManager::Get().FreeDbPageTable(this->dataFileKey._slotIndex);
         this->_allocator.Release();
     }
 
@@ -233,12 +238,6 @@ namespace CoreEngine{
         return logger.Log(logEntry);
     }
 
-    byte_t Database::GetObjectSizeToCategory(const row_size_t &size){
-        // Direct mapping to 7levels (0-7)
-        const auto freeSpacePercentage = static_cast<float>(size) / StorageLayout::PAGE_SIZE;
-        return static_cast<byte_t>(freeSpacePercentage * 7);
-    }
-
     StorageTypes::Table * Database::OpenTableByOrdinal(const table_id_t tableId) const{
         for (Int i  = 0;i < this->_tables.Size(); i++){
             const auto& entry = this->_tables[i];
@@ -247,14 +246,6 @@ namespace CoreEngine{
         }
 
         return nullptr;
-    }
-
-    page_id_t Database::CalculateExtentFirstPageId(const extent_id_t extentId){
-        return extentId * StorageLayout::EXTENT_SIZE;
-    }
-
-    extent_id_t Database::CalculateExtentId(const page_id_t pageId){
-        return pageId / StorageLayout::EXTENT_SIZE;
     }
 
     // void DatabaseHeader::ValidateFormatVersion(const DataTypes::StringView& databaseName) const{
@@ -478,7 +469,7 @@ namespace CoreEngine{
 
             for (const auto& [_firstExtentId, _count] : segmentsRuns) {
                 for (auto extentId = _firstExtentId; extentId < _firstExtentId + _count; extentId++){
-                    const auto firstPageId = Database::CalculateExtentFirstPageId(extentId);
+                    const auto firstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
                     // Check each page in the extent
                     for (page_id_t pageId = firstPageId; pageId < firstPageId + StorageLayout::EXTENT_SIZE; pageId++) {

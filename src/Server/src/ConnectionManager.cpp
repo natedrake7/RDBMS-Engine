@@ -421,8 +421,9 @@ void ConnectionManager::CloseServerConnection() const
         std::string query
     ){
         const QueryGuard queryGuard(connection);
+        const auto sessionId = connection->SessionId();
 
-        auto queryContext = QueryPipeline::Parser::StartTransaction(query, connection->SessionId());
+        auto queryContext = QueryPipeline::Parser::Parse(sessionId, query);
 
         if (queryContext.status.hasError){
             connection->SendTextFrame(
@@ -437,7 +438,7 @@ void ConnectionManager::CloseServerConnection() const
 
         std::vector<char> buffer;
         statement_ordinal_t statementOrdinal = 0;
-        for (auto* cursor: queryContext.cursors){
+        while (auto* cursor = QueryPipeline::Parser::CompileNext(queryContext, sessionId)){
             auto failed = false;
             try{
                 auto schemaSent = false;
@@ -462,7 +463,7 @@ void ConnectionManager::CloseServerConnection() const
                         break;
                     }
 
-                    auto batch = cursor->FetchNextBatch();
+                    auto batch = cursor->Fetch();
                     if (!batch.status.IsOk()){
                         connection->SendTextFrame(
                             MessageType::Error,
@@ -515,7 +516,7 @@ void ConnectionManager::CloseServerConnection() const
                     requestId, 0,
                     DataTypes::StringView::ViewOf(ex.what())
                 );
-                connection->SendControlFrame(MessageType::QueryComplete, requestId, 0);
+                failed = true;
             }
 
             if (failed){

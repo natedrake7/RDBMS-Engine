@@ -29,12 +29,12 @@ namespace Pages{
 
     void HeaderPageView::SetDatabaseHeader(const CoreEngine::DatabaseHeader& header) const{
         std::memcpy(this->databaseHeaderPtr, &header, sizeof(CoreEngine::DatabaseHeader));
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void HeaderPageView::SetTableHeader(const CoreEngine::StorageTypes::TableHeader& header, const SmallInt ordinalPosition) const{
         auto* dataOffset = this->GetTableHeaderDataOffset(ordinalPosition);
         std::memcpy(dataOffset, &header, sizeof(CoreEngine::StorageTypes::TableHeader));
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 }

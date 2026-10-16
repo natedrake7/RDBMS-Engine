@@ -37,7 +37,7 @@ namespace Pages{
         const auto pageType = page->GetPageType();
         assert(pageType == type);
 
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{

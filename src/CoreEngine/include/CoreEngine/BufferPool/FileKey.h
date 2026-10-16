@@ -9,29 +9,30 @@ namespace Storage{
     };
 
     struct FileKey{
-        Int databaseId;
+        UnsignedTinyInt _slotIndex;
         FileType type;
 
-        bool operator==(const FileKey& other) const{
-            return this->databaseId == other.databaseId
-                && this->type == other.type;
+        FileKey()
+            : _slotIndex(0), type(FileType::Data){}
+
+        explicit FileKey(const UnsignedTinyInt slotIndex, const FileType type)
+            : _slotIndex(slotIndex), type(type){}
+
+        static FileKey Create(const UnsignedTinyInt slotIndex, const FileType type){
+            return FileKey(slotIndex, type);
         }
 
-        FileKey()
-            : databaseId(INVALID_DATABASE_ID), type(FileType::Data){}
-
-        FileKey(const Int databaseId, const FileType type)
-            : databaseId(databaseId), type(type){}
-
-        static FileKey Create(const Int databaseId, const FileType type){
-            return FileKey(databaseId, type);
+        bool operator==(const FileKey& other) const{
+            return std::memcmp(this, &other, sizeof(FileKey)) == 0;
         }
     };
+
+    static_assert(std::is_trivially_copyable_v<FileKey>, "FileKey must be trivially copyable");
 }
 
 template<>
 struct std::hash<Storage::FileKey>{
     size_t operator()(const Storage::FileKey& key) const noexcept{
-        return std::hash<Int>()(key.databaseId) ^ std::hash<Storage::FileType>()(key.type);
+        return std::hash<Int>()(key._slotIndex) ^ std::hash<Storage::FileType>()(key.type);
     }
 };

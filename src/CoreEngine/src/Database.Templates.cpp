@@ -48,7 +48,7 @@ namespace CoreEngine{
         allocationPage.GetAllocatedExtents(&allocatedExtents);
 
         for (const auto extentId : allocatedExtents){
-            const auto firstExtentPageId = Database::CalculateExtentFirstPageId(extentId);
+            const auto firstExtentPageId = StorageLayout::ExtentFirstPageId(extentId);
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 const auto pfs = Database::GetAssociatedPfsPage(this->systemFileKey, pageId);
                 //

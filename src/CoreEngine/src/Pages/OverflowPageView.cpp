@@ -19,7 +19,7 @@ namespace Pages{
 
         header->size++;
         header->ConsumeBytes(size + SlotDirectory::SIZE);
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
 
         return OverflowPtr(header->pageId, header->size - 1);
     }

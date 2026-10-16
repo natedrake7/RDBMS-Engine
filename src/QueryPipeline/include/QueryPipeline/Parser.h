@@ -38,6 +38,7 @@ namespace QueryPipeline{
         Errors::ParserStatus status;
         const Network::Session* _session;
 
+        UnsignedSmallInt _nextStatement;
         UnsignedSmallInt _virtualId;
         bool hasMore;
 
@@ -59,10 +60,11 @@ namespace QueryPipeline{
     };
 
     class Parser{
-        static void Parse(QueryContext& result, session_id_t sessionId, const std::string& query);
         static LogicalPlan* BuildLogicalPlan(QueryContext& result, Statements::Statement* statement);
         static PhysicalPlan::PlanNode* BuildExecutionPlan(QueryContext& result, LogicalPlan* logicalPlan);
-        static void CleanUpPostExecutionObjects(session_id_t sessionId, PipelineConstants::cursor_id_t cursorId);
+        static void CloseCursor(session_id_t sessionId, PipelineConstants::cursor_id_t cursorId);
+
+
 
         public:
             static Parser& Get(){
@@ -70,7 +72,9 @@ namespace QueryPipeline{
                 return instance;
             }
 
-            static QueryContext StartTransaction(const std::string& query, session_id_t sessionId);
+            [[nodiscard]] static QueryContext Parse(session_id_t sessionId, const std::string& query);
+
+            [[nodiscard]] static Cursor* CompileNext(QueryContext& context, session_id_t sessionId);
 
             static void CommitTransaction(session_id_t sessionId, const Cursor* cursor);
             static void RollbackTransaction(session_id_t sessionId, const Cursor* cursor);

@@ -111,8 +111,16 @@ namespace CoreEngine::StorageLayout{
             + pageSlotInInterval(dataPageId) / PAGE_FREE_SPACE_SIZE;
     }
 
-    [[nodiscard]] constexpr UnsignedInt PfsSlot(const page_id_t dataPageId){
-        return pageSlotInInterval(dataPageId) % PAGE_FREE_SPACE_SIZE;
+    [[nodiscard]] constexpr UnsignedInt PfsSlot(const page_id_t pageId){
+        return pageSlotInInterval(pageId) % PAGE_FREE_SPACE_SIZE;
+    }
+
+    [[nodiscard]] constexpr page_id_t ExtentFirstPageId(const extent_id_t extentId){
+        return extentId * EXTENT_SIZE;
+    }
+
+    [[nodiscard]] constexpr extent_id_t ExtentId(const page_id_t pageId){
+        return pageId / EXTENT_SIZE;
     }
 
     static_assert(GamPageId(0) == 1 && PfsPageId(0) == 2);

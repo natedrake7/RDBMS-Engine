@@ -27,15 +27,23 @@ namespace CoreEngine{
 
             void Initialize(UnsignedBigInt size);
 
-            [[nodiscard]] Int Capacity() const;
-            [[nodiscard]] object_t* Data() const;
-            [[nodiscard]] object_t* Data(UnsignedBigInt offset) const;
+            [[nodiscard]] Int Capacity() const{
+                return this->_capacity;
+            }
+
+            [[nodiscard]] inline object_t* Data() const{
+                return this->_data;
+            }
+
+            [[nodiscard]] inline object_t* Data(const UnsignedBigInt offset) const{
+                return this->_data + offset;
+            }
 
             object_t* CopyToMemory(const char* buffer, UnsignedBigInt offset, page_offset_t bufferOffset) const;
 
-            [[nodiscard]] Pages::Frame* AllocateFrame(Int index) const;
-
-            [[nodiscard]] Pages::Frame* GetFrame(Int index) const;
+            [[nodiscard]] Pages::Frame* GetFrame(const Int index) const{
+                return &this->_framesData[index];
+            }
 
             [[nodiscard]] bool PopStackNoLock(Pages::FrameId& frameId);
             void PushStackNoLock(Pages::FrameId frameId);

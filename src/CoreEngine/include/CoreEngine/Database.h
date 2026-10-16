@@ -161,8 +161,6 @@ public:
         page_id_t pageId
     );
 
-    static byte_t GetObjectSizeToCategory(const row_size_t &size);
-
     [[nodiscard]]
     StorageTypes::Table* CreateTable(const Schemas::TableSchema* schema);
 
@@ -207,10 +205,6 @@ public:
 
     [[nodiscard]] Storage::FileKey DataFileKey() const;
     [[nodiscard]] Storage::FileKey SystemFileKey() const;
-
-    static page_id_t CalculateExtentFirstPageId(extent_id_t extentId);
-
-    static extent_id_t CalculateExtentId(page_id_t pageId);
 
     void UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const;
 

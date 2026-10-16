@@ -21,7 +21,7 @@ namespace QueryPipeline {
       PhysicalPlan::PlanNode* plan
     );
 
-    [[nodiscard]] PhysicalPlan::ExecutionResult FetchNextBatch();
+    [[nodiscard]] PhysicalPlan::ExecutionResult Fetch();
     [[nodiscard]] bool CanFetch()const;
     [[nodiscard]] const CoreEngine::ExecutionContext& GetExecutionContext()const;
     [[nodiscard]] const CoreEngine::Snapshot& GetSnapshot()const;

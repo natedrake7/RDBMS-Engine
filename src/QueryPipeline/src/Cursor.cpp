@@ -7,7 +7,7 @@ namespace QueryPipeline {
         PhysicalPlan::PlanNode *plan
     ) : id(cursorId), executionContext(std::move(executionContext)), canFetchMore(true), plan(plan) {}
 
-    PhysicalPlan::ExecutionResult Cursor::FetchNextBatch(){
+    PhysicalPlan::ExecutionResult Cursor::Fetch(){
         this->executionContext.ResetAllocator();
         auto result = this->plan->Execute(this->executionContext);
         this->canFetchMore = result.canFetchMore;

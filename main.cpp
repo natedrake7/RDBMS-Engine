@@ -206,19 +206,20 @@ void CommandLineInterface(Network::Server& server) {
 void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
     const auto start = std::chrono::high_resolution_clock::now();
 
-    const auto parseResult = QueryPipeline::Parser::StartTransaction(query, sessionId);
+    auto queryContext = QueryPipeline::Parser::Parse(sessionId, query);
 
-    if (parseResult.status.hasError) {
-        std::cerr << "Error: " << parseResult.status.message << std::endl;
+    if (queryContext.status.hasError) {
+        std::cerr << "Error: " << queryContext.status.message << std::endl;
         return;
     }
 
     bool hasError = false;
 
     auto count = 0;
-    for (auto* cursor : parseResult.cursors){
+
+    while (auto* cursor = QueryPipeline::Parser::CompileNext(queryContext, sessionId)){
         while (cursor->CanFetch()) {
-            auto batch = cursor->FetchNextBatch();
+            auto batch = cursor->Fetch();
             if (!batch.status.IsOk()) {
                 std::cerr << "Error: " << batch.status.message << std::endl;
                 hasError = true;
@@ -244,7 +245,7 @@ void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
         CoreEngine::GlobalMemoryManager::Get().Log<::Memory::MemoryLogLevel::MegaBytes>(std::cout);
     }
 
-    parseResult.Release();
+    queryContext.Release();
 
     const auto end = std::chrono::high_resolution_clock::now();
     const auto elapsed = std::chrono::duration<double, std::milli>(end - start);

@@ -94,7 +94,7 @@ namespace Pages{
         this->InsertNewSlot(newSlot);
 
         this->_frame->Header()->size++;
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
         this->_frame->Header()->ConsumeBytes(rowSize + SlotDirectory::SIZE);
     }
 
@@ -197,7 +197,7 @@ namespace Pages{
         const auto usedBytes = offset + (header->size * SlotDirectory::SIZE);
         assert(usedBytes <= CoreEngine::StorageLayout::PAGE_SIZE && "PageView::Defragment: slots exceed the page");
         header->bytesLeft = static_cast<page_size_t>(CoreEngine::StorageLayout::PAGE_SIZE - usedBytes);
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void PageView::Resize(const Int size) const{
@@ -207,7 +207,7 @@ namespace Pages{
         }
 
         this->_frame->Header()->size = size;
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     void PageView::DistributeFromPage(
@@ -236,7 +236,7 @@ namespace Pages{
         }
 
         this->_frame->Header()->ConsumeBytes(this->_frame->Header()->size * SlotDirectory::SIZE + (offset - startOffset));
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
 
         donorPage->Resize(donorNewSize);
         donorPage->Defragment(allocator);
@@ -268,7 +268,7 @@ namespace Pages{
             this->_frame->Header()->ConsumeBytes(leftSize + SlotDirectory::SIZE);
         }
 
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
 
         donorPage->Resize(donorResizeVariant);
         donorPage->Defragment(allocator);
@@ -290,7 +290,7 @@ namespace Pages{
 
         header->size++;
         header->ConsumeBytes(rowSize + SlotDirectory::SIZE);
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
 
         return header->size - 1;
     }
@@ -316,7 +316,7 @@ namespace Pages{
 
         header->size++;
         header->ConsumeBytes(rowSize + SlotDirectory::SIZE);
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
     }
 
     bool PageView::UpdateRow(
@@ -345,7 +345,7 @@ namespace Pages{
             this->UpdateSlotDirectory(updatedSlot, indexPosition);
 
             header->ReleaseBytes(slot.DataSize() - newSize);
-            this->_frame->isDirty = true;
+            this->_frame->_isDirty = true;
             return true;
         }
 
@@ -393,7 +393,7 @@ namespace Pages{
         this->UpdateSlotDirectory(newSlot, indexPosition);
 
         header->ConsumeBytes(requiredSpace);
-        this->_frame->isDirty = true;
+        this->_frame->_isDirty = true;
         return true;
     }
 
