@@ -1,6 +1,6 @@
 ﻿#include <CoreEngine/Pages/Additional/SlotDirectory.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     SlotDirectory::SlotDirectory()
         :   flags_offset(0), _dataSize(0),
             _offset(0), _keySize(0){}

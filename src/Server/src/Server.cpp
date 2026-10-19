@@ -3,7 +3,6 @@
 #include <CoreEngine/Managers/TransactionManager.h>
 #include <CoreEngine/SystemDatabases/SystemCatalog.h>
 #include <CoreEngine/SystemDatabases/TemporaryDatabase.h>
-#include <Systemic/Guards/ReaderGuard.h>
 #include <Systemic/Guards/WriterGuard.h>
 
 #include <iostream>
@@ -21,104 +20,98 @@ namespace Network {
     }
 
   void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
-    const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
+      const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
 
-    for (const auto* role : roles)
-      const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role->name), role);
+      for (const auto* role : roles)
+          const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role->name), role);
   }
 
   void Server::CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext) {
-    const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
+      const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
 
-    DataTypes::String hashedPassword(baseContext.GetAllocator());
-    if (Security::UserManager::HashPassword(Constants::ADMIN_NAME, hashedPassword) == false) {
-      std::cerr << "Failed to hash password for admin user" << std::endl;
-      return;
-    }
+      DataTypes::String hashedPassword(baseContext.GetAllocator());
+      if (Security::UserManager::HashPassword(Constants::ADMIN_NAME, hashedPassword) == false) {
+          std::cerr << "Failed to hash password for admin user" << std::endl;
+          return;
+      }
 
-    const auto user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
-    const auto _ = this->userManager.AddUser(user.id, user.name, hashedPassword, defaultRole);
-    // user->role = defaultRole;
-    // const auto _ = this->userManager.AddSystemUser(user);
+      const auto user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
+      const auto _ = this->userManager.AddUser(user.id, user.name, hashedPassword, defaultRole);
+      // user->role = defaultRole;
+      // const auto _ = this->userManager.AddSystemUser(user);
   }
 
   Server& Server::Get(){
-    static Server instance;
+      static Server instance;
 
-    return instance;
+      return instance;
   }
 
   void Server::Initialize(){
-    const CoreEngine::ExecutionContext _baseContext;
+      const CoreEngine::ExecutionContext _baseContext;
 
-    this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
-    this->temporaryDatabase->Initialize(_baseContext.GetAllocator());
+      this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
+      this->temporaryDatabase->Initialize(_baseContext.GetAllocator());
 
-    this->versionDatabase = &CoreEngine::VersionDatabase::Get();
-    this->versionDatabase->Initialize(_baseContext);
+      this->versionDatabase = &CoreEngine::VersionDatabase::Get();
+      this->versionDatabase->Initialize(_baseContext);
 
-    this->systemCatalog = &CoreEngine::SystemCatalog::Get();
-    if (this->systemCatalog->Initialize(_baseContext)){
-        this->CreateSystemRoles(_baseContext);
-        this->CreateSystemUsers(_baseContext);
-        return;
-    }
+      this->systemCatalog = &CoreEngine::SystemCatalog::Get();
+      if (this->systemCatalog->Initialize(_baseContext)){
+          this->CreateSystemRoles(_baseContext);
+          this->CreateSystemUsers(_baseContext);
+          return;
+      }
 
-    const auto lastCheckpoint = CoreEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
-    CoreEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
+      const auto lastCheckpoint = CoreEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+      CoreEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
-    const CoreEngine::Memory::Allocator allocator;
-    for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
-        const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role.name), &role);
+      const CoreEngine::Memory::Allocator allocator;
+      for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
+          const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role.name), &role);
 
-    for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
-        const auto* role = this->roleManager.GetRole(user.roleId);
-        const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
-    }
+      for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
+          const auto* role = this->roleManager.GetRole(user.roleId);
+          const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
+      }
   }
 
-  Errors::RuntimeStatus Server::GrantRole(
-    const CoreEngine::ExecutionContext& context,
-    const session_id_t currentSessionId,
-    const DataTypes::String& username,
-    const Security::Role *role
-  )const{
-    Int userId = -1;
+  void Server::Shutdown(){
+      const CoreEngine::Memory::Allocator allocator;
+      for (const auto* database: this->databases | std::views::values){
+          database->UpdateSystemCatalog(&allocator);
+          database->Destroy();
+          delete database;
+      }
 
-    if (!this->userManager.GrantRole(DataTypes::StringView::ViewOf(username), role, userId))
-        return Errors::RuntimeStatus(
-            Errors::RuntimeError::Error,
-            DataTypes::String::Concat(context.GetAllocator(), "Failed to grant role: ", role->name, " to user: ", username)
-        );
+      this->temporaryDatabase->Shutdown();
+      this->systemCatalog->Shutdown();
+      // this->versionDatabase->
 
-    return this->UpdateUserById(context, currentSessionId, userId, role->id);
+      auto& storageManager = Storage::StorageManager::Get();
+      storageManager.FlushAll();
+      storageManager.CloseAllFiles();
   }
 
-    Errors::RuntimeStatus Server::UpdateUserById(
+    Errors::RuntimeStatus Server::GrantRole(
         const CoreEngine::ExecutionContext& context,
-        const session_id_t callerSessionId,
-        const Int userId,
-        const Int roleId
+        const session_id_t currentSessionId,
+        const DataTypes::String& username,
+        const Security::Role *role
     )const{
-        const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
+        Int userId = -1;
 
-        if (currentSession == nullptr || currentSession->user == nullptr)
+        if (!this->userManager.GrantRole(DataTypes::StringView::ViewOf(username), role, userId))
             return Errors::RuntimeStatus(
-                Errors::RuntimeError::InvalidSession,
-                Messages::FAILED_TO_GET_USER_SESSION,
-                context.GetAllocator()
+                Errors::RuntimeError::Error,
+                DataTypes::String::Concat(context.GetAllocator(), "Failed to grant role: ", role->name, " to user: ", username)
             );
 
-        return this->systemCatalog->UpdateUserById(
-            context,
-            DataTypes::StringView::ViewOf(currentSession->user->name),
-            userId,
-            roleId
-        );
+        return this->UpdateUserById(context, currentSessionId, userId, role->id);
     }
 
   bool Server::UserExists(const DataTypes::String& userName) const{
-    return this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr;
+      return this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr;
   }
 
   bool Server::CreateUser(
@@ -126,44 +119,67 @@ namespace Network {
       const DataTypes::String& userName,
       const DataTypes::String& password,
       const DataTypes::String& roleName
-    ){
-    if (this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr)
-      return false;
+  ){
+      if (this->userManager.GetUser(DataTypes::StringView::ViewOf(userName)) != nullptr)
+          return false;
 
-    const auto* role = this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
+      const auto* role = this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
 
-    if (role == nullptr)
-      return false;
+      if (role == nullptr)
+          return false;
 
-    DataTypes::String hashedPassword(context.GetAllocator());
-    if (Security::UserManager::HashPassword(DataTypes::StringView::ViewOf(password), hashedPassword) == false) {
-      std::cerr << "Failed to hash password for user" << userName << std::endl;
-      return false;
-    }
+      DataTypes::String hashedPassword(context.GetAllocator());
+      if (Security::UserManager::HashPassword(DataTypes::StringView::ViewOf(password), hashedPassword) == false) {
+          std::cerr << "Failed to hash password for user" << userName << std::endl;
+          return false;
+      }
 
-    const auto result =
-      this->systemCatalog->InsertUserToMasterDb(
-        context,
-        DataTypes::StringView::ViewOf(userName),
-        DataTypes::StringView::ViewOf(hashedPassword),
-        role->id,
-        true
+      const auto result =
+          this->systemCatalog->InsertUserToMasterDb(
+              context,
+              DataTypes::StringView::ViewOf(userName),
+              DataTypes::StringView::ViewOf(hashedPassword),
+              role->id,
+              true
+          );
+
+      if (result.code != Errors::RuntimeError::Ok) {
+          std::cerr << "Failed to create user"
+              << userName
+              << " with error: "
+              << result.message << std::endl;
+
+          return false;
+      }
+
+      return this->userManager.AddUser(result.primaryKey.AsInt<Int>(), userName, hashedPassword, role);
+  }
+
+  Errors::RuntimeStatus Server::UpdateUserById(
+      const CoreEngine::ExecutionContext& context,
+      const session_id_t callerSessionId,
+      const Int userId,
+      const Int roleId
+  )const{
+      const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
+
+      if (currentSession == nullptr || currentSession->user == nullptr)
+          return Errors::RuntimeStatus(
+              Errors::RuntimeError::InvalidSession,
+              Messages::FAILED_TO_GET_USER_SESSION,
+              context.GetAllocator()
+          );
+
+      return this->systemCatalog->UpdateUserById(
+          context,
+          DataTypes::StringView::ViewOf(currentSession->user->name),
+          userId,
+          roleId
       );
-
-    if (result.code != Errors::RuntimeError::Ok) {
-      std::cerr << "Failed to create user"
-                << userName
-                << " with error: "
-                << result.message << std::endl;
-
-      return false;
-    }
-
-    return this->userManager.AddUser(result.primaryKey.AsInt<Int>(), userName, hashedPassword, role);
   }
 
   const Security::User* Server::Authenticate(const DataTypes::String& username, const DataTypes::String& password)const{
-    return this->userManager.Authenticate(DataTypes::StringView::ViewOf(username), DataTypes::StringView::ViewOf(password));
+      return this->userManager.Authenticate(DataTypes::StringView::ViewOf(username), DataTypes::StringView::ViewOf(password));
   }
 
   const Security::User* Server::Authenticate(const DataTypes::StringView& username, const DataTypes::StringView& password) const{
@@ -171,41 +187,41 @@ namespace Network {
   }
 
   bool Server::RoleExists(const DataTypes::String& role) const{
-    return this->roleManager.GetRole(DataTypes::StringView::ViewOf(role)) != nullptr;
+      return this->roleManager.GetRole(DataTypes::StringView::ViewOf(role)) != nullptr;
   }
 
   const Security::Role * Server::GetRole(const DataTypes::String& roleName)const {
-    return this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
+      return this->roleManager.GetRole(DataTypes::StringView::ViewOf(roleName));
   }
 
   const Session * Server::CreateSession(const Security::User* user){
-    return this->sessionManager.CreateSession(user);
+      return this->sessionManager.CreateSession(user);
   }
 
   const Session * Server::GetSession(const session_id_t key)const{
-    return this->sessionManager.GetSession(key);
+      return this->sessionManager.GetSession(key);
   }
 
   bool Server::CloseSession(const session_id_t key) {
-    return this->sessionManager.CloseSession(key);
+      return this->sessionManager.CloseSession(key);
   }
 
   bool Server::UpdateSession(const session_id_t key, const Int databaseId)const{
-    return this->sessionManager.UpdateSession(key, databaseId);
+      return this->sessionManager.UpdateSession(key, databaseId);
   }
 
   bool Server::AddOrSetVariable(const session_id_t sessionId, const Variable& variable) const {
-    return this->sessionManager.AddOrSetVariable(sessionId, variable);
+      return this->sessionManager.AddOrSetVariable(sessionId, variable);
   }
 
-  QueryPipeline::Cursor* Server::CreateCursor(
-    const session_id_t id,
-    const QueryPipeline::CompileContext& compileContext,
-    CoreEngine::ExecutionContext& executionContext,
-    QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
-  ) const {
-    return this->sessionManager.CreateCursor(id, compileContext, executionContext, physicalPlan);
-  }
+    QueryPipeline::Cursor* Server::CreateCursor(
+        const session_id_t id,
+        const QueryPipeline::CompileContext& compileContext,
+        CoreEngine::ExecutionContext& executionContext,
+        QueryPipeline::PhysicalPlan::PlanNode *physicalPlan
+    ) const {
+        return this->sessionManager.CreateCursor(id, compileContext, executionContext, physicalPlan);
+    }
 
     bool Server::CloseCursor(
         const session_id_t id,
@@ -214,21 +230,12 @@ namespace Network {
         return this->sessionManager.CloseCursor(id, cursorId);
     }
 
-    void Server::Shutdown(){
-        const CoreEngine::Memory::Allocator allocator;
-        for (const auto* database: this->databases | std::views::values){
-            database->UpdateSystemCatalog(&allocator);
-            database->Destroy();
-            delete database;
-        }
-
-        this->temporaryDatabase->Shutdown();
-        this->systemCatalog->Shutdown();
-        // this->versionDatabase->
-
-        auto& storageManager = Storage::StorageManager::Get();
-        storageManager.FlushAll();
-        storageManager.CloseAllFiles();
+    void Server::CreateDatabase(
+        const Memory::IAllocator* allocator,
+        const Int databaseId,
+        const DataTypes::StringView& dbName
+    ){
+        auto accessor = CoreEngine::CreateDatabase(allocator, databaseId, dbName);
     }
 
     CoreEngine::Database* Server::UseDatabase(

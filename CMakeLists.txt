@@ -130,7 +130,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Pages/AllocationPageView.cpp
         src/CoreEngine/src/Pages/HeaderPageView.cpp
         src/CoreEngine/src/Pages/Additional/SlotDirectory.cpp
-        src/CoreEngine/src/Pages/Additional/Frame.cpp
         src/CoreEngine/src/Pages/Additional/IndexPageStructs.cpp
         src/CoreEngine/src/Pages/LargeObjects/LobDataView.cpp
         src/CoreEngine/src/Pages/OverflowPageView.cpp
@@ -154,6 +153,7 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/DataStorage/Schemas/Schemas.cpp
         src/CoreEngine/src/SystemDatabases/CatalogSchema.cpp
         src/CoreEngine/src/Database.Bootstrap.cpp
+        src/CoreEngine/src/BufferPool/File.cpp
 )
 
 target_include_directories(CoreEngine

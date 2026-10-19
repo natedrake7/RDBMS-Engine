@@ -1,8 +1,11 @@
 ﻿#pragma once
+#include <filesystem>
 #include <span>
 #include <Systemic/DataTypes/DataTypes.h>
 #include <ostream>
 #include <Systemic/DataTypes/StringValue.h>
+
+#include "../../../../../../../../../msys64/clang64/include/c++/v1/__filesystem/filesystem_error.h"
 
 namespace Memory{
     class IAllocator;
@@ -317,6 +320,15 @@ namespace DataTypes{
                 static_assert(DataTypes::AlwaysFalse<T>, "Invalid type for StringView constructor");
 
             return StringView();
+        }
+
+        [[nodiscard]] inline constexpr std::filesystem::path ToPath() const{
+            return {
+                std::u8string_view(
+                     reinterpret_cast<const char8_t*>(this->_data),
+                     this->_size
+                )
+            };
         }
 
         static StringView ViewOf(const char* str, const data_size_t size){

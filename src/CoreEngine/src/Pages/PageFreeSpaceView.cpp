@@ -3,7 +3,7 @@
 #include <cassert>
 #include <CoreEngine/Pages/Additional/Frame.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     page_offset_t PageFreeSpaceView::GetOffset(const page_id_t pageId) const{
         // PFS ranges restart at every GAM boundary, so the slot is relative to the page's GAM interval
         return this->initialOffset + CoreEngine::StorageLayout::PfsSlot(pageId);
@@ -19,8 +19,8 @@ namespace Pages{
         return PackedByte::ExtractBits<bool, ALLOCATION_SHIFT, ALLOCATION_SINGLE_BIT_MASK>(*this->GetByte(pageId));
     }
 
-    Constants::PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
-        return PackedByte::ExtractBits<Constants::PageType, TYPE_SHIFT, TYPE_VALUE_MASK>(*this->GetByte(pageId));
+    PageLayout::PageType PageFreeSpaceView::GetPageType(const page_id_t pageId) const{
+        return PackedByte::ExtractBits<PageLayout::PageType, TYPE_SHIFT, TYPE_VALUE_MASK>(*this->GetByte(pageId));
     }
 
     byte_t PageFreeSpaceView::GetPageSizeCategory(const page_id_t pageId) const{
@@ -53,11 +53,11 @@ namespace Pages{
         PackedByte::SetBits<SIZE_SHIFT, SIZE_MASK>(this->GetByte(pageId), pageAllocationStatus);
     }
 
-    void PageFreeSpaceView::SetPageType(const page_id_t pageId, Constants::PageType pageType) const{
+    void PageFreeSpaceView::SetPageType(const page_id_t pageId, PageLayout::PageType pageType) const{
         PackedByte::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(this->GetByte(pageId), static_cast<byte_t>(pageType));
     }
 
-    bool PageFreeSpaceView::IsAllocatedAs(const page_id_t pageId, const Constants::PageType pageType) const{
+    bool PageFreeSpaceView::IsAllocatedAs(const page_id_t pageId, const PageLayout::PageType pageType) const{
         return this->IsPageAllocated(pageId) && this->GetPageType(pageId) == pageType;
     }
 }

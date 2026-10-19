@@ -9,19 +9,12 @@
 #include <Systemic/DataTypes/StringValue.h>
 #include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     PageHeader::PageHeader()
         :   pageId(INVALID_PAGE_ID), size(0),
-            type(static_cast<page_size_t>(Constants::PageType::DATA)),
+            type(static_cast<page_size_t>(PageLayout::PageType::DATA)),
             bytesLeft(static_cast<page_size_t>(CoreEngine::StorageLayout::PAGE_SIZE - CoreEngine::StorageLayout::PAGE_HEADER_SIZE)){}
 
-    Constants::PageType PageHeader::Type() const{
-        return static_cast<Constants::PageType>(this->type);
-    }
-
-    void PageHeader::SetType(const Constants::PageType pageType){
-        this->type = static_cast<page_size_t>(pageType);
-    }
 
     void PageView::SetPageId(const page_id_t pageId) const{
         this->_frame->Header()->pageId = pageId;
@@ -99,7 +92,7 @@ namespace Pages{
     }
 
     bool PageView::IsIndexPage() const{
-        return this->_frame->Header()->Type() == Constants::PageType::INDEXED;
+        return this->_frame->Header()->Type() == PageLayout::PageType::INDEXED;
     }
 
     PageView::PageView()
@@ -424,7 +417,7 @@ namespace Pages{
     }
 
     MaterializedRow PageView::MaterializeRow(
-        const Memory::IAllocator* allocator,
+        const ::Memory::IAllocator* allocator,
         const CoreEngine::StorageTypes::Table* tablePtr,
         const Int indexPosition
     ) const{
@@ -509,7 +502,7 @@ namespace Pages{
         return this->_frame != nullptr;
     }
 
-    Constants::PageType PageView::GetPageType() const{
+    PageLayout::PageType PageView::GetPageType() const{
         return this->_frame->Header()->Type();
     }
 
@@ -554,7 +547,7 @@ namespace Pages{
     }
 
     DataTypes::String PageView::GetStringColumnAt(
-        const Memory::IAllocator* allocator,
+        const ::Memory::IAllocator* allocator,
         const Int index,
         const Int columnIndex,
         bool* outNull

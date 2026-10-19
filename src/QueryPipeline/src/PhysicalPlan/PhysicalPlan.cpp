@@ -193,13 +193,14 @@ namespace QueryPipeline::PhysicalPlan {
   PhysicalCreateDatabase::PhysicalCreateDatabase(const session_id_t sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
 
   ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
+    const auto* allocator = context.GetAllocator();
       if (this->session == nullptr || this->session->user == nullptr)
           return ExecutionResult::Error(
-              context.GetAllocator(),
+              allocator,
               Messages::FAILED_TO_RETRIEVE_USER_SESSION
           );
 
-      const auto path = DataTypes::String::Concat(context.GetAllocator(), this->dbName, Constants::DATA_FILE_EXTENSION);
+      const auto path = DataTypes::String::Concat(allocator, this->dbName, Constants::DATA_FILE_EXTENSION);
 
       const auto result = CoreEngine::SystemCatalog::Get().InsertDbToMasterDb(
           context,
@@ -213,7 +214,7 @@ namespace QueryPipeline::PhysicalPlan {
 
       const auto _ = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
 
-      CoreEngine::CreateDatabase(context.GetAllocator(), databaseId, DataTypes::StringView::ViewOf(this->dbName));
+      CoreEngine::CreateDatabase(allocator, databaseId, DataTypes::StringView::ViewOf(this->dbName));
 
       return ExecutionResult(context);
   }

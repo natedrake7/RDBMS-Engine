@@ -4,7 +4,7 @@
 
 #include <CoreEngine/Pages/Additional/Frame.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     LobDataView::LobDataView(Frame* framePtr) : PageView(framePtr){}
 
     void LobDataView::Initialize(const page_id_t rootPageId, const UnsignedInt pageIndex) const{

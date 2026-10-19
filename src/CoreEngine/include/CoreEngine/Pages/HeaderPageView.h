@@ -9,7 +9,7 @@ namespace CoreEngine{
     }
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct Frame;
 
     class HeaderPageView final : public PageView{

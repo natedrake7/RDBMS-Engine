@@ -1,39 +1,59 @@
 ﻿#pragma once
 #include <atomic>
 
-#include <CoreEngine/DatabaseConstants.h>
 #include <Systemic/DataTypes/DataTypes.h>
 #include <Systemic/Guards/Mutex.h>
-#include <CoreEngine/BufferPool/FileManager.h>
 
-namespace Pages{
-    using FrameId = Int;
+#include "CoreEngine/BufferPool/StorageLayout.h"
+#include "CoreEngine/Pages/PageLayout.h"
+
+namespace CoreEngine::Pages{
     struct PageHeader;
+
+    inline static constexpr StorageLayout::frame_identity_t INVALID_FRAME_IDENTITY = std::numeric_limits<StorageLayout::frame_identity_t>::max();
+
+    [[nodiscard]] inline constexpr StorageLayout::frame_identity_t FrameIdentity(
+        const buffer_pool_slot_t slotIndex,
+        const page_id_t pageId
+    ){
+        return (static_cast<StorageLayout::frame_identity_t>(slotIndex) << 32) | pageId;
+    }
+
+    enum class FrameState: UnsignedTinyInt{
+        Free = 0,
+        Loading = 1,
+        Ready = 2,
+        Failed = 3
+    };
 
     struct Frame{
         mutable MultiThreading::Mutex _latch;
 
         object_t* _data;
 
+        std::atomic<StorageLayout::frame_identity_t> _identity;
+
         log_sequence_number_t logSequenceNumber;
 
-        buffer_pool_index_t _slotIndex;
+        buffer_pool_slot_t _slotIndex;
         std::atomic<Int> _pinCount;
 
-        std::atomic<Constants::PagePriority> _priority;
+        std::atomic<FrameState> _state;
+        std::atomic<PageLayout::PagePriority> _priority;
         std::atomic<bool> _hasSecondChance;
         std::atomic<bool> _isDirty;
 
         inline static constexpr Int EVICTING_PIN_COUNT = -1;
 
         Frame()
-            :   _data(nullptr), logSequenceNumber(0),
-                _slotIndex(0), _pinCount(0),
-                _priority(Constants::PagePriority::LOW), _hasSecondChance(true), _isDirty(false){}
+            :   _data(nullptr), _identity(INVALID_FRAME_IDENTITY),
+                logSequenceNumber(0), _slotIndex(0),
+                _pinCount(0), _state(FrameState::Free), _priority(PageLayout::PagePriority::LOW),
+                _hasSecondChance(true), _isDirty(false){}
         explicit Frame(object_t* data)
             :   _data(data), logSequenceNumber(0),
                 _slotIndex(0), _pinCount(0),
-                _priority(Constants::PagePriority::LOW), _hasSecondChance(true), _isDirty(false){}
+                _priority(PageLayout::PagePriority::LOW), _hasSecondChance(true), _isDirty(false){}
 
         Frame& operator=(const Frame&) = delete;
         Frame(const Frame&) = delete;

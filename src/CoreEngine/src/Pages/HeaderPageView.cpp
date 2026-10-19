@@ -3,7 +3,7 @@
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     object_t* HeaderPageView::GetTableHeaderDataOffset(const Int ordinalPosition) const{
         return this->_frame->_data
             + sizeof(CoreEngine::DatabaseHeader)

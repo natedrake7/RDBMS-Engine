@@ -4,6 +4,13 @@
 #include <Server/Security/Security.h>
 #include <Systemic/DataTypes/StringView.h>
 
+namespace Pages
+{
+    class HeaderPageView;
+    class PageFreeSpaceView;
+    class GlobalAllocationPageView;
+}
+
 namespace Constants{
     inline constexpr UnsignedBigInt KB = 1024;
     inline constexpr UnsignedBigInt MB = 1024 * KB;
@@ -43,26 +50,6 @@ namespace Constants{
         COUNT = 3,
         MIN = 4,
         MAX = 5
-    };
-
-    enum class PageType : UnsignedSmallInt{
-        DATA = 0,
-        ALLOCATION = 1,
-        LOB_ROOT = 2,
-        INDEXED = 3,
-        HEADER = 4,
-        GLOBAL_ALLOCATION = 5,
-        FREE_SPACE = 6,
-        OVERFLOW_TYPE = 7,
-        LOB_INDEX = 8,
-        LOB_DATA = 9
-    };
-
-    enum class PagePriority : UnsignedTinyInt{
-        LOW = 0,
-        MEDIUM = 1,
-        HIGH = 2,
-        SYSTEM = 3,
     };
 
     enum class TableType : UnsignedTinyInt{

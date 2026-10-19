@@ -88,6 +88,11 @@ namespace Network {
     )const;
     [[nodiscard]] bool CloseCursor(session_id_t id, QueryPipeline::PipelineConstants::cursor_id_t cursorId)const;
 
+    void CreateDatabase(
+        const ::Memory::IAllocator* allocator,
+        Int databaseId,
+        const DataTypes::StringView& dbName
+    );
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,
         Int databaseId

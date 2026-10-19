@@ -4,7 +4,7 @@
 
 #include <CoreEngine/Pages/Additional/Frame.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     LobIndexView::LobIndexView(Frame* framePtr)
         : PageView(framePtr){}
 

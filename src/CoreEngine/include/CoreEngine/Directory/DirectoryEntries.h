@@ -13,7 +13,6 @@ namespace CoreEngine{
 }
 
 namespace CoreEngine::Directory{
-
     struct TableKey{
         Int _schemaId;
         DataTypes::StringView _lowerName;

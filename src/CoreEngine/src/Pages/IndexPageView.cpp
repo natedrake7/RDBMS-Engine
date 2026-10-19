@@ -2,7 +2,7 @@
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     void IndexPageView::InsertFirstTuple(const IndexInsertTuple& tuple) const{
         auto pos = this->NewInsertOffset();
         const auto copyPos = pos;

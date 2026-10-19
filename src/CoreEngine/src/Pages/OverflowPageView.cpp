@@ -1,5 +1,6 @@
 ﻿#include <CoreEngine/Pages/OverflowPageView.h>
-namespace Pages{
+
+namespace CoreEngine::Pages{
     OverflowPageView::OverflowPageView() : PageView() {}
 
     OverflowPageView::OverflowPageView(Frame* frame) : PageView(frame) {}

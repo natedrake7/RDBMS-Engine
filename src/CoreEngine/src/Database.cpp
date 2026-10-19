@@ -503,23 +503,25 @@ namespace CoreEngine{
         return this->_nextOrdinal++;
     }
 
-    void CreateDatabase(
+    Accessors::PageAccessor CreateDatabase(
         const ::Memory::IAllocator* allocator,
         const Int databaseId,
         const DataTypes::StringView& dbName
     ){
         static auto& storageManager = Storage::StorageManager::Get();
 
+        auto accessor = storageManager.ReserveDbPageTables();
+
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
-        const auto dataKey = Storage::FileKey::Create(databaseId, Storage::FileType::Data);
 
-        storageManager.CreateFile_(dataKey, DataTypes::StringView::ViewOf(path), Constants::DATA_FILE_EXTENSION);
+        const auto dataPath = DataTypes::String::Concat(allocator, path, Constants::DATA_FILE_EXTENSION);
 
+        storageManager.OpenFile(dataKey, DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::CreateNew);
 
         const auto sysDbName = DataTypes::String::Concat(path.GetAllocator(), path, Constants::SYS_EXTENSION);
         const auto sysKey = Storage::FileKey::Create(databaseId, Storage::FileType::System);
 
-        storageManager.CreateFile_(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
+        storageManager.OpenFile(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
 
         // First interval of the system file: GAM #0 at page 1, then the PFS page covering data page 0 at page 2
         constexpr auto firstPfsPageId = StorageLayout::PfsPageId(0);

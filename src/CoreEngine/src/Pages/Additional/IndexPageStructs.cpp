@@ -1,7 +1,7 @@
 ﻿#include <CoreEngine/Pages/Additional/IndexPageStructs.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     IndexInsertTuple::IndexInsertTuple(){
         this->payload = nullptr;
     }

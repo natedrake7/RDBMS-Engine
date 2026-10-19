@@ -29,6 +29,47 @@ namespace CoreEngine::StorageLayout{
     /** @} End of: Page and extent geometry */
 
     /**
+     * @name BufferPool segmenting
+     * @{
+     */
+    typedef uint64_t frame_identity_t;
+    typedef uint32_t frame_id_t;
+
+    inline constexpr frame_id_t INVALID_FRAME = std::numeric_limits<frame_id_t>::max();
+    inline constexpr UnsignedInt MAX_BUFFER_POOL_SLOTS = 256;
+
+    namespace PageAddress{
+        inline constexpr UnsignedInt SEGMENT_BITS = 12;
+        inline constexpr UnsignedInt GROUP_BITS = 10;
+        inline constexpr UnsignedInt DIRECTORY_BITS = 10;
+
+        inline constexpr UnsignedInt SEGMENT_SIZE = 1 << SEGMENT_BITS;
+        inline constexpr UnsignedInt GROUP_SIZE = 1 << GROUP_BITS;
+        inline constexpr UnsignedInt DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
+
+        [[nodiscard]] inline constexpr UnsignedInt SegmentSlot(const page_id_t pageId){
+            return pageId >> PageAddress::SEGMENT_BITS;
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt PageSlot(const page_id_t pageId){
+            return pageId & (PageAddress::SEGMENT_SIZE - 1);
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt DirectorySlot(const page_id_t pageId){
+            const auto segmentId = PageAddress::SegmentSlot(pageId);
+            return (segmentId >> PageAddress::GROUP_BITS) & (PageAddress::DIRECTORY_SIZE - 1);
+        }
+
+        [[nodiscard]] inline constexpr UnsignedInt GroupSlot(const page_id_t pageId){
+            const auto segmentId = PageAddress::SegmentSlot(pageId);
+            return segmentId & (PageAddress::GROUP_SIZE - 1);
+        }
+    }
+
+    /** @} End of: BufferPool segmenting */
+
+
+    /**
      * @name Allocation maps
      * A GAM page tracks EXTENT_BIT_MAP_SIZE extents (1 bit each); a PFS page tracks PAGE_FREE_SPACE_SIZE
      * pages (1 byte each).

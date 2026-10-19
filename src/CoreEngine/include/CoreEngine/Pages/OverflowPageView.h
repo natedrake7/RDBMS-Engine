@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <CoreEngine/Pages/PageView.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct OverflowPtr{
         page_id_t _pageId;
         page_offset_t _index;

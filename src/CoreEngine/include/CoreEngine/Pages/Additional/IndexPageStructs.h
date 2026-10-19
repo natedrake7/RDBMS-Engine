@@ -10,7 +10,7 @@ namespace CoreEngine::StorageTypes{
     class SerializedRow;
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct IndexPageAdditionalHeader {
 		static constexpr UnsignedTinyInt TREE_TYPE_BIT_POS = 0;
 		static constexpr UnsignedTinyInt IS_LEAF_BIT_POS = 2;
@@ -72,19 +72,19 @@ namespace Pages{
     static_assert(sizeof(IndexPageAdditionalHeader) == CoreEngine::StorageLayout::INDEX_PAGE_ADDITIONAL_HEADER_SIZE);
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
 
     struct IndexInsertTuple{
         DataTypes::Indexing::Key key;
-        CoreEngine::StorageTypes::SerializedRow* payload;
+        StorageTypes::SerializedRow* payload;
 
         IndexInsertTuple();
-        IndexInsertTuple(DataTypes::Indexing::Key& key, CoreEngine::StorageTypes::SerializedRow* payload);
+        IndexInsertTuple(DataTypes::Indexing::Key& key, StorageTypes::SerializedRow* payload);
     };
 
 	struct LeafNodeTuple{
 		DataTypes::Indexing::Key key;
-		CoreEngine::StorageTypes::RID row;
+		StorageTypes::RID row;
 
 		LeafNodeTuple& operator=(LeafNodeTuple&& other) noexcept;
 		LeafNodeTuple(LeafNodeTuple&& other) noexcept;
@@ -92,7 +92,7 @@ namespace Pages{
 		LeafNodeTuple& operator=(const LeafNodeTuple& other) = delete;
 		LeafNodeTuple(const LeafNodeTuple& other) = delete;
 
-		LeafNodeTuple(CoreEngine::StorageTypes::RID row, DataTypes::Indexing::Key& key);
+		LeafNodeTuple(StorageTypes::RID row, DataTypes::Indexing::Key& key);
 	};
 
 	struct RowIdTuple{

@@ -3,7 +3,7 @@
 #include <CoreEngine/Pages/PageView.h>
 #include <CoreEngine/Pages/Additional/LobPageStructs.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     class LobRootView : public PageView{
         [[nodiscard]] LobRootHeader* GetAdditionalHeader() const{
             return reinterpret_cast<LobRootHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);

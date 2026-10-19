@@ -1,13 +1,14 @@
 ﻿#pragma once
 #include <cassert>
 
-#include <CoreEngine/DatabaseConstants.h>
 #include <CoreEngine/BufferPool/StorageLayout.h>
 #include <Systemic/MaterializedRow.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
 #include <CoreEngine/Pages/Additional/RawRowReference.h>
 #include <CoreEngine/Pages/Additional/SlotDirectory.h>
+
+#include <CoreEngine/Pages/PageLayout.h>
 
 namespace Memory{
     class IAllocator;
@@ -22,7 +23,7 @@ namespace MultiThreading{
     class Mutex;
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct Frame;
 
     struct PageHeader{
@@ -33,13 +34,18 @@ namespace Pages{
 
         PageHeader();
 
-        [[nodiscard]] Constants::PageType Type() const;
-        void SetType(Constants::PageType pageType);
+        [[nodiscard]] inline PageLayout::PageType Type() const{
+            return static_cast<PageLayout::PageType>(this->type);
+        }
+
+        inline void SetType(PageLayout::PageType pageType){
+            this->type = static_cast<page_size_t>(pageType);
+        }
 
         // Usable bytes of a page of this type. Read from the header, not the view type: the shared PageView
         // functions (InsertRow, Resize, DistributeFromPage, ...) also run on index pages.
         [[nodiscard]] page_size_t Capacity() const{
-            return static_cast<Constants::PageType>(this->type) == Constants::PageType::INDEXED
+            return static_cast<PageLayout::PageType>(this->type) == PageLayout::PageType::INDEXED
                 ? CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE
                 : CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
         }
@@ -187,7 +193,7 @@ namespace Pages{
 
         [[nodiscard]] bool IsValid()const;
 
-        [[nodiscard]] Constants::PageType GetPageType() const;
+        [[nodiscard]] PageLayout::PageType GetPageType() const;
 
         template<typename T>
         [[nodiscard]] T GetColumnAt(

@@ -7,7 +7,7 @@
 
 #include <CoreEngine/BufferPool/StorageLayout.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     AllocationPageView::AllocationPageView(){
         this->initialOffset = CoreEngine::StorageLayout::PAGE_HEADER_SIZE + sizeof(AllocationPageAdditionalHeader);
     }

@@ -1,11 +1,12 @@
 ﻿#pragma once
 #include <CoreEngine/Pages/PageView.h>
+#include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace CoreEngine::StorageTypes{
     struct ExtentSegment;
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct GlobalAllocationPageAdditionalHeader{
         gam_index_t _gamIndex;
         UnsignedInt _freeExtentCount;

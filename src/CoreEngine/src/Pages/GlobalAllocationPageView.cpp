@@ -4,7 +4,7 @@
 #include <CoreEngine/Pages/Additional/Frame.h>
 #include <CoreEngine/BufferPool/StorageLayout.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     void GlobalAllocationPageView::SetBits(const UnsignedInt startIndex, const UnsignedInt numberOfBits) const{
         for (auto i = startIndex; i < startIndex + numberOfBits; i++)
             this->SetBit(i);

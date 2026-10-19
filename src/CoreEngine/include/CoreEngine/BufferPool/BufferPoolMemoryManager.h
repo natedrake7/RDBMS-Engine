@@ -7,9 +7,9 @@ namespace CoreEngine{
         object_t* _data;
         Pages::Frame* _framesData;
         Pages::FrameId* _freeStack;
-        Int _freeTopId;
+        UnsignedInt _freeTopId;
 
-        Int _capacity;
+        UnsignedInt _capacity;
 
 
         void AllocatePagePool();
@@ -27,7 +27,7 @@ namespace CoreEngine{
 
             void Initialize(UnsignedBigInt size);
 
-            [[nodiscard]] Int Capacity() const{
+            [[nodiscard]] UnsignedInt Capacity() const{
                 return this->_capacity;
             }
 
@@ -41,7 +41,7 @@ namespace CoreEngine{
 
             object_t* CopyToMemory(const char* buffer, UnsignedBigInt offset, page_offset_t bufferOffset) const;
 
-            [[nodiscard]] Pages::Frame* GetFrame(const Int index) const{
+            [[nodiscard]] Pages::Frame* GetFrame(const UnsignedInt index) const{
                 return &this->_framesData[index];
             }
 

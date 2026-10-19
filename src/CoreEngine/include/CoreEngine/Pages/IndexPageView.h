@@ -3,7 +3,7 @@
 #include <CoreEngine/Pages/PageView.h>
 #include <CoreEngine/Pages/Additional/IndexPageStructs.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     class IndexPageView final : public PageView {
             void InsertFirstTuple(const IndexInsertTuple& tuple) const;
             [[nodiscard]] DataTypes::Indexing::Key GetKeyByOffset(SlotDirectory slot) const;

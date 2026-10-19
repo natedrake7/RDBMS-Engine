@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <Systemic/DataTypes/DataTypes.h>
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct RawRowReference{
         object_t* _data;
         Int size;

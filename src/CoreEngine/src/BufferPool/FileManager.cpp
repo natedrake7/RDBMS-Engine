@@ -1,137 +1,47 @@
 ﻿#include <CoreEngine/BufferPool/FileManager.h>
-
 #include <fcntl.h>
-#include <functional>
-
-#include <Systemic/Guards/ReaderGuard.h>
-#include <Systemic/Guards/WriterGuard.h>
-
 #include <filesystem>
-#include <ranges>
+
 #ifdef WIN32
     #include <io.h>
     #define F_OK 0
     #define access _access
-    #define flush _commit
     #define lseek _lseeki64
 #else
     #include <unistd.h>
-    #define flush fdatasync
     #define lseek ::lseek
 #endif
 
 namespace Storage{
-    File::File(const DataTypes::StringView& filename, const file_descriptor_t fd)
-        : _filename(filename), _fd(fd){}
-
-    Int File::Read(const file_descriptor_t fd, void* data, const size_t size, const size_t offSet){
-        lseek(fd, offSet, SEEK_SET);
-        const auto result = ::read(fd, data, size);
-
-        if (result < 0){
-            perror("File::Read: Failed to read from file");
-            throw std::runtime_error("File::Read: Failed to read from file");
-        }
-
-        return result;
-    }
-
-    Int File::Write(const file_descriptor_t fd, const void* data, const size_t size, const size_t offSet){
-        lseek(fd, offSet, SEEK_SET);
-        const auto result = ::write(fd, data, size);
-
-        if (result != size)
-            throw std::runtime_error("File::Write: Failed to write to file");
-
-        return result;
-    }
-
-    void File::Flush(const file_descriptor_t fd){ ::flush(fd); }
-
-    FileManager::FileManager() = default;
-
     FileManager::~FileManager(){
         this->CloseAllFiles();
     }
 
-    void FileManager::CreateFile_(
-        const FileKey key,
-        const DataTypes::StringView& filename,
-        const DataTypes::StringView& extension
+    void FileManager::OpenFile(
+        const buffer_pool_slot_t slotIndex,
+        const DataTypes::StringView& pathView,
+        const FileOpenMode mode,
+        const FileOpenFlags flags
     ){
-        {
-            MultiThreading::ReaderGuard lock(&this->tableMutex);
-            if (this->_fileTable.Contains(key))
-                throw std::runtime_error("File already exists");
-        }
+        auto& entry = this->_table[slotIndex];
+        assert(!entry.IsOpen() && "slot already holds an open file");
 
-        char path[DIRECTORY_SIZE];
-        std::snprintf(
-            path, sizeof(path), "%.*s%.*s",
-            filename.Size(), filename.Data(),
-            extension.Size(), extension.Data()
-        );
+        if (pathView.Size() > File::MAX_PATH_SIZE)
+            throw std::runtime_error("FileManager:Open: path too long");
 
-        if (access(path, F_OK) == 0)
-            throw std::runtime_error("FileManager::CreateFile: File already exists");
+        const auto handle = FileIO::Open(pathView, mode, flags);
 
-        char parentDir[DIRECTORY_SIZE];
-        std::strncpy(parentDir, path, sizeof(parentDir));
-        parentDir[sizeof(parentDir) - 1] = '\0';
-
-        auto* lastSlash = std::strrchr(parentDir, '/');
-        if (lastSlash == nullptr)
-            lastSlash = std::strrchr(parentDir, '\\');
-
-        if (lastSlash){
-            *lastSlash = '\0';
-
-#ifdef _WIN32
-            mkdir(parentDir);
-#else
-            mkdir(parentDir, 0755);
-#endif
-        }
-
-        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
-        if (fd < 0)
-            throw std::runtime_error("FileManager::CreateFile: Database File could not be created");
-
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-
-        if (this->_fileTable.Contains(key))
-            return;
-
-        this->_fileTable.Add(key, File(filename, fd));
+        std::memcpy(entry._path, pathView.Data(), pathView.Size());
+        entry._path[pathView.Size()] = '\0';
+        entry._handle.store(handle, std::memory_order_release);
     }
 
-    void FileManager::OpenFile(const FileKey key, const DataTypes::StringView& filename){
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-
-        if (this->_fileTable.Contains(key))
-            return;
-
-        char path[DIRECTORY_SIZE];
-        std::snprintf(path, sizeof(path), "%.*s", filename.Size(), filename.Data());
-
-        const auto fd = ::open(path, O_RDWR | O_CREAT | O_BINARY, 0644);
-        if (fd < 0)
-            throw std::runtime_error("FileManager::Open: File could not be opened");
-
-        this->_fileTable.Add(key, File(filename, fd));
+    native_file_t FileManager::GetHandle(const buffer_pool_slot_t slotIndex) const{
+        return this->_table[slotIndex]._handle.load(std::memory_order_acquire);
     }
 
-    file_descriptor_t FileManager::GetFile(const FileKey key){
-        MultiThreading::ReaderGuard lock(&this->tableMutex);
-        return this->_fileTable.Get(key)._fd;
-    }
-
-
-    void FileManager::CloseFile(const FileKey key){
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-        const auto* file = &this->_fileTable.Get(key);
-        ::close(file->_fd);
-        this->_fileTable.Remove(key);
+    void FileManager::CloseFile(const buffer_pool_slot_t slotIndex){
+        FileIO::Close(this->_table[slotIndex]._handle.exchange(INVALID_NATIVE_FILE, std::memory_order_acq_rel));
     }
 
     bool FileManager::FileExists(const DataTypes::StringView& fileName){
@@ -147,8 +57,7 @@ namespace Storage{
     }
 
     void FileManager::CloseAllFiles(){
-        MultiThreading::WriterGuard lock(&this->tableMutex);
-        for(const auto& file : this->_fileTable | std::views::values)
-            ::close(file._fd);
+        for (Int i = 0;i < CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS;i++)
+            this->CloseFile(i);
     }
 };

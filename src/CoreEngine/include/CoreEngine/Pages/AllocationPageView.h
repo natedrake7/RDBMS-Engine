@@ -11,7 +11,7 @@ namespace DataStructures{
     class PolymorphicArray<extent_id_t>;
 }
 
-namespace Pages{
+namespace CoreEngine::Pages{
     struct AllocationPageAdditionalHeader {
         gam_index_t _gamIndex;
         extent_id_t _lastAllocatedExtentId;

@@ -11,6 +11,7 @@
 #include <CoreEngine/Pages/PageFreeSpaceView.h>
 #include <CoreEngine/BufferPool/FileKey.h>
 
+#include "Accessors/PageAccessor.h"
 #include "Systemic/DataStructures/SortedDirectory.h"
 
 namespace Memory{
@@ -75,13 +76,10 @@ class Database final{
 
     DataTypes::StringView _lowerName;
 
-    // DataStructures::PolymorphicArray<StorageTypes::Table*> _tables;
-
     MultiThreading::Mutex _directoryMutex;
     MultiThreading::Mutex _ddlMutex;
     DataStructures::SortedDirectory<std::string_view, Directory::SchemaEntry> _schemas;
     DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry> _tables;
-
 
     DatabaseHeader header;
 
@@ -219,7 +217,7 @@ public:
     }
 };
 
-void CreateDatabase(
+Accessors::PageAccessor CreateDatabase(
     const ::Memory::IAllocator* allocator,
     Int databaseId,
     const DataTypes::StringView& dbName

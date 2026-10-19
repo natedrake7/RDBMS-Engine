@@ -8,7 +8,7 @@
 #include <Systemic/DataTypes/DataTypes.Traits.h>
 #include <Systemic/Reflection/Enum.h>
 
-typedef uint8_t buffer_pool_index_t;
+typedef uint8_t buffer_pool_slot_t;
 typedef uint16_t schema_version_t;
 typedef uint32_t data_size_t;
 
@@ -31,8 +31,6 @@ typedef int8_t TinyInt;
 typedef int16_t SmallInt;
 typedef int32_t Int;
 typedef int64_t BigInt;
-
-typedef Int file_descriptor_t;
 
 typedef uint8_t byte_t;
 
