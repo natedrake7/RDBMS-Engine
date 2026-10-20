@@ -44,6 +44,12 @@ namespace Storage{
 
         void Close(native_file_t file);
 
+        [[nodiscard]] UnsignedBigInt ReadScatter(
+            native_file_t file,
+            std::span<object_t* const> pages,
+            UnsignedBigInt offset
+        );
+
         [[nodiscard]] UnsignedBigInt Read(
             native_file_t file,
             void* data,

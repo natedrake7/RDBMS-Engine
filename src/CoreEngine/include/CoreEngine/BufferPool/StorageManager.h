@@ -53,18 +53,17 @@ namespace Storage {
         mutable MultiThreading::Mutex _stackMutex; //protects dbStack
         const CoreEngine::Memory::PersistentAllocator _allocator;
 
-        UnsignedInt _clockHand;
+        std::atomic<UnsignedInt> _clockHand;
 
         explicit StorageManager();
 
         void EvictPageNoLock();
 
-        void FlushFrameToDiskNoLock(CoreEngine::Pages::Frame* framePtr) const;
+        void FlushFrameToDiskNoLock(CoreEngine::Pages::Frame* frame) const;
 
         [[nodiscard]]CoreEngine::Pages::Frame* OpenExtentNoLock(
             buffer_pool_slot_t slotIndex,
-            page_id_t pageId,
-            extent_id_t extentId
+            page_id_t pageId
         );
 
         [[nodiscard]]CoreEngine::Pages::Frame* CreateFrame(
@@ -72,6 +71,11 @@ namespace Storage {
             page_id_t pageId,
             CoreEngine::PageLayout::PageType type
         );
+
+        [[nodiscard]]CoreEngine::Pages::Frame* PinIfHolds(
+            CoreEngine::StorageLayout::frame_id_t frameId,
+            CoreEngine::StorageLayout::frame_identity_t frameIdentity
+        ) const;
 
         Segment* GetSegmentNoLock(buffer_pool_slot_t slotIndex, page_id_t pageId) const;
 

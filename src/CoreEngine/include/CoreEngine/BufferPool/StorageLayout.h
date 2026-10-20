@@ -66,6 +66,11 @@ namespace CoreEngine::StorageLayout{
         }
     }
 
+    static_assert(
+        PageAddress::SEGMENT_SIZE % CoreEngine::StorageLayout::EXTENT_SIZE == 0,
+        "an extent never straddles two segments"
+    );
+
     /** @} End of: BufferPool segmenting */
 
 

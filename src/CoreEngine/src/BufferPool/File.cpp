@@ -3,9 +3,19 @@
 #include <Systemic/DataTypes/StringView.h>
 #include <winsock2.h>
 
+#include "CoreEngine/BufferPool/StorageLayout.h"
+#include "Systemic/Functions/MathFunctions.h"
+
 namespace Storage::FileIO{
 #ifdef _WIN32
     namespace{
+        inline constexpr DWORD WINDOWS_MEMORY_PAGE = 4096;
+
+        static_assert(
+            CoreEngine::StorageLayout::PAGE_SIZE % WINDOWS_MEMORY_PAGE == 0,
+            "PageSize modulo windows memory page must be 0 for read scatter to work"
+        );
+
         OVERLAPPED AtOffset(const UnsignedBigInt offset){
             OVERLAPPED overlapped{};
             overlapped.Offset = static_cast<DWORD>(offset);
@@ -16,6 +26,59 @@ namespace Storage::FileIO{
         [[noreturn]] void ThrowLastError(const char* what){
             throw std::system_error(static_cast<Int>(GetLastError()), std::system_category(), what);
         }
+
+        struct ThreadIOEvent{
+            HANDLE _event;
+            ThreadIOEvent()
+                : _event(CreateEventW(nullptr, TRUE, FALSE, nullptr)){}
+            ~ThreadIOEvent(){
+                if (this->_event != nullptr)
+                    CloseHandle(this->_event);
+            }
+
+            [[nodiscard]] inline bool HasEvent() const{
+                return this->_event != nullptr;
+            }
+        };
+
+       [[nodiscard]] inline HANDLE ThreadEvent(){
+            thread_local ThreadIOEvent event;
+            if (!event.HasEvent())
+                ThrowLastError("ThreadEvent");
+            return event._event;
+        }
+
+        [[nodiscard]] inline OVERLAPPED OverlappedAt(const UnsignedBigInt offset){
+            return {
+                .Offset = static_cast<DWORD>(offset),
+                .OffsetHigh = static_cast<DWORD>(offset >> 32),
+                .hEvent = ThreadEvent()
+            };
+        }
+
+        [[nodiscard]] DWORD FinishIO(
+            const HANDLE handle,
+            const BOOL started,
+            OVERLAPPED& overlapped,
+            const char* what
+        ){
+            if (!started){
+                const auto error = GetLastError();
+                if (error == ERROR_HANDLE_EOF)
+                    return 0;
+                if (error != ERROR_IO_PENDING)
+                    ThrowLastError(what);
+            }
+
+           DWORD transferred = 0;
+           if (!GetOverlappedResult(handle, &overlapped, &transferred, TRUE)){
+                if (GetLastError() == ERROR_HANDLE_EOF)
+                    return transferred;
+               ThrowLastError(what);
+           }
+
+           return transferred;
+       }
     }
 #else
 
@@ -38,10 +101,10 @@ namespace Storage::FileIO{
         DWORD access;
         switch (mode){
         case FileOpenMode::OpenExisting:
-            access = CREATE_NEW;
+            access = OPEN_EXISTING;
             break;
         case FileOpenMode::CreateNew:
-            access = OPEN_EXISTING;
+            access = CREATE_NEW;
             break;
         case FileOpenMode::OpenOrCreate:
             access = OPEN_ALWAYS;
@@ -106,6 +169,75 @@ namespace Storage::FileIO{
 #endif
     }
 
+    UnsignedBigInt ReadScatter(
+        const native_file_t file,
+        const std::span<object_t* const> pages,
+        const UnsignedBigInt offset
+    ){
+        assert(!pages.empty() && pages.size() <= CoreEngine::StorageLayout::EXTENT_SIZE);
+#ifdef _WIN32
+        constexpr auto ENTRIES_PER_PAGE = CoreEngine::StorageLayout::PAGE_SIZE / WINDOWS_MEMORY_PAGE;
+
+        FILE_SEGMENT_ELEMENT segments[CoreEngine::StorageLayout::EXTENT_SIZE * ENTRIES_PER_PAGE + 1] = {};
+
+        UnsignedBigInt counter = 0;
+        for (auto* page: pages){
+            assert(reinterpret_cast<std::uintptr_t>(page) % WINDOWS_MEMORY_PAGE == 0);
+            for (auto part = 0; part < ENTRIES_PER_PAGE; part++){
+                auto* segment = segments + counter;
+                segment->Buffer = PtrToPtr64(page + part * WINDOWS_MEMORY_PAGE);
+                counter++;
+            }
+        }
+
+        auto overlapped = OverlappedAt(offset);
+        const auto started = ReadFileScatter(
+            file,
+            segments,
+            pages.size() * CoreEngine::StorageLayout::PAGE_SIZE,
+            nullptr,
+            &overlapped
+        );
+
+        const auto bytes = FinishIO(file, started, overlapped, "FileIO:ReadScatter");
+        return bytes / CoreEngine::StorageLayout::PAGE_SIZE;
+#else
+        iovec vectors[EXTENT_SIZE];
+        for (size_t i = 0; i < pages.size(); ++i)
+            vectors[i] = iovec{
+            pages[i],
+            PAGE_SIZE
+        };
+
+        const auto total = static_cast<UnsignedBigInt>(pages.size()) * PAGE_SIZE;
+        UnsignedBigInt done = 0;
+        while (done < total){
+            // A short read can stop mid-buffer: continue from the first unfilled buffer
+            const auto first = static_cast<size_t>(done / PAGE_SIZE);
+            const auto skip  = static_cast<size_t>(done % PAGE_SIZE);
+            vectors[first].iov_base = static_cast<char*>(pages[first]) + skip;
+            vectors[first].iov_len  = PAGE_SIZE - skip;
+
+            const auto n = ::preadv(
+                file,
+                vectors + first,
+                static_cast<Int>(pages.size() - first),
+                static_cast<off_t>(offset + done)
+            );
+
+            if (n < 0){
+                if (errno == EINTR)
+                    continue;
+                ThrowErrno("FileIO::ReadScatter");
+            }
+            if (n == 0)
+                break;                                     // end of file
+            done += static_cast<UnsignedBigInt>(n);
+        }
+        return static_cast<UnsignedInt>(done / PAGE_SIZE);
+#endif
+    }
+
     UnsignedBigInt Read(
         native_file_t file,
         void* data,
@@ -117,15 +249,10 @@ namespace Storage::FileIO{
 
         while (done < size){
 #ifdef _WIN32
-            auto overlapped = AtOffset(offset + done);
-            const auto chunk = static_cast<DWORD>(std::min<UnsignedBigInt>(size - done, MAXDWORD));
-            DWORD transferred = 0;
-
-            if (!ReadFile(file, bytes + done, chunk, &transferred, &overlapped)){
-                if (GetLastError() == ERROR_HANDLE_EOF)
-                    break;
-                ThrowLastError("FileIO::Read");
-            }
+            auto overlapped = OverlappedAt(offset+ done);
+            const auto chunk = static_cast<DWORD>(Math::Min<UnsignedBigInt>(size - done, MAXDWORD));
+            const auto started = ReadFile(file, bytes + done, chunk, nullptr, &overlapped);
+            const auto transferred = FinishIO(file, started, overlapped, "FileIO:Read");
 #else
             const auto transferred = ::pread(file, bytes + done, size - done, static_cast<off_t>(offset + done));
             if (transferred < 0){
@@ -155,11 +282,9 @@ namespace Storage::FileIO{
         while (done < size){
 #ifdef _WIN32
             auto overlapped = AtOffset(offset + done);
-            const auto chunk = static_cast<DWORD>(std::min<UnsignedBigInt>(size - done, MAXDWORD));
-            DWORD transferred = 0;
-
-            if (!WriteFile(file, bytes + done, chunk, &transferred, &overlapped))
-                ThrowLastError("FileIO::Write");
+            const auto chunk = static_cast<DWORD>(Math::Min<UnsignedBigInt>(size - done, MAXDWORD));
+            const auto started = WriteFile(file, bytes + done, chunk, nullptr, &overlapped);
+            const auto transferred = FinishIO(file, started, overlapped, "FileIO:Write");
 #else
             const auto transferred = ::pwrite(file, bytes + done, size - done, static_cast<off_t>(offset + done));
             if (transferred < 0){
