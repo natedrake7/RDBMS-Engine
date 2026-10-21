@@ -3,8 +3,21 @@
 #include <Systemic/DataTypes/StringView.h>
 #include <winsock2.h>
 
-#include "CoreEngine/BufferPool/StorageLayout.h"
-#include "Systemic/Functions/MathFunctions.h"
+#include <CoreEngine/BufferPool/StorageLayout.h>
+#include <Systemic/Functions/MathFunctions.h>
+
+#ifdef _WIN32
+    #define WIN32_LEAN_AND_MEAN
+    #define NOMINMAX
+    #define byte win_byte_override
+    #include <windows.h>
+    #undef byte
+#else
+    #include <cerrno>
+    #include <fcntl.h>
+    #include <sys/uio.h>
+    #include <unistd.h>
+#endif
 
 namespace Storage::FileIO{
 #ifdef _WIN32

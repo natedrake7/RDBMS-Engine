@@ -6,7 +6,7 @@ namespace CoreEngine{
     class BufferPoolMemoryManager{
         object_t* _data;
         Pages::Frame* _framesData;
-        Pages::FrameId* _freeStack;
+        StorageLayout::frame_id_t* _freeStack;
         UnsignedInt _freeTopId;
 
         UnsignedInt _capacity;
@@ -45,8 +45,8 @@ namespace CoreEngine{
                 return &this->_framesData[index];
             }
 
-            [[nodiscard]] bool PopStackNoLock(Pages::FrameId& frameId);
-            void PushStackNoLock(Pages::FrameId frameId);
+            [[nodiscard]] bool PopStackNoLock(StorageLayout::frame_id_t& frameId);
+            void PushStackNoLock(StorageLayout::frame_id_t frameId);
     };
 
 }

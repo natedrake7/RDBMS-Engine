@@ -31,7 +31,7 @@ namespace CoreEngine{
 
     void BufferPoolMemoryManager::AllocateFreeStack(){
 #ifdef _WIN32
-        this->_freeStack =  static_cast<Pages::FrameId*>(_aligned_malloc(this->_capacity * sizeof(Pages::FrameId),alignof(Pages::FrameId)));
+        this->_freeStack =  static_cast<StorageLayout::frame_id_t*>(_aligned_malloc(this->_capacity * sizeof(StorageLayout::frame_id_t),alignof(StorageLayout::frame_id_t)));
 #else
         this->_freeStack = static_cast<Storage::FrameId*>(std::aligned_alloc(alignof(Storage::FrameId), this->_capacity * sizeof(Storage::FrameId)));
 #endif
@@ -48,9 +48,11 @@ namespace CoreEngine{
 #ifdef _WIN32
         _aligned_free(this->_data);
         _aligned_free(this->_framesData);
+        _aligned_free(this->_freeStack);
 #else
         std::free(this->_data);
         std::free(this->_framesData);
+        std::free(this->_freeStack);
 #endif
     }
 
@@ -68,14 +70,14 @@ namespace CoreEngine{
         return destination;
     }
 
-    bool BufferPoolMemoryManager::PopStackNoLock(Pages::FrameId& frameId){
+    bool BufferPoolMemoryManager::PopStackNoLock(StorageLayout::frame_id_t& frameId){
         if (this->_freeTopId == 0)
             return false;
         frameId = this->_freeStack[--this->_freeTopId];
         return true;
     }
 
-    void BufferPoolMemoryManager::PushStackNoLock(const Pages::FrameId frameId){
+    void BufferPoolMemoryManager::PushStackNoLock(const StorageLayout::frame_id_t frameId){
         this->_freeStack[this->_freeTopId++] = frameId;
     }
 }

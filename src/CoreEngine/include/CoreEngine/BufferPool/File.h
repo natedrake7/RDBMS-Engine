@@ -4,10 +4,8 @@
 #include <Systemic/DataTypes/DataTypes.h>
 
 #ifdef _WIN32
-    #include <handleapi.h>
-    #include <winnt.h>
-    using native_file_t = HANDLE;
-    inline const native_file_t INVALID_NATIVE_FILE = INVALID_HANDLE_VALUE;
+    using native_file_t = void*;    // HANDLE
+    inline const auto INVALID_NATIVE_FILE = reinterpret_cast<native_file_t>(static_cast<std::intptr_t>(-1));
 #else
     using native_file_t = int;
     inline constexpr native_file_t INVALID_NATIVE_FILE = -1;

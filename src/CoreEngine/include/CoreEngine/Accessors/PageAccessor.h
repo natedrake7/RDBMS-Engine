@@ -9,8 +9,10 @@ namespace CoreEngine::Accessors{
         buffer_pool_slot_t _dataSlot;
         buffer_pool_slot_t _systemSlot;
 
-        friend class StorageManager;                          // the only place that can mint one
+        friend class Storage::StorageManager;
 
+        explicit PageAccessor(const buffer_pool_slot_t dataSlot, const buffer_pool_slot_t systemSlot)
+            : _dataSlot(dataSlot), _systemSlot(systemSlot){}
 
         template<typename TView>
         [[nodiscard]] inline TView Get(page_id_t pageId){

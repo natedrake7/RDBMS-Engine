@@ -8,16 +8,11 @@
 #include <CoreEngine/Pages/HeaderPageView.h>
 #include <CoreEngine/Pages/PageFreeSpaceView.h>
 
-#include <CoreEngine/Accessors/PageAccessor.h>
 #include <CoreEngine/Pages/PageLayout.h>
 
-namespace CoreEngine {
-    class Database;
-
-  namespace StorageTypes {
-    class Table;
-  }
-} // namespace DatabaseEngine
+namespace CoreEngine::Accessors{
+    struct PageAccessor;
+}
 
 namespace Storage {
     struct Segment{
@@ -44,7 +39,7 @@ namespace Storage {
     class StorageManager final{
         FileDirectory _pageTable[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
         UnsignedTinyInt _freeDbStack[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
-        UnsignedTinyInt _freeTopDbStack;
+        UnsignedSmallInt _freeTopDbStack;
 
         FileManager _fileManager;
         CoreEngine::BufferPoolMemoryManager _memoryManager;
@@ -86,7 +81,7 @@ namespace Storage {
             page_id_t pageId
         );
 
-        CoreEngine::StorageLayout::frame_id_t AcquireFrameId();
+        CoreEngine::StorageLayout::frame_id_t AcquireFrameIdNoLock();
 
        CoreEngine::Pages::Frame* GetFrame(
             buffer_pool_slot_t slotIndex,
@@ -97,6 +92,7 @@ namespace Storage {
 
     public:
         static StorageManager& Get();
+
         ~StorageManager();
 
         void Initialize(UnsignedBigInt size);

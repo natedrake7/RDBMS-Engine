@@ -18,7 +18,7 @@ namespace Storage{
         inline static constexpr Int DIRECTORY_SIZE = 512;
 
         public:
-            FileManager() = delete;
+            FileManager() = default;
 
             FileManager(const FileManager& other) = delete;
             FileManager& operator=(const FileManager& other) = delete;

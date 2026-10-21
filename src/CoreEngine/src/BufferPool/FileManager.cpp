@@ -1,16 +1,5 @@
 ﻿#include <CoreEngine/BufferPool/FileManager.h>
-#include <fcntl.h>
 #include <filesystem>
-
-#ifdef WIN32
-    #include <io.h>
-    #define F_OK 0
-    #define access _access
-    #define lseek _lseeki64
-#else
-    #include <unistd.h>
-    #define lseek ::lseek
-#endif
 
 namespace Storage{
     FileManager::~FileManager(){
@@ -26,7 +15,7 @@ namespace Storage{
         auto& entry = this->_table[slotIndex];
         assert(!entry.IsOpen() && "slot already holds an open file");
 
-        if (pathView.Size() > File::MAX_PATH_SIZE)
+        if (pathView.Size() >= File::MAX_PATH_SIZE)
             throw std::runtime_error("FileManager:Open: path too long");
 
         const auto handle = FileIO::Open(pathView, mode, flags);
