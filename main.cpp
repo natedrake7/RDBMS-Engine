@@ -245,6 +245,9 @@ void ExecuteQuery(const std::string& query, const session_id_t sessionId) {
         CoreEngine::GlobalMemoryManager::Get().Log<::Memory::MemoryLogLevel::MegaBytes>(std::cout);
     }
 
+    if (queryContext.status.hasError)
+        std::cerr << "Error: " << queryContext.status.message << std::endl;
+
     queryContext.Release();
 
     const auto end = std::chrono::high_resolution_clock::now();

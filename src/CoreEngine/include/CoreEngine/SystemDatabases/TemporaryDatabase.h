@@ -3,6 +3,9 @@
 #include <Systemic/Coercions/Coercions.h>
 #include <Systemic/DataTypes/DataTypes.h>
 
+#include "CoreEngine/Database.h"
+#include "CoreEngine/Accessors/PageAccessor.h"
+
 namespace CoreEngine {
     namespace StorageTypes{
         class Table;
@@ -37,5 +40,9 @@ namespace CoreEngine {
             [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;
 
             void Shutdown();
+
+            [[nodiscard]] Accessors::PageAccessor GetPageAccessor()const{
+                return this->_db->GetPageAccessor();
+            }
     };
 }

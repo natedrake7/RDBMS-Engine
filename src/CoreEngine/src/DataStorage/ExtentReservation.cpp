@@ -1,28 +1,35 @@
 ﻿#include <CoreEngine/DataStorage/ExtentReservation.h>
 
 #include <CoreEngine/Database.h>
-#include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Pages/IndexPageView.h>
 #include <Systemic/Guards/WriterGuard.h>
+
+#include "CoreEngine/Pages/OverflowPageView.h"
+#include "CoreEngine/Pages/LargeObjects/LobDataView.h"
+#include "CoreEngine/Pages/LargeObjects/LobIndexView.h"
+#include "CoreEngine/Pages/LargeObjects/LobRootView.h"
 
 namespace CoreEngine::StorageTypes{
     ExtentReservation::ExtentReservation()
         :   _segments(), _db(nullptr), _table(nullptr),
-            _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
+            _segmentIndex(0), _segmentOffset(0), _extentIndex(0),
+            _pageAccessor(){}
 
     ExtentReservation::ExtentReservation(
         const ::Memory::IAllocator* allocator,
         Database* db,
         const Table* table
-    )   : _segments(allocator), _db(db), _table(table),
-          _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
+    )   :   _segments(allocator), _db(db), _table(table),
+            _segmentIndex(0), _segmentOffset(0), _extentIndex(0),
+            _pageAccessor(db->GetPageAccessor()){}
 
     ExtentReservation::ExtentReservation(
         DataStructures::PolymorphicArray<ExtentSegment>& segments,
         Database* db,
         const Table* table
     ):   _segments(std::move(segments)), _db(db), _table(table),
-        _segmentIndex(0), _segmentOffset(0), _extentIndex(0){}
+        _segmentIndex(0), _segmentOffset(0), _extentIndex(0),
+        _pageAccessor(db->GetPageAccessor()){}
 
     template <typename TView>
     TView ExtentReservation::Next(){
@@ -31,14 +38,6 @@ namespace CoreEngine::StorageTypes{
                 this->_segments.GetAllocator(),
                 this->_table
             );
-            // const auto subReserve = this->_db->ReserveExtents(
-            //     this->_segments.GetAllocator(),
-            //     StorageLayout::EXTENT_SIZE,
-            //     this->_tableOrdinalPos
-            // );
-            //
-            // for (const auto& segment: subReserve._segments)
-            //     this->_segments.Push(segment);
         }
 
         const auto& [_firstExtentId, _count] = this->_segments[this->_segmentIndex];
@@ -55,10 +54,10 @@ namespace CoreEngine::StorageTypes{
             this->_segmentOffset = 0;
         }
 
-        auto page = Storage::StorageManager::Get().CreatePage<TView>(this->_db->DataFileKey(), pageId);
+        auto page = this->_pageAccessor.CreatePage<TView>(pageId);
 
         {
-            const auto pfs = Database::GetAssociatedPfsPage(this->_db->SystemFileKey(), pageId);
+            const auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
             MultiThreading::WriterGuard lock(&pfs.Latch());
             pfs.SetPageMetaData(&page);
         }
@@ -75,8 +74,9 @@ namespace CoreEngine::StorageTypes{
     template Pages::LobDataView ExtentReservation::Next<Pages::LobDataView>();
 
     ExtentReservation::ExtentReservation(ExtentReservation&& other) noexcept
-        : _segments(std::move(other._segments)), _db(other._db), _table(other._table),
-          _segmentIndex(other._segmentIndex), _segmentOffset(other._segmentOffset), _extentIndex(other._extentIndex){}
+        :   _segments(std::move(other._segments)), _db(other._db), _table(other._table),
+            _segmentIndex(other._segmentIndex), _segmentOffset(other._segmentOffset),
+            _extentIndex(other._extentIndex), _pageAccessor(other._pageAccessor){}
 
     ExtentReservation& ExtentReservation::operator=(ExtentReservation&& other) noexcept{
         if (this == &other)
@@ -88,6 +88,7 @@ namespace CoreEngine::StorageTypes{
         this->_segmentOffset = other._segmentOffset;
         this->_extentIndex = other._extentIndex;
         this->_table = other._table;
+        this->_pageAccessor = other._pageAccessor;
 
         other._db = nullptr;
         other._segments.Clear();

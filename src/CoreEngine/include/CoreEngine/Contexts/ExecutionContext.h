@@ -9,6 +9,8 @@
 #include <CoreEngine/BufferPool/FileKey.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 
+#include "CoreEngine/Accessors/PageAccessor.h"
+
 class BoundVariable;
 
 namespace DataTypes{
@@ -77,7 +79,6 @@ namespace CoreEngine {
 
     struct ExecutionSchema{
         const StorageTypes::Table* tables[Constants::MAX_QUERY_JOINS];
-        Storage::FileKey fileKeys[Constants::MAX_QUERY_JOINS];
         UnsignedInt tableCount;
 
         ExecutionSchema()
@@ -135,13 +136,8 @@ namespace CoreEngine {
 
             void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
             const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;
-            DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> GetFileKeys(UnsignedSmallInt index) const;
-            Storage::FileKey GetFileKey(UnsignedSmallInt slotIndex, UnsignedSmallInt index) const;
 
-            void SetFileKey(
-                Storage::FileKey fileKey,
-                UnsignedSmallInt slotIndex
-            );
+            [[nodiscard]] Accessors::PageAccessor GetPageAccessor(UnsignedSmallInt slotIndex)const;
 
             void SetScanHandle(const StorageTypes::RID* rids, UnsignedInt size, UnsignedSmallInt slotIndex);
             const ScanHandle& GetScanHandle(UnsignedInt index) const;

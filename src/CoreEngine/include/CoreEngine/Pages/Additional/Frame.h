@@ -163,5 +163,9 @@ namespace CoreEngine::Pages{
         [[nodiscard]] bool PriorityEquals(const PageLayout::PagePriority priority) const{
             return this->_priority.load(std::memory_order_relaxed) == priority;
         }
+
+        [[nodiscard]] PageLayout::PagePriority Priority() const{
+            return this->_priority.load(std::memory_order_relaxed);
+        }
     };
 }

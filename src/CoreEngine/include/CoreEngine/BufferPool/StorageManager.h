@@ -61,10 +61,9 @@ namespace Storage {
             page_id_t pageId
         );
 
-        [[nodiscard]]CoreEngine::Pages::Frame* CreateFrame(
+        [[nodiscard]]CoreEngine::Pages::Frame* BeginCreateFrame(
             buffer_pool_slot_t slotIndex,
-            page_id_t pageId,
-            CoreEngine::PageLayout::PageType type
+            page_id_t pageId
         );
 
         [[nodiscard]]CoreEngine::Pages::Frame* PinIfHolds(
@@ -93,13 +92,11 @@ namespace Storage {
     public:
         static StorageManager& Get();
 
-        ~StorageManager();
-
         void Initialize(UnsignedBigInt size);
 
         CoreEngine::Accessors::PageAccessor ReserveDbPageTables();
 
-        void FreeDbPageTable(SmallInt index);
+        void FreeDbPageTable(CoreEngine::Accessors::PageAccessor accessor);
 
         void OpenFile(
             buffer_pool_slot_t slotIndex,
@@ -111,19 +108,11 @@ namespace Storage {
 
         void FlushAll() const;
 
-       CoreEngine::Pages::HeaderPageView CreateHeaderPage(buffer_pool_slot_t slotIndex);
-       CoreEngine::Pages::GlobalAllocationPageView CreateGlobalAllocationMapPage(buffer_pool_slot_t slotIndex, gam_index_t gamIndex);
-       CoreEngine::Pages::AllocationPageView CreateAllocationPage(
-            buffer_pool_slot_t slotIndex,
-            page_id_t pageId,
-            page_id_t gamPageId
-        );
-       CoreEngine::Pages::PageFreeSpaceView CreatePageFreeSpacePage(buffer_pool_slot_t slotIndex, page_id_t pageId);
-
-        template<typename TView>
+        template<typename TView, typename... Args>
         TView CreatePage(
             buffer_pool_slot_t slotIndex,
-            page_id_t pageId
+            page_id_t pageId,
+            Args&&... args
         );
         template<typename TView>
         TView GetPage(

@@ -4,19 +4,18 @@
 #include <CoreEngine/Vectorization/Vectorization.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/BufferPool/StorageManager.h>
-#include <CoreEngine/Database.h>
+#include "CoreEngine/SystemDatabases/TemporaryDatabase.h"
+#include "CoreEngine/SystemDatabases/VersionDatabase.h"
 
 namespace CoreEngine::StorageTypes{
     template <typename T>
     void Table::MaterializeColumnFromPage(
-        const Storage::FileKey* fileKeys,
+        const Accessors::PageAccessor* pageAccessors,
         const ::Memory::IAllocator* allocator,
         const DataStructures::PolymorphicArray<RID>& rids,
         DataVector* __restrict__ _vector,
         const column_index_t ordinalPosition
     ){
-        static auto& storageManager = Storage::StorageManager::Get();
-
         auto* __restrict__ output = reinterpret_cast<T*>(_vector->_data);
         const auto* __restrict__ ridsData = rids.Data();
         bool outNull = false;
@@ -26,10 +25,7 @@ namespace CoreEngine::StorageTypes{
 
         const auto lazyFetchPage = [&](const page_id_t pageId, const RID::Source source){
             if (pageId != cachedPageIds[source]){
-                cachedPages[source] = storageManager.GetPage<Pages::PageView>(
-                    fileKeys[source],
-                    pageId
-                );
+                cachedPages[source] = pageAccessors[std::to_underlying(source)].GetPage<Pages::PageView>(pageId);
                 cachedPageIds[source] = pageId;
             }
         };
@@ -51,10 +47,9 @@ namespace CoreEngine::StorageTypes{
         const UnsignedSmallInt slotIndex,
         const column_index_t ordinalPosition
     ){
-        static auto& storageManager = Storage::StorageManager::Get();
         const auto isIdentity = sv->isIdentity;
 
-        auto* __restrict__ output = reinterpret_cast<T*>(_vector->_data);
+        auto* __restrict__ output = _vector->DataAs<T>();
 
         const auto* allocator = context.GetAllocator();
         const auto* rids = context.GetRIDs(slotIndex);
@@ -62,14 +57,15 @@ namespace CoreEngine::StorageTypes{
         page_id_t cachedPageIds[RID::Source::Count] = {};
         Pages::PageView cachedPages[RID::Source::Count];
 
-        const auto fileKeys = context.GetFileKeys(slotIndex);
+        const Accessors::PageAccessor accessors[RID::Source::Count] = {
+            context.GetPageAccessor(slotIndex),
+            VersionDatabase::Get().GetPageAccessor(),// RID::Version
+            TemporaryDatabase::Get().GetPageAccessor()// RID::TemporaryDb
+        };
 
         const auto lazyFetchPage = [&](const page_id_t pageId, const RID::Source source){
             if (pageId != cachedPageIds[source]){
-                cachedPages[source] = storageManager.GetPage<Pages::PageView>(
-                    fileKeys[source],
-                    pageId
-                );
+                cachedPages[source] = accessors[std::to_underlying(source)].GetPage<Pages::PageView>(pageId);
                 cachedPageIds[source] = pageId;
             }
         };
@@ -98,16 +94,16 @@ namespace CoreEngine::StorageTypes{
         }
     }
 
-    template void Table::MaterializeColumnFromPage<bool>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<TinyInt>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<SmallInt>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<Int>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<BigInt>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<DataTypes::DateTime>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<DataTypes::Guid>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<DataTypes::StringValue>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<DataTypes::Decimal>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
-    template void Table::MaterializeColumnFromPage<DataTypes::JsonBinary>(const Storage::FileKey*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<bool>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<TinyInt>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<SmallInt>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<Int>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<BigInt>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<DataTypes::DateTime>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<DataTypes::Guid>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<DataTypes::StringValue>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<DataTypes::Decimal>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
+    template void Table::MaterializeColumnFromPage<DataTypes::JsonBinary>(const Accessors::PageAccessor*, const ::Memory::IAllocator*, const DataStructures::PolymorphicArray<RID>&, DataVector* __restrict__, column_index_t);
 
     template void Table::MaterializeColumn<bool> (const ExecutionContext&, const SelectionVector*, DataVector* __restrict__, UnsignedSmallInt, column_index_t);
     template void Table::MaterializeColumn<TinyInt> (const ExecutionContext&, const SelectionVector*, DataVector* __restrict__, UnsignedSmallInt, column_index_t);

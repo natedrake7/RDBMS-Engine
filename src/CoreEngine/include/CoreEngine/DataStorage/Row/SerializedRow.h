@@ -14,11 +14,11 @@ namespace Expressions
 }
 
 namespace CoreEngine{
-    class ExecutionContext;
-}
+    namespace Pages{
+        struct RawRowReference;
+    }
 
-namespace Pages{
-    struct RawRowReference;
+    class ExecutionContext;
 }
 
 namespace CoreEngine::StorageTypes{

@@ -17,7 +17,7 @@ namespace CoreEngine::Pages{
         additionalHeader->_level = LobLayout::LevelFor(totalLength);
         additionalHeader->_flags = 0;
 
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     void LobRootView::WriteInline(
@@ -28,7 +28,7 @@ namespace CoreEngine::Pages{
         assert(this->Level() == 0 && offset + size <= LobLayout::INLINE_CAPACITY);
 
         std::memcpy(this->Payload() + offset, data, size);
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     page_id_t LobRootView::Child(const UnsignedInt slot) const{
@@ -45,7 +45,7 @@ namespace CoreEngine::Pages{
         assert(header->_level > 0 && header->_childCount < LobLayout::ROOT_FANOUT);
         std::memcpy(this->Payload() + header->_childCount * sizeof(page_id_t), &child, sizeof(page_id_t));
         header->_childCount++;
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     void LobRootView::BulkAppendChildren(const page_id_t* children, const UnsignedInt count) const{
@@ -57,7 +57,7 @@ namespace CoreEngine::Pages{
         assert(header->_level > 0 && header->_childCount + count <= LobLayout::ROOT_FANOUT);
         std::memcpy(this->Payload() + header->_childCount * sizeof(page_id_t), children, count * sizeof(page_id_t));
         header->_childCount += count;
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     bool LobRootView::IsConsistent() const{

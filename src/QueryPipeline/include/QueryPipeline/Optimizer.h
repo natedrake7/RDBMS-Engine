@@ -8,6 +8,8 @@
 #include <Systemic/DataStructures/HashSet.h>
 #include <CoreEngine/SystemDatabases/CatalogHeaders.h>
 
+#include "Systemic/DataStructures/Dictionary.h"
+
 namespace QueryPipeline::Statements {
     struct JoinStatement;
     struct SelectStatement;

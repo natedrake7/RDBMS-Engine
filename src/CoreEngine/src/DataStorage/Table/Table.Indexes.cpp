@@ -10,13 +10,6 @@
 #include <CoreEngine/Memory/PersistentAllocator.h>
 
 namespace CoreEngine::StorageTypes {
-    Pages::IndexPageView Table::GetIndexFromDisk(const page_id_t indexPageId) const{
-        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-            this->_db->DataFileKey(),
-            indexPageId
-        );
-    }
-
     Errors::RuntimeStatus Table::ClusteredIndexInsert(
         const ExecutionContext& executionContext,
         ExtentReservation& extentReservation,
@@ -95,10 +88,6 @@ namespace CoreEngine::StorageTypes {
         this->InsertExistingRowToNonClusteredIndexByHeap(indexPos, pagesToAllocate);
         return Errors::RuntimeStatus();
     }
-
-    Storage::FileKey Table::GetSystemFileKey() const{ return this->_db->SystemFileKey(); }
-
-    Storage::FileKey Table::GetDataFileKey() const{ return this->_db->DataFileKey(); }
 
     void Table::ClusteredIndexSeekRange(
         const ExecutionContext& executionContext,
@@ -184,8 +173,7 @@ namespace CoreEngine::StorageTypes {
         const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<RID> *selectedRows,
         const Expressions::Expression *expression,
-        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const Storage::FileKey* fileKeys
+        const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns
     ){
         if (this->IsEmpty())
             return;
@@ -226,57 +214,56 @@ namespace CoreEngine::StorageTypes {
         const Expressions::Expression *expression
     ){
         const auto* tree = this->GetNonClusteredIndexTree(indexPos);
-
-        DataStructures::PolymorphicArray<DataTypes::RowIdentifier> rowIds(executionContext.GetAllocator());
-        tree->Scan(&rowIds, state, executionContext.GetBatchSize());
-
-        Expressions::EvaluationContext evaluationContext(
-            Expressions::EvaluationContext::EvaluationContextType::SingleRow,
-            &executionContext
-        );
-
-        const auto fileKey = this->_db->DataFileKey();
-        if (expression != nullptr) {
-
-            for (const auto& rowId : rowIds) {
-                const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                    fileKey,
-                    rowId.pageId
-                );
-
-                MultiThreading::ReaderGuard lock(&page.Latch());
-
-                // auto pageRow = page->GetRow(this, rowId.indexId);
-                //
-                // const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
-
-                // context.row = &row;
-                // if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
-                //     continue;
-                //
-                // selectedRows->push_back(row);
-            }
-
-            return;
-        }
-
-        for (const auto& rowId : rowIds) {
-            const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                fileKey,
-                rowId.pageId
-            );
-
-            MultiThreading::ReaderGuard lock(&page.Latch());
-
-            // auto pageRow = page->GetRow(this, rowId.indexId);
-            //
-            // auto row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
-            //
-            // if (row.IsInvalid())
-            //     continue;
-
-            // selectedRows->push_back(row);
-        }
+        //
+        // DataStructures::PolymorphicArray<DataTypes::RowIdentifier> rowIds(executionContext.GetAllocator());
+        // tree->Scan(&rowIds, state, executionContext.GetBatchSize());
+        //
+        // Expressions::EvaluationContext evaluationContext(
+        //     Expressions::EvaluationContext::EvaluationContextType::SingleRow,
+        //     &executionContext
+        // );
+        //
+        // if (expression != nullptr) {
+        //
+        //     for (const auto& rowId : rowIds) {
+        //         const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+        //             fileKey,
+        //             rowId.pageId
+        //         );
+        //
+        //         MultiThreading::ReaderGuard lock(&page.Latch());
+        //
+        //         // auto pageRow = page->GetRow(this, rowId.indexId);
+        //         //
+        //         // const auto& row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
+        //
+        //         // context.row = &row;
+        //         // if (row.IsInvalid() || !expression->Evaluate(context).AsBool())
+        //         //     continue;
+        //         //
+        //         // selectedRows->push_back(row);
+        //     }
+        //
+        //     return;
+        // }
+        //
+        // for (const auto& rowId : rowIds) {
+        //     const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
+        //         fileKey,
+        //         rowId.pageId
+        //     );
+        //
+        //     MultiThreading::ReaderGuard lock(&page.Latch());
+        //
+        //     // auto pageRow = page->GetRow(this, rowId.indexId);
+        //     //
+        //     // auto row = pageRow.GetVisibleVersionForTransaction(properties.snapshot);
+        //     //
+        //     // if (row.IsInvalid())
+        //     //     continue;
+        //
+        //     // selectedRows->push_back(row);
+        // }
     }
 
     void Table::ClusteredIndexScanDelete(

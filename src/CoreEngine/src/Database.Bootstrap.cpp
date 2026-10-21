@@ -49,10 +49,7 @@ namespace CoreEngine{
     ){
         static auto& catalog = SystemCatalog::Get();
 
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
-            this->systemFileKey,
-           StorageLayout::HEADER_PAGE_ID
-        );
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
 
         const auto tableHeaders = catalog.SelectTables(allocator, this->id);
 
@@ -95,10 +92,7 @@ namespace CoreEngine{
         const DataTypes::StringView& name,
         const bool isNew
     ){
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
-            this->systemFileKey,
-            StorageLayout::HEADER_PAGE_ID
-        );
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
 
         auto* cursor = this->_allocator.AllocateRaw<char>(name.Size() + SYSTEM_SCHEMA_NAME.Size());
         this->_lowerName = CopyString(cursor, name);

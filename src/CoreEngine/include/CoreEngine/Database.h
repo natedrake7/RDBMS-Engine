@@ -41,7 +41,6 @@ namespace CoreEngine {
     namespace Catalog
     {
         struct DatabaseHeader;
-        struct TableHeader;
     }
 
     namespace Schemas
@@ -83,11 +82,10 @@ class Database final{
 
     DatabaseHeader header;
 
-    Storage::FileKey dataFileKey;
-    Storage::FileKey systemFileKey;
-
     Int id;
     UnsignedSmallInt _nextOrdinal;
+
+    Accessors::PageAccessor _pageAccessor;
 
     static void PopulateFilenames(
         const ::Memory::IAllocator* tempAllocator,
@@ -95,15 +93,10 @@ class Database final{
         DataTypes::String& outFile,
         DataTypes::String& outSysFile
     );
-    void CreateKeys();
-
-    void WriteHeaderToFile() const;
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
 
     [[nodiscard]] static Int CalculateExtentsToAllocate(Int pagesToAllocate);
-
-    void InitializeStaticData();
 
     Pages::GlobalAllocationPageView RollToNewGamPageNoLock();
     Pages::AllocationPageView FindOrRollToNewAllocationPage(
@@ -116,6 +109,7 @@ class Database final{
 public:
     Database(
         const ::Memory::IAllocator* allocator,
+        Accessors::PageAccessor pageAccessor,
         Int databaseId,
         const DataTypes::StringView& dbName
     );
@@ -152,11 +146,6 @@ public:
       DataStructures::PolymorphicArray<char>& buffer,
       transaction_id_t transactionId,
       table_id_t tableOrdinal
-    );
-
-    [[nodiscard]] static Pages::PageFreeSpaceView GetAssociatedPfsPage(
-        Storage::FileKey sysFileKey,
-        page_id_t pageId
     );
 
     [[nodiscard]]
@@ -201,9 +190,6 @@ public:
         const StorageTypes::Table* table
     );
 
-    [[nodiscard]] Storage::FileKey DataFileKey() const;
-    [[nodiscard]] Storage::FileKey SystemFileKey() const;
-
     void UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const;
 
     const DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry>& GetTables() const{
@@ -215,11 +201,19 @@ public:
     [[nodiscard]] MultiThreading::Mutex* DDLMutex(){
         return &this->_ddlMutex;
     }
+
+    [[nodiscard]] Accessors::PageAccessor GetPageAccessor() const{
+        return this->_pageAccessor;
+    }
 };
 
 Accessors::PageAccessor CreateDatabase(
     const ::Memory::IAllocator* allocator,
-    Int databaseId,
+    const DataTypes::StringView& dbName
+);
+
+Accessors::PageAccessor UseDatabase(
+    const ::Memory::IAllocator* allocator,
     const DataTypes::StringView& dbName
 );
 }; // namespace DatabaseEngine

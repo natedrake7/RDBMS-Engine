@@ -22,20 +22,17 @@ namespace CoreEngine {
         constexpr auto sysDbPath = DataTypes::StringView("versionDb/versionDb.data");
 
         this->PopulateFilenames(baseContext.GetAllocator(), sysDbName);
-        this->CreateKeys();
 
-        if (!CoreEngine::VersionDatabase::VersionDatabaseExists(sysDbPath))
-            CoreEngine::CreateDatabase(baseContext.GetAllocator(), Constants::VERSION_DATABASE_ID, sysDbName);
-
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, this->filenameView);
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, this->systemFilenameView);
+        this->_pageAccessor = !CoreEngine::VersionDatabase::VersionDatabaseExists(sysDbPath)
+            ? CoreEngine::CreateDatabase(baseContext.GetAllocator(), sysDbName)
+            : UseDatabase(baseContext.GetAllocator(), sysDbName);
 
         this->lastUsedPageId = INVALID_PAGE_ID;
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
         this->header = *headerPage.GetDatabaseHeaderPtr();
     }
 
-    VersionDatabase::VersionDatabase(){
+    VersionDatabase::VersionDatabase(): _pageAccessor(){
         this->lastUsedPageId = INVALID_PAGE_ID;
     }
 
@@ -44,16 +41,7 @@ namespace CoreEngine {
     }
 
     bool VersionDatabase::VersionDatabaseExists(const DataTypes::StringView& path){
-        return Storage::FileManager::FileExists(path);
-    }
-
-    void VersionDatabase::CreateKeys(){
-        UnsignedTinyInt slotIndex = 0;
-        if (!Storage::StorageManager::Get().ReserveDbPageTable(slotIndex))
-            throw std::runtime_error("VersionDatabase::CreateKeys: Failed to reserve page slot for version database");
-
-        this->dataFileKey = Storage::FileKey(slotIndex, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey(slotIndex, Storage::FileType::System);
+        return std::filesystem::exists(path.ToPath());
     }
 
     void VersionDatabase::PopulateFilenames(
@@ -69,7 +57,7 @@ namespace CoreEngine {
     }
 
     void VersionDatabase::WriteHeaderToFile() const{
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
     }
 
@@ -136,15 +124,12 @@ namespace CoreEngine {
             pageId = this->lastUsedPageId;
         }
 
-        auto lastUsedPage = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-            this->dataFileKey,
-            pageId
-        );
+        auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
 
-        MultiThreading::ReaderGuard lastUsedPageLatch(&lastUsedPage.Latch());
+        MultiThreading::ReaderGuard lastUsedPageLatch(&page.Latch());
 
-        if (lastUsedPage.BytesLeft() >= size)
-            return lastUsedPage;
+        if (page.BytesLeft() >= size)
+            return page;
 
         return {};
     }
@@ -161,35 +146,21 @@ namespace CoreEngine {
         }
 
         for (page_id_t pageId = newPageId; pageId < newPageId + StorageLayout::EXTENT_SIZE; pageId++){
-            auto pageFreeSpacePage = Database::GetAssociatedPfsPage(
-                this->systemFileKey,
-                pageId
-            );
+            auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
 
-            MultiThreading::WriterGuard lock(&pageFreeSpacePage.Latch());
-
-            auto undoPage = Storage::StorageManager::Get().CreatePage<Pages::PageView>(
-                this->dataFileKey,
-                pageId
-            );
-
-            pageFreeSpacePage.SetPageMetaData(&undoPage);
+            MultiThreading::WriterGuard lock(&pfs.Latch());
+            auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
+            pfs.SetPageMetaData(&page);
         }
 
-        return Storage::StorageManager::Get().GetPage<Pages::PageView>(
-            this->dataFileKey,
-            newPageId
-        );
+        return this->_pageAccessor.GetPage<Pages::PageView>(newPageId);
     }
 
     Pages::PageView VersionDatabase::GetLastUndoPage(
         const ::Memory::IAllocator* allocator,
         const row_size_t size
     ) {
-        const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
-            this->systemFileKey,
-            StorageLayout::GamPageId(this->header._lastGamIndex)
-        );
+        const auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->header._lastGamIndex));
 
         auto cachedPage = this->TryGetLastUndoPage(size);
         if (cachedPage.IsValid())
@@ -200,34 +171,27 @@ namespace CoreEngine {
 
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
                 {
-                    const page_id_t correspondingPfsPageId = CoreEngine::StorageLayout::PfsPageId(pageId);
-                    const auto pageFreeSpace = Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(
-                        this->systemFileKey,
-                        correspondingPfsPageId
-                    );
+                    const auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
 
-                    MultiThreading::ReaderGuard pfsLock(&pageFreeSpace.Latch());
+                    MultiThreading::ReaderGuard pfsLock(&pfs.Latch());
 
                     const auto categorySize = Pages::PageFreeSpaceView::ObjectSizeToCategory(size);
 
-                    if(pageFreeSpace.GetPageSizeCategory(pageId) <= categorySize)
+                    if(pfs.GetPageSizeCategory(pageId) <= categorySize)
                         continue;
                 }
 
-                auto undoPage = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                    this->dataFileKey,
-                    pageId
-                );
+                auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
 
-                MultiThreading::ReaderGuard undoLatch(&undoPage.Latch());
+                MultiThreading::ReaderGuard undoLatch(&page.Latch());
 
-                if (undoPage.BytesLeft() >= size) {
+                if (page.BytesLeft() >= size) {
                     {
                      MultiThreading::WriterGuard lock(&this->lastUsedPageMutex);
-                     this->lastUsedPageId = undoPage.PageId();
+                     this->lastUsedPageId = page.PageId();
                     }
 
-                    return undoPage;
+                    return page;
                 }
             }
         }
@@ -257,10 +221,7 @@ namespace CoreEngine {
         StorageTypes::RID* outRID
     )const {
         while (true){
-            const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                this->dataFileKey,
-                rowHeader->_versionRID._pageId
-            );
+            const auto page = this->_pageAccessor.GetPage<Pages::PageView>(rowHeader->_versionRID._pageId);
 
             MultiThreading::ReaderGuard lock(&page.Latch());
 
@@ -276,10 +237,10 @@ namespace CoreEngine {
     }
 
     std::vector<extent_id_t> VersionDatabase::GetAllocatedExtents(const extent_id_t startingExtentId) const {
-        const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
-            this->systemFileKey,
-            StorageLayout::GamPageId(this->header._lastGamIndex)
-        );
+        // const auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
+        //     this->systemFileKey,
+        //     StorageLayout::GamPageId(this->header._lastGamIndex)
+        // );
 
         // return gamPage.GetAllocatedExtents(startingExtentId);
         return std::vector<extent_id_t>();
@@ -290,7 +251,6 @@ namespace CoreEngine {
         const transaction_id_t transactionId,
         const extent_id_t startingExtentId
     )const {
-        static auto& storageManager = Storage::StorageManager::Get();
         const auto extents = this->GetAllocatedExtents(startingExtentId);
 
         for (const auto extentId : extents){
@@ -298,22 +258,16 @@ namespace CoreEngine {
 
             bool isExtentEmpty = true;
             for (page_id_t pageId = firstExtentPageId; pageId < firstExtentPageId + StorageLayout::EXTENT_SIZE; pageId++){
-                auto pfsPage = Database::GetAssociatedPfsPage(
-                    this->systemFileKey,
-                    pageId
-                );
+                auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
 
                 {
-                    MultiThreading::ReaderGuard pfsReaderLock(&pfsPage.Latch());
+                    MultiThreading::ReaderGuard pfsReaderLock(&pfs.Latch());
 
-                    if (!pfsPage.IsPageAllocated(pageId))
+                    if (!pfs.IsPageAllocated(pageId))
                         continue;
                 }
 
-                auto page = storageManager.GetPage<Pages::PageView>(
-                    this->dataFileKey,
-                    pageId
-                );
+                auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
 
                 MultiThreading::WriterGuard pageLatch(&page.Latch());
 
@@ -330,8 +284,8 @@ namespace CoreEngine {
                 }
 
                 if (page.PageSize() == 0) {
-                    MultiThreading::WriterGuard pfsWriterLock(&pfsPage.Latch());
-                    pfsPage.SetPageFreed(pageId);
+                    MultiThreading::WriterGuard pfsWriterLock(&pfs.Latch());
+                    pfs.SetPageFreed(pageId);
 
                     continue;
                 }
@@ -340,10 +294,7 @@ namespace CoreEngine {
             }
 
             if (isExtentEmpty) {
-                auto gamPage = storageManager.GetPage<Pages::GlobalAllocationPageView>(
-                    this->systemFileKey,
-                    StorageLayout::GamPageId(this->header._lastGamIndex)
-                );
+                auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->header._lastGamIndex));
 
                 MultiThreading::WriterGuard gamLock(&gamPage.Latch());
 
@@ -356,9 +307,5 @@ namespace CoreEngine {
 
     bool VersionDatabase::HasPendingVersions() const{
         return this->numberOfPendingVersions.load(std::memory_order_relaxed) > VersionDatabase::PENDING_VERSIONS_THRESHOLD;
-    }
-
-    Storage::FileKey VersionDatabase::GetDataFileKey() const{
-        return this->dataFileKey;
     }
 }

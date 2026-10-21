@@ -1,9 +1,11 @@
 ﻿#pragma once
 #include <Systemic/DataTypes/LobReference.h>
 #include <Systemic/DataTypes/DataTypes.h>
-#include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Pages/LargeObjects/LobIndexView.h>
 #include <CoreEngine/Pages/LargeObjects/LobRootView.h>
+
+#include "CoreEngine/Accessors/PageAccessor.h"
+#include "CoreEngine/Pages/LargeObjects/LobDataView.h"
 
 namespace CoreEngine::StorageTypes{
     enum class LobReadStatus : UnsignedTinyInt{
@@ -12,7 +14,7 @@ namespace CoreEngine::StorageTypes{
     };
 
     class LobReader{
-        Storage::FileKey _fileKey;
+        Accessors::PageAccessor _pageAccessor;
         DataTypes::LobReference _reference;
 
         Pages::LobRootView _rootView;
@@ -31,7 +33,7 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] Pages::LobDataView FetchDataPage(const Pages::LobLayout::Position& position);
 
         public:
-            LobReader(const Storage::FileKey& fileKey, const DataTypes::LobReference& reference);
+            LobReader(Accessors::PageAccessor pageAccessor, const DataTypes::LobReference& reference);
 
             LobReader(const LobReader&) = delete;
             LobReader& operator=(const LobReader&) = delete;

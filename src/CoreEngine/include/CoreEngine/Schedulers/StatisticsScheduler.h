@@ -63,7 +63,7 @@ namespace CoreEngine {
 
         static void UpdateHeapStatistics(
             const StorageTypes::Table* table,
-            page_id_t iamPageId,
+            page_id_t allocationPageId,
             Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues

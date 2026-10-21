@@ -8,6 +8,10 @@
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/Pages/IndexPageView.h>
 
+#include <Systemic/DataStructures/Dictionary.h>
+
+#include "CoreEngine/Accessors/PageAccessor.h"
+
 namespace Expressions{
     class Expression;
 }
@@ -16,11 +20,6 @@ namespace CoreEngine::Catalog {
     struct ColumnStatistics;
     struct TableStatistics;
     struct IndexStatistics;
-}
-
-namespace Pages{
-    struct IndexInsertTuple;
-    struct LeafNodeTuple;
 }
 
 namespace Statistics {
@@ -46,20 +45,18 @@ namespace CoreEngine{
     class Database;
 }
 
-namespace Pages{
-    class IndexPage;
-}
-
-namespace Indexing{
+namespace CoreEngine::Indexing{
     class BTree final{
-        CoreEngine::Database* database;
-        CoreEngine::StorageTypes::Table* table;
+        StorageTypes::Table* table;
 
         Int degree;
         Int keySize;
 
         Int nonClusteredIndexId;
         page_id_t rootPageId;
+
+        Accessors::PageAccessor _pageAccessor;
+
         Constants::TreeType type;
 
         [[nodiscard]] bool ShouldSplit(const Pages::IndexPageView& node)const;
@@ -93,34 +90,34 @@ namespace Indexing{
         );
 
         Errors::RuntimeStatus InsertToEmptyTree(
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation,
+            StorageTypes::ExtentReservation& extentReservation,
             const Pages::IndexInsertTuple& tuple
         );
 
         void SplitRootNoLock(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             Pages::IndexPageView& root,
             MultiThreading::WriterGuard& rootLock,
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+            StorageTypes::ExtentReservation& extentReservation
         );
 
         void SplitChild(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             Int index,
             const Pages::IndexPageView& child,
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+            StorageTypes::ExtentReservation& extentReservation
         ) const;
 
         static void SplitLeafNoLock(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
             Int index
         );
         static void SplitInternalNodeNoLock(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
@@ -128,27 +125,27 @@ namespace Indexing{
         );
 
         void SplitChildNoLock(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             Int index,
             const Pages::IndexPageView& child,
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+            StorageTypes::ExtentReservation& extentReservation
         ) const;
 
         Errors::RuntimeStatus InsertRowOptimistic(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexInsertTuple& tuple,
             bool* outSuccess
         ) const;
 
         Errors::RuntimeStatus InsertRowPessimistic(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexInsertTuple& tuple,
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+            StorageTypes::ExtentReservation& extentReservation
         );
 
         static Errors::RuntimeStatus InsertToNodeNoLock(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& node,
             const Pages::IndexInsertTuple& tuple
         );
@@ -158,8 +155,7 @@ namespace Indexing{
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode() const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(TinyInt& depth) const;
 
-        [[nodiscard]] Pages::IndexPageView GetNode(page_id_t pageId) const;
-        [[nodiscard]] Int CalculateTreeDegree(const CoreEngine::StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
+        [[nodiscard]] Int CalculateTreeDegree(const StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
 
         void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex);
         void HandleRootUnderflow();
@@ -169,7 +165,7 @@ namespace Indexing{
 
         // Leaf redistribution methods for improved space utilization
         [[nodiscard]] bool TryRedistributeLeaf(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             MultiThreading::ReaderGuard& parentLock,
             Pages::IndexPageView& child,
@@ -203,9 +199,9 @@ namespace Indexing{
         void CalculateClusteredStatistics(
             const ::Memory::IAllocator* allocator,
             Pages::IndexPageView& currentNode,
-            CoreEngine::Catalog::IndexStatistics& indexStatistics,
-            CoreEngine::Catalog::TableStatistics& tableStatistics,
-            DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
+            Catalog::IndexStatistics& indexStatistics,
+            Catalog::TableStatistics& tableStatistics,
+            DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;
 
@@ -215,122 +211,120 @@ namespace Indexing{
         static inline constexpr Int MIN_TREE_DEGREE = 2;
 
         explicit BTree(
-            CoreEngine::StorageTypes::Table *table,
+            StorageTypes::Table *table,
             page_id_t indexPageId,
             Constants::TreeType treeType,
             Int nonClusteredIndexId = -1
         );
-        BTree();
-        ~BTree();
 
         Errors::RuntimeStatus InsertRow(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Pages::IndexInsertTuple& tuple,
-            CoreEngine::StorageTypes::ExtentReservation& extentReservation
+            StorageTypes::ExtentReservation& extentReservation
         );
 
         void SeekRange(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result
         )const;
 
         void SeekRange(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key& minKey,
             const DataTypes::Indexing::Key& maxKey,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            CoreEngine::VectorizedPushedDownFilter& filter
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+            VectorizedPushedDownFilter& filter
         )const;
 
         void Seek(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result
         )const;
 
         void Seek(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            CoreEngine::VectorizedPushedDownFilter& filter
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+            VectorizedPushedDownFilter& filter
         )const;
         void SystemSeek(
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result
         )const;
         void SystemSeek(
             const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
 
         void Scan(
-            const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            CoreEngine::IndexState& state
+            const ExecutionContext& context,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+            IndexState& state
         )const;
 
         void Scan(
-            const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-            CoreEngine::IndexState& state,
-            CoreEngine::VectorizedPushedDownFilter& filter
+            const ExecutionContext& context,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+            IndexState& state,
+            VectorizedPushedDownFilter& filter
         )const;
 
         void Scan(
-            const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+            const ExecutionContext& context,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result
         )const;
         void Scan(
-            const CoreEngine::ExecutionContext& context,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+            const ExecutionContext& context,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
 
         void SystemScan(
             const ::Memory::IAllocator* allocator,
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+            DataStructures::PolymorphicArray<StorageTypes::RID>* result,
             const Expressions::Expression* expression
         )const;
-        void SystemScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result)const;
+        void SystemScan(DataStructures::PolymorphicArray<StorageTypes::RID>* result)const;
         void Scan(
             DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result,
-            CoreEngine::IndexState& state,
+            IndexState& state,
             Int rowsToSelect
         )const;
 
         void Scan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
 
         void ScanUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Expressions::Expression* expression,
             const DataStructures::PolymorphicArray<Value> &updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus ScanUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Expressions::Expression* expression,
            const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus ScanUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
         )const;
 
         [[nodiscard]]
         Errors::RuntimeStatus SeekUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key& key,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SeekUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const Expressions::Expression* expression,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
@@ -338,14 +332,14 @@ namespace Indexing{
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SeekUpdate(
-            const CoreEngine::ExecutionContext& context,
+            const ExecutionContext& context,
             const DataTypes::Indexing::Key* minKey,
             const DataTypes::Indexing::Key* maxKey,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;
         [[nodiscard]]
         Errors::RuntimeStatus SystemIndexSeekUpdate(
-            const Memory::IAllocator* allocator,
+            const ::Memory::IAllocator* allocator,
             const DataTypes::Indexing::Key& key,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;
@@ -360,7 +354,7 @@ namespace Indexing{
 
         [[nodiscard]] page_id_t GetFirstIndexPageId() const;
 
-        void InsertRowsToOtherTree(CoreEngine::StorageTypes::ExtentReservation& extentReservation, Int indexPos)const;
+        void InsertRowsToOtherTree(StorageTypes::ExtentReservation& extentReservation, Int indexPos)const;
 
         void InsertColumnToRow(column_index_t index, const Value& defaultValue)const;
 
@@ -369,8 +363,8 @@ namespace Indexing{
         [[nodiscard]] bool IsEmpty()const;
 
         void CalculateIndexStatistics(
-            CoreEngine::Catalog::IndexStatistics& indexStatistics,
-            CoreEngine::Catalog::TableStatistics& tableStatistics,
+            Catalog::IndexStatistics& indexStatistics,
+            Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
             Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
         )const;

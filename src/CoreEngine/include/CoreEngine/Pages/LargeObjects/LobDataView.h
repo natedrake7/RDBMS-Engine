@@ -13,6 +13,13 @@ namespace CoreEngine::Pages{
         }
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::LOB_DATA;
+            static constexpr bool IS_SYSTEM = false;
+
+            static void Initialize(const Frame* frame){
+                frame->Header()->_bytesLeft = 0;
+            }
+
             LobDataView() = default;
             explicit LobDataView(Frame* framePtr);
 

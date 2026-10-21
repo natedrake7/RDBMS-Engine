@@ -3,6 +3,8 @@
 #include <CoreEngine/Pages/PageLayout.h>
 #include <CoreEngine/Pages/Additional/IndexPageStructs.h>
 
+#include "Systemic/Guards/WriterGuard.h"
+
 
 namespace CoreEngine::Pages
 {
@@ -34,30 +36,31 @@ namespace Storage{
         return CoreEngine::PageLayout::PageType::DATA;
     }
 
-    template<typename TView>
+    template<typename TView, typename... Args>
     TView StorageManager::CreatePage(
         const buffer_pool_slot_t slotIndex,
-        const page_id_t pageId
+        const page_id_t pageId,
+        Args&&... args
     ){
-        auto* frame = this->CreateFrame(slotIndex, pageId, StorageManager::DeducePageType<TView>());
-        if constexpr (std::is_same_v<TView, CoreEngine::Pages::PageView>)
-            frame->Header()->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
-        else if constexpr (std::is_same_v<TView, CoreEngine::Pages::IndexPageView>){
-            frame->Header()->bytesLeft = CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE;
-            auto* additionalHeader = reinterpret_cast<CoreEngine::Pages::IndexPageAdditionalHeader*>(frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
-            additionalHeader->nextNode = INVALID_PAGE_ID;
-            additionalHeader->previousNode = INVALID_PAGE_ID;
+        static_assert(CoreEngine::PageLayout::DeclaresOwnType<TView>(), "StorageManager::CreatePage: each page must declare its own type");
+        auto* frame = this->BeginCreateFrame(slotIndex, pageId);
+
+        {
+            MultiThreading::WriterGuard pageLock(&frame->_latch);
+
+            std::memset(frame->_data, 0, CoreEngine::StorageLayout::PAGE_SIZE);
+
+            auto* header = frame->Header();
+            header->_pageId = pageId;
+            header->SetType(TView::TYPE);
+            TView::Initialize(frame, std::forward<Args>(args)...);
         }
-        //LOB Pages don't track available space through pageHeader.
-        else if constexpr (
-            std::is_same_v<TView, CoreEngine::Pages::LobDataView>
-            || std::is_same_v<TView, CoreEngine::Pages::LobIndexView>
-            || std::is_same_v<TView, CoreEngine::Pages::LobRootView>
-        ) frame->Header()->bytesLeft = 0;
-        else if constexpr (std::is_same_v<TView, CoreEngine::Pages::OverflowPageView>)
-            frame->Header()->bytesLeft = CoreEngine::StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
-        else
-            static_assert(DataTypes::AlwaysFalse<TView>, "Invalid Page Type");
+
+        frame->MarkDirty();
+        frame->MarkHasSecondChance();
+        frame->SetPriority(CoreEngine::PageLayout::PagePriority::LOW);
+        frame->SetState(CoreEngine::Pages::FrameState::Ready);
+        frame->_state.notify_all();
 
         return TView(frame);
     }

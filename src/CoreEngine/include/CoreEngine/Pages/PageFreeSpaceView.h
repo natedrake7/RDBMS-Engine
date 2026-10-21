@@ -19,6 +19,11 @@ namespace CoreEngine::Pages{
         [[nodiscard]] inline byte_t* GetByte(page_id_t pageId) const;
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::FREE_SPACE;
+            static constexpr bool IS_SYSTEM = true;
+
+            static void Initialize(const Frame* frame){}
+
             explicit PageFreeSpaceView(Frame* frame);
 
             PageFreeSpaceView(PageFreeSpaceView&& other) noexcept = default;

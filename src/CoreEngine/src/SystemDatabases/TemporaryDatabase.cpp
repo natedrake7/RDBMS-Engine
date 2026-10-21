@@ -31,10 +31,11 @@ namespace CoreEngine {
         if (CoreEngine::TemporaryDatabase::Exists(sysDbName))
             Storage::FileManager::RemoveFile(sysDbName);          // std::filesystem::remove_all
 
-        CreateDatabase(allocator, Constants::TEMPORARY_DATABASE_ID, sysDbName);
+        const auto pageAccessor = CoreEngine::CreateDatabase(allocator, sysDbName);
 
         this->_db = new Database(
             allocator,
+            pageAccessor,
             Constants::TEMPORARY_DATABASE_ID,
             sysDbName
         );

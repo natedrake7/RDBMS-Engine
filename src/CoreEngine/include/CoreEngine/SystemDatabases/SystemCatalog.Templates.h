@@ -98,7 +98,7 @@ namespace CoreEngine{
 
         DataStructures::PolymorphicArray<TRow> rows(allocator, rids.Size());
         for (const auto& rid : rids){
-            const auto materialized = table->MaterializeFromPage(allocator, &rid);
+            const auto materialized = table->SystemMaterializeFromPage(allocator, &rid);
             rows.Push(Rows::FromRow<TRow>(materialized.Data(), allocator));
         }
         return rows;

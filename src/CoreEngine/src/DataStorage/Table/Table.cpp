@@ -80,16 +80,14 @@ namespace CoreEngine::StorageTypes {
     void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
         if(this->IsEmpty())
             return;
-
-        const auto dataKey = this->_db->DataFileKey();
-
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-            dataKey,
-            this->_physicalHeader.GetAllocationPageId()
-        );
-
-        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
+        //
+        // const auto allocationPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
+        //     dataKey,
+        //     this->_physicalHeader.GetAllocationPageId()
+        // );
+        //
+        // DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
+        // allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         // const auto& indexedColumns = this->nonClusteredHeaders[indexPos].columns;
         //
@@ -101,7 +99,7 @@ namespace CoreEngine::StorageTypes {
         //         extentFirstPageId
         //     );
         //
-        //     const page_id_t pageId = (tableMapPage.PageId() != extentFirstPageId)
+        //     const page_id_t pageId = (allocationPage.PageId() != extentFirstPageId)
         //                                  ? extentFirstPageId
         //                                  : extentFirstPageId + 1;
         //
@@ -139,15 +137,15 @@ namespace CoreEngine::StorageTypes {
     void Table::RemoveColumnByHeap(const column_index_t index)const{
         // const auto& filename = this->GetFileNameView();
         //
-        // const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(filename, this->header.allocationPageId, this);
+        // const auto allocationPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(filename, this->header.allocationPageId, this);
         //
         // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
-        // tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
+        // allocationPage.GetAllocatedExtents(&allocatedExtents, 0);
         //
         // for (const auto& extentId: allocatedExtents) {
         // const page_id_t extentFirstPageId = Database::CalculateExtentFirstPageId(extentId);
         //
-        // const page_id_t firstDataPageId = (tableMapPage.PageId() != extentFirstPageId)
+        // const page_id_t firstDataPageId = (allocationPage.PageId() != extentFirstPageId)
         //             ? extentFirstPageId
         //             : extentFirstPageId + 1;
         //
@@ -429,13 +427,13 @@ namespace CoreEngine::StorageTypes {
     }
 
     Errors::RuntimeStatus Table::HeapInsertToNewPage(
+        const Accessors::PageAccessor pageAccessor,
         ExtentReservation& extentReservation,
         const SerializedRow& payload
-    ) const{
-        const auto systemFileKey = this->_db->SystemFileKey();
-
+    )
+    {
         const auto newPage = extentReservation.Next<Pages::PageView>();
-        const auto pfs = Database::GetAssociatedPfsPage(systemFileKey, newPage.PageId());
+        const auto pfs = pageAccessor.GetAssociatedPfsPage(newPage.PageId());
 
         MultiThreading::WriterGuard pfsLatch(&pfs.Latch());
         MultiThreading::WriterGuard pageLock(&newPage.Latch());
@@ -454,19 +452,15 @@ namespace CoreEngine::StorageTypes {
         ExtentReservation& extentReservation,
         const SerializedRow& payload
     )const{
-        const auto systemFileKey = this->_db->SystemFileKey();
-        const auto dataKey = this->_db->DataFileKey();
+        const auto pageAccessor = this->_db->GetPageAccessor();
 
         if (this->IsEmpty())
-            return this->HeapInsertToNewPage(extentReservation, payload);
+            return Table::HeapInsertToNewPage(pageAccessor, extentReservation, payload);
 
-        const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-            dataKey,
-            this->_physicalHeader.GetAllocationPageId()
-        );
+        const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
-        allocPage.GetAllocatedExtents(&tableExtentIds, 0);
+        allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         const auto rowCategory = Pages::PageFreeSpaceView::ObjectSizeToCategory(payload.Size());
 
@@ -475,18 +469,18 @@ namespace CoreEngine::StorageTypes {
             const auto extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
             for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++){
-                auto pfs = Database::GetAssociatedPfsPage(systemFileKey, pageId);
+                auto pfs = pageAccessor.GetAssociatedPfsPage(pageId);
 
                 MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
 
-                if (!pfs.IsAllocatedAs(pageId, Constants::PageType::DATA))
+                if (!pfs.IsAllocatedAs(pageId, PageLayout::PageType::DATA))
                     continue;
 
                 const auto pageSizeCategory = pfs.GetPageSizeCategory(pageId);
                 if (rowCategory > pageSizeCategory)
                     continue;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId);
+                auto page = pageAccessor.GetPage<Pages::PageView>(pageId);
 
                 MultiThreading::WriterGuard pageLock(&page.Latch());
 
@@ -502,7 +496,7 @@ namespace CoreEngine::StorageTypes {
             }
         }
 
-        return this->HeapInsertToNewPage(extentReservation, payload);
+        return Table::HeapInsertToNewPage(pageAccessor, extentReservation, payload);
     }
 
     void Table::HeapScan(
@@ -513,28 +507,27 @@ namespace CoreEngine::StorageTypes {
         if(this->IsEmpty())
             return;
 
-        const auto dataKey = this->_db->DataFileKey();
-        const auto systemFileKey = this->_db->SystemFileKey();
+        const auto pageAccessor = this->_db->GetPageAccessor();
 
         const auto& snapshot = executionContext.GetSnapshot();
 
-        const auto allocPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_physicalHeader.GetAllocationPageId());
+        const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
-        allocPage.GetAllocatedExtents(&tableExtentIds, state._extentId);
+        allocationPage.GetAllocatedExtents(&tableExtentIds, state._extentId);
 
         state.canFetchMore = false;
         RID rid;
         for (const auto extentId : tableExtentIds){
             const auto firstPageId = StorageLayout::ExtentFirstPageId(extentId);
-            const auto pfs = Database::GetAssociatedPfsPage(systemFileKey, firstPageId);
+            const auto pfs = pageAccessor.GetAssociatedPfsPage(firstPageId);
 
             MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
             for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + StorageLayout::EXTENT_SIZE; currentPageId++){
-                if (!pfs.IsAllocatedAs(currentPageId, Constants::PageType::DATA))
+                if (!pfs.IsAllocatedAs(currentPageId, PageLayout::PageType::DATA))
                     continue;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, currentPageId);
+                auto page = pageAccessor.GetPage<Pages::PageView>(currentPageId);
 
                 MultiThreading::ReaderGuard pageLock(&page.Latch());
 
@@ -577,23 +570,19 @@ namespace CoreEngine::StorageTypes {
         if(this->IsEmpty())
             return Errors::RuntimeStatus();
 
-        const auto dataKey = this->_db->DataFileKey();
-        const auto systemFileKey = this->_db->SystemFileKey();
+        const auto pageAccessor = this->_db->GetPageAccessor();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-            dataKey,
-            this->_physicalHeader.GetAllocationPageId()
-        );
+        const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
+        allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto& extentId : tableExtentIds){
             const auto extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
 
-            const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
+            const auto pageFreeSpacePage = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
 
-            const auto pageId = (tableMapPage.PageId() != extentFirstPageId)
+            const auto pageId = (allocationPage.PageId() != extentFirstPageId)
                                     ? extentFirstPageId
                                     : extentFirstPageId + 1;
 
@@ -603,10 +592,10 @@ namespace CoreEngine::StorageTypes {
             );
 
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
+                if (pageFreeSpacePage.GetPageType(extentPageId) != PageLayout::PageType::DATA)
                     break;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
+                auto page = pageAccessor.GetPage<Pages::PageView>(pageId);
 
                 if (page.IsEmpty())
                     continue;
@@ -635,23 +624,19 @@ namespace CoreEngine::StorageTypes {
         if(this->IsEmpty())
             return Errors::RuntimeStatus();
 
-        const auto dataKey = this->_db->DataFileKey();
-        const auto systemFileKey = this->_db->SystemFileKey();
+        const auto pageAccessor = this->_db->GetPageAccessor();
 
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-            dataKey,
-            this->_physicalHeader.GetAllocationPageId()
-        );
+        const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
+        allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
 
         for (const auto extentId : tableExtentIds){
             const page_id_t extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
 
-            const auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
+            const auto pfs = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
 
-            const page_id_t pageId = (tableMapPage.PageId() != extentFirstPageId)
+            const page_id_t pageId = (allocationPage.PageId() != extentFirstPageId)
                                          ? extentFirstPageId
                                          : extentFirstPageId + 1;
 
@@ -660,10 +645,10 @@ namespace CoreEngine::StorageTypes {
                 &executionContext
             );
             for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA)
+                if (pfs.GetPageType(extentPageId) != PageLayout::PageType::DATA)
                     break;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, extentPageId);
+                auto page = pageAccessor.GetPage<Pages::PageView>(extentPageId);
 
                 for (int i = 0;i < page.PageSize(); i++){
                     auto row = RID(extentPageId, i);
@@ -872,7 +857,7 @@ namespace CoreEngine::StorageTypes {
         // const auto dataKey = this->database->GetDataFileKey();
         // const auto systemFileKey = this->database->GetSystemFileKey();
         //
-        // const auto tableMapPage =
+        // const auto allocationPage =
         //     Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
         //         dataKey,
         //         this->header.allocationPageId,
@@ -880,7 +865,7 @@ namespace CoreEngine::StorageTypes {
         //     );
         //
         // DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        // tableMapPage.GetAllocatedExtents(&tableExtentIds, 0);
+        // allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
         //
         // DataStructures::PolymorphicArray<Row*> rowsToBeInserted;
         // Expressions::EvaluationContext evaluationContext(Expressions::EvaluationContext::EvaluationContextType::SingleRow, executionContext);
@@ -890,7 +875,7 @@ namespace CoreEngine::StorageTypes {
         //
         //     auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemFileKey, extentFirstPageId);
         //
-        //     const auto pageId = (tableMapPage.PageId() != extentFirstPageId)
+        //     const auto pageId = (allocationPage.PageId() != extentFirstPageId)
         //            ? extentFirstPageId
         //            : extentFirstPageId + 1;
         //
@@ -919,12 +904,12 @@ namespace CoreEngine::StorageTypes {
         // }
     }
 
-    MaterializedRow Table::MaterializeFromPage(const ::Memory::IAllocator* allocator, const RID* row) const{
-        const auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-            this->_db->DataFileKey(),
-            row->_pageId
-        );
-
+    MaterializedRow Table::SystemMaterializeFromPage(
+        const ::Memory::IAllocator* allocator,
+        const RID* row
+    ) const{
+        const auto pageAccessor = this->_db->GetPageAccessor();
+        const auto page = pageAccessor.GetPage<Pages::PageView>(row->_pageId);
         return page.MaterializeRow(allocator, this, row->_index);
     }
 
@@ -1048,38 +1033,35 @@ namespace CoreEngine::StorageTypes {
 
         tree->InsertColumnToRow(index, defaultValue);
     }
+
     void Table::PopulateColumnByHeap(const column_index_t index, const Value &defaultValue){
-
-        const auto dataKey = this->_db->DataFileKey();
-        const auto systemKey = this->_db->SystemFileKey();
-
-        const auto tableMapPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_physicalHeader.GetAllocationPageId());
-
-        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
-        tableMapPage.GetAllocatedExtents(&allocatedExtents, 0);
-
-        for (const auto extentId: allocatedExtents) {
-            const page_id_t extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
-
-            const page_id_t firstDataPageId = (tableMapPage.PageId() != extentFirstPageId)
-                                                  ? extentFirstPageId
-                                                  : extentFirstPageId + 1;
-
-            for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++)
-            {
-                auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemKey, pageId);
-
-                if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
-                    break;
-
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId);
-
-                // for (auto& row: page.DataRowsNoLock(this))
-                //   this->HandleAddColumn(page.Get(), &row, index, defaultValue);
-
-                pageFreeSpacePage.SetPageMetaData(&page);
-            }
-        }
+        // const auto allocationPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(dataKey, this->_physicalHeader.GetAllocationPageId());
+        //
+        // DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
+        // allocationPage.GetAllocatedExtents(&allocatedExtents, 0);
+        //
+        // for (const auto extentId: allocatedExtents) {
+        //     const page_id_t extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
+        //
+        //     const page_id_t firstDataPageId = (allocationPage.PageId() != extentFirstPageId)
+        //                                           ? extentFirstPageId
+        //                                           : extentFirstPageId + 1;
+        //
+        //     for (page_id_t pageId = firstDataPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++)
+        //     {
+        //         auto pageFreeSpacePage = Database::GetAssociatedPfsPage(systemKey, pageId);
+        //
+        //         if (pageFreeSpacePage.GetPageType(pageId) != Constants::PageType::DATA)
+        //             break;
+        //
+        //         auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(dataKey, pageId);
+        //
+        //         // for (auto& row: page.DataRowsNoLock(this))
+        //         //   this->HandleAddColumn(page.Get(), &row, index, defaultValue);
+        //
+        //         pageFreeSpacePage.SetPageMetaData(&page);
+        //     }
+        // }
     }
 
     void Table::Rollback(const Snapshot& snapshot, const DataTypes::RowIdentifier& rowId) const{

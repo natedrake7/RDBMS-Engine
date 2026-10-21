@@ -9,6 +9,17 @@ namespace CoreEngine::Pages{
             [[nodiscard]] DataTypes::Indexing::Key GetKeyByOffset(SlotDirectory slot) const;
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::INDEXED;
+            static constexpr bool IS_SYSTEM = false;
+
+            static void Initialize(const Frame* frame){
+                frame->Header()->_bytesLeft = StorageLayout::INDEX_PAGE_DEFAULT_SIZE;
+
+                auto* additionalHeader = reinterpret_cast<IndexPageAdditionalHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
+                additionalHeader->nextNode = INVALID_PAGE_ID;
+                additionalHeader->previousNode = INVALID_PAGE_ID;
+            }
+
             IndexPageView() = default;
             explicit IndexPageView(Frame* framePtr);
 

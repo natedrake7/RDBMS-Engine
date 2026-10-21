@@ -4,13 +4,6 @@
 #include <Server/Security/Security.h>
 #include <Systemic/DataTypes/StringView.h>
 
-namespace Pages
-{
-    class HeaderPageView;
-    class PageFreeSpaceView;
-    class GlobalAllocationPageView;
-}
-
 namespace Constants{
     inline constexpr UnsignedBigInt KB = 1024;
     inline constexpr UnsignedBigInt MB = 1024 * KB;

@@ -3,6 +3,8 @@
 #include <Systemic/DataTypes/DataTypes.h>
 #include <Systemic/DataStructures/PolymorphicArray.h>
 
+#include "CoreEngine/Accessors/PageAccessor.h"
+
 namespace CoreEngine{
     class Database;
 }
@@ -39,6 +41,8 @@ namespace CoreEngine::StorageTypes{
         UnsignedSmallInt _segmentIndex;
         UnsignedSmallInt _segmentOffset;
         UnsignedSmallInt _extentIndex;
+
+        Accessors::PageAccessor _pageAccessor;
 
         public:
             explicit ExtentReservation();

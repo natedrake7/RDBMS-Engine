@@ -2,10 +2,7 @@
 #include <filesystem>
 #include <span>
 #include <Systemic/DataTypes/DataTypes.h>
-#include <ostream>
 #include <Systemic/DataTypes/StringValue.h>
-
-#include "../../../../../../../../../msys64/clang64/include/c++/v1/__filesystem/filesystem_error.h"
 
 namespace Memory{
     class IAllocator;

@@ -6,14 +6,21 @@
 namespace CoreEngine::Pages{
     class LobRootView : public PageView{
         [[nodiscard]] LobRootHeader* GetAdditionalHeader() const{
-            return reinterpret_cast<LobRootHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
+            return reinterpret_cast<LobRootHeader*>(this->_frame->_data + StorageLayout::PAGE_HEADER_SIZE);
         }
 
         [[nodiscard]] object_t* Payload()const{
-            return this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE + sizeof(LobRootHeader);
+            return this->_frame->_data + StorageLayout::PAGE_HEADER_SIZE + sizeof(LobRootHeader);
         }
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::LOB_ROOT;
+            static constexpr bool IS_SYSTEM = false;
+
+            static void Initialize(const Frame* frame){
+                frame->Header()->_bytesLeft = 0;
+            }
+
             LobRootView() = default;
             explicit LobRootView(Frame* framePtr);
 

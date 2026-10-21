@@ -4,6 +4,8 @@
 #include <CoreEngine/Vectorization/Vectorization.h>
 #include <CoreEngine/DataStorage/FilterColumnInfo.h>
 
+#include "CoreEngine/SystemDatabases/VersionDatabase.h"
+
 
 namespace CoreEngine{
     namespace StorageTypes{
@@ -15,7 +17,7 @@ namespace CoreEngine{
 
         const Expressions::Expression* _expression;
         const DataStructures::PolymorphicArray<StorageTypes::FilterColumnInfo>* _filterColumns;
-        DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> _fileKeys;
+        DataStructures::StaticArray<Accessors::PageAccessor, StorageTypes::RID::Count - 1> _pageAccessors;
         const ExecutionContext* _executionContext;
 
         Int _schemaWidth;
@@ -28,8 +30,13 @@ namespace CoreEngine{
             const UnsignedSmallInt slotIndex,
             const Int schemaWidth
         ):  _candidates(executionContext->GetAllocator()), _expression(expression),
-            _filterColumns(filterColumns), _fileKeys(executionContext->GetFileKeys(slotIndex)),
-            _executionContext(executionContext), _schemaWidth(schemaWidth){}
+            _filterColumns(filterColumns),
+            _executionContext(executionContext), _schemaWidth(schemaWidth){
+            this->_pageAccessors = {
+                executionContext->GetPageAccessor(slotIndex),
+                VersionDatabase::Get().GetPageAccessor()
+            };
+        }
 
         inline void AddCandidate(const StorageTypes::RID& candidate){
             this->_candidates.Push(candidate);
@@ -45,7 +52,7 @@ namespace CoreEngine{
                 return;
 
             const auto* allocator = this->_executionContext->GetAllocator();
-            const auto* fileKeysData = this->_fileKeys.Data();
+            const auto* pageAccessorsData = this->_pageAccessors.Data();
 
             auto allocationStart = allocator->RecordAllocationStart();
 
@@ -56,7 +63,7 @@ namespace CoreEngine{
                 const auto& columnInfo = (*this->_filterColumns)[i];
 
                 auto* vector = DataVector::FlatVector(allocator, columnInfo._type, this->_candidates.Size());
-                columnInfo._function(fileKeysData, allocator, this->_candidates, vector, columnInfo._ordinalPosition);
+                columnInfo._function(pageAccessorsData, allocator, this->_candidates, vector, columnInfo._ordinalPosition);
                 chunk.SetColumn(vector, columnInfo._schemaPosition);
             }
 

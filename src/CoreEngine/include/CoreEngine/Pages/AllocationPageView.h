@@ -30,6 +30,16 @@ namespace CoreEngine::Pages{
         }
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::ALLOCATION;
+            static constexpr auto IS_SYSTEM = false;
+
+            static void Initialize(const Frame* frame, const gam_index_t gamIndex){
+                auto* header = reinterpret_cast<AllocationPageAdditionalHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
+                header->_nextPageId = INVALID_PAGE_ID;
+                header->_lastAllocatedExtentId = 0;
+                header->_gamIndex = gamIndex;
+            }
+
             AllocationPageView();
             explicit AllocationPageView(Frame* framePtr);
             AllocationPageView(AllocationPageView&& other) noexcept = default;

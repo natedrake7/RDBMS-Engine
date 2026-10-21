@@ -90,8 +90,7 @@ namespace Network {
 
     void CreateDatabase(
         const ::Memory::IAllocator* allocator,
-        Int databaseId,
-        const DataTypes::StringView& dbName
+        const CoreEngine::Catalog::DatabaseHeader& header
     );
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,

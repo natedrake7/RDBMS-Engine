@@ -21,7 +21,7 @@ namespace CoreEngine::StorageTypes{
     class Table;
 
     using PageMaterializationFunction  = void(*)(
-        const Storage::FileKey*,
+        const Accessors::PageAccessor*,
         const ::Memory::IAllocator*,
         const DataStructures::PolymorphicArray<RID>&,
         DataVector*,

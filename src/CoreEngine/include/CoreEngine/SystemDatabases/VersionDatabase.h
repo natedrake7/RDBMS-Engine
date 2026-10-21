@@ -19,12 +19,11 @@ namespace CoreEngine{
 
         DatabaseHeader header;
 
-        Storage::FileKey dataFileKey;
-        Storage::FileKey systemFileKey;
-
         page_id_t lastUsedPageId;
 
         std::atomic<Int> numberOfPendingVersions;
+
+        Accessors::PageAccessor _pageAccessor;
 
         static constexpr Int PENDING_VERSIONS_THRESHOLD = 1000;
 
@@ -49,7 +48,6 @@ namespace CoreEngine{
         ~VersionDatabase();
 
         [[nodiscard]] static bool VersionDatabaseExists(const DataTypes::StringView& path);
-        void CreateKeys();
 
         public:
             VersionDatabase(VersionDatabase const&) = delete;
@@ -80,6 +78,8 @@ namespace CoreEngine{
             )const;
             [[nodiscard]] bool HasPendingVersions()const;
 
-            [[nodiscard]] Storage::FileKey GetDataFileKey() const;
+            [[nodiscard]] Accessors::PageAccessor GetPageAccessor()const{
+                return this->_pageAccessor;
+            }
     };
 }

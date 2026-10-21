@@ -30,6 +30,19 @@ namespace CoreEngine::Pages{
         ) const;
 
         public:
+            static constexpr auto TYPE = PageLayout::PageType::GLOBAL_ALLOCATION;
+            static constexpr bool IS_SYSTEM = true;
+
+            static void Initialize(const Frame* frame, const gam_index_t gamIndex){
+                assert(frame->PageId() == StorageLayout::GamPageId(gamIndex));
+                auto* header = reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
+                header->_gamIndex = gamIndex;
+                header->_appendBitId = 0;
+                header->_firstFreeBitId = 0;
+                header->_freeExtentCount = StorageLayout::GAM_BIT_MAP_SIZE;
+                // _reserved is already zero: the whole page is cleared before Initialize runs
+            }
+
             explicit GlobalAllocationPageView(Frame* frame);
 
             GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept = default;

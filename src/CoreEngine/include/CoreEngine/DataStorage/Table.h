@@ -10,15 +10,12 @@
 #include <CoreEngine/Memory/Allocator.h>
 #include <CoreEngine/Memory/PersistentAllocator.h>
 
+#include "CoreEngine/Database.h"
+#include "CoreEngine/Accessors/PageAccessor.h"
 #include "CoreEngine/Directory/DirectoryEntries.h"
 
-namespace Expressions
-{
+namespace Expressions{
     struct EvaluationContext;
-}
-
-namespace Pages{
-    class LobDataView;
 }
 
 namespace CoreEngine::StorageTypes{
@@ -101,8 +98,6 @@ namespace CoreEngine::StorageTypes{
         * Functions to manage indexes and pages.
         * @{
         */
-        [[nodiscard]] Pages::IndexPageView GetIndexFromDisk(page_id_t indexPageId) const;
-
         [[nodiscard]]
         page_id_t InsertLargeObject(
             const ::Memory::IAllocator* allocator,
@@ -278,10 +273,11 @@ namespace CoreEngine::StorageTypes{
                 ExtentReservation& extentReservation,
                 SerializedRow& payload
             );
-            Errors::RuntimeStatus HeapInsertToNewPage(
+            static Errors::RuntimeStatus HeapInsertToNewPage(
+                Accessors::PageAccessor pageAccessor,
                 ExtentReservation& extentReservation,
                 const SerializedRow& payload
-            )const;
+            );
             Errors::RuntimeStatus HeapInsert(
                 const ExecutionContext& executionContext,
                 ExtentReservation& extentReservation,
@@ -310,8 +306,6 @@ namespace CoreEngine::StorageTypes{
         * Functions to access table metadata.
         * @{
         */
-            [[nodiscard]] Storage::FileKey GetSystemFileKey() const;
-            [[nodiscard]] Storage::FileKey GetDataFileKey() const;
             [[nodiscard]] const TableHeader& GetPhysicalHeader() const { return this->_physicalHeader; }
             [[nodiscard]] bool IsClustered()const{
                 return this->_schema->_clusteredIndexOrdinalPosition != Schemas::TableSchema::NONE;
@@ -332,6 +326,9 @@ namespace CoreEngine::StorageTypes{
             }
             [[nodiscard]] UnsignedSmallInt GetOrdinalPosition() const{
                 return this->_schema->_ordinalPosition;
+            }
+            [[nodiscard]] Accessors::PageAccessor GetPageAccessor() const{
+                return this->_db->GetPageAccessor();
             }
 
 
@@ -380,8 +377,7 @@ namespace CoreEngine::StorageTypes{
                 const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
                 const Expressions::Expression* expression,
-                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                const Storage::FileKey* fileKeys
+                const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns
             );
             void SystemClusteredIndexScan(
                 const ::Memory::IAllocator* allocator,
@@ -522,11 +518,14 @@ namespace CoreEngine::StorageTypes{
         * @name Materialization Functions
         * @{
         */
-            MaterializedRow MaterializeFromPage(const::Memory::IAllocator* allocator, const RID* row) const;
+            MaterializedRow SystemMaterializeFromPage(
+                const::Memory::IAllocator* allocator,
+                const RID* row
+            ) const;
 
             template<typename T>
             static void MaterializeColumnFromPage(
-                const Storage::FileKey* fileKeys,
+                const Accessors::PageAccessor* pageAccessors,
                 const ::Memory::IAllocator* allocator,
                 const DataStructures::PolymorphicArray<RID>& rids,
                 DataVector* __restrict__ _vector,

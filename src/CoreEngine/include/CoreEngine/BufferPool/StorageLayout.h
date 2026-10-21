@@ -130,8 +130,6 @@ namespace CoreEngine::StorageLayout{
         "the last GAM range must fit in page_id_t"
     );
 
-    inline constexpr gam_index_t FIRST_GAM_INDEX = 0;
-
     [[nodiscard]] constexpr gam_index_t GamIndexOfPage(const page_id_t dataPageId){
         return dataPageId / GAM_NUMBER_OF_PAGES;
     }
@@ -169,6 +167,9 @@ namespace CoreEngine::StorageLayout{
         return pageId / EXTENT_SIZE;
     }
 
+    inline constexpr gam_index_t FIRST_GAM_INDEX = 0;
+    inline constexpr page_id_t FIRST_PFS_PAGE_ID = PfsPageId(0);
+    
     static_assert(GamPageId(0) == 1 && PfsPageId(0) == 2);
     static_assert(PfsPageId(GAM_NUMBER_OF_PAGES - 1) == 64);   // last PFS of interval 0
     static_assert(GamPageId(1) == 65 && PfsPageId(GAM_NUMBER_OF_PAGES) == 66);

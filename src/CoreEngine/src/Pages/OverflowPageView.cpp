@@ -18,11 +18,11 @@ namespace CoreEngine::Pages{
 
         auto* header = this->_frame->Header();
 
-        header->size++;
-        header->ConsumeBytes(size + SlotDirectory::SIZE);
-        this->_frame->_isDirty = true;
+        header->IncrementSizeNoLock();
+        header->ConsumeBytesNoLock(size + SlotDirectory::SIZE);
+        this->_frame->MarkDirty();
 
-        return OverflowPtr(header->pageId, header->size - 1);
+        return OverflowPtr(header->_pageId, header->_size - 1);
     }
 
     const object_t* OverflowPageView::Get(const Int index, Int& outSize) const{

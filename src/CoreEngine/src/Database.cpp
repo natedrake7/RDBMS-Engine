@@ -43,23 +43,6 @@ namespace CoreEngine{
         outSysFile = DataTypes::String::Concat(tempAllocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
     }
 
-    void Database::CreateKeys(){
-        UnsignedTinyInt slotIndex = 0;
-        if (!Storage::StorageManager::Get().ReserveDbPageTable(slotIndex))
-            throw std::runtime_error("Database::CreateKeys: Db page table is full");
-
-        this->dataFileKey = Storage::FileKey::Create(slotIndex, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey::Create(slotIndex, Storage::FileType::System);
-    }
-
-    void Database::WriteHeaderToFile() const{
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(
-            this->systemFileKey,
-            StorageLayout::HEADER_PAGE_ID
-        );
-        headerPage.SetDatabaseHeader(this->header);
-    }
-
     void Database::ApplyRecoveryLog(const Logging::LogEntry &logEntry)const{
         if (!logEntry.ValidateIntegrity())
             return;
@@ -85,17 +68,12 @@ namespace CoreEngine{
         return static_cast<Int>(std::ceil(static_cast<float>(pagesToAllocate) / static_cast<float>(StorageLayout::EXTENT_SIZE)));
     }
 
-    void Database::InitializeStaticData(){
-        this->dataFileKey = Storage::FileKey::Create(this->id, Storage::FileType::Data);
-        this->systemFileKey = Storage::FileKey::Create(this->id, Storage::FileType::System);
-    }
-
     Pages::GlobalAllocationPageView Database::RollToNewGamPageNoLock(){
         const auto nextGamIndex = this->header._lastGamIndex + 1;
         if (nextGamIndex > StorageLayout::MAX_GAM_INDEX)
             throw std::runtime_error("Database::RollToNewGamPageNoLock: data file reached its maximum size");
 
-        auto gamPage = Storage::StorageManager::Get().CreateGlobalAllocationMapPage(this->systemFileKey, nextGamIndex);
+        auto gamPage = this->_pageAccessor.CreatePage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(nextGamIndex), nextGamIndex);
         this->header._lastGamIndex = nextGamIndex;
         return gamPage;
     }
@@ -107,8 +85,7 @@ namespace CoreEngine{
         const page_id_t newAllocationPageId
     ) const{
         if (currentAllocationPageId == INVALID_PAGE_ID){
-            auto page = Storage::StorageManager::Get().CreateAllocationPage(
-                this->dataFileKey,
+            auto page = this->_pageAccessor.CreatePage<Pages::AllocationPageView>(
                 newAllocationPageId,
                 gamIndex
             );
@@ -119,8 +96,7 @@ namespace CoreEngine{
 
         Pages::AllocationPageView prev, current;
         while (currentAllocationPageId != INVALID_PAGE_ID){
-            current = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-                this->dataFileKey,
+            current = this->_pageAccessor.GetPage<Pages::AllocationPageView>(
                 currentAllocationPageId
             );
             if (current.GamIndex() == gamIndex)
@@ -130,10 +106,9 @@ namespace CoreEngine{
             prev = std::move(current);
         }
 
-        current = Storage::StorageManager::Get().CreateAllocationPage(
-            this->dataFileKey,
-            newAllocationPageId,
-            gamIndex
+        current = this->_pageAccessor.CreatePage<Pages::AllocationPageView>(
+                newAllocationPageId,
+                gamIndex
         );
 
         {
@@ -146,27 +121,22 @@ namespace CoreEngine{
 
     Database::Database(
         const ::Memory::IAllocator* allocator,
+        const Accessors::PageAccessor pageAccessor,
         const Int databaseId,
         const DataTypes::StringView& dbName
-    ): id(databaseId), _nextOrdinal(0){
+    ): id(databaseId), _nextOrdinal(0), _pageAccessor(pageAccessor){
         DataTypes::String file,sysFile;
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
-        this->CreateKeys();
 
-        Storage::StorageManager::Get().OpenFile(this->dataFileKey, DataTypes::StringView::ViewOf(file));
-        Storage::StorageManager::Get().OpenFile(this->systemFileKey, DataTypes::StringView::ViewOf(sysFile));
-
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
-        this->header = *headerPage.GetDatabaseHeaderPtr();
-        // this->header.ValidateFormatVersion(dbName);
-
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
+        std::memcpy(&this->header, headerPage.GetDatabaseHeaderPtr(), sizeof(DatabaseHeader));
         this->_tables.SetAllocator(&this->_allocator);
         this->_schemas.SetAllocator(&this->_allocator);
     }
 
     void Database::Destroy() const{
         // save db header;
-        const auto headerPage = Storage::StorageManager::Get().GetPage<Pages::HeaderPageView>(this->systemFileKey, StorageLayout::HEADER_PAGE_ID);
+        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
         headerPage.SetDatabaseHeader(this->header);
 
         for (auto& [key, table] : this->_tables){
@@ -175,7 +145,7 @@ namespace CoreEngine{
             delete table;
         }
 
-        Storage::StorageManager::Get().FreeDbPageTable(this->dataFileKey._slotIndex);
+        this->_pageAccessor.FreePageTableSlots();
         this->_allocator.Release();
     }
 
@@ -259,17 +229,6 @@ namespace CoreEngine{
     //         + ". Recreate the database."
     //     );
     // }
-
-    Pages::PageFreeSpaceView Database::GetAssociatedPfsPage(
-        const Storage::FileKey sysFileKey,
-        const page_id_t pageId
-    ){
-        const auto pageFreeSpacePageId = StorageLayout::PfsPageId(pageId);
-        return Storage::StorageManager::Get().GetPage<Pages::PageFreeSpaceView>(
-            sysFileKey,
-            pageFreeSpacePageId
-        );
-    }
 
     void Database::DeleteTable(const DataTypes::String& tableName){
         const StorageTypes::Table* table = nullptr;
@@ -396,10 +355,7 @@ namespace CoreEngine{
 
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
-            auto gamPage = Storage::StorageManager::Get().GetPage<Pages::GlobalAllocationPageView>(
-                this->systemFileKey,
-                StorageLayout::GamPageId(this->header._lastGamIndex)
-            );
+            auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->header._lastGamIndex));
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
             bool newAllocationPageRequired = currentAllocationPageId == INVALID_PAGE_ID;
@@ -476,10 +432,7 @@ namespace CoreEngine{
                         const auto pfsPageId = StorageLayout::PfsPageId(pageId);
 
                         if (pfsPageId > this->header._lastPfsPageId) {
-                            Storage::StorageManager::Get().CreatePageFreeSpacePage(
-                                this->systemFileKey,
-                                pfsPageId
-                            );
+                            this->_pageAccessor.CreatePage<Pages::PageFreeSpaceView>(pfsPageId);
                             this->header._lastPfsPageId = pfsPageId;
                         }
                     }
@@ -489,10 +442,6 @@ namespace CoreEngine{
 
         return StorageTypes::ExtentReservation(segmentsRuns, this, table);
     }
-
-    Storage::FileKey Database::DataFileKey() const{ return this->dataFileKey; }
-
-    Storage::FileKey Database::SystemFileKey() const{ return this->systemFileKey; }
 
     void Database::UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const{
         for(const auto& [key, table]: this->_tables)
@@ -505,31 +454,50 @@ namespace CoreEngine{
 
     Accessors::PageAccessor CreateDatabase(
         const ::Memory::IAllocator* allocator,
-        const Int databaseId,
         const DataTypes::StringView& dbName
     ){
         static auto& storageManager = Storage::StorageManager::Get();
 
-        auto accessor = storageManager.ReserveDbPageTables();
+        const auto pageAccessor = storageManager.ReserveDbPageTables();
 
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
-
         const auto dataPath = DataTypes::String::Concat(allocator, path, Constants::DATA_FILE_EXTENSION);
+        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::CreateNew);
 
-        storageManager.OpenFile(dataKey, DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::CreateNew);
-
-        const auto sysDbName = DataTypes::String::Concat(path.GetAllocator(), path, Constants::SYS_EXTENSION);
-        const auto sysKey = Storage::FileKey::Create(databaseId, Storage::FileType::System);
-
-        storageManager.OpenFile(sysKey, DataTypes::StringView::ViewOf(sysDbName), Constants::DATA_FILE_EXTENSION);
+        const auto sysDbPath = DataTypes::String::Concat(allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
+        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), Storage::FileOpenMode::CreateNew);
 
         // First interval of the system file: GAM #0 at page 1, then the PFS page covering data page 0 at page 2
-        constexpr auto firstPfsPageId = StorageLayout::PfsPageId(0);
+        pageAccessor.CreatePage<Pages::GlobalAllocationPageView>(
+            StorageLayout::GamPageId(StorageLayout::FIRST_GAM_INDEX),
+            StorageLayout::FIRST_GAM_INDEX
+        );
 
-        storageManager.CreateGlobalAllocationMapPage(sysKey, StorageLayout::FIRST_GAM_INDEX);
-        storageManager.CreatePageFreeSpacePage(sysKey, firstPfsPageId);
+        pageAccessor.CreatePage<Pages::PageFreeSpaceView>(
+            StorageLayout::FIRST_PFS_PAGE_ID
+        );
 
-        const auto headerPage = storageManager.CreateHeaderPage(sysKey);
-        headerPage.SetDatabaseHeader(DatabaseHeader(firstPfsPageId, StorageLayout::FIRST_GAM_INDEX));
+        const auto headerPage = pageAccessor.CreatePage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
+        headerPage.SetDatabaseHeader(DatabaseHeader(StorageLayout::FIRST_PFS_PAGE_ID, StorageLayout::FIRST_GAM_INDEX));
+
+        return pageAccessor;
+    }
+
+    Accessors::PageAccessor UseDatabase(
+        const ::Memory::IAllocator* allocator,
+        const DataTypes::StringView& dbName
+    ){
+        static auto& storageManager = Storage::StorageManager::Get();
+
+        const auto pageAccessor = storageManager.ReserveDbPageTables();
+
+        const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
+        const auto dataPath = DataTypes::String::Concat(allocator, path, Constants::DATA_FILE_EXTENSION);
+        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::OpenExisting);
+
+        const auto sysDbPath = DataTypes::String::Concat(allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
+        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), Storage::FileOpenMode::OpenExisting);
+
+        return pageAccessor;
     }
 }

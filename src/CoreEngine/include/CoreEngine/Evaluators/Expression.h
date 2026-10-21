@@ -31,10 +31,6 @@ namespace Memory{
     class IAllocator;
 }
 
-namespace Pages{
-    class PageView;
-}
-
 namespace Expressions{
     class JsonExpression;
     class BinaryExpression;
@@ -57,7 +53,7 @@ namespace Expressions{
         };
 
         const CoreEngine::StorageTypes::RID* _rids;
-        const Pages::PageView* _pages;
+        const CoreEngine::Pages::PageView* _pages;
 
         const CoreEngine::ExecutionContext* _executionContext;
         const ::Memory::IAllocator* _allocator;

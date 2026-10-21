@@ -2,20 +2,18 @@
 #include <algorithm>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/DataStorage/Table.h>
-#include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Database.h>
 #include <Systemic/Guards/ReaderGuard.h>
 #include <Systemic/Guards/WriterGuard.h>
 #include <CoreEngine/Schedulers/StatisticsScheduler.h>
-
 #include <CoreEngine/ScanState.h>
 #include <CoreEngine/Contexts/ExecutionContext.h>
-#include <CoreEngine/DataStorage/FilterColumnInfo.h>
 #include <CoreEngine/Evaluators/Expression.h>
 #include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
 #include <CoreEngine/Memory/Allocator.h>
 #include <CoreEngine/SystemDatabases/VersionDatabase.h>
 #include <CoreEngine/Vectorization/Vectorization.h>
+#include <CoreEngine/Pages/PageView.h>
 
 #include <Systemic/Macros.h>
 
@@ -24,7 +22,7 @@
 #endif
 
 
-namespace Indexing{
+namespace CoreEngine::Indexing{
     bool BTree::ShouldSplit(const Pages::IndexPageView& node) const{
         return node.Keys() == 2 * this->degree - 1;
     }
@@ -133,7 +131,7 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertToEmptyTree(
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation,
+        StorageTypes::ExtentReservation& extentReservation,
         const Pages::IndexInsertTuple& tuple
     ){
         const auto root = extentReservation.Next<Pages::IndexPageView>();
@@ -158,10 +156,10 @@ namespace Indexing{
     }
 
     void BTree::SplitRootNoLock(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         Pages::IndexPageView& root,
         MultiThreading::WriterGuard& rootLock,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        StorageTypes::ExtentReservation& extentReservation
     ){
         {
             auto newRoot = extentReservation.Next<Pages::IndexPageView>();
@@ -190,11 +188,11 @@ namespace Indexing{
     }
 
     void BTree::SplitChild(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView& parent,
         const Int index,
         const Pages::IndexPageView& child,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        StorageTypes::ExtentReservation& extentReservation
     ) const{
         MultiThreading::WriterGuard parentLock(&parent.Latch());
         MultiThreading::WriterGuard childLock(&child.Latch());
@@ -203,7 +201,7 @@ namespace Indexing{
     }
 
     void BTree::SplitLeafNoLock(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView &parent,
         const Pages::IndexPageView &child,
         const Pages::IndexPageView &newChild,
@@ -224,7 +222,7 @@ namespace Indexing{
 
     //TODO maybe optimize further
     void BTree::SplitInternalNodeNoLock(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView &parent,
         const Pages::IndexPageView &child,
         const Pages::IndexPageView &newChild,
@@ -247,11 +245,11 @@ namespace Indexing{
     }
 
     void BTree::SplitChildNoLock(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView &parent,
         const Int index,
         const Pages::IndexPageView &child,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        StorageTypes::ExtentReservation& extentReservation
     ) const{
         const auto newChild = extentReservation.Next<Pages::IndexPageView>();
 
@@ -270,12 +268,12 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertRowOptimistic(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexInsertTuple& tuple,
         bool* outSuccess
     ) const{
         *outSuccess = false;
-        auto node = this->GetNode(this->rootPageId);
+        auto node = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         MultiThreading::ReaderGuard nodeLock(&node.Latch());
 
@@ -287,7 +285,7 @@ namespace Indexing{
         while (true){
             const auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
             const auto childPageId = node.GetChild(childIndex);
-            auto child = this->GetNode(childPageId);
+            auto child = this->_pageAccessor.GetPage<Pages::IndexPageView>(childPageId);
 
             bool isLeaf = false;
             {
@@ -310,12 +308,12 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertRowPessimistic(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexInsertTuple& tuple,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        StorageTypes::ExtentReservation& extentReservation
     ){
         while (true){
-            auto node = this->GetNode(this->rootPageId);
+            auto node = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
             MultiThreading::WriterGuard nodeLock(&node.Latch());
 
             if (node.PageId() != this->rootPageId)
@@ -330,7 +328,7 @@ namespace Indexing{
 
                 auto childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
                 const auto childPageId = node.GetChild(childIndex);
-                auto child = this->GetNode(childPageId);
+                auto child = this->_pageAccessor.GetPage<Pages::IndexPageView>(childPageId);
 
                 MultiThreading::WriterGuard childLock(&child.Latch());
 
@@ -344,7 +342,7 @@ namespace Indexing{
                     childIndex = BTree::InternalNodeLowerBound(node, tuple.key);
                     const auto newChildPageId = node.GetChild(childIndex);
                     if (newChildPageId != child.PageId()){
-                        child = this->GetNode(newChildPageId);
+                        child = this->_pageAccessor.GetPage<Pages::IndexPageView>(newChildPageId);
                         childLock = MultiThreading::WriterGuard(&child.Latch());
                     }
                 }
@@ -357,7 +355,7 @@ namespace Indexing{
     }
 
     Errors::RuntimeStatus BTree::InsertToNodeNoLock(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView &node,
         const Pages::IndexInsertTuple& tuple
     ){
@@ -369,7 +367,7 @@ namespace Indexing{
     }
 
     Pages::IndexPageView BTree::SearchKey(const DataTypes::Indexing::Key &key) const{
-        auto currentNode = this->GetNode(this->rootPageId);
+        auto currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         while (true) {
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
@@ -379,62 +377,55 @@ namespace Indexing{
 
             const auto index = BTree::InternalNodeLowerBound(currentNode, key);
             const auto childId = currentNode.GetChild(index);
-            currentNode = this->GetNode(childId);
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(childId);
         }
     }
 
     Pages::IndexPageView BTree::SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::PolymorphicArray<Pages::IndexPageView> & ancestors) const{
-        auto currentNode = this->GetNode(this->rootPageId);
+        auto currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         //   while (!currentNode.IsLeaf()){
         //     const auto index = BTree::InternalNodePartialLowerBound(currentNode, key);
 
         //     ancestors.push_back(std::move(currentNode));
 
-        //     currentNode = std::move(this->GetNode(currentNode.GetChild(index)));
+        //     currentNode = std::move(pageAccessor.GetPage<Pages::IndexPageView>(currentNode.GetChild(index)));
         //   }
 
         return currentNode;
     }
 
     Pages::IndexPageView BTree::SearchLeftMostLeafNode() const{
-        auto currentNode = this->GetNode(this->rootPageId);
+        auto currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         while (!currentNode.IsLeaf()) {
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
-            currentNode = this->GetNode(currentNode.GetChild(0));
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.GetChild(0));
         }
 
         return currentNode;
     }
 
     Pages::IndexPageView BTree::SearchLeftMostLeafNode(TinyInt &depth) const{
-        auto currentNode = this->GetNode(this->rootPageId);
+        auto currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         while (!currentNode.IsLeaf()){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             depth++;
-            currentNode = this->GetNode(currentNode.GetChild(0));
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.GetChild(0));
         }
 
         return currentNode;
     }
 
-    Pages::IndexPageView BTree::GetNode(const page_id_t pageId) const{
-        return Storage::StorageManager::Get().GetPage<Pages::IndexPageView>(
-            this->database->DataFileKey(),
-            pageId
-        );
-    }
-
     Int BTree::CalculateTreeDegree(
-        const CoreEngine::StorageTypes::Table* otherTable,
+        const StorageTypes::Table* otherTable,
         const Constants::TreeType treeType,
         const Int nonClusteredId
     )const{
         if(treeType == Constants::TreeType::Clustered){
             const auto tupleCost = this->keySize + otherTable->WorstCaseRowSize() + Pages::SlotDirectory::SIZE;
-            const Int calculatedDegree = CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
+            const Int calculatedDegree = StorageLayout::INDEX_PAGE_DEFAULT_SIZE / (2 * tupleCost);
             assert(calculatedDegree >= MIN_TREE_DEGREE && "BTree::CalculateTreeDegree: Tree Degree out of bounds");
             return calculatedDegree;
         }
@@ -452,7 +443,7 @@ namespace Indexing{
         //     computedKeySize += column->Size();
         // }
 
-        return static_cast<Int>(CoreEngine::StorageLayout::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
+        return static_cast<Int>(StorageLayout::INDEX_PAGE_DEFAULT_SIZE / ((this->keySize + ROW_ID_SIZE + Pages::SlotDirectory::SIZE) * 2));
     }
 
     void BTree::HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex) {
@@ -483,18 +474,18 @@ namespace Indexing{
         //
         //  //if borrowing failed merge nodes
         //  if (index > 0) {
-        //      auto leftSibling = this->GetNode(children->at(index - 1));
+        //      auto leftSibling = this->_pageAccessor.GetPage<Pages::IndexPageView>(children->at(index - 1));
         //      this->MergeNodes(leftSibling, node, parent, index - 1, ancestors, parentIndex);
         //
         //      return;
         //  }
         //
-        // auto rightSibling = this->GetNode(children->at(index + 1));
+        // auto rightSibling = this->_pageAccessor.GetPage<Pages::IndexPageView>(children->at(index + 1));
         // this->MergeNodes(node, rightSibling, parent, index, ancestors, parentIndex);
     }
 
     void BTree::HandleRootUnderflow() {
-        auto root = this->GetNode(this->rootPageId);
+        auto root = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
 
         // const auto* keys = root->GetKeysUnsafe();
         // auto* children = root->GetChildren();
@@ -503,7 +494,7 @@ namespace Indexing{
         //  if (keys->empty() && !children->empty()) {
         //     auto oldRoot = std::move(root);
         //
-        //     auto newRoot = std::move(this->GetNode(children->at(0)));
+        //     auto newRoot = std::move(pageAccessor.GetPage<Pages::IndexPageView>(children->at(0)));
         //
         //     newRoot->SetIsRoot(true);
         //
@@ -525,7 +516,7 @@ namespace Indexing{
     bool BTree::TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, const Int index)const{
         // auto* children = parent.GetChildren();
         //
-        // auto sibling = std::move(this->GetNode(children->at(index - 1)));
+        // auto sibling = std::move(pageAccessor.GetPage<Pages::IndexPageView>(children->at(index - 1)));
         //
         // auto* siblingKeys = sibling->GetKeysUnsafe();
         //
@@ -589,7 +580,7 @@ namespace Indexing{
 
         //   auto* children = parent.GetChildren();
         //
-        //   auto sibling = this->GetNode(children->at(index + 1));
+        //   auto sibling = this->_pageAccessor.GetPage<Pages::IndexPageView>(children->at(index + 1));
         //
         //   auto* siblingKeys = sibling->GetKeysUnsafe();
         //
@@ -647,7 +638,7 @@ namespace Indexing{
     }
 
     bool BTree::TryRedistributeLeaf(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexPageView &parent,
         MultiThreading::ReaderGuard &parentLock,
         Pages::IndexPageView &child,
@@ -658,7 +649,7 @@ namespace Indexing{
             return false;
 
         if (child.HasLeftSibling()) {
-            auto sibling = this->GetNode(child.LeftSibling());
+            auto sibling = this->_pageAccessor.GetPage<Pages::IndexPageView>(child.LeftSibling());
 
             MultiThreading::ReaderGuard siblingLock(&sibling.Latch());
 
@@ -678,7 +669,7 @@ namespace Indexing{
         }
 
         if (child.HasRightSibling()) {
-            auto sibling = this->GetNode(child.RightSibling());
+            auto sibling = this->_pageAccessor.GetPage<Pages::IndexPageView>(child.RightSibling());
 
             MultiThreading::ReaderGuard siblingLock(&sibling.Latch());
             //
@@ -846,7 +837,7 @@ namespace Indexing{
         //
         //
         //      if(rightNode.GetRightSibling() != INVALID_PAGE_ID){
-        //        auto nextNode = this->GetNode(rightNode.GetRightSibling());
+        //        auto nextNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(rightNode.GetRightSibling());
         //        nextNode->SetLeftSibling(leftNode->GetPageId());
         //      }
         // }
@@ -888,8 +879,8 @@ namespace Indexing{
     void BTree::CalculateClusteredStatistics(
         const ::Memory::IAllocator* allocator,
         Pages::IndexPageView& currentNode,
-        CoreEngine::Catalog::IndexStatistics& indexStatistics,
-        CoreEngine::Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
+        Catalog::IndexStatistics& indexStatistics,
+        Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const{
 
@@ -911,7 +902,7 @@ namespace Indexing{
                 // for (Int j = 0; j < columnStatistics.Size(); j++) {
                 //     auto& columnStats = columnStatistics[j];
                 //
-                //     CoreEngine::StatisticsScheduler::UpdateColumnStatistics(
+                //     StatisticsScheduler::UpdateColumnStatistics(
                 //         columnStats,
                 //         materializedRow.GetColumnReferenceAt(j),
                 //         sortedValues[columnStats.columnId]
@@ -922,54 +913,38 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 break;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
 
         tableStatistics.averageRowSize = static_cast<Int>(std::ceil(static_cast<float>(tableStatistics.averageRowSize) / static_cast<float>(tableStatistics.rowCount)));
     }
 
     void BTree::UpdatePfsPageNoLock(const Pages::IndexPageView& page) const{
-        const auto pfs = CoreEngine::Database::GetAssociatedPfsPage(
-            this->database->SystemFileKey(),
-            page.PageId()
-        );
-
+        const auto pfs = this->_pageAccessor.GetAssociatedPfsPage(page.PageId());
         MultiThreading::WriterGuard pfsPageLock(&pfs.Latch());
         pfs.SetPageMetaData(&page);
     }
 
     BTree::BTree(
-        CoreEngine::StorageTypes::Table *table,
+        StorageTypes::Table *table,
         const page_id_t indexPageId,
         const Constants::TreeType treeType,
         const Int nonClusteredIndexId
-    ){
+    ) : _pageAccessor(table->GetDatabase()->GetPageAccessor())
+    {
         //handle degree here correctly based on indexed columns
         this->keySize = table->CalculateIndexKeySize(nonClusteredIndexId);
         this->degree = BTree::CalculateTreeDegree(table, treeType, nonClusteredIndexId);
         this->rootPageId = indexPageId;
         this->type = treeType;
-        this->database = table->GetDatabase();
         this->nonClusteredIndexId = nonClusteredIndexId;
         this->table = table;
     }
 
-    BTree::BTree(){
-        this->degree = 0;
-        this->keySize = 0;
-        this->nonClusteredIndexId = -1;
-        this->rootPageId = INVALID_PAGE_INDEX_ID;
-        this->table = nullptr;
-        this->database = nullptr;
-        this->type = Constants::TreeType::NonClustered;
-    }
-
-    BTree::~BTree() = default;
-
     Errors::RuntimeStatus BTree::InsertRow(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Pages::IndexInsertTuple& tuple,
-        CoreEngine::StorageTypes::ExtentReservation& extentReservation
+        StorageTypes::ExtentReservation& extentReservation
     ){
         //base case scenario
         if (this->IsEmpty())
@@ -992,10 +967,10 @@ namespace Indexing{
     }
 
     void BTree::SeekRange(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key &minKey,
         const DataTypes::Indexing::Key &maxKey,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -1004,7 +979,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
 
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
@@ -1019,17 +994,17 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
 
     void BTree::SeekRange(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key& minKey,
         const DataTypes::Indexing::Key& maxKey,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        CoreEngine::VectorizedPushedDownFilter& filter
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+        VectorizedPushedDownFilter& filter
     ) const{
         if (this->IsEmpty())
             return;
@@ -1038,7 +1013,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, minKey);
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1057,15 +1032,15 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
 
     void BTree::Seek(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result
     ) const {
         if (this->IsEmpty())
             return;
@@ -1074,7 +1049,7 @@ namespace Indexing{
         const auto& snapshot = context.GetSnapshot();
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
 
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
@@ -1090,16 +1065,16 @@ namespace Indexing{
             if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(rightSibling);
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(rightSibling);
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
 
     void BTree::Seek(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        CoreEngine::VectorizedPushedDownFilter& filter
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+        VectorizedPushedDownFilter& filter
     ) const {
         if (this->IsEmpty())
             return;
@@ -1110,7 +1085,7 @@ namespace Indexing{
 
         auto startingIndex = BTree::ScanLeafLowerBound(currentNode, key);
 
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1129,14 +1104,14 @@ namespace Indexing{
             if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(rightSibling);
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(rightSibling);
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
 
     void BTree::SystemSeek(
         const DataTypes::Indexing::Key& key,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result
     ) const{
         if (this->IsEmpty())
             return;
@@ -1149,13 +1124,13 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++)
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(StorageTypes::RID(currentNode.PageId(), i));
 
             const auto rightSibling = currentNode.RightSibling();
             if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(rightSibling);
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(rightSibling);
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
@@ -1163,7 +1138,7 @@ namespace Indexing{
     void BTree::SystemSeek(
         const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1183,7 +1158,7 @@ namespace Indexing{
             evaluationContext._pages = &currentNode;
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext._rids = &rid;
 
                 if (Expressions::RowModeFilter(expression, evaluationContext))
@@ -1194,27 +1169,27 @@ namespace Indexing{
             if(rightSibling == INVALID_PAGE_ID)
                 return;
 
-            currentNode = this->GetNode(rightSibling);
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(rightSibling);
             startingIndex = 0; // Reset starting index for subsequent nodes
         }
     }
 
     void BTree::Scan(
-        const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        CoreEngine::IndexState& state
+        const ExecutionContext& context,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+        IndexState& state
     )const{
         if (this->IsEmpty())
             return;
 
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                ? this->SearchLeftMostLeafNode()
-                               : this->GetNode(state.pageId);
+                               : this->_pageAccessor.GetPage<Pages::IndexPageView>(state.pageId);
 
         const auto& snapshot = context.GetSnapshot();
 
         state.canFetchMore = false;
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1236,27 +1211,27 @@ namespace Indexing{
                 return;
             }
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     void BTree::Scan(
-        const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
-        CoreEngine::IndexState& state,
-        CoreEngine::VectorizedPushedDownFilter& filter
+        const ExecutionContext& context,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
+        IndexState& state,
+        VectorizedPushedDownFilter& filter
     )const{
         if (this->IsEmpty())
             return;
 
         auto currentNode = state.pageId == INVALID_PAGE_ID
                                ? this->SearchLeftMostLeafNode()
-                               : this->GetNode(state.pageId);
+                               : this->_pageAccessor.GetPage<Pages::IndexPageView>(state.pageId);
 
         const auto& snapshot = context.GetSnapshot();
         state.canFetchMore = false;
 
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
@@ -1286,13 +1261,13 @@ namespace Indexing{
                 return;
             }
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     void BTree::Scan(
-        const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result
+        const ExecutionContext& context,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result
     )const{
         if (this->IsEmpty())
             return;
@@ -1304,19 +1279,19 @@ namespace Indexing{
             for(Int i = 0;i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(StorageTypes::RID(currentNode.PageId(), i));
             }
 
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     void BTree::Scan(
-        const CoreEngine::ExecutionContext& context,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        const ExecutionContext& context,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
         const Expressions::Expression *expression
     )const{
         if (this->IsEmpty())
@@ -1330,7 +1305,7 @@ namespace Indexing{
             &context
         );
 
-        CoreEngine::StorageTypes::RID rid;
+        StorageTypes::RID rid;
         while (true){
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
             evaluationContext._pages = &currentNode;
@@ -1347,13 +1322,13 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     void BTree::SystemScan(
         const ::Memory::IAllocator* allocator,
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result,
+        DataStructures::PolymorphicArray<StorageTypes::RID>* result,
         const Expressions::Expression* expression
     ) const{
         if (this->IsEmpty())
@@ -1370,7 +1345,7 @@ namespace Indexing{
 
             evaluationContext._pages = &currentNode;
             for (Int i = 0;i < currentNode.PageSize();i++){
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
 
                 evaluationContext._rids = &rid;
                 if (!Expressions::RowModeFilter(expression, evaluationContext))
@@ -1382,11 +1357,11 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
-    void BTree::SystemScan(DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID>* result) const{
+    void BTree::SystemScan(DataStructures::PolymorphicArray<StorageTypes::RID>* result) const{
         if (this->IsEmpty())
             return;
 
@@ -1395,18 +1370,18 @@ namespace Indexing{
             MultiThreading::ReaderGuard lock(&currentNode.Latch());
 
             for(Int i = 0;i < currentNode.PageSize();i++)
-                result->Push(CoreEngine::StorageTypes::RID(currentNode.PageId(), i));
+                result->Push(StorageTypes::RID(currentNode.PageId(), i));
 
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     void BTree::Scan(
         DataStructures::PolymorphicArray<DataTypes::RowIdentifier> *result,
-        CoreEngine::IndexState& state,
+        IndexState& state,
         const Int rowsToSelect
     )const{
 
@@ -1415,7 +1390,7 @@ namespace Indexing{
         //
         // auto currentNode = state.pageId == INVALID_PAGE_ID
         //                 ? this->SearchLeftMostLeafNode()
-        //                 : this->GetNode(state.pageId);
+        //                 : this->_pageAccessor.GetPage<Pages::IndexPageView>(state.pageId);
         //
         // const Int startingPosition = state.GetNextKeyIndex();
         //
@@ -1453,7 +1428,7 @@ namespace Indexing{
         //     if(!currentNode.HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode.RightSibling());
+        //     currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         // }
     }
 
@@ -1478,12 +1453,12 @@ namespace Indexing{
         //     if(!currentNode.HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode.RightSibling());
+        //     currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         // }
     }
 
     void BTree::ScanUpdate(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Expressions::Expression *expression,
         const DataStructures::PolymorphicArray<Value> &updates
     )const{
@@ -1504,7 +1479,7 @@ namespace Indexing{
             for (Int i = 0; i < currentNode.PageSize();i++){
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
-                const auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                const auto rid = StorageTypes::RID(currentNode.PageId(), i);
 
                 evaluationContext._rids = &rid;
                 Expressions::EvaluateExpression(expression, evaluationContext, &exprResult, &exprNull);
@@ -1524,12 +1499,12 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return;
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
     }
 
     Errors::RuntimeStatus BTree::ScanUpdate(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Expressions::Expression *expression,
         const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
     )const{
@@ -1551,7 +1526,7 @@ namespace Indexing{
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext._rids = &rid;
 
                 Expressions::EvaluateExpression(expression, evaluationContext, &exprResult, &exprNull);
@@ -1571,14 +1546,14 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return Errors::RuntimeStatus();
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         }
 
         return Errors::RuntimeStatus();
     }
 
    Errors::RuntimeStatus BTree::ScanUpdate(
-       const CoreEngine::ExecutionContext& context,
+       const ExecutionContext& context,
        const DataStructures::PolymorphicArray<Expressions::Expression*>& updates
    )const{
        if (this->IsEmpty())
@@ -1593,7 +1568,7 @@ namespace Indexing{
                if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                    continue;
 
-               auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+               auto rid = StorageTypes::RID(currentNode.PageId(), i);
                auto result = this->table->UpdateRowNoLock(
                    &currentNode,
                    &rid,
@@ -1608,14 +1583,14 @@ namespace Indexing{
            if(!currentNode.HasRightSibling())
                return Errors::RuntimeStatus();
 
-           currentNode = this->GetNode(currentNode.RightSibling());
+           currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
        }
 
        return Errors::RuntimeStatus();
    }
 
     Errors::RuntimeStatus BTree::SeekUpdate(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key &key,
         const DataStructures::PolymorphicArray<Value> &updates
     ) const {
@@ -1633,7 +1608,7 @@ namespace Indexing{
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
                     &rid,
@@ -1648,13 +1623,13 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return Errors::RuntimeStatus();
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0;
         }
     }
 
     Errors::RuntimeStatus BTree::SeekUpdate(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const Expressions::Expression* expression,
         const DataTypes::Indexing::Key* minKey,
         const DataTypes::Indexing::Key* maxKey,
@@ -1680,7 +1655,7 @@ namespace Indexing{
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 evaluationContext._rids = &rid;
                 if(!Expressions::RowModeFilter(expression, evaluationContext))
                     continue;
@@ -1699,13 +1674,13 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return Errors::RuntimeStatus();
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0;
         }
     }
 
     Errors::RuntimeStatus BTree::SeekUpdate(
-        const CoreEngine::ExecutionContext& context,
+        const ExecutionContext& context,
         const DataTypes::Indexing::Key *minKey,
         const DataTypes::Indexing::Key *maxKey,
         const DataStructures::PolymorphicArray<Value> &updates
@@ -1724,7 +1699,7 @@ namespace Indexing{
                 if (!currentNode.IsRowVisible(context.GetSnapshot(), i))
                     continue;
 
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->UpdateRowNoLock(
                     &currentNode,
                     &rid,
@@ -1739,13 +1714,13 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return Errors::RuntimeStatus();
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0;
         }
     }
 
     Errors::RuntimeStatus BTree::SystemIndexSeekUpdate(
-        const Memory::IAllocator* allocator,
+        const ::Memory::IAllocator* allocator,
         const DataTypes::Indexing::Key& key,
         const DataStructures::PolymorphicArray<Value>& updates
     ) const{
@@ -1760,7 +1735,7 @@ namespace Indexing{
 
             const auto endingIndex = BTree::ScanLeafUpperBound(currentNode, key, startingIndex);
             for (Int i = startingIndex; i < endingIndex; i++){
-                auto rid = CoreEngine::StorageTypes::RID(currentNode.PageId(), i);
+                auto rid = StorageTypes::RID(currentNode.PageId(), i);
                 auto result = this->table->SystemUpdateRowNoLock(
                     &currentNode,
                     &rid,
@@ -1775,7 +1750,7 @@ namespace Indexing{
             if(!currentNode.HasRightSibling())
                 return Errors::RuntimeStatus();
 
-            currentNode = this->GetNode(currentNode.RightSibling());
+            currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
             startingIndex = 0;
         }
     }
@@ -1833,7 +1808,7 @@ namespace Indexing{
     page_id_t BTree::GetFirstIndexPageId() const { return this->rootPageId; }
 
     //escalate to table lock
-    void BTree::InsertRowsToOtherTree(CoreEngine::StorageTypes::ExtentReservation& extentReservation, const Int indexPos)const{
+    void BTree::InsertRowsToOtherTree(StorageTypes::ExtentReservation& extentReservation, const Int indexPos)const{
         if (this->IsEmpty())
             return;
 
@@ -1851,7 +1826,7 @@ namespace Indexing{
         //     if(!currentNode->HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode.GetRightSibling());
+        //     currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.GetRightSibling());
         // }
     }
 
@@ -1869,7 +1844,7 @@ namespace Indexing{
       //     if(!currentNode->HasRightSibling())
       //         return;
       //
-      //     currentNode = this->GetNode(currentNode.GetRightSibling());
+      //     currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.GetRightSibling());
       // }
   }
 
@@ -1877,7 +1852,7 @@ namespace Indexing{
         if (this->IsEmpty())
             return;
         //
-        // auto root = this->GetNode(this->rootPageId);
+        // auto root = this->_pageAccessor.GetPage<Pages::IndexPageView>(this->rootPageId);
         //
         // auto currentNode = this->SearchLeftMostLeafNode();
         //
@@ -1889,7 +1864,7 @@ namespace Indexing{
         //     if(!currentNode.HasRightSibling())
         //         return;
         //
-        //     currentNode = this->GetNode(currentNode.RightSibling());
+        //     currentNode = this->_pageAccessor.GetPage<Pages::IndexPageView>(currentNode.RightSibling());
         // }
 
     }
@@ -1897,14 +1872,14 @@ namespace Indexing{
     bool BTree::IsEmpty() const{ return this->rootPageId == INVALID_PAGE_ID; }
 
     void BTree::CalculateIndexStatistics(
-        CoreEngine::Catalog::IndexStatistics& indexStatistics,
-        CoreEngine::Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
+        Catalog::IndexStatistics& indexStatistics,
+        Catalog::TableStatistics& tableStatistics, DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) const {
         if (this->IsEmpty())
             return;
 
-        const CoreEngine::Memory::Allocator allocator;
+        const Memory::Allocator allocator;
         auto currentNode = this->SearchLeftMostLeafNode(indexStatistics.depth);
 
         if (this->type == Constants::TreeType::Clustered){

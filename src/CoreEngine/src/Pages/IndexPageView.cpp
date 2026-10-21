@@ -20,9 +20,9 @@ namespace CoreEngine::Pages{
         this->InsertNewSlot(newSlot);
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->size++;
-        headerPtr->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
-        this->_frame->_isDirty = true;
+        headerPtr->IncrementSizeNoLock();
+        headerPtr->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->MarkDirty();
     }
 
     DataTypes::Indexing::Key IndexPageView::GetKeyByOffset( const SlotDirectory slot) const{
@@ -44,7 +44,7 @@ namespace CoreEngine::Pages{
     }
 
     bool IndexPageView::IsEmpty() const{
-        return this->_frame->Header()->size == 0;
+        return this->_frame->Header()->_size == 0;
     }
 
     bool IndexPageView::IsLeaf() const{
@@ -57,27 +57,27 @@ namespace CoreEngine::Pages{
 
     UnsignedSmallInt IndexPageView::Keys() const{
         return this->IsLeaf()
-                   ? this->_frame->Header()->size
-                   : this->_frame->Header()->size - 1;
+                   ? this->_frame->Header()->_size
+                   : this->_frame->Header()->_size - 1;
     }
 
     void IndexPageView::SetIsLeaf(const bool isLeaf) const{
         auto* additionalHeader = this->GetAdditionalHeader();
         additionalHeader->SetIsLeaf(isLeaf);
         additionalHeader->SetIsEmpty(false);
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     void IndexPageView::SetIsRoot(const bool isRoot) const{
         auto* additionalHeader = this->GetAdditionalHeader();
         additionalHeader->SetIsRoot(isRoot);
         additionalHeader->SetIsEmpty(false);
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     void IndexPageView::InsertChild(const page_id_t child, const DataTypes::Indexing::Key* key) const{
         auto* headerPtr = this->_frame->Header();
-        if (headerPtr->size == 0){
+        if (headerPtr->_size == 0){
             this->InsertFirstChild(child);
             return;
         }
@@ -96,9 +96,9 @@ namespace CoreEngine::Pages{
         );
         this->InsertNewSlot(newSlot);
 
-        headerPtr->size++;
-        this->_frame->_isDirty = true;
-        headerPtr->ConsumeBytes(static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        headerPtr->IncrementSizeNoLock();
+        this->_frame->MarkDirty();
+        headerPtr->ConsumeBytesNoLock(static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
     }
 
     void IndexPageView::InsertChild(
@@ -121,9 +121,9 @@ namespace CoreEngine::Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->Size());
 
 
-        this->_frame->Header()->ConsumeBytes(sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
-        this->_frame->Header()->size++;
-        this->_frame->_isDirty = true;
+        this->_frame->Header()->ConsumeBytesNoLock(sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->_size++;
+        this->_frame->MarkDirty();
     }
 
     void IndexPageView::InsertFirstChild(const page_id_t child) const{
@@ -134,9 +134,9 @@ namespace CoreEngine::Pages{
         const auto newSlot = SlotDirectory(nextOffset, 0, sizeof(page_id_t), 0, SlotDirectory::SLOT_USED);
         this->InsertNewSlot(newSlot);
 
-        this->_frame->Header()->size++;
-        this->_frame->_isDirty = true;
-        this->_frame->Header()->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->_size++;
+        this->_frame->MarkDirty();
+        this->_frame->Header()->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
     }
 
     void IndexPageView::SetLeftSibling(const page_id_t previousPage) const{
@@ -181,9 +181,9 @@ namespace CoreEngine::Pages{
         this->InsertNewSlot(newSlot);
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->size++;
-        headerPtr->ConsumeBytes(newSlot.Size() + SlotDirectory::SIZE);
-        this->_frame->_isDirty = true;
+        headerPtr->IncrementSizeNoLock();
+        headerPtr->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->MarkDirty();
     }
 
     void IndexPageView::InsertTuple(const IndexInsertTuple& tuple, const Int indexPosition) const{
@@ -204,9 +204,9 @@ namespace CoreEngine::Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.Size());
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->ConsumeBytes(size + tuple.key.Size() + SlotDirectory::SIZE);
-        headerPtr->size++;
-        this->_frame->_isDirty = true;
+        headerPtr->ConsumeBytesNoLock(size + tuple.key.Size() + SlotDirectory::SIZE);
+        headerPtr->IncrementSizeNoLock();
+        this->_frame->MarkDirty();
     }
 
     DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const Int indexPosition) const{

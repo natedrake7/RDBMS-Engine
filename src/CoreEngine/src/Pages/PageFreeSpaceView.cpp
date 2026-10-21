@@ -29,15 +29,15 @@ namespace CoreEngine::Pages{
 
     void PageFreeSpaceView::SetPageMetaData(const PageView* page) const{
         const auto* header = page->GetHeader();
-        this->SetPageAllocated(header->pageId);
-        this->SetPageType(header->pageId, page->GetPageType());
-        this->SetPageAllocationStatus(header->pageId, header->bytesLeft);
+        this->SetPageAllocated(header->_pageId);
+        this->SetPageType(header->_pageId, page->GetPageType());
+        this->SetPageAllocationStatus(header->_pageId, header->_bytesLeft);
 
-        const auto type = this->GetPageType(header->pageId);
+        const auto type = this->GetPageType(header->_pageId);
         const auto pageType = page->GetPageType();
         assert(pageType == type);
 
-        this->_frame->_isDirty = true;
+        this->_frame->MarkDirty();
     }
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{

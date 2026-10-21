@@ -106,7 +106,6 @@ add_library(CoreEngine STATIC
         src/CoreEngine/src/Algorithms/Sort/QuickSort.cpp
         src/CoreEngine/src/Algorithms/Sort/MergeSort.cpp
         src/CoreEngine/src/Managers/IdentityManager.cpp
-        src/CoreEngine/src/Managers/LockManager.cpp
         src/CoreEngine/src/Managers/TransactionManager.cpp
         src/CoreEngine/src/Logger/Logger.cpp
         src/CoreEngine/src/Logger/WriteAheadLogger.cpp

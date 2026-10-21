@@ -2,6 +2,8 @@
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/SystemDatabases/VersionDatabase.h>
 
+#include "CoreEngine/DataStorage/Table.h"
+
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
         Snapshot& snapshot,
@@ -83,23 +85,8 @@ namespace CoreEngine{
         return this->_schema.tables[index];
     }
 
-    DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> ExecutionContext::GetFileKeys(const UnsignedSmallInt index) const{
-        DataStructures::StaticArray<Storage::FileKey, StorageTypes::RID::Count> fileKeys;
-        fileKeys[StorageTypes::RID::Table] = this->_schema.fileKeys[index];
-        fileKeys[StorageTypes::RID::Version] = VersionDatabase::Get().GetDataFileKey();
-
-        return fileKeys;
-    }
-
-    Storage::FileKey ExecutionContext::GetFileKey(const UnsignedSmallInt slotIndex, const UnsignedSmallInt index) const{
-        return this->_schema.fileKeys[slotIndex];
-    }
-
-    void ExecutionContext::SetFileKey(
-        const Storage::FileKey fileKey,
-        const UnsignedSmallInt slotIndex
-    ){
-        this->_schema.fileKeys[slotIndex] = fileKey;
+    Accessors::PageAccessor ExecutionContext::GetPageAccessor(UnsignedSmallInt slotIndex) const{
+        return this->_schema.tables[slotIndex]->GetPageAccessor();
     }
 
     void ExecutionContext::SetScanHandle(const StorageTypes::RID* rids, const UnsignedInt size, const UnsignedSmallInt slotIndex){

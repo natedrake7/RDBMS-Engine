@@ -1,7 +1,6 @@
 ﻿#include <system_error>
 #include <CoreEngine/BufferPool/File.h>
 #include <Systemic/DataTypes/StringView.h>
-#include <winsock2.h>
 
 #include <CoreEngine/BufferPool/StorageLayout.h>
 #include <Systemic/Functions/MathFunctions.h>
@@ -294,7 +293,7 @@ namespace Storage::FileIO{
 
         while (done < size){
 #ifdef _WIN32
-            auto overlapped = AtOffset(offset + done);
+            auto overlapped = OverlappedAt(offset + done);
             const auto chunk = static_cast<DWORD>(Math::Min<UnsignedBigInt>(size - done, MAXDWORD));
             const auto started = WriteFile(file, bytes + done, chunk, nullptr, &overlapped);
             const auto transferred = FinishIO(file, started, overlapped, "FileIO:Write");

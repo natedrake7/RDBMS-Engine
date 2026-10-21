@@ -19,62 +19,58 @@ namespace Network {
         this->versionDatabase = nullptr;
     }
 
-  void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
-      const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
+    void Server::CreateSystemRoles(const CoreEngine::ExecutionContext& baseContext) {
+        const auto roles = this->systemCatalog->InsertSystemRoles(baseContext);
+        for (const auto* role : roles)
+            const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role->name), role);
+    }
 
-      for (const auto* role : roles)
-          const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role->name), role);
-  }
+    void Server::CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext) {
+    const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
 
-  void Server::CreateSystemUsers(const CoreEngine::ExecutionContext& baseContext) {
-      const auto defaultRole = this->roleManager.GetRole(Constants::ADMIN_NAME);
+    DataTypes::String hashedPassword(baseContext.GetAllocator());
+        if (Security::UserManager::HashPassword(Constants::ADMIN_NAME, hashedPassword) == false) {
+            std::cerr << "Failed to hash password for admin user" << std::endl;
+            return;
+        }
 
-      DataTypes::String hashedPassword(baseContext.GetAllocator());
-      if (Security::UserManager::HashPassword(Constants::ADMIN_NAME, hashedPassword) == false) {
-          std::cerr << "Failed to hash password for admin user" << std::endl;
-          return;
-      }
+        const auto user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
+        const auto _ = this->userManager.AddUser(user.id, user.name, hashedPassword, defaultRole);
+    }
 
-      const auto user = this->systemCatalog->InsertSystemUsers(baseContext, hashedPassword, defaultRole->id);
-      const auto _ = this->userManager.AddUser(user.id, user.name, hashedPassword, defaultRole);
-      // user->role = defaultRole;
-      // const auto _ = this->userManager.AddSystemUser(user);
-  }
+    Server& Server::Get(){
+        static Server instance;
+        return instance;
+    }
 
-  Server& Server::Get(){
-      static Server instance;
+    void Server::Initialize(){
+        const CoreEngine::ExecutionContext _baseContext;
 
-      return instance;
-  }
+        this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
+        this->temporaryDatabase->Initialize(_baseContext.GetAllocator());
 
-  void Server::Initialize(){
-      const CoreEngine::ExecutionContext _baseContext;
+        this->versionDatabase = &CoreEngine::VersionDatabase::Get();
+        this->versionDatabase->Initialize(_baseContext);
 
-      this->temporaryDatabase = &CoreEngine::TemporaryDatabase::Get();
-      this->temporaryDatabase->Initialize(_baseContext.GetAllocator());
+        this->systemCatalog = &CoreEngine::SystemCatalog::Get();
+        if (this->systemCatalog->Initialize(_baseContext)){
+            this->CreateSystemRoles(_baseContext);
+            this->CreateSystemUsers(_baseContext);
+            return;
+        }
 
-      this->versionDatabase = &CoreEngine::VersionDatabase::Get();
-      this->versionDatabase->Initialize(_baseContext);
+        const auto lastCheckpoint = CoreEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
+        CoreEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
 
-      this->systemCatalog = &CoreEngine::SystemCatalog::Get();
-      if (this->systemCatalog->Initialize(_baseContext)){
-          this->CreateSystemRoles(_baseContext);
-          this->CreateSystemUsers(_baseContext);
-          return;
-      }
+        const CoreEngine::Memory::Allocator allocator;
+        for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
+            const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role.name), &role);
 
-      const auto lastCheckpoint = CoreEngine::Logging::WriteAheadLogger::Get().RecoverLastCheckPoint();
-      CoreEngine::TransactionManager::Get().SetTransactionId(lastCheckpoint.transactionId + 1);
-
-      const CoreEngine::Memory::Allocator allocator;
-      for (const auto& role : this->systemCatalog->SelectRoles(&allocator))
-          const auto _ = this->roleManager.AddRole(DataTypes::StringView::ViewOf(role.name), &role);
-
-      for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
-          const auto* role = this->roleManager.GetRole(user.roleId);
-          const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
-      }
-  }
+        for (const auto& user : this->systemCatalog->SelectUsers(&allocator)) {
+            const auto* role = this->roleManager.GetRole(user.roleId);
+            const auto _ = this->userManager.AddUser(user.id, user.name, user.passwordHash, role);
+        }
+    }
 
   void Server::Shutdown(){
       const CoreEngine::Memory::Allocator allocator;
@@ -232,10 +228,26 @@ namespace Network {
 
     void Server::CreateDatabase(
         const Memory::IAllocator* allocator,
-        const Int databaseId,
-        const DataTypes::StringView& dbName
+        const CoreEngine::Catalog::DatabaseHeader& header
     ){
-        auto accessor = CoreEngine::CreateDatabase(allocator, databaseId, dbName);
+        MultiThreading::WriterGuard lock(&this->databasesLatch);
+
+        CoreEngine::Database* db = nullptr;
+        if (this->databases.TryGetValue(header.id, db))
+            return;
+
+        const auto nameView = DataTypes::StringView::ViewOf(header.name);
+        const auto accessor = CoreEngine::CreateDatabase(allocator, nameView);
+        db = new CoreEngine::Database(
+            allocator,
+            accessor,
+            header.id,
+            nameView
+        );
+
+        db->Bootstrap(allocator, header);
+
+        this->databases.Add(header.id, db);
     }
 
     CoreEngine::Database* Server::UseDatabase(
@@ -254,11 +266,15 @@ namespace Network {
             return db;
 
         const auto dbHeader = this->systemCatalog->SelectDatabaseById(allocator, databaseId);
+        const auto view = DataTypes::StringView::ViewOf(dbHeader.name);
+
+        const auto accessor = CoreEngine::UseDatabase(allocator, view);
 
         db = new CoreEngine::Database(
             allocator,
+            accessor,
             databaseId,
-            DataTypes::StringView::ViewOf(dbHeader.name)
+            view
         );
 
         db->Bootstrap(allocator, dbHeader);

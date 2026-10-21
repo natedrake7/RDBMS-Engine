@@ -190,34 +190,36 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  PhysicalCreateDatabase::PhysicalCreateDatabase(const session_id_t sessionId, DataTypes::String& name) : PlanNode(sessionId), dbName(std::move(name)){}
+    PhysicalCreateDatabase::PhysicalCreateDatabase(const session_id_t sessionId, DataTypes::String& name)
+        : PlanNode(sessionId), dbName(std::move(name)){}
 
-  ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
-    const auto* allocator = context.GetAllocator();
-      if (this->session == nullptr || this->session->user == nullptr)
-          return ExecutionResult::Error(
-              allocator,
-              Messages::FAILED_TO_RETRIEVE_USER_SESSION
-          );
+    ExecutionResult PhysicalCreateDatabase::Execute(CoreEngine::ExecutionContext& context){
+        const auto* allocator = context.GetAllocator();
+        if (this->session == nullptr || this->session->user == nullptr)
+            return ExecutionResult::Error(
+                allocator,
+                Messages::FAILED_TO_RETRIEVE_USER_SESSION
+            );
 
-      const auto path = DataTypes::String::Concat(allocator, this->dbName, Constants::DATA_FILE_EXTENSION);
+        const auto path = DataTypes::String::Concat(allocator, this->dbName, Constants::DATA_FILE_EXTENSION);
 
-      const auto result = CoreEngine::SystemCatalog::Get().InsertDbToMasterDb(
-          context,
-          DataTypes::StringView::ViewOf(this->dbName),
-          DataTypes::StringView::ViewOf(path),
-          false,
-          DataTypes::StringView::ViewOf(this->session->user->name)
-      );
+        const auto result = CoreEngine::SystemCatalog::Get().InsertDbToMasterDb(
+            context,
+            DataTypes::StringView::ViewOf(this->dbName),
+            DataTypes::StringView::ViewOf(path),
+            false,
+            DataTypes::StringView::ViewOf(this->session->user->name)
+        );
 
-      const auto databaseId = result.primaryKey.AsInt<Int>();
+        const auto databaseId = result.primaryKey.AsInt<Int>();
 
-      const auto _ = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
+        const auto dbHeader = CoreEngine::SystemCatalog::Get().SelectDatabaseById(allocator, databaseId);
 
-      CoreEngine::CreateDatabase(allocator, databaseId, DataTypes::StringView::ViewOf(this->dbName));
+        const auto _ = CoreEngine::SystemCatalog::Get().InsertSchemaToMasterDb(context, databaseId, Constants::DEFAULT_SCHEMA_NAME);
+        Network::Server::Get().CreateDatabase(allocator, dbHeader);
 
-      return ExecutionResult(context);
-  }
+        return ExecutionResult(context);
+    }
 
   PhysicalUseDatabase::PhysicalUseDatabase(const session_id_t sessionId, const Int databaseId)
       : sessionId(sessionId), databaseId(databaseId){}
@@ -558,7 +560,6 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -594,8 +595,6 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
-
-        context.SetFileKey(tablePtr->GetDataFileKey(), slotIndex);
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rids(context.GetAllocator(), context.GetBatchSize());
 
@@ -646,7 +645,6 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
@@ -678,7 +676,6 @@ namespace QueryPipeline::PhysicalPlan {
 
         context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
-        context.SetFileKey(tablePtr->GetDataFileKey(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;

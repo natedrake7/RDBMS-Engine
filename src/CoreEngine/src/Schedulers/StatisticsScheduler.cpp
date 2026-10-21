@@ -231,22 +231,17 @@ namespace CoreEngine {
 
     void StatisticsScheduler::UpdateHeapStatistics(
         const StorageTypes::Table *table,
-        const page_id_t iamPageId,
+        const page_id_t allocationPageId,
         Catalog::TableStatistics &tableStatistics,
         DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
         Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
     ) {
 
-        const auto dataKey = table->GetDataFileKey();
-        const auto systemKey = table->GetSystemFileKey();
-
-        const auto iamPage = Storage::StorageManager::Get().GetPage<Pages::AllocationPageView>(
-            dataKey,
-            iamPageId
-        );
+        const auto pageAccessor = table->GetPageAccessor();
+        const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(allocationPageId);
 
         DataStructures::PolymorphicArray<extent_id_t> extents;
-        iamPage.GetAllocatedExtents(&extents, 0);
+        allocationPage.GetAllocatedExtents(&extents, 0);
 
         int estimatedRowCount = 1000;
 
@@ -255,30 +250,24 @@ namespace CoreEngine {
         int allocatedPagesPerExtent = 0;
 
         const Memory::Allocator allocator;
-        for (const auto& extentId : extents) {
-            const page_id_t extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
+        for (const auto extentId : extents) {
+            const auto extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
-            const auto pageFreeSpacePage = CoreEngine::Database::GetAssociatedPfsPage(
-                systemKey,
-                extentFirstPageId
-            );
+            const auto pfs = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
 
-            const auto firstDataPageId = (iamPage.PageId() != extentFirstPageId)
+            const auto firstDataPageId = (allocationPage.PageId() != extentFirstPageId)
                        ? extentFirstPageId
                        : extentFirstPageId + 1;
 
             bool successfulPfsLock = false;
-            auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pageFreeSpacePage.Latch(), successfulPfsLock);
+            auto pfsLatch = MultiThreading::ReaderGuard::TryLock(&pfs.Latch(), successfulPfsLock);
 
             for (page_id_t extentPageId = firstDataPageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
                 if (successfulPfsLock
-                    && pageFreeSpacePage.GetPageType(extentPageId) != Constants::PageType::DATA
+                    && pfs.GetPageType(extentPageId) != PageLayout::PageType::DATA
                 ) break;
 
-                auto page = Storage::StorageManager::Get().GetPage<Pages::PageView>(
-                    dataKey,
-                    extentPageId
-                );
+                auto page = pageAccessor.GetPage<Pages::PageView>(extentPageId);
 
                 bool successfulLock = false;
                 auto lock = MultiThreading::ReaderGuard::TryLock(&page.Latch(), successfulLock);
@@ -287,7 +276,7 @@ namespace CoreEngine {
 
                 const auto pageSize = page.PageSize();
                 const auto fallBackPageType = page.GetPageType();
-                if (pageSize == 0 || (fallBackPageType != Constants::PageType::INDEXED && fallBackPageType != Constants::PageType::DATA))
+                if (pageSize == 0 || (fallBackPageType != PageLayout::PageType::INDEXED && fallBackPageType != PageLayout::PageType::DATA))
                     continue;
 
                 averageRowsPerPage += pageSize;

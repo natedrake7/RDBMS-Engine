@@ -2,13 +2,10 @@
 
 namespace CoreEngine::StorageTypes{
     bool LobReader::InitializeRootView(){
-        this->_rootView = Storage::StorageManager::Get().GetPage<Pages::LobRootView>(
-            this->_fileKey,
-            this->_reference._rootPageId
-        );
+        this->_rootView = this->_pageAccessor.GetPage<Pages::LobRootView>(this->_reference._rootPageId);
 
         if (!this->_rootView.IsValid()
-            || this->_rootView.GetPageType() != Constants::PageType::LOB_ROOT
+            || this->_rootView.GetPageType() != PageLayout::PageType::LOB_ROOT
             || !this->_rootView.IsConsistent()
             || this->_rootView.TotalLength() != this->_reference._totalLength
         ) return false;
@@ -16,7 +13,7 @@ namespace CoreEngine::StorageTypes{
         this->_length = this->_rootView.TotalLength();
         this->_level = this->_rootView.Level();
 
-        auto expected = 0;
+        UnsignedInt expected = 0;
         switch (this->_level){
         case 1:
             expected = Pages::LobLayout::DataPageCount(this->_length);
@@ -39,18 +36,14 @@ namespace CoreEngine::StorageTypes{
         if (rootSlot > this->_rootView.ChildCount())
             return false;
 
-        this->_indexView = Storage::StorageManager::Get().GetPage<Pages::LobIndexView>(
-            this->_fileKey,
-            this->_rootView.Child(rootSlot)
-        );
-
+        this->_indexView =  this->_pageAccessor.GetPage<Pages::LobIndexView>(this->_rootView.Child(rootSlot));
         this->_indexRootSlot = rootSlot;
 
         const auto dataPages = Pages::LobLayout::DataPageCount(this->_length);
         const auto expectedDataPages = Math::Min<UnsignedInt>(Pages::LobLayout::INDEX_FANOUT, dataPages - rootSlot * Pages::LobLayout::INDEX_FANOUT);
 
         return this->_indexView.IsValid()
-            && this->_indexView.GetPageType() == Constants::PageType::LOB_INDEX
+            && this->_indexView.GetPageType() == PageLayout::PageType::LOB_INDEX
             && this->_indexView.RootPageId() == this->_reference._rootPageId
             && this->_indexView.ChildCount() == expectedDataPages;
     }
@@ -76,11 +69,11 @@ namespace CoreEngine::StorageTypes{
     Pages::LobDataView LobReader::FetchDataPage(const Pages::LobLayout::Position& position){
         const auto pageId = this->DataPageId(position);
 
-        auto dataView = Storage::StorageManager::Get().GetPage<Pages::LobDataView>(this->_fileKey, pageId);
+        auto dataView = this->_pageAccessor.GetPage<Pages::LobDataView>(pageId);
 
         if (
             !dataView.IsValid()
-            || dataView.GetPageType() != Constants::PageType::LOB_DATA
+            || dataView.GetPageType() != PageLayout::PageType::LOB_DATA
             || dataView.RootPageId() != this->_reference._rootPageId
             || dataView.PageIndex() != position._dataPage
         ) throw std::runtime_error("LobReader::FetchDataPage: Invalid data page");
@@ -88,8 +81,8 @@ namespace CoreEngine::StorageTypes{
         return dataView;
     }
 
-    LobReader::LobReader(const Storage::FileKey& fileKey, const DataTypes::LobReference& reference)
-        :   _fileKey(fileKey), _reference(reference),
+    LobReader::LobReader(const Accessors::PageAccessor pageAccessor, const DataTypes::LobReference& reference)
+        :   _pageAccessor(pageAccessor), _reference(reference),
             _indexRootSlot(std::numeric_limits<UnsignedInt>::max()), _length(0),
             _position(0), _level(0), _status(LobReadStatus::Ok){
         if (!reference.IsValid() || !this->InitializeRootView())
