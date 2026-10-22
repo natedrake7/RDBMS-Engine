@@ -1,11 +1,11 @@
 ﻿#pragma once
 #include <algorithm>
-#include <assert.h>
+#include <cassert>
 #include <functional>
-#include <stdexcept>
 #include <cstring>
 #include <Systemic/DataTypes/DataTypes.h>
 #include <Systemic/Memory/IAllocator.h>
+#include <memory>
 
 namespace DataStructures{
     enum class ArraySortType: UnsignedTinyInt{
@@ -15,10 +15,52 @@ namespace DataStructures{
 
     template <typename T>
     class PolymorphicArray final{
+        static constexpr bool TRIVIALLY_COPIABLE = std::is_trivially_copyable_v<T>;
+
         const Memory::IAllocator* _allocator;
         T* _data;
         Int _size;
         Int _capacity;
+
+        static void Relocate(T* to, T* from, const Int count){
+            if (count == 0)
+                return;
+
+            if constexpr (TRIVIALLY_COPIABLE)
+                std::memcpy(static_cast<void*>(to), static_cast<const void*>(from), count * sizeof(T));
+            else{
+                std::uninitialized_move_n(from, count, to);
+                std::destroy_n(from, count);
+            }
+        }
+
+        static void Copy(T* to, const T* from, const Int count){
+            if (count == 0)
+                return;
+
+            if constexpr (TRIVIALLY_COPIABLE)
+                std::memcpy(static_cast<void*>(to), static_cast<const void*>(from), count * sizeof(T));
+            else
+                std::uninitialized_copy_n(from, count, to);
+        }
+
+        void GrowIfFull(){
+            assert(this->_allocator != nullptr && "PolymorphicArray:GrowIfFull: array growth called by no allocator was present");
+
+            if (this->_size >= this->_capacity)
+                this->Reserve(this->_capacity == 0 ? 1 : this->_capacity * 2);
+        }
+
+        void GrowTo(const Int required){
+            assert(this->_allocator != nullptr && "PolymorphicArray:GrowTo: array growth called by no allocator was present");
+
+            if (required <= this->_capacity)
+                return;
+            auto newCapacity = this->_capacity == 0 ? 1 : this->_capacity;
+            while (newCapacity < required)
+                newCapacity *= 2;
+            this->Reserve(newCapacity);
+        }
 
     public:
         PolymorphicArray()
@@ -30,35 +72,37 @@ namespace DataStructures{
                 _size(0), _capacity(0){}
 
         PolymorphicArray(const Memory::IAllocator* allocator, const Int capacity)
-            :   _allocator(allocator), _data(static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)))),
+            :   _allocator(allocator), _data(static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T), alignof(T)))),
                 _size(0), _capacity(capacity){}
 
-        PolymorphicArray(const Memory::IAllocator* allocator, Int capacity, T value){
-            this->_allocator = allocator;
-            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T)));
-            this->_size = capacity;
-            this->_capacity = capacity;
-
-            for (Int i = 0; i < capacity; i++)
-                this->_data[i] = value;
+        PolymorphicArray(const Memory::IAllocator* allocator, const Int capacity, T value)
+            :   _allocator(allocator), _data(static_cast<T*>(allocator->AllocateRaw(capacity * sizeof(T), alignof(T)))),
+                _size(capacity), _capacity(capacity){
+            std::uninitialized_fill_n(this->_data, capacity, value);
         }
 
-        PolymorphicArray(const PolymorphicArray& other){
-            this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T)));
-            std::memcpy(this->_data, other._data, other._size * sizeof(T));
-
-            this->_size = other._size;
-            this->_capacity = other._capacity;
+        PolymorphicArray(const PolymorphicArray& other)
+            :   _allocator(other._allocator),
+                _data(other._capacity == 0
+                        ? nullptr
+                        : static_cast<T*>(other._allocator->AllocateRaw(other._capacity * sizeof(T), alignof(T)))
+                ),
+                _size(other._size), _capacity(other._capacity){
+            PolymorphicArray::Copy(this->_data, other._data, other._size);
         }
 
         PolymorphicArray& operator=(const PolymorphicArray& other){
             if (this == &other)
                 return *this;
 
+            std::destroy_n(this->_data, this->_size);
             this->_allocator = other._allocator;
-            this->_data = static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T)));
-            std::memcpy(static_cast<void*>(this->_data), static_cast<void*>(other._data), other._size * sizeof(T));
+
+            this->_data = other._capacity == 0
+                    ? nullptr
+                    : static_cast<T*>(this->_allocator->AllocateRaw(other._capacity * sizeof(T), alignof(T)));
+
+            PolymorphicArray::Copy(this->_data, other._data, other._size);
 
             this->_size = other._size;
             this->_capacity = other._capacity;
@@ -79,6 +123,8 @@ namespace DataStructures{
             if (this == &other)
                 return *this;
 
+            std::destroy_n(this->_data, this->_size);
+
             this->_allocator = other._allocator;
             this->_data = other._data;
             this->_size = other._size;
@@ -92,7 +138,7 @@ namespace DataStructures{
             return *this;
         }
 
-        PolymorphicArray& PartialMove(PolymorphicArray& other, Int offSet) noexcept{
+        PolymorphicArray& PartialMove(PolymorphicArray& other, Int offSet) noexcept requires TRIVIALLY_COPIABLE{
             if (this == &other)
                 return *this;
 
@@ -110,108 +156,136 @@ namespace DataStructures{
             return *this;
         }
 
-        void Clear() { this->_size = 0; }
+        ~PolymorphicArray(){
+            if constexpr (!std::is_trivially_destructible_v<T>)
+                std::destroy_n(this->_data, this->_size);
+        }
+
+        void Clear(){
+            std::destroy_n(this->_data, this->_size);
+            this->_size = 0;
+        }
 
         void SetNewSize(const Int newSize){
-            if (newSize > this->_capacity)
-                this->Reserve(newSize);
-            this->_size = newSize;
+            this->Resize(newSize);
+        }
+
+        template<typename... Args>
+        T& Emplace(Args&&... args){
+            assert(this->_allocator != nullptr && "PolymorphicArray:Emplace: array growth called by no allocator was present");
+
+            if (this->_size < this->_capacity)
+                return *std::construct_at(this->_data + this->_size++, std::forward<Args>(args)...);
+
+            const auto newCapacity = this->_capacity == 0
+                ? 1
+                : this->_capacity * 2;
+
+            auto* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T), alignof(T)));
+            auto* element = std::construct_at(newData + this->_size, std::forward<Args>(args)...);
+
+            Relocate(newData, this->_data, this->_size);
+
+            this->_data = newData;
+            this->_capacity = newCapacity;
+
+            ++this->_size;
+
+            return *element;
         }
 
         void Push(T&& value){
-            if (this->_size >= this->_capacity){
-                auto newCapacity = (this->_capacity == 0) ? 1 : this->_capacity * 2;
-                this->Reserve(newCapacity);
-            }
-
-            this->_data[this->_size++] = std::move(value);
+            this->Emplace(std::move(value));
         }
 
-        inline void Push(const T& value){
-            if (this->_size >= this->_capacity){
-                auto newCapacity = (this->_capacity == 0)
-                    ? 1
-                    : this->_capacity * 2;
-                this->Reserve(newCapacity);
-            }
-
-            this->_data[this->_size++] = value;
+        void Push(const T& value){
+            this->Emplace(value);
         }
 
-        void Insert(const T& value, const Int index){
-            assert(!(index != 0 && index > this->_size) && "PolymorphicArray Insert: Index is out of range.");
+        void Insert(T value, const Int index){
+            assert(index >= 0 && index <= this->_size && "PolymorphicArray::Insert: index out of range");
 
-            if (this->_size >= this->_capacity){
-                auto newCapacity = (this->_capacity == 0)
-                    ? 1
-                    : this->_capacity * 2;
-                this->Reserve(newCapacity);
+            this->GrowIfFull();
+
+            auto* const slot = this->_data + index;
+            auto* const oldEnd = this->_data + this->_size;
+
+            if (index == this->_size)
+                std::construct_at(slot, std::move(value));
+            else if constexpr (TRIVIALLY_COPIABLE){
+                std::memmove(static_cast<void*>(slot + 1), slot, (this->_size - index) * sizeof(T));
+                *slot = value;
+            }
+            else{
+                std::construct_at(oldEnd, std::move(*(oldEnd - 1)));
+                std::move_backward(slot, oldEnd - 1, oldEnd);
+                *slot = std::move(value);
             }
 
-            for (Int i = this->_size - 1; i >= index; --i)
-                this->_data[i + 1] = std::move(this->_data[i]);
-
-            this->_data[index] = value;
             ++this->_size;
         }
 
         void Insert(const T& value, const Int index, const Int count){
             assert(!(index != 0 && index > this->_size) && "PolymorphicArray Insert: Index is out of range.");
 
-            if (this->_size + count >= this->_capacity){
-                if (this->_capacity == 0)
-                    this->Reserve(count);
-                else{
-                    auto newCapacity = this->_capacity * 2;
-                    while (newCapacity < this->_size + count)
-                        newCapacity *= 2;
+            if (count == 0)
+                return;
 
-                    this->Reserve(newCapacity);
-                }
+            const T copy = value;                                   // `value` may point into this array
+            this->GrowTo(this->_size + count);
+
+            auto* const first = this->_data + index;
+            auto* const oldEnd = this->_data + this->_size;
+            const Int tail = this->_size - index;                   // elements that move right by `count`
+
+            if constexpr (TRIVIALLY_COPIABLE){
+                std::memmove(static_cast<void*>(first + count), first, tail * sizeof(T));
+                std::uninitialized_fill_n(first, count, copy);
             }
-            for (Int i = this->_size - 1; i >= index; --i)
-                this->_data[i + count] = std::move(this->_data[i]);
-
-            for (Int i = 0; i < count; ++i)
-                this->_data[index + i] = value;
+            else if (tail <= count){
+                // Every tail element lands past the old end (raw); the gap spans both live and raw slots
+                std::uninitialized_move(first, oldEnd, first + count);   // tail      -> [index+count, size+count)  raw
+                std::uninitialized_fill(oldEnd, first + count, copy);    // gap, raw  -> [size, index+count)
+                std::fill(first, oldEnd, copy);                          // gap, live -> [index, size)  (moved-from)
+            }
+            else{
+                // Only the last `count` tail elements land in raw memory; the gap is entirely live
+                std::uninitialized_move(oldEnd - count, oldEnd, oldEnd); // [size-count, size) -> [size, size+count)  raw
+                std::move_backward(first, oldEnd - count, oldEnd);       // [index, size-count) -> [index+count, size) live
+                std::fill_n(first, count, copy);                         // gap [index, index+count)  live (moved-from)
+            }
 
             this->_size += count;
         }
 
         void AlignSize(){
-            this->_size = this->_capacity;
+            this->Resize(this->_capacity);
         }
 
-        void MemoryCopy(const void* src, const Int size){
-            if (this->_size + size > this->_capacity){
-                auto newCapacity = (this->_capacity == 0) ? size : this->_capacity * 2;
-                while (newCapacity < this->_size + size) newCapacity *= 2;
-                this->Reserve(newCapacity);
-            }
-            std::memcpy(this->_data + this->_size, src, size);
+        void MemoryCopy(const void* src, const Int size) requires TRIVIALLY_COPIABLE{
+            this->GrowTo(this->_size + size);
+            PolymorphicArray::Copy(this->_data + this->_size, static_cast<const T*>(src), size);
             this->_size += size;
         }
 
-        void Resize(Int newCapacity){
-            if (newCapacity <= this->_capacity)
+        void Resize(Int newSize){
+            if (newSize < this->_size){
+                std::destroy_n(this->_data + newSize, this->_size - newSize);
+                this->_size = newSize;
                 return;
+            }
 
-            T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T), alignof(T)));
-            std::memcpy(static_cast<void*>(newData), this->_data, this->_size * sizeof(T));
-            std::memset(static_cast<void*>(newData + this->_size), 0, (newCapacity - this->_size) * sizeof(T));
-
-            this->_data = newData;
-            this->_capacity = newCapacity;
-            this->_size = newCapacity;
+            this->GrowTo(newSize);
+            std::uninitialized_value_construct_n(this->_data + this->_size, newSize - this->_size);   // zeros for scalars
+            this->_size = newSize;
         }
 
         void Reserve(Int newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 
-            T* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T), alignof(T)));
-            std::memcpy(static_cast<void*>(newData), this->_data, this->_size * sizeof(T));
-
+            auto* newData = static_cast<T*>(this->_allocator->AllocateRaw(newCapacity * sizeof(T), alignof(T)));
+            Relocate(newData, this->_data, this->_size);
             this->_data = newData;
             this->_capacity = newCapacity;
         }
@@ -221,12 +295,12 @@ namespace DataStructures{
             // Shift elements to the left to fill the gap
             for (Int i = index; i < this->_size - 1; i++)
                 this->_data[i] = std::move(this->_data[i + 1]);
-
-            --this->_size;
+            std::destroy_at(this->_data + --this->_size);
         }
 
         void RemoveFrom(Int index){
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::RemoveFrom: Index out of range.");
+            std::destroy_n(this->_data + index, this->_size - index);
             this->_size = index;
         }
 
@@ -273,7 +347,7 @@ namespace DataStructures{
 
         void SetAllocator(const Memory::IAllocator* allocator) { this->_allocator = allocator; }
 
-        void SetData(T* data, const Int size){
+        void SetData(T* data, const Int size) requires TRIVIALLY_COPIABLE{
             this->_data = data;
             this->_size = size;
         }

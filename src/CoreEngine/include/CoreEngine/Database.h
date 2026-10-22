@@ -114,6 +114,8 @@ public:
         const DataTypes::StringView& dbName
     );
 
+    ~Database();
+
     void Bootstrap(
         const ::Memory::IAllocator* allocator,
         const Catalog::DatabaseHeader& header

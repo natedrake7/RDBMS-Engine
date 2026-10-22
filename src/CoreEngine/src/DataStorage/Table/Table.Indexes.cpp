@@ -18,11 +18,9 @@ namespace CoreEngine::StorageTypes {
         auto* tree = this->GetClusteredIndexedTree();
 
         auto* index = &this->_schema->_indexes[this->_schema->_clusteredIndexOrdinalPosition];
-        std::span keyColumns(index->_keyColumns, index->_keyCount);
-
         auto key = this->CreateKey(
             executionContext,
-            keyColumns,
+            std::span(index->_keyColumns, index->_keyCount),
             payload
         );
 

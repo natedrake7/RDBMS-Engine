@@ -134,6 +134,8 @@ namespace CoreEngine{
         this->_schemas.SetAllocator(&this->_allocator);
     }
 
+    Database::~Database() = default;
+
     void Database::Destroy() const{
         // save db header;
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);

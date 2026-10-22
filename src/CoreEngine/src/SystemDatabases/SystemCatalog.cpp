@@ -72,7 +72,12 @@ namespace CoreEngine {
 
         const auto store = [](const Errors::RuntimeStatus& status, const char* what){
             if (!status.IsOk())
-                throw std::runtime_error(std::string("SystemCatalog::StoreSystemTablesToCatalog: could not store ") + what);
+                throw std::runtime_error(
+                    std::string(
+                        "SystemCatalog::StoreSystemTablesToCatalog: could not store ")
+                        + what + std::string(status.message.Data(), status.message.Size()
+                    )
+                );
         };
 
         store(this->Insert(baseContext, Catalog::SysDatabaseRow{

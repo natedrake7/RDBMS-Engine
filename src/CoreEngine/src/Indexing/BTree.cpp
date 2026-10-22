@@ -1,5 +1,6 @@
 ﻿#include <CoreEngine/Indexing/BTree.h>
 #include <algorithm>
+#include <iostream>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Database.h>
@@ -360,8 +361,17 @@ namespace CoreEngine::Indexing{
         const Pages::IndexInsertTuple& tuple
     ){
         const auto indexPosition = BTree::LeafLowerBound(node, tuple.key);
-        if (indexPosition == -1)
+        if (indexPosition == -1){
+            const auto slot = BTree::ScanLeafLowerBound(node, tuple.key);
+            std::cerr << "DUP on page " << node.PageId()
+              << " type " << static_cast<Int>(node.GetPageType())
+              << " keys " << node.Keys()
+              << " next " << node.RightSibling()
+              << " incoming " << tuple.key.ToString(context.GetAllocator())
+              << " existing " << node.GetKeyByIndex(slot).ToString(context.GetAllocator()) << '\n';
+
             return BTree::CreateDuplicateKeyError(tuple.key, context.GetAllocator());
+        }
         node.InsertTuple(tuple, indexPosition);
         return Errors::RuntimeStatus();
     }

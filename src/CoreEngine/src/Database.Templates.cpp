@@ -7,11 +7,11 @@
 
 #include <CoreEngine/Managers/GlobalMemoryManager.h>
 
-#include "CoreEngine/Pages/OverflowPageView.h"
-#include "CoreEngine/Pages/LargeObjects/LobDataView.h"
-#include "CoreEngine/Pages/LargeObjects/LobIndexView.h"
-#include "CoreEngine/Pages/LargeObjects/LobRootView.h"
-#include <CoreEngine/BufferPool/StorageManager.Templates.h>
+#include <CoreEngine/Pages/OverflowPageView.h>"
+#include <CoreEngine/Pages/LargeObjects/LobDataView.h>
+#include <CoreEngine/Pages/LargeObjects/LobIndexView.h>
+#include <CoreEngine/Pages/LargeObjects/LobRootView.h>"
+#include <CoreEngine/Accessors/PageAccessor.h>
 
 namespace CoreEngine{
     static_assert(StorageLayout::PAGE_FREE_SPACE_SIZE % StorageLayout::EXTENT_SIZE == 0);
@@ -54,7 +54,7 @@ namespace CoreEngine{
                 if (pfs.IsPageAllocated(pageId))
                     continue;
 
-                auto page = this->_pageAccessor.GetPage<TVIew>(pageId);
+                auto page = this->_pageAccessor.CreatePage<TVIew>(pageId);
                 pfs.SetPageMetaData(&page);
                 return page;
             }
