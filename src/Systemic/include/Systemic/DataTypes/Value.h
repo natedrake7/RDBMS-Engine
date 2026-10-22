@@ -69,7 +69,8 @@ class Value{
 
     template<typename T>
     void WriteInline(const T& value){
-        std::memcpy(&this->_data, &value, this->_size);
+        static_assert(sizeof(T) <= sizeof(Storage), "Value::WriteInline: type does not fit inline storage");
+        std::memcpy(&this->_data, &value, sizeof(T));
 
         if constexpr  (DataTypes::IsDecimal<T>)
             this->_size = value.Size();

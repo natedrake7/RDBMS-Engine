@@ -21,7 +21,9 @@ namespace CoreEngine::StorageLayout{
      * @{
      */
     inline constexpr size_t PAGE_SIZE = 8 * 1024;
-    inline constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(page_id_t) + 2 * sizeof(page_size_t);
+    inline constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(log_sequence_number_t)
+            + sizeof(UnsignedInt) + sizeof(page_id_t)
+            + 2 * sizeof(page_size_t) + sizeof(UnsignedBigInt);
     inline constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
 
     inline constexpr size_t EXTENT_SIZE = 8;
@@ -35,7 +37,7 @@ namespace CoreEngine::StorageLayout{
     typedef uint64_t frame_identity_t;
     typedef uint32_t frame_id_t;
 
-    inline constexpr frame_id_t INVALID_FRAME = std::numeric_limits<frame_id_t>::max();
+    inline constexpr frame_id_t INVALID_FRAME_ID = std::numeric_limits<frame_id_t>::max();
     inline constexpr UnsignedInt MAX_BUFFER_POOL_SLOTS = 256;
 
     namespace PageAddress{

@@ -166,8 +166,9 @@ namespace DataStructures{
             this->_size = 0;
         }
 
-        void SetNewSize(const Int newSize){
-            this->Resize(newSize);
+        void SetNewSize(const Int newSize) requires TRIVIALLY_COPIABLE{
+            assert(newSize >= 0 && newSize <= this->_capacity && "PolymorphicArray::SetNewSize: size exceeds capacity");
+            this->_size = newSize;
         }
 
         template<typename... Args>

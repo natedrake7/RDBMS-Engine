@@ -83,7 +83,8 @@ namespace CoreEngine{
             const auto candidatesSize = this->_candidates.Size();
             if (anyNull == 0){
                 for (auto i = 0;i < candidatesSize; i++){
-                    out[selectedCount] = candidatesData[i];
+                    const auto data = candidatesData[i];
+                    out[selectedCount] = data;
                     selectedCount += selected[i];
                 }
             }

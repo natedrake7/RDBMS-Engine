@@ -44,25 +44,12 @@ void StorageManager::EvictPageNoLock() {
         if (!frame->TryClaimForEviction())
             continue;
 
-        const auto identity = frame->Identity();
-        if (frame->IsDirty())
+        if (frame->IsDirty()){
+
             this->FlushFrameToDiskNoLock(frame);
-
-        if (identity != CoreEngine::Pages::INVALID_FRAME_IDENTITY){
-            const auto pageId = CoreEngine::Pages::PageOf(identity);
-            auto* segment = this->GetSegmentNoLock(CoreEngine::Pages::SlotOf(identity), pageId);
-            auto expected = candidateId;
-
-            segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageId)].compare_exchange_strong(
-            expected,
-                CoreEngine::StorageLayout::INVALID_FRAME,
-                std::memory_order_release
-            );
         }
 
-        frame->SetIdentity(CoreEngine::Pages::INVALID_FRAME_IDENTITY);
-        frame->SetState(CoreEngine::Pages::FrameState::Free);
-        this->_memoryManager.PushStackNoLock(candidateId);
+        this->ReleaseClaimedFrameNoLock(candidateId, frame);
         return;
     }
 
@@ -83,6 +70,28 @@ void StorageManager::FlushFrameToDiskNoLock(CoreEngine::Pages::Frame *frame) con
     FileIO::Sync(handle);
 }
 
+void StorageManager::ReleaseClaimedFrameNoLock(
+    const CoreEngine::StorageLayout::frame_id_t frameId,
+    CoreEngine::Pages::Frame* frame
+){
+    const auto identity = frame->Identity();
+    if (identity != CoreEngine::Pages::INVALID_FRAME_IDENTITY){
+        const auto pageId = CoreEngine::Pages::PageOf(identity);
+        auto expected = frameId;
+        auto* segment = this->GetSegmentNoLock(CoreEngine::Pages::SlotOf(identity), pageId);
+        segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageId)]
+            .compare_exchange_strong(
+                expected,
+                CoreEngine::StorageLayout::INVALID_FRAME_ID,
+                std::memory_order_release
+            );
+    }
+
+    frame->SetIdentity(CoreEngine::Pages::INVALID_FRAME_IDENTITY);
+    frame->SetState(CoreEngine::Pages::FrameState::Free);
+    this->_memoryManager.PushStackNoLock(frameId);
+}
+
 CoreEngine::Pages::Frame* StorageManager::OpenExtentNoLock(
     const buffer_pool_slot_t slotIndex,
     const page_id_t pageId
@@ -97,7 +106,7 @@ CoreEngine::Pages::Frame* StorageManager::OpenExtentNoLock(
 
     const auto isCached = [&](const page_id_t id){
         return segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(id)]
-            .load(std::memory_order_acquire) != CoreEngine::StorageLayout::INVALID_FRAME;
+            .load(std::memory_order_acquire) != CoreEngine::StorageLayout::INVALID_FRAME_ID;
     };
 
     UnsignedInt i = 0;
@@ -115,7 +124,7 @@ CoreEngine::Pages::Frame* StorageManager::OpenExtentNoLock(
         UnsignedInt count = 0;
         while (i < CoreEngine::StorageLayout::EXTENT_SIZE && !isCached(current)){
             const auto runPageId = current;
-            auto frameId = CoreEngine::StorageLayout::INVALID_FRAME;
+            auto frameId = CoreEngine::StorageLayout::INVALID_FRAME_ID;
             if (runPageId == pageId)
                 frameId = this->AcquireFrameIdNoLock();
             else if(!readAhead || !this->_memoryManager.PopStackNoLock(frameId)){
@@ -171,6 +180,150 @@ CoreEngine::Pages::Frame* StorageManager::OpenExtentNoLock(
     return requestedFrame;
 }
 
+ExtentLoadInfo StorageManager::ReserveExtentNoLock(
+    const buffer_pool_slot_t slotIndex,
+    const page_id_t pageId
+){
+    const auto extentId = CoreEngine::StorageLayout::ExtentId(pageId);
+    ExtentLoadInfo info{
+        ._firstPageId = pageId,
+        ._requestedPageId =  CoreEngine::StorageLayout::ExtentFirstPageId(extentId),
+        ._slot = slotIndex
+    };
+
+    auto* segment = this->EnsureSegmentExistsNoLock(slotIndex, pageId);
+
+    bool readAhead = true;
+    for (UnsignedInt i = 0;i < CoreEngine::StorageLayout::EXTENT_SIZE;i++){
+        const auto currentPageId = info._firstPageId + i;
+        info._frames[i] = CoreEngine::StorageLayout::INVALID_FRAME_ID;
+
+        auto* entry = &segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(currentPageId)];
+        //Page is already loaded by another thread (skip)
+        if (entry->load(std::memory_order_relaxed) != CoreEngine::StorageLayout::INVALID_FRAME_ID)
+            continue;
+
+        auto frameId = CoreEngine::StorageLayout::INVALID_FRAME_ID;
+        if (currentPageId == pageId)
+            frameId = this->AcquireFrameIdNoLock();
+        else if(!readAhead || !this->_memoryManager.PopStackNoLock(frameId)){
+            readAhead = false;
+            continue;
+        }
+
+        auto* frame = this->_memoryManager.GetFrame(frameId);
+        frame->SetIdentity(slotIndex, currentPageId);
+        frame->MarkFlushed();
+        frame->ClearHasSecondChance();
+        frame->SetPinCount(1);
+        frame->SetPriority(CoreEngine::PageLayout::PagePriority::LOW);
+        frame->SetState(CoreEngine::Pages::FrameState::Loading);
+
+        entry->store(frameId, std::memory_order_release);
+        info._frames[i] = frameId;
+
+    }
+
+    return info;
+}
+
+CoreEngine::Pages::Frame* StorageManager::CompleteExtentLoad(const ExtentLoadInfo& info) const{
+    const auto file = this->_fileManager.GetHandle(info._slot);
+    CoreEngine::Pages::Frame* requested = nullptr;
+    std::exception_ptr error;
+
+    UnsignedInt i = 0;
+    auto* __restrict__ frameIds = info._frames;
+    while (i < CoreEngine::StorageLayout::EXTENT_SIZE){
+        if (frameIds[i] != CoreEngine::StorageLayout::INVALID_FRAME_ID){
+            i++;
+            continue;
+        }
+
+        const auto runStart = i;
+        object_t* buffers[CoreEngine::StorageLayout::EXTENT_SIZE];
+        UnsignedInt counter = 0;
+
+        while (i < CoreEngine::StorageLayout::EXTENT_SIZE && frameIds[i] != CoreEngine::StorageLayout::INVALID_FRAME_ID)
+            buffers[counter++] = this->_memoryManager.GetFrame(frameIds[i++])->_data;
+
+        UnsignedInt loadedFrames = 0;
+        try{
+            loadedFrames = FileIO::ReadScatter(
+                file,
+                std::span<object_t* const>(buffers, counter),
+                (info._firstPageId + runStart) * CoreEngine::StorageLayout::PAGE_SIZE
+            );
+        }
+        catch (...){
+            error = std::current_exception();
+        }
+
+        ExtentFailLoadInfo failedInfo{
+            ._count = 0,
+            ._slot = info._slot,
+        };
+
+        for (UnsignedInt j = 0;j < counter;j++){
+            const auto currentPageId = info._firstPageId + runStart + j;
+            auto* frame = this->_memoryManager.GetFrame(currentPageId);
+
+            if (j >= loadedFrames){
+                failedInfo._frames[failedInfo._count] = frameIds[runStart + j];
+                failedInfo._pages[failedInfo._count] = currentPageId;
+                failedInfo._count++;
+                continue;
+            }
+
+            frame->SetState(CoreEngine::Pages::FrameState::Ready);
+            frame->_state.notify_all();
+
+            if (currentPageId == info._requestedPageId)
+                requested = frame;
+            else
+                frame->Unpin();
+        }
+
+        if (failedInfo._count > 0){
+            this->FailExtentLoad(failedInfo);
+        }
+    }
+
+    if (requested == nullptr){
+        if (error)
+            std::rethrow_exception(error);
+        throw std::runtime_error("StorageManager::CompleteExtentLoad: page is beyond the end of the file or corrupt");
+    }
+    return requested;
+}
+
+void StorageManager::FailExtentLoad(const ExtentFailLoadInfo& failedInfo) const{
+    const auto* __restrict__ frames = failedInfo._frames;
+
+    {
+        MultiThreading::WriterGuard guard(&this->_tableMutex);
+        const auto* __restrict__ pageIds = failedInfo._pages;
+
+        auto* segment = this->GetSegmentNoLock(failedInfo._slot, pageIds[0]);
+        for (UnsignedInt i = 0; i < failedInfo._count; i++){
+            auto expectedFrame = failedInfo._frames[i];
+            segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageIds[i])].compare_exchange_strong(
+               expectedFrame,
+                CoreEngine::StorageLayout::INVALID_FRAME_ID,
+                std::memory_order_release
+            );
+        }
+    }
+
+    for (UnsignedInt i = 0; i < failedInfo._count; i++){
+        auto* frame = this->_memoryManager.GetFrame(frames[i]);
+        frame->SetIdentity(CoreEngine::Pages::INVALID_FRAME_IDENTITY);
+        frame->SetState(CoreEngine::Pages::FrameState::Failed);
+        frame->_state.notify_all();
+        frame->Unpin();
+    }
+}
+
 CoreEngine::Pages::Frame* StorageManager::GetFrame(
     const buffer_pool_slot_t slotIndex,
     const page_id_t pageId
@@ -181,7 +334,7 @@ CoreEngine::Pages::Frame* StorageManager::GetFrame(
         const auto frameId = segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageId)]
             .load(std::memory_order_acquire);
 
-        if (frameId != CoreEngine::StorageLayout::INVALID_FRAME){
+        if (frameId != CoreEngine::StorageLayout::INVALID_FRAME_ID){
             if (auto* frame = this->PinIfHolds(frameId, frameIdentity)){
                 if (!frame->HasSecondChance())
                     frame->MarkHasSecondChance();
@@ -291,7 +444,7 @@ CoreEngine::Pages::Frame* StorageManager::BeginCreateFrame(
 ){
     CoreEngine::Pages::Frame* frame = nullptr;
     const auto segmentSlot = CoreEngine::StorageLayout::PageAddress::PageSlot(pageId);
-    CoreEngine::StorageLayout::frame_id_t frameId = CoreEngine::StorageLayout::INVALID_FRAME;
+    CoreEngine::StorageLayout::frame_id_t frameId = CoreEngine::StorageLayout::INVALID_FRAME_ID;
 
     MultiThreading::WriterGuard lock(&this->_tableMutex);
 
@@ -299,7 +452,7 @@ CoreEngine::Pages::Frame* StorageManager::BeginCreateFrame(
     auto* entry = &segment->_frames[segmentSlot];
 
     frameId = entry->load(std::memory_order_relaxed);
-    if (const auto existing = entry->load(std::memory_order_relaxed); existing != CoreEngine::StorageLayout::INVALID_FRAME){
+    if (const auto existing = entry->load(std::memory_order_relaxed); existing != CoreEngine::StorageLayout::INVALID_FRAME_ID){
         frame = this->_memoryManager.GetFrame(existing);
         const auto pinned = frame->TryPin();
         assert(pinned && "CoreEngine::Pages::Frame* StorageManager::CreateFrame: Re-creating a page that is still in use");
@@ -376,32 +529,33 @@ CoreEngine::Pages::Frame* StorageManager::HandlePageCacheMiss(
     const page_id_t pageId
 ){
     const auto identity = CoreEngine::Pages::FrameIdentity(slotIndex, pageId);
+    auto frameId = CoreEngine::StorageLayout::INVALID_FRAME_ID;
+    ExtentLoadInfo extentInfo{};
 
     while (true){
-        CoreEngine::StorageLayout::frame_id_t frameId = CoreEngine::StorageLayout::INVALID_FRAME;
         {
             MultiThreading::WriterGuard guard(&this->_tableMutex);
             const auto* segment = this->EnsureSegmentExistsNoLock(slotIndex, pageId);
 
-            const auto requestedFrameId = segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageId)]
+            frameId = segment->_frames[CoreEngine::StorageLayout::PageAddress::PageSlot(pageId)]
                 .load(std::memory_order_relaxed);
-            if (requestedFrameId != CoreEngine::StorageLayout::INVALID_FRAME)
-                frameId = requestedFrameId;
-            else
-                return this->OpenExtentNoLock(slotIndex, pageId);
+
+            if (frameId == CoreEngine::StorageLayout::INVALID_FRAME_ID)
+                extentInfo = this->ReserveExtentNoLock(slotIndex, pageId);
         }
 
-        if (frameId != CoreEngine::StorageLayout::INVALID_FRAME){
-            if (auto* frame = this->PinIfHolds(frameId, identity))
-                return frame;
-        }
+        if (frameId == CoreEngine::StorageLayout::INVALID_FRAME_ID)
+            return this->CompleteExtentLoad(extentInfo);
+
+        if (auto* frame = this->PinIfHolds(frameId, identity))
+            return frame;
     }
 
     std::unreachable();
 }
 
 CoreEngine::StorageLayout::frame_id_t StorageManager::AcquireFrameIdNoLock(){
-    auto frameId = CoreEngine::StorageLayout::INVALID_FRAME;
+    auto frameId = CoreEngine::StorageLayout::INVALID_FRAME_ID;
     while (this->_memoryManager.PopStackNoLock(frameId) == false)
         this->EvictPageNoLock();
     return frameId;

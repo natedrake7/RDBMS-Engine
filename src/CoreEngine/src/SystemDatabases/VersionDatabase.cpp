@@ -112,26 +112,22 @@ namespace CoreEngine {
         return true;
     }
 
-    Pages::PageView VersionDatabase::TryGetLastUndoPage(const row_size_t size) {
-        page_id_t pageId;
-
-        {
-            MultiThreading::ReaderGuard lock(&this->lastUsedPageMutex);
-
-            if (this->lastUsedPageId == INVALID_PAGE_ID)
-                return {};
-
-            pageId = this->lastUsedPageId;
-        }
+    bool VersionDatabase::TryGetLastUndoPage(const row_size_t size, Pages::PageView* outPage) const{
+        const auto pageId = this->lastUsedPageId.load(std::memory_order_relaxed);
+        if (pageId == INVALID_PAGE_ID)
+            return false;
 
         auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
 
         MultiThreading::ReaderGuard lastUsedPageLatch(&page.Latch());
 
-        if (page.BytesLeft() >= size)
-            return page;
+        if (page.BytesLeft() >= size){
+            *outPage = std::move(page);
+            return true;
 
-        return {};
+        }
+
+        return false;
     }
 
     Pages::PageView VersionDatabase::CreateUndoPage(const ::Memory::IAllocator* allocator){
@@ -140,20 +136,20 @@ namespace CoreEngine {
 
         this->AllocateNewExtent(allocator, newPageId, newExtentId);
 
-        {
-            MultiThreading::WriterGuard pageIdLock(&this->lastUsedPageMutex);
-            this->lastUsedPageId = newPageId;
-        }
+        this->lastUsedPageId.store(newPageId, std::memory_order_release);
 
         for (page_id_t pageId = newPageId; pageId < newPageId + StorageLayout::EXTENT_SIZE; pageId++){
-            auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
+            const auto pfs = this->_pageAccessor.GetAssociatedPfsPage(pageId);
 
             MultiThreading::WriterGuard lock(&pfs.Latch());
-            auto page = this->_pageAccessor.GetPage<Pages::PageView>(pageId);
+            auto page = this->_pageAccessor.CreatePage<Pages::PageView>(pageId);
+
             pfs.SetPageMetaData(&page);
+
+            return page;
         }
 
-        return this->_pageAccessor.GetPage<Pages::PageView>(newPageId);
+        std::unreachable();
     }
 
     Pages::PageView VersionDatabase::GetLastUndoPage(
@@ -162,8 +158,8 @@ namespace CoreEngine {
     ) {
         const auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->header._lastGamIndex));
 
-        auto cachedPage = this->TryGetLastUndoPage(size);
-        if (cachedPage.IsValid())
+        Pages::PageView cachedPage;
+        if (this->TryGetLastUndoPage(size, &cachedPage))
             return cachedPage;
 
         for (const auto extentId : gamPage.GetAllocatedExtents(allocator)){
@@ -186,11 +182,7 @@ namespace CoreEngine {
                 MultiThreading::ReaderGuard undoLatch(&page.Latch());
 
                 if (page.BytesLeft() >= size) {
-                    {
-                     MultiThreading::WriterGuard lock(&this->lastUsedPageMutex);
-                     this->lastUsedPageId = page.PageId();
-                    }
-
+                    this->lastUsedPageId.store(page.PageId(), std::memory_order_release);
                     return page;
                 }
             }
@@ -203,16 +195,17 @@ namespace CoreEngine {
         const ::Memory::IAllocator* allocator,
         const Pages::RawRowReference& rowRef
     ){
-        const auto page = this->GetLastUndoPage(allocator, rowRef.size);
-
-        MultiThreading::WriterGuard lock(&page.Latch());
-
-        const auto payload = StorageTypes::SerializedRow::FromRowPtr(rowRef);
-        const auto indexPosition = page.InsertRow(payload);
-
-        this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
-
-        return StorageTypes::RID(page.PageId(), indexPosition);
+        // const auto page = this->GetLastUndoPage(allocator, rowRef.size);
+        //
+        // MultiThreading::WriterGuard lock(&page.Latch());
+        //
+        // const auto payload = StorageTypes::SerializedRow::FromRowPtr(rowRef);
+        // const auto indexPosition = page.InsertRow(payload);
+        //
+        // this->numberOfPendingVersions.fetch_add(1, std::memory_order_relaxed);
+        //
+        // return StorageTypes::RID(page.PageId(), indexPosition);
+        return StorageTypes::RID(0, 0);
     }
 
      bool VersionDatabase::RetrieveVersionedRID(

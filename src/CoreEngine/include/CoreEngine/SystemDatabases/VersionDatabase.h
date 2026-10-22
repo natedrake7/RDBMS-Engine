@@ -4,7 +4,6 @@
 
 namespace CoreEngine{
     class VersionDatabase {
-        MultiThreading::Mutex lastUsedPageMutex;
         MultiThreading::Mutex gamPageMutex;
         MultiThreading::Mutex pfsPageMutex;
 
@@ -19,7 +18,7 @@ namespace CoreEngine{
 
         DatabaseHeader header;
 
-        page_id_t lastUsedPageId;
+        std::atomic<page_id_t> lastUsedPageId;
 
         std::atomic<Int> numberOfPendingVersions;
 
@@ -36,7 +35,7 @@ namespace CoreEngine{
             extent_id_t& newExtentId
         );
 
-        Pages::PageView TryGetLastUndoPage(row_size_t size);
+        [[nodiscard]]bool TryGetLastUndoPage(row_size_t size, Pages::PageView* outPage) const;
 
         Pages::PageView CreateUndoPage(const ::Memory::IAllocator* allocator);
         Pages::PageView GetLastUndoPage(

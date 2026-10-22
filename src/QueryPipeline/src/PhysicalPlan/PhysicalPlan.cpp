@@ -550,7 +550,9 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
         result.columns = tablePtr->Columns();
 
+        context.SetTable(tablePtr, this->table->_slotIndex);
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+
         tablePtr->HeapScan(context, &rows, this->state);
 
         result.canFetchMore = this->state.canFetchMore;
@@ -558,7 +560,6 @@ namespace QueryPipeline::PhysicalPlan {
         if (result.canFetchMore == false)
             this->state.Reset();
 
-        context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
@@ -597,6 +598,7 @@ namespace QueryPipeline::PhysicalPlan {
         result.columns = tablePtr->Columns();
 
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rids(context.GetAllocator(), context.GetBatchSize());
+        context.SetTable(tablePtr, slotIndex);
 
         if (this->isClustered){
             tablePtr->ClusteredIndexScan(context, &rids, this->state, this->expression, this->filterColumns, slotIndex, this->_schema->_columns.Size());
@@ -609,7 +611,6 @@ namespace QueryPipeline::PhysicalPlan {
         if (result.canFetchMore == false)
             this->state.Reset();
 
-        context.SetTable(tablePtr, slotIndex);
         context.SetScanHandle(rids.Data(), rids.Size(), slotIndex);
 
         result.selectionVector->selectedRidsCount = rids.Size();
@@ -641,9 +642,9 @@ namespace QueryPipeline::PhysicalPlan {
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
-        tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression, this->filterColumns, this->table->_slotIndex, this->_schema->_columns.Size());
-
         context.SetTable(tablePtr, this->table->_slotIndex);
+
+        tablePtr->ClusteredIndexSeek(context, &rows, this->key, this->expression, this->filterColumns, this->table->_slotIndex, this->_schema->_columns.Size());
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();
@@ -672,9 +673,10 @@ namespace QueryPipeline::PhysicalPlan {
 
         //select if to use clustered or non clustered index here
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
+        context.SetTable(tablePtr, this->table->_slotIndex);
+
         tablePtr->ClusteredIndexSeekRange(context, &rows, this->minKey, this->maxKey, this->expression, this->filterColumns, this->table->_slotIndex, this->_schema->_columns.Size());
 
-        context.SetTable(tablePtr, this->table->_slotIndex);
         context.SetScanHandle(rows.Data(), rows.Size(), this->table->_slotIndex);
 
         result.selectionVector->selectedRidsCount = rows.Size();

@@ -19,7 +19,7 @@ namespace Storage {
         std::atomic<CoreEngine::StorageLayout::frame_id_t> _frames[CoreEngine::StorageLayout::PageAddress::SEGMENT_SIZE];
         Segment(){
             for (auto& slot : this->_frames)
-                slot.store(CoreEngine::StorageLayout::INVALID_FRAME, std::memory_order_relaxed);
+                slot.store(CoreEngine::StorageLayout::INVALID_FRAME_ID, std::memory_order_relaxed);
         }
     };
 
@@ -35,6 +35,29 @@ namespace Storage {
                 slot.store(nullptr, std::memory_order_relaxed);
         }
     };
+
+    struct ExtentLoadInfo{
+        CoreEngine::StorageLayout::frame_id_t _frames[CoreEngine::StorageLayout::EXTENT_SIZE];
+
+        page_id_t _firstPageId;
+        page_id_t _requestedPageId;
+        buffer_pool_slot_t _slot;
+
+        ExtentLoadInfo() = default;
+    };
+
+    struct ExtentFailLoadInfo{
+        CoreEngine::StorageLayout::frame_id_t _frames[CoreEngine::StorageLayout::EXTENT_SIZE];
+        page_id_t _pages[CoreEngine::StorageLayout::EXTENT_SIZE];
+
+        UnsignedInt _count;
+        buffer_pool_slot_t _slot;
+    };
+
+    static_assert(
+        CoreEngine::StorageLayout::PageAddress::SEGMENT_SIZE % CoreEngine::StorageLayout::EXTENT_SIZE == 0,
+        "an extent must never straddle two segments"
+    );
 
     class StorageManager final{
         FileDirectory _pageTable[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
@@ -56,10 +79,24 @@ namespace Storage {
 
         void FlushFrameToDiskNoLock(CoreEngine::Pages::Frame* frame) const;
 
+        void ReleaseClaimedFrameNoLock(
+            CoreEngine::StorageLayout::frame_id_t frameId,
+            CoreEngine::Pages::Frame* frame
+        );
+
         [[nodiscard]]CoreEngine::Pages::Frame* OpenExtentNoLock(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId
         );
+
+        [[nodiscard]] ExtentLoadInfo ReserveExtentNoLock(
+            buffer_pool_slot_t slotIndex,
+            page_id_t pageId
+        );
+
+        [[nodiscard]]CoreEngine::Pages::Frame* CompleteExtentLoad(const ExtentLoadInfo& info) const;
+
+        void FailExtentLoad(const ExtentFailLoadInfo& failedInfo) const;
 
         [[nodiscard]]CoreEngine::Pages::Frame* BeginCreateFrame(
             buffer_pool_slot_t slotIndex,

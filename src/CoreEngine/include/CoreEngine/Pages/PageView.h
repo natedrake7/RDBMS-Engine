@@ -27,10 +27,15 @@ namespace CoreEngine::Pages{
     struct Frame;
 
     struct PageHeader{
+        log_sequence_number_t _lsn;
+        UnsignedInt _checkSum;
+
         page_id_t _pageId;
         page_size_t _size: 12;
         page_size_t _type: 4;
         page_size_t _bytesLeft;
+
+        UnsignedBigInt _reserved;
 
         PageHeader();
 

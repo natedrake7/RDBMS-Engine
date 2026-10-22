@@ -10,7 +10,7 @@
 #include <CoreEngine/Pages/OverflowPageView.h>"
 #include <CoreEngine/Pages/LargeObjects/LobDataView.h>
 #include <CoreEngine/Pages/LargeObjects/LobIndexView.h>
-#include <CoreEngine/Pages/LargeObjects/LobRootView.h>"
+#include <CoreEngine/Pages/LargeObjects/LobRootView.h>
 #include <CoreEngine/Accessors/PageAccessor.h>
 
 namespace CoreEngine{

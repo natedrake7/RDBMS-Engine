@@ -25,8 +25,8 @@ namespace CoreEngine::StorageTypes{
         UnsignedSmallInt _flags;
 
         RID();
-        RID(page_id_t pageId, Int index);
-        RID(page_id_t pageId, Int index, Source source);
+        explicit RID(page_id_t pageId, Int index);
+        explicit RID(page_id_t pageId, Int index, Source source);
 
         RID& operator=(const RID& other) = default;
         RID(const RID& other) = default;
