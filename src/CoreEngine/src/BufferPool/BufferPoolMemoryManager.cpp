@@ -27,6 +27,9 @@ namespace CoreEngine{
         // Raw memory is not a Frame: the latch (std::mutex + condition_variables) must be constructed.
         // libstdc++/winpthreads mutexes are invalid when zero-filled (PTHREAD_MUTEX_INITIALIZER is -1).
         std::uninitialized_default_construct_n(this->_framesData, this->_capacity);
+
+        for (UnsignedInt i = 0; i < this->_capacity; ++i)
+            this->_framesData[i]._data = this->_data + i * StorageLayout::PAGE_SIZE;
     }
 
     void BufferPoolMemoryManager::AllocateFreeStack(){

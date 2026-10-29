@@ -10,26 +10,28 @@
 
 #include <CoreEngine/Pages/PageLayout.h>
 
+#include "BackgroundWriter.h"
+
 namespace CoreEngine::Accessors{
     struct PageAccessor;
 }
 
-namespace Storage {
+namespace CoreEngine::Storage{
     struct Segment{
-        std::atomic<CoreEngine::StorageLayout::frame_id_t> _frames[CoreEngine::StorageLayout::PageAddress::SEGMENT_SIZE];
+        std::atomic<StorageLayout::frame_id_t> _frames[StorageLayout::PageAddress::SEGMENT_SIZE];
         Segment(){
             for (auto& slot : this->_frames)
-                slot.store(CoreEngine::StorageLayout::INVALID_FRAME_ID, std::memory_order_relaxed);
+                slot.store(StorageLayout::INVALID_FRAME_ID, std::memory_order_relaxed);
         }
     };
 
     struct SegmentGroup{
-        std::atomic<Segment*> _segments[CoreEngine::StorageLayout::PageAddress::GROUP_SIZE];
+        std::atomic<Segment*> _segments[StorageLayout::PageAddress::GROUP_SIZE];
         SegmentGroup(){ for (auto& slot : _segments) slot.store(nullptr, std::memory_order_relaxed); }
     };
 
     struct FileDirectory{
-        std::atomic<SegmentGroup*> _groups[CoreEngine::StorageLayout::PageAddress::DIRECTORY_SIZE];
+        std::atomic<SegmentGroup*> _groups[StorageLayout::PageAddress::DIRECTORY_SIZE];
         FileDirectory(){
             for (auto& slot : this->_groups)
                 slot.store(nullptr, std::memory_order_relaxed);
@@ -37,56 +39,70 @@ namespace Storage {
     };
 
     struct ExtentLoadInfo{
-        CoreEngine::StorageLayout::frame_id_t _frames[CoreEngine::StorageLayout::EXTENT_SIZE];
+        StorageLayout::frame_id_t _frames[StorageLayout::EXTENT_SIZE];
 
         page_id_t _firstPageId;
         page_id_t _requestedPageId;
         buffer_pool_slot_t _slot;
 
-        ExtentLoadInfo() = default;
+        explicit ExtentLoadInfo()
+            :  _frames{}, _firstPageId(INVALID_PAGE_ID),
+                _requestedPageId(INVALID_PAGE_ID), _slot(0){}
+        explicit ExtentLoadInfo(
+            const page_id_t firstPageId,
+            const page_id_t requestedPageId,
+            const buffer_pool_slot_t slotIndex
+        ):  _frames{}, _firstPageId(firstPageId),
+            _requestedPageId(requestedPageId), _slot(slotIndex){}
     };
 
     struct ExtentFailLoadInfo{
-        CoreEngine::StorageLayout::frame_id_t _frames[CoreEngine::StorageLayout::EXTENT_SIZE];
-        page_id_t _pages[CoreEngine::StorageLayout::EXTENT_SIZE];
+        StorageLayout::frame_id_t _frames[StorageLayout::EXTENT_SIZE];
+        page_id_t _pages[StorageLayout::EXTENT_SIZE];
 
         UnsignedInt _count;
         buffer_pool_slot_t _slot;
     };
 
     static_assert(
-        CoreEngine::StorageLayout::PageAddress::SEGMENT_SIZE % CoreEngine::StorageLayout::EXTENT_SIZE == 0,
+        StorageLayout::PageAddress::SEGMENT_SIZE % StorageLayout::EXTENT_SIZE == 0,
         "an extent must never straddle two segments"
     );
 
     class StorageManager final{
-        FileDirectory _pageTable[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
-        UnsignedTinyInt _freeDbStack[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
+        FileDirectory _pageTable[StorageLayout::MAX_BUFFER_POOL_SLOTS];
+        UnsignedTinyInt _freeDbStack[StorageLayout::MAX_BUFFER_POOL_SLOTS];
         UnsignedSmallInt _freeTopDbStack;
 
         FileManager _fileManager;
-        CoreEngine::BufferPoolMemoryManager _memoryManager;
+        BufferPoolMemoryManager _memoryManager;
 
         mutable MultiThreading::Mutex _tableMutex; // protects pageTable_ and frame insertion
         mutable MultiThreading::Mutex _stackMutex; //protects dbStack
-        const CoreEngine::Memory::PersistentAllocator _allocator;
+        const Memory::PersistentAllocator _allocator;
 
         std::atomic<UnsignedInt> _clockHand;
+        UnsignedInt _writerLastHand; // touched only by the writer thread
+
+        BackgroundWriter _writer;
+
+        inline static constexpr UnsignedInt WRITER_MIN_LOOKAHEAD = 256;
+        inline static constexpr UnsignedInt WRITER_MAX_WRITES = 128;   // 1 MB per round at 8 KB pages
+
+        static_assert(
+            WRITER_MAX_WRITES * StorageLayout::PAGE_SIZE == 1 * Constants::MB,
+            "StorageManager Background Writer max writes spans more than 1 MB"
+        );
 
         explicit StorageManager();
 
         void EvictPageNoLock();
 
-        void FlushFrameToDiskNoLock(CoreEngine::Pages::Frame* frame) const;
+        void WriteFrameToDiskNoLock(Pages::Frame* frame) const;
 
         void ReleaseClaimedFrameNoLock(
-            CoreEngine::StorageLayout::frame_id_t frameId,
-            CoreEngine::Pages::Frame* frame
-        );
-
-        [[nodiscard]]CoreEngine::Pages::Frame* OpenExtentNoLock(
-            buffer_pool_slot_t slotIndex,
-            page_id_t pageId
+            StorageLayout::frame_id_t frameId,
+            Pages::Frame* frame
         );
 
         [[nodiscard]] ExtentLoadInfo ReserveExtentNoLock(
@@ -94,56 +110,57 @@ namespace Storage {
             page_id_t pageId
         );
 
-        [[nodiscard]]CoreEngine::Pages::Frame* CompleteExtentLoad(const ExtentLoadInfo& info) const;
+        [[nodiscard]]Pages::Frame* CompleteExtentLoad(const ExtentLoadInfo& info) const;
 
         void FailExtentLoad(const ExtentFailLoadInfo& failedInfo) const;
 
-        [[nodiscard]]CoreEngine::Pages::Frame* BeginCreateFrame(
+        [[nodiscard]]Pages::Frame* BeginCreateFrame(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId
         );
 
-        [[nodiscard]]CoreEngine::Pages::Frame* PinIfHolds(
-            CoreEngine::StorageLayout::frame_id_t frameId,
-            CoreEngine::StorageLayout::frame_identity_t frameIdentity
+        [[nodiscard]]Pages::Frame* PinIfHolds(
+            StorageLayout::frame_id_t frameId,
+            StorageLayout::frame_identity_t frameIdentity
         ) const;
 
         Segment* GetSegmentNoLock(buffer_pool_slot_t slotIndex, page_id_t pageId) const;
 
         Segment* EnsureSegmentExistsNoLock(buffer_pool_slot_t slotIndex, page_id_t pageId);
 
-       CoreEngine::Pages::Frame* HandlePageCacheMiss(
+       Pages::Frame* HandlePageCacheMiss(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId
         );
 
-        CoreEngine::StorageLayout::frame_id_t AcquireFrameIdNoLock();
+        StorageLayout::frame_id_t AcquireFrameIdNoLock();
 
-       CoreEngine::Pages::Frame* GetFrame(
+       Pages::Frame* GetFrame(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId
         );
 
-        [[nodiscard]] bool ReserveDbPageTableNoLock(buffer_pool_slot_t& outIndex);
+        void FlushAll() const;
+
+        void CleanAheadOfClock();
 
     public:
         static StorageManager& Get();
 
         void Initialize(UnsignedBigInt size);
 
-        CoreEngine::Accessors::PageAccessor ReserveDbPageTables();
+        void Shutdown();
 
-        void FreeDbPageTable(CoreEngine::Accessors::PageAccessor accessor);
+        Accessors::PageAccessor ReserveDbPageTables();
+
+        template<bool Flush>
+        void ReleasePageTables(Accessors::PageAccessor accessor);
 
         void OpenFile(
             buffer_pool_slot_t slotIndex,
             const DataTypes::StringView& filename,
-            FileOpenMode mode
+            ::Storage::FileOpenMode mode
         );
-
-        void CloseAllFiles();
-
-        void FlushAll() const;
 
         template<typename TView, typename... Args>
         TView CreatePage(
@@ -158,6 +175,6 @@ namespace Storage {
         );
 
         template<typename TView>
-        inline static constexpr CoreEngine::PageLayout::PageType DeducePageType();
+        inline static constexpr PageLayout::PageType DeducePageType();
     };
 }

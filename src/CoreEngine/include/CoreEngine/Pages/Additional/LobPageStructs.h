@@ -89,8 +89,8 @@ namespace CoreEngine::Pages{
             UnsignedInt _indexSlot;    // level 2 only: slot inside the index page
             UnsignedInt _inPageOffset;       // byte offset inside the data page, or inside the root at level 0
 
-            constexpr Position() = default;
-            constexpr Position(
+            explicit constexpr Position() = default;
+            explicit constexpr Position(
                 const UnsignedInt dataPage,
                 const UnsignedInt rootSlot,
                 const UnsignedInt indexSlot,
@@ -116,8 +116,8 @@ namespace CoreEngine::Pages{
             return Position(dataPage, dataPage / INDEX_FANOUT, dataPage % INDEX_FANOUT, inPageOffset);
         }
 
-        static_assert(INLINE_CAPACITY == 8160 && DATA_CAPACITY == 8176);
-        static_assert(ROOT_FANOUT == 2040 && INDEX_FANOUT == 2044);
+        static_assert(INLINE_CAPACITY == 8144 && DATA_CAPACITY == 8160);
+        static_assert(ROOT_FANOUT == 2036 && INDEX_FANOUT == 2040);
         static_assert(LevelFor(0) == 0 && LevelFor(INLINE_CAPACITY) == 0 && LevelFor(INLINE_CAPACITY + 1) == 1);
         static_assert(LevelFor(static_cast<UnsignedBigInt>(ROOT_FANOUT) * DATA_CAPACITY) == 1);
         static_assert(LevelFor(static_cast<UnsignedBigInt>(ROOT_FANOUT) * DATA_CAPACITY + 1) == 2);

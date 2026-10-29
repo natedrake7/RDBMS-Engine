@@ -40,16 +40,17 @@ namespace CoreEngine::Accessors{
                 return Storage::StorageManager::Get().CreatePage<TView>(this->_dataSlot, pageId, std::forward<Args>(args)...);
         }
 
-        void OpenDataFile(const DataTypes::StringView& filename, const Storage::FileOpenMode mode)const{
+        void OpenDataFile(const DataTypes::StringView& filename, const ::Storage::FileOpenMode mode)const{
             Storage::StorageManager::Get().OpenFile(this->_dataSlot, filename, mode);
         }
 
-        void OpenSystemFile(const DataTypes::StringView& filename, const Storage::FileOpenMode mode)const{
+        void OpenSystemFile(const DataTypes::StringView& filename, const ::Storage::FileOpenMode mode)const{
                 Storage::StorageManager::Get().OpenFile(this->_systemSlot, filename, mode);
         }
 
-        void FreePageTableSlots()const{
-            Storage::StorageManager::Get().FreeDbPageTable(*this);
+        template<bool Flush>
+        void ReleasePageTables() const{
+            Storage::StorageManager::Get().ReleasePageTables<Flush>(*this);
         }
     };
 

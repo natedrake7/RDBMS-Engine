@@ -129,7 +129,7 @@ namespace CoreEngine{
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
 
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
-        std::memcpy(&this->header, headerPage.GetDatabaseHeaderPtr(), sizeof(DatabaseHeader));
+        this->header = headerPage.GetDatabaseHeader();
         this->_tables.SetAllocator(&this->_allocator);
         this->_schemas.SetAllocator(&this->_allocator);
     }
@@ -137,17 +137,18 @@ namespace CoreEngine{
     Database::~Database() = default;
 
     void Database::Destroy() const{
-        // save db header;
-        const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
-        headerPage.SetDatabaseHeader(this->header);
+        {
+            const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
+            headerPage.SetDatabaseHeader(this->header);
 
-        for (auto& [key, table] : this->_tables){
-            headerPage.SetTableHeader(table->GetPhysicalHeader(), table->GetOrdinalPosition());
-            table->Destroy();
-            delete table;
+            for (auto& [key, table] : this->_tables){
+                headerPage.SetTableHeader(table->GetPhysicalHeader(), table->GetOrdinalPosition());
+                table->Destroy();
+                delete table;
+            }
         }
 
-        this->_pageAccessor.FreePageTableSlots();
+        this->_pageAccessor.ReleasePageTables<true>();
         this->_allocator.Release();
     }
 
@@ -464,10 +465,10 @@ namespace CoreEngine{
 
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
         const auto dataPath = DataTypes::String::Concat(allocator, path, Constants::DATA_FILE_EXTENSION);
-        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::CreateNew);
+        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), ::Storage::FileOpenMode::CreateNew);
 
         const auto sysDbPath = DataTypes::String::Concat(allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
-        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), Storage::FileOpenMode::CreateNew);
+        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), ::Storage::FileOpenMode::CreateNew);
 
         // First interval of the system file: GAM #0 at page 1, then the PFS page covering data page 0 at page 2
         pageAccessor.CreatePage<Pages::GlobalAllocationPageView>(
@@ -495,10 +496,10 @@ namespace CoreEngine{
 
         const auto path = DataTypes::String::Concat(allocator, dbName, "/", dbName);
         const auto dataPath = DataTypes::String::Concat(allocator, path, Constants::DATA_FILE_EXTENSION);
-        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), Storage::FileOpenMode::OpenExisting);
+        pageAccessor.OpenDataFile(DataTypes::StringView::ViewOf(dataPath), ::Storage::FileOpenMode::OpenExisting);
 
         const auto sysDbPath = DataTypes::String::Concat(allocator, path, Constants::SYS_EXTENSION, Constants::DATA_FILE_EXTENSION);
-        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), Storage::FileOpenMode::OpenExisting);
+        pageAccessor.OpenSystemFile(DataTypes::StringView::ViewOf(sysDbPath), ::Storage::FileOpenMode::OpenExisting);
 
         return pageAccessor;
     }

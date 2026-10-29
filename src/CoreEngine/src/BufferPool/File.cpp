@@ -28,13 +28,6 @@ namespace Storage::FileIO{
             "PageSize modulo windows memory page must be 0 for read scatter to work"
         );
 
-        OVERLAPPED AtOffset(const UnsignedBigInt offset){
-            OVERLAPPED overlapped{};
-            overlapped.Offset = static_cast<DWORD>(offset);
-            overlapped.OffsetHigh = static_cast<DWORD>(offset >> 32);
-            return overlapped;
-        }
-
         [[noreturn]] void ThrowLastError(const char* what){
             throw std::system_error(static_cast<Int>(GetLastError()), std::system_category(), what);
         }

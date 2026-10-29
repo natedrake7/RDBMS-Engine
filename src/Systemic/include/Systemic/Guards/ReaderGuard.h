@@ -1,9 +1,10 @@
 #pragma once
+
 namespace MultiThreading {
   class Mutex;
 
   class ReaderGuard {
-    Mutex* mutex;
+    Mutex* _mutex;
 
     public:
       ReaderGuard();

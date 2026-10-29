@@ -9,7 +9,6 @@
 #include <CoreEngine/Pages/AllocationPageView.h>
 #include <CoreEngine/Pages/GlobalAllocationPageView.h>
 #include <CoreEngine/Pages/PageFreeSpaceView.h>
-#include <CoreEngine/BufferPool/FileKey.h>
 
 #include "Accessors/PageAccessor.h"
 #include "Systemic/DataStructures/SortedDirectory.h"

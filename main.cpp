@@ -124,7 +124,7 @@ int main(){
 
     globalMemoryManager.Log<::Memory::MemoryLogLevel::Bytes>(std::cout);
 
-    static auto& storageManager = Storage::StorageManager::Get();
+    static auto& storageManager = CoreEngine::Storage::StorageManager::Get();
     storageManager.Initialize(globalMemoryManager.GetBufferPoolCapacity());
 
     // Tests::InitializeTester();

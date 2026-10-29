@@ -5,7 +5,7 @@ namespace MultiThreading {
   class Mutex;
 
   class WriterGuard {
-    Mutex* mutex;
+    Mutex* _mutex;
 
     void PromoteLock()const;
 

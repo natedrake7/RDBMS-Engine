@@ -29,7 +29,7 @@ namespace CoreEngine {
 
         this->lastUsedPageId = INVALID_PAGE_ID;
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
-        this->header = *headerPage.GetDatabaseHeaderPtr();
+        this->header = headerPage.GetDatabaseHeader();
     }
 
     VersionDatabase::VersionDatabase(): _pageAccessor(){

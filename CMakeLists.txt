@@ -13,6 +13,13 @@ add_compile_options($<$<COMPILE_LANG_AND_ID:CXX,GNU>:-freflection>)
 
 project(Database)
 
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+    add_compile_options(
+            $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-march=x86-64-v3>
+            $<$<COMPILE_LANG_AND_ID:CXX,GNU,Clang>:-mpclmul>
+    )
+endif()
+
 set(BUILD_SHARED_LIBS ON)
 
 add_executable(

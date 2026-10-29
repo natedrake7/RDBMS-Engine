@@ -2,44 +2,37 @@
 #include <Systemic/Guards/Mutex.h>
 
 namespace MultiThreading {
-    ReaderGuard::ReaderGuard(){
-        this->mutex = nullptr;
-    }
+    ReaderGuard::ReaderGuard()
+        : _mutex(nullptr){}
 
-    ReaderGuard::ReaderGuard(Mutex* mtx){
-        this->mutex = mtx;
-        this->mutex->SharedLock();
+    ReaderGuard::ReaderGuard(Mutex* mtx)
+        : _mutex(mtx){
+        this->_mutex->SharedLock();
     }
 
     ReaderGuard::~ReaderGuard(){
-        if (this->mutex == nullptr)
+        if (this->_mutex == nullptr)
             return;
 
-        this->mutex->SharedUnlock();
+        this->_mutex->SharedUnlock();
     }
 
     ReaderGuard & ReaderGuard::operator=(ReaderGuard &&other) noexcept{
         if (this == &other)
             return *this;
 
-        if (this->mutex != nullptr)
-            this->mutex->SharedUnlock();
+        if (this->_mutex != nullptr)
+            this->_mutex->SharedUnlock();
 
-        this->mutex = other.mutex;
-        other.mutex = nullptr;
+        this->_mutex = other._mutex;
+        other._mutex = nullptr;
 
         return *this;
     }
 
-    ReaderGuard::ReaderGuard(ReaderGuard &&other) noexcept{
-        if (this == &other)
-            return;
-
-        if (this->mutex != nullptr)
-            this->mutex->SharedUnlock();
-
-        this->mutex = other.mutex;
-        other.mutex = nullptr;
+    ReaderGuard::ReaderGuard(ReaderGuard &&other) noexcept
+        : _mutex(other._mutex){
+        other._mutex = nullptr;
     }
 
     ReaderGuard ReaderGuard::TryLock(Mutex *mtx, bool& isSuccessful){
@@ -55,14 +48,14 @@ namespace MultiThreading {
     }
 
     void ReaderGuard::SetMutex(Mutex *mtx){
-        this->mutex = mtx;
+        this->_mutex = mtx;
     }
 
     void ReaderGuard::Release()const{
-        this->mutex->SharedUnlock();
+        this->_mutex->SharedUnlock();
     }
 
     void ReaderGuard::DisableMutex(){
-        this->mutex = nullptr;
+        this->_mutex = nullptr;
     }
 }

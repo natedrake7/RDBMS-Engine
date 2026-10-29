@@ -17,7 +17,7 @@ namespace CoreEngine{
         void AllocateFreeStack();
 
         public:
-            explicit BufferPoolMemoryManager() = default;
+            BufferPoolMemoryManager() = default;
             ~BufferPoolMemoryManager();
 
             BufferPoolMemoryManager(const BufferPoolMemoryManager& other) = delete;
@@ -43,6 +43,14 @@ namespace CoreEngine{
 
             [[nodiscard]] Pages::Frame* GetFrame(const UnsignedInt index) const{
                 return &this->_framesData[index];
+            }
+
+            [[nodiscard]] object_t* FrameData(const UnsignedInt index){
+                return this->_data + index * StorageLayout::PAGE_SIZE;
+            }
+
+            [[nodiscard]] const object_t* FrameData(const UnsignedInt index) const{
+                return this->_data + index * StorageLayout::PAGE_SIZE;
             }
 
             [[nodiscard]] bool PopStackNoLock(StorageLayout::frame_id_t& frameId);

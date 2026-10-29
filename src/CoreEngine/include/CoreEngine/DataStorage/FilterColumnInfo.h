@@ -6,10 +6,6 @@ namespace Memory{
     class IAllocator;
 }
 
-namespace Storage{
-    struct FileKey;
-}
-
 namespace CoreEngine{
     class ExecutionContext;
     struct SelectionVector;

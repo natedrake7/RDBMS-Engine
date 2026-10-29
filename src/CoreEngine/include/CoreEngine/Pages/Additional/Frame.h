@@ -168,4 +168,33 @@ namespace CoreEngine::Pages{
             return this->_priority.load(std::memory_order_relaxed);
         }
     };
+
+
+    struct FramePin{
+        Frame* _frame;
+
+        explicit FramePin(Frame* frame)
+            : _frame(frame){}
+
+        ~FramePin(){
+            this->_frame->Unpin();
+        }
+
+        FramePin(const FramePin&) = delete;
+        FramePin& operator=(const FramePin&) = delete;
+
+        FramePin(FramePin&&) = delete;
+        FramePin& operator=(FramePin&&) = delete;
+    };
+
+    [[nodiscard]] inline bool ClaimWaitingForTransientPins(Frame* frame){
+        for (UnsignedInt attempt = 0; attempt < 1000; attempt++){
+            if (frame->TryClaimForEviction())
+                return true;
+
+            std::this_thread::sleep_for(std::chrono::microseconds(100));
+        }
+
+        return false;
+    }
 }

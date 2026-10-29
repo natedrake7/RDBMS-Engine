@@ -13,7 +13,8 @@ namespace CoreEngine::Pages{
     struct Frame;
 
     class HeaderPageView final : public PageView{
-        [[nodiscard]] inline object_t* GetTableHeaderDataOffset(Int ordinalPosition) const;
+        [[nodiscard]] object_t* DatabaseHeaderData() const;
+        [[nodiscard]] object_t* GetTableHeaderData(UnsignedInt ordinal) const;
 
         public:
             static constexpr auto TYPE = PageLayout::PageType::HEADER;
@@ -26,7 +27,7 @@ namespace CoreEngine::Pages{
             HeaderPageView(HeaderPageView&& other) noexcept = default;
             HeaderPageView& operator=(HeaderPageView&& other) noexcept = default;
 
-            [[nodiscard]] DatabaseHeader* GetDatabaseHeaderPtr() const;
+            [[nodiscard]] DatabaseHeader GetDatabaseHeader() const;
 
             [[nodiscard]] StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
 

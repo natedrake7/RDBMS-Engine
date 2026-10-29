@@ -11,9 +11,9 @@ namespace DataTypes{
     class StringView;
 }
 
-namespace Storage{
+namespace CoreEngine::Storage{
     class FileManager final {
-        File _table[CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS];
+        ::Storage::File _table[StorageLayout::MAX_BUFFER_POOL_SLOTS];
 
         inline static constexpr Int DIRECTORY_SIZE = 512;
 
@@ -29,8 +29,8 @@ namespace Storage{
             void OpenFile(
                 buffer_pool_slot_t slotIndex,
                 const DataTypes::StringView& pathView,
-                FileOpenMode mode,
-                FileOpenFlags flags
+                ::Storage::FileOpenMode mode,
+                ::Storage::FileOpenFlags flags
             );
             [[nodiscard]] native_file_t GetHandle(buffer_pool_slot_t slotIndex) const;
             void CloseFile(buffer_pool_slot_t slotIndex);

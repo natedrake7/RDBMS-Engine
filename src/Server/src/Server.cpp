@@ -84,9 +84,7 @@ namespace Network {
       this->systemCatalog->Shutdown();
       // this->versionDatabase->
 
-      auto& storageManager = Storage::StorageManager::Get();
-      storageManager.FlushAll();
-      storageManager.CloseAllFiles();
+      CoreEngine::Storage::StorageManager::Get().Shutdown();
   }
 
     Errors::RuntimeStatus Server::GrantRole(

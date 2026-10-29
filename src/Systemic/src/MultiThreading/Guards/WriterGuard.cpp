@@ -2,50 +2,43 @@
 #include <Systemic/Guards/Mutex.h>
 
 namespace MultiThreading {
-    WriterGuard::WriterGuard(Mutex *mtx){
-        this->mutex = mtx;
-        this->mutex->UniqueLock();
+    WriterGuard::WriterGuard(Mutex *mtx)
+        : _mutex(mtx){
+        this->_mutex->UniqueLock();
     }
 
-    WriterGuard::WriterGuard() {
-        this->mutex = nullptr;
-    }
+    WriterGuard::WriterGuard()
+        : _mutex(nullptr){}
 
     WriterGuard::~WriterGuard(){
-        if (this->mutex != nullptr)
-            this->mutex->UniqueUnlock();
+        if (this->_mutex != nullptr)
+            this->_mutex->UniqueUnlock();
     }
 
-    WriterGuard::WriterGuard(WriterGuard &&other) noexcept {
-        if (this == &other)
-            return;
-
-        if (this->mutex != nullptr)
-            this->mutex->UniqueUnlock();
-
-        this->mutex = other.mutex;
-        other.mutex = nullptr;
+    WriterGuard::WriterGuard(WriterGuard &&other) noexcept
+        : _mutex(other._mutex){
+        other._mutex = nullptr;
     }
 
     WriterGuard& WriterGuard::operator=(WriterGuard &&other) noexcept {
         if (this == &other)
             return *this;
 
-        if (this->mutex != nullptr)
-            this->mutex->UniqueUnlock();
+        if (this->_mutex != nullptr)
+            this->_mutex->UniqueUnlock();
 
-        this->mutex = other.mutex;
-        other.mutex = nullptr;
+        this->_mutex = other._mutex;
+        other._mutex = nullptr;
 
         return *this;
     }
 
     void WriterGuard::PromoteLock()const{
-        this->mutex->PromoteLock();
+        this->_mutex->PromoteLock();
     }
 
     void WriterGuard::SetMutex(Mutex *mtx) {
-        this->mutex = mtx;
+        this->_mutex = mtx;
     }
 
     WriterGuard WriterGuard::TryLock(Mutex *mtx, bool& isSuccessful) {
@@ -60,11 +53,11 @@ namespace MultiThreading {
     }
 
     void WriterGuard::DisableMutex() {
-        this->mutex = nullptr;
+        this->_mutex = nullptr;
     }
 
     void WriterGuard::Release()const {
-        this->mutex->UniqueUnlock();
+        this->_mutex->UniqueUnlock();
     }
 
 }
