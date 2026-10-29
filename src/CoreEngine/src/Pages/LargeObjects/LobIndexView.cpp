@@ -8,15 +8,6 @@ namespace CoreEngine::Pages{
     LobIndexView::LobIndexView(Frame* framePtr)
         : PageView(framePtr){}
 
-    void LobIndexView::Initialize(const page_id_t rootPageId) const{
-        auto* additionalHeader = this->GetAdditionalHeader();
-
-        additionalHeader->_rootPageId = rootPageId;
-        additionalHeader->_childCount = 0;
-
-        this->_frame->MarkDirty();
-    }
-
     page_id_t LobIndexView::Child(const UnsignedInt slot) const{
         const auto* header = this->GetAdditionalHeader();
         assert(slot < header->_childCount);

@@ -40,7 +40,7 @@ namespace CoreEngine::Pages{
     }
 
     void AllocationPageView::SetDeallocatedExtent(const extent_id_t extentId) const{
-        this->ClearBit(extentId);
+        this->ClearBit(extentId - StorageLayout::GamBaseExtent(this->GamIndex()));
         this->_frame->MarkDirty();
     }
 

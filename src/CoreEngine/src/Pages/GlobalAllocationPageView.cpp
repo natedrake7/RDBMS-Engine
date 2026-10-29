@@ -30,19 +30,21 @@ namespace CoreEngine::Pages{
 
         extent_id_t bit = from;
         while (bit <= to){
-            if (PackedWord<UnsignedBigInt>::BitIndex(bit) == 0 && bit + 64 <= to){
-                uint64_t word;
+            if (PackedWord<UnsignedBigInt>::BitIndex(bit) == 0 && bit + 63 <= to){
+                UnsignedBigInt word;
                 std::memcpy(&word, this->_frame->_data + this->initialOffset + PackedByte::WordIndex(bit), sizeof(word));
-                if (word == 0x00){
+                if (word == 0){
                     if (length == 0)
                         start = bit;
                     length += 64;
+                    bit += 64;
+                    continue;
                 }
-                else if (word == ~0x00)
+                if (word == ~0ull){
                     append();
-
-                bit += 64;
-                continue;
+                    bit += 64;
+                    continue;
+                }
             }
 
             if (this->GetBit(bit))
@@ -59,11 +61,11 @@ namespace CoreEngine::Pages{
     }
 
     GlobalAllocationPageView::GlobalAllocationPageView(Frame* frame) : PageView(frame){
-        this->initialOffset = CoreEngine::StorageLayout::GAM_METADATA_SIZE;
+        this->initialOffset = StorageLayout::GAM_METADATA_SIZE;
     }
 
     UnsignedInt GlobalAllocationPageView::ReserveExtentsNoLock(
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,
+        DataStructures::PolymorphicArray<StorageTypes::ExtentSegment>& segmentsRuns,
         const UnsignedInt neededExtents
     ) const{
         auto* additionalHeader = this->GetAdditionalHeader();
@@ -71,21 +73,21 @@ namespace CoreEngine::Pages{
             return 0;
 
         //fast path:
-        const auto base = CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
+        const auto base = StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
         UnsignedInt remaining = neededExtents;
-        const auto tailAvailable = static_cast<UnsignedInt>(CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE - additionalHeader->_appendBitId);
+        const auto tailAvailable = static_cast<UnsignedInt>(StorageLayout::GAM_BIT_MAP_SIZE - additionalHeader->_appendBitId);
         if (tailAvailable > 0){
             const auto bitsToTake = Math::Min(remaining, tailAvailable);
             this->SetBits(additionalHeader->_appendBitId, bitsToTake);
 
-            segmentsRuns.Push(CoreEngine::StorageTypes::ExtentSegment(base + additionalHeader->_appendBitId, bitsToTake));
+            segmentsRuns.Push(StorageTypes::ExtentSegment(base + additionalHeader->_appendBitId, bitsToTake));
 
             additionalHeader->_appendBitId += bitsToTake;
             remaining -= bitsToTake;
         }
 
         if (remaining > 0){
-            DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment> fragments(segmentsRuns.GetAllocator());
+            DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> fragments(segmentsRuns.GetAllocator());
             this->CollectRunsNoLock(
                 fragments,
                 additionalHeader->_firstFreeBitId,
@@ -100,7 +102,7 @@ namespace CoreEngine::Pages{
                 const auto bitsToTake = Math::Min(remaining, _count);
                 this->SetBits(_firstBitId, bitsToTake);
 
-                segmentsRuns.Push(CoreEngine::StorageTypes::ExtentSegment(base + _firstBitId, bitsToTake));
+                segmentsRuns.Push(StorageTypes::ExtentSegment(base + _firstBitId, bitsToTake));
                 remaining -= bitsToTake;
             }
         }
@@ -117,7 +119,7 @@ namespace CoreEngine::Pages{
     }
 
     void GlobalAllocationPageView::DeallocateExtentNoLock(const extent_id_t extentId) const{
-        const auto bitIndex = extentId - CoreEngine::StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
+        const auto bitIndex = extentId - StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
 
         if (!this->GetBit(bitIndex))
             return;
@@ -138,7 +140,7 @@ namespace CoreEngine::Pages{
     }
 
     void GlobalAllocationPageView::RecountFreeExtentsNoLock() const{
-        constexpr auto BITMAP_WORDS = CoreEngine::StorageLayout::GAM_BITMAP_BYTES / sizeof(UnsignedBigInt);
+        constexpr auto BITMAP_WORDS = StorageLayout::GAM_BITMAP_BYTES / sizeof(UnsignedBigInt);
         static_assert(BITMAP_WORDS % alignof(UnsignedBigInt) == 0, "GAM Bitmap must be word aligned");
 
         const auto* wordMap = this->_frame->_data + this->initialOffset;
@@ -149,7 +151,7 @@ namespace CoreEngine::Pages{
             usedExtents += static_cast<UnsignedInt>(std::popcount(word));
         }
 
-        this->GetAdditionalHeader()->_freeExtentCount = static_cast<UnsignedInt>(CoreEngine::StorageLayout::GAM_BIT_MAP_SIZE - usedExtents);
+        this->GetAdditionalHeader()->_freeExtentCount = static_cast<UnsignedInt>(StorageLayout::GAM_BIT_MAP_SIZE - usedExtents);
         this->_frame->MarkDirty();
     }
 }

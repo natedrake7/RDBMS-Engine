@@ -4,7 +4,7 @@
 #include <CoreEngine/Pages/Additional/LobPageStructs.h>
 
 namespace CoreEngine::Pages{
-    class LobRootView : public PageView{
+    class LobRootView final: public PageView{
         [[nodiscard]] LobRootHeader* GetAdditionalHeader() const{
             return reinterpret_cast<LobRootHeader*>(this->_frame->_data + StorageLayout::PAGE_HEADER_SIZE);
         }
@@ -17,8 +17,15 @@ namespace CoreEngine::Pages{
             static constexpr auto TYPE = PageLayout::PageType::LOB_ROOT;
             static constexpr bool IS_SYSTEM = false;
 
-            static void Initialize(const Frame* frame){
+            static void Initialize(const Frame* frame, const UnsignedBigInt totalLength){
                 frame->Header()->_bytesLeft = 0;
+                auto* additionalHeader = reinterpret_cast<LobRootHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
+
+                additionalHeader->_totalLength = totalLength;
+                additionalHeader->_companionRoot = INVALID_PAGE_ID;
+                additionalHeader->_childCount = 0;
+                additionalHeader->_level = LobLayout::LevelFor(totalLength);
+                additionalHeader->_flags = 0;
             }
 
             LobRootView() = default;
@@ -27,10 +34,16 @@ namespace CoreEngine::Pages{
             LobRootView(LobRootView&&) noexcept = default;
             LobRootView& operator=(LobRootView&&) noexcept = default;
 
-            void Initialize(UnsignedBigInt totalLength) const;
-
             [[nodiscard]] UnsignedBigInt TotalLength() const{
                 return this->GetAdditionalHeader()->_totalLength;
+            }
+
+            // The root is created before the length is known, so the level must follow the final length
+            void SetTotalLength(const UnsignedBigInt totalLength) const{
+                auto* additionalHeader = this->GetAdditionalHeader();
+                additionalHeader->_totalLength = totalLength;
+                additionalHeader->_level = LobLayout::LevelFor(totalLength);
+                this->_frame->MarkDirty();
             }
 
             [[nodiscard]] UnsignedInt ChildCount() const{

@@ -51,6 +51,7 @@ namespace CoreEngine::Pages{
             void GetAllocatedExtents(DataStructures::PolymorphicArray<extent_id_t>* allocatedExtents, extent_id_t startingExtentId) const;
             void SetNextPageId(const page_id_t nextPageId) const{
                 this->GetAdditionalHeader()->_nextPageId = nextPageId;
+                this->_frame->MarkDirty();
             }
 
             [[nodiscard]] page_id_t NextPageId() const{

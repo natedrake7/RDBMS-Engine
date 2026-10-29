@@ -31,7 +31,7 @@ namespace CoreEngine::Pages{
         const auto* header = page->GetHeader();
         this->SetPageAllocated(header->_pageId);
         this->SetPageType(header->_pageId, page->GetPageType());
-        this->SetPageAllocationStatus(header->_pageId, header->_bytesLeft);
+        this->SetPageAllocationStatus(header->_pageId, header->TotalFreeBytesNoLock());
 
         const auto type = this->GetPageType(header->_pageId);
         const auto pageType = page->GetPageType();
@@ -42,19 +42,23 @@ namespace CoreEngine::Pages{
 
     void PageFreeSpaceView::SetPageFreed(const page_id_t pageId) const{
         PackedByte::SetBit<ALLOCATION_SHIFT, false>(this->GetByte(pageId));
+        this->_frame->MarkDirty();
     }
 
     void PageFreeSpaceView::SetPageAllocated(const page_id_t pageId) const{
         PackedByte::SetBit<ALLOCATION_SHIFT, true>(this->GetByte(pageId));
+        this->_frame->MarkDirty();
     }
 
     void PageFreeSpaceView::SetPageAllocationStatus(const page_id_t pageId, const page_size_t bytesLeft) const{
         const auto pageAllocationStatus = static_cast<byte_t>(bytesLeft * 7 / CoreEngine::StorageLayout::PAGE_SIZE);
         PackedByte::SetBits<SIZE_SHIFT, SIZE_MASK>(this->GetByte(pageId), pageAllocationStatus);
+        this->_frame->MarkDirty();
     }
 
     void PageFreeSpaceView::SetPageType(const page_id_t pageId, PageLayout::PageType pageType) const{
         PackedByte::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(this->GetByte(pageId), static_cast<byte_t>(pageType));
+        this->_frame->MarkDirty();
     }
 
     bool PageFreeSpaceView::IsAllocatedAs(const page_id_t pageId, const PageLayout::PageType pageType) const{

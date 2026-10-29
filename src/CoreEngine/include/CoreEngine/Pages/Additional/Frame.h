@@ -9,7 +9,6 @@
 
 namespace CoreEngine::Pages{
     struct PageHeader;
-
     inline static constexpr StorageLayout::frame_identity_t INVALID_FRAME_IDENTITY = std::numeric_limits<StorageLayout::frame_identity_t>::max();
 
     [[nodiscard]] inline constexpr StorageLayout::frame_identity_t FrameIdentity(

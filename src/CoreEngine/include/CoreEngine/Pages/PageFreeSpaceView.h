@@ -22,6 +22,13 @@ namespace CoreEngine::Pages{
             static constexpr auto TYPE = PageLayout::PageType::FREE_SPACE;
             static constexpr bool IS_SYSTEM = true;
 
+            [[nodiscard]] static constexpr byte_t FreeSpaceCategory(const UnsignedInt freeBytes){
+                return static_cast<byte_t>(freeBytes * 7 / StorageLayout::PAGE_SIZE);
+            }
+            [[nodiscard]] static constexpr byte_t RequiredCategory(const UnsignedInt bytes){
+                return static_cast<byte_t>((bytes * 7 + StorageLayout::PAGE_SIZE - 1) / StorageLayout::PAGE_SIZE);
+            }
+
             static void Initialize(const Frame* frame){}
 
             explicit PageFreeSpaceView(Frame* frame);

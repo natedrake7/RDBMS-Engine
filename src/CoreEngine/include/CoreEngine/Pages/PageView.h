@@ -35,7 +35,8 @@ namespace CoreEngine::Pages{
         page_size_t _type: 4;
         page_size_t _bytesLeft;
 
-        UnsignedBigInt _reserved;
+        page_size_t _fragmentedBytes;// 2: bytes in holes left by deletes/shrinks; Defragment reclaims them
+        page_size_t _flags;// 2: reserved
 
         PageHeader();
 
@@ -62,9 +63,12 @@ namespace CoreEngine::Pages{
             this->_bytesLeft = static_cast<page_size_t>(this->_bytesLeft - bytes);
         }
 
-        void ReleaseBytesNoLock(const UnsignedInt bytes){
-            assert(this->_bytesLeft + bytes <= this->Capacity() && "PageHeader::ReleaseBytes: more free space than the page holds");
-            this->_bytesLeft = static_cast<page_size_t>(this->_bytesLeft + bytes);
+        void FragmentBytesNoLock(const UnsignedInt bytes){
+            this->_fragmentedBytes = static_cast<page_size_t>(this->_fragmentedBytes + bytes);
+        }
+
+        [[nodiscard]] UnsignedInt TotalFreeBytesNoLock() const{
+            return this->_bytesLeft + this->_fragmentedBytes;
         }
 
         void IncrementSizeNoLock(const page_size_t size = 1){
@@ -151,7 +155,7 @@ namespace CoreEngine::Pages{
         void InsertNewSlot(SlotDirectory slotDirectory) const;
 
         void Defragment(const ::Memory::IAllocator* allocator) const;
-        void Resize(Int size) const;
+        void Truncate(Int size) const;
 
         void DistributeFromPage(
             const ::Memory::IAllocator* allocator,
@@ -159,12 +163,8 @@ namespace CoreEngine::Pages{
             Int slotToMoveFrom,
             Int donorNewSize
         ) const;
-        void DistributeFromBeginningOfPage(
-            const ::Memory::IAllocator* allocator,
-            const PageView* donorPage,
-            Int numberOfSlotsToMove,
-            Int donorResizeVariant
-        ) const;
+
+        [[nodiscard]] bool EnsureContiguousSpace(const ::Memory::IAllocator* allocator, UnsignedInt bytes)const;
 
         [[nodiscard]] Int InsertRow(const StorageTypes::SerializedRow& payload) const;
         void InsertRow(const StorageTypes::SerializedRow& payload, Int indexPosition) const;
@@ -193,33 +193,39 @@ namespace CoreEngine::Pages{
             Int indexPosition
         ) const;
 
-        void Delete(Int indexPosition) const;
+        void MarkDead(Int indexPosition)const;
+        void RemoveSlot(Int indexPosition) const;
 
-        [[nodiscard]] page_id_t PageId()const;
-        [[nodiscard]] page_size_t PageSize()const;
-        [[nodiscard]] page_size_t BytesLeft()const;
-
-        [[nodiscard]] bool IsEmpty()const;
-
-        [[nodiscard]] object_t* GetData() const;
-
-        [[nodiscard]] Frame* GetFrame()const;
-
-        [[nodiscard]] MultiThreading::Mutex& Latch()const;
-
-        [[nodiscard]] bool IsValid()const;
-
-        [[nodiscard]] PageLayout::PageType GetPageType() const;
+        [[nodiscard]] page_id_t PageId()const{
+            return this->_frame->Header()->_pageId;
+        }
+        [[nodiscard]] page_size_t PageSize()const{
+            return this->_frame->Header()->_size;
+        }
+        [[nodiscard]] page_size_t BytesLeft()const{
+            return this->_frame->Header()->_bytesLeft;
+        }
+        [[nodiscard]] bool IsEmpty() const{
+            return this->_frame->Header()->_size == 0;
+        }
+        [[nodiscard]] object_t* GetData() const{
+            return this->_frame->_data;
+        }
+        [[nodiscard]] Frame* GetFrame() const{
+            return this->_frame;
+        }
+        [[nodiscard]] MultiThreading::Mutex& Latch() const{
+            return this->_frame->_latch;
+        }
+        [[nodiscard]] bool IsValid() const{
+            return this->_frame != nullptr;
+        }
+        [[nodiscard]] PageLayout::PageType GetPageType() const{
+            return this->_frame->Header()->Type();
+        }
 
         template<typename T>
         [[nodiscard]] T GetColumnAt(
-            const ::Memory::IAllocator* allocator,
-            Int index,
-            Int columnIndex,
-            bool* outNull
-        )const;
-
-        DataTypes::String GetStringColumnAt(
             const ::Memory::IAllocator* allocator,
             Int index,
             Int columnIndex,

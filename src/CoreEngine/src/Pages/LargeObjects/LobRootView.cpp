@@ -1,24 +1,12 @@
 ﻿#include <CoreEngine/Pages/LargeObjects/LobRootView.h>
 
-#include <assert.h>
+#include <cassert>
 
 #include <CoreEngine/Pages/Additional/Frame.h>
 
 namespace CoreEngine::Pages{
     LobRootView::LobRootView(Frame* framePtr)
         : PageView(framePtr){}
-
-    void LobRootView::Initialize(const UnsignedBigInt totalLength) const{
-        auto* additionalHeader = this->GetAdditionalHeader();
-
-        additionalHeader->_totalLength = totalLength;
-        additionalHeader->_companionRoot = INVALID_PAGE_ID;
-        additionalHeader->_childCount = 0;
-        additionalHeader->_level = LobLayout::LevelFor(totalLength);
-        additionalHeader->_flags = 0;
-
-        this->_frame->MarkDirty();
-    }
 
     void LobRootView::WriteInline(
         const UnsignedInt offset,

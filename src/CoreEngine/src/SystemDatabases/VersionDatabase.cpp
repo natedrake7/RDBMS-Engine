@@ -271,7 +271,7 @@ namespace CoreEngine {
                         transactionId == FIRST_TRANSACTION_ID
                         || rowHeader->_createdTransactionId <= transactionId
                     ) {
-                        page.Delete(i);
+                        page.RemoveSlot(i);
                         i--;
                     }
                 }

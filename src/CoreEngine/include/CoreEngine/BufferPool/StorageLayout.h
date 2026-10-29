@@ -23,7 +23,7 @@ namespace CoreEngine::StorageLayout{
     inline constexpr size_t PAGE_SIZE = 8 * 1024;
     inline constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(log_sequence_number_t)
             + sizeof(UnsignedInt) + sizeof(page_id_t)
-            + 2 * sizeof(page_size_t) + sizeof(UnsignedBigInt);
+            + 2 * sizeof(page_size_t) + sizeof(page_size_t) + sizeof(page_size_t);
     inline constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
 
     inline constexpr size_t EXTENT_SIZE = 8;

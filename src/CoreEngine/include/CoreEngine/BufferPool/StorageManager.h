@@ -162,19 +162,16 @@ namespace CoreEngine::Storage{
             ::Storage::FileOpenMode mode
         );
 
-        template<typename TView, typename... Args>
+        template<PageLayout::PageViewType TView, typename... Args>
         TView CreatePage(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId,
             Args&&... args
         );
-        template<typename TView>
+        template<PageLayout::PageViewType TView>
         TView GetPage(
             buffer_pool_slot_t slotIndex,
             page_id_t pageId
         );
-
-        template<typename TView>
-        inline static constexpr PageLayout::PageType DeducePageType();
     };
 }

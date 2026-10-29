@@ -10,6 +10,12 @@ namespace CoreEngine::Pages{
     }
 
     object_t* HeaderPageView::GetTableHeaderData(const UnsignedInt ordinal) const{
+        static constexpr UnsignedInt MAX_TABLES =
+            (StorageLayout::PAGE_SIZE - StorageLayout::PAGE_HEADER_SIZE - sizeof(DatabaseHeader)) / sizeof(StorageTypes::TableHeader);
+
+        if (ordinal >= MAX_TABLES)
+            throw std::length_error("HeaderPageView: table ordinal exceeds the header page");
+        
         return this->_frame->_data
                 + StorageLayout::PAGE_HEADER_SIZE
                 + sizeof(DatabaseHeader)
@@ -25,8 +31,8 @@ namespace CoreEngine::Pages{
         return header;
     }
 
-    StorageTypes::TableHeader* HeaderPageView::GetTableHeaderPtr(const Int ordinalPosition) const{
-        return reinterpret_cast<StorageTypes::TableHeader*>(
+    const StorageTypes::TableHeader* HeaderPageView::GetTableHeaderPtr(const Int ordinalPosition) const{
+        return reinterpret_cast<const StorageTypes::TableHeader*>(
             this->GetTableHeaderData(ordinalPosition)
         );
     }

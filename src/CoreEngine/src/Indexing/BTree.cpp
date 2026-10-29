@@ -1,4 +1,5 @@
 ﻿#include <CoreEngine/Indexing/BTree.h>
+#include <CoreEngine/DataStorage/ExtentReservation.Templates.h>
 #include <algorithm>
 #include <iostream>
 #include <CoreEngine/DataStorage/Row/Row.h>

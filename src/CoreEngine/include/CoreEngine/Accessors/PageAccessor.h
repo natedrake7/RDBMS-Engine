@@ -20,7 +20,7 @@ namespace CoreEngine::Accessors{
         PageAccessor(PageAccessor&&) = default;
         PageAccessor& operator=(PageAccessor&&) = default;
 
-        template<typename TView>
+        template<PageLayout::PageViewType TView>
         [[nodiscard]] inline TView GetPage(const page_id_t pageId)const{
             if constexpr (PageLayout::IsSystemPage<TView>())
                 return Storage::StorageManager::Get().GetPage<TView>(this->_systemSlot, pageId);

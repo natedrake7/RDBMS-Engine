@@ -82,7 +82,7 @@ typedef uint16_t page_size_t;
 typedef uint16_t page_offset_t;
 typedef uint16_t large_page_index_t;
 
-typedef uint32_t log_sequence_number_t;
+typedef uint64_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
 

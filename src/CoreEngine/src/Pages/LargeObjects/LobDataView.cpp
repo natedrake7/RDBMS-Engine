@@ -6,16 +6,7 @@
 
 namespace CoreEngine::Pages{
     LobDataView::LobDataView(Frame* framePtr) : PageView(framePtr){}
-
-    void LobDataView::Initialize(const page_id_t rootPageId, const UnsignedInt pageIndex) const{
-        auto* additionalHeader = this->GetAdditionalHeader();
-
-        additionalHeader->_rootPageId = rootPageId;
-        additionalHeader->_pageIndex = pageIndex;
-
-        this->_frame->MarkDirty();
-    }
-
+    
     void LobDataView::WriteInline(
         const UnsignedInt offset,
         const object_t* data,

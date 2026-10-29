@@ -66,10 +66,9 @@ namespace CoreEngine::Pages{
             [[nodiscard]] Comparators::Comparator PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
 
-            [[nodiscard]] CoreEngine::StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
+            [[nodiscard]] StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
 
             [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
             [[nodiscard]] InternalNodeTuple GetInternalNodeTuple( Int indexPosition) const;
-            void RemoveKeyFromChild(Int indexPosition) const;
     };
 }

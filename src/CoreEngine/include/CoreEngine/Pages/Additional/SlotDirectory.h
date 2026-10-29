@@ -23,56 +23,95 @@ namespace CoreEngine::Pages{
 
         static constexpr UnsignedTinyInt SIZE = 8;
 
-        SlotDirectory();
-        SlotDirectory(
-            UnsignedSmallInt offset,
-            UnsignedSmallInt dataOffset,
-            UnsignedSmallInt dataSize,
-            UnsignedSmallInt keySize,
-            Flag flag
-        );
+        SlotDirectory()
+        :   flags_offset(0), _dataSize(0),
+            _offset(0), _keySize(0){}
 
-        [[nodiscard]] UnsignedSmallInt AbsoluteDataOffset() const;
-        [[nodiscard]] UnsignedSmallInt AbsoluteKeyOffset() const;
+        explicit SlotDirectory(
+            const UnsignedSmallInt offset,
+            const UnsignedSmallInt dataOffset,
+            const UnsignedSmallInt dataSize,
+            const UnsignedSmallInt keySize,
+            const Flag flag
+        ):  flags_offset(0), _dataSize(dataSize),
+            _offset(offset), _keySize(keySize){
+            this->SetDataOffset(dataOffset);
+            this->SetFlag(flag);
+        }
 
-        [[nodiscard]] UnsignedSmallInt DataOffset() const;
-        void SetDataOffset(UnsignedSmallInt otherOffset);
+        static SlotDirectory DeadSlot(){
+            return SlotDirectory(0, 0, 0, 0, SLOT_DEAD);
+        }
 
-        [[nodiscard]] UnsignedSmallInt DataSize() const;
-        void SetDataSize(UnsignedSmallInt otherSize);
+        [[nodiscard]] UnsignedSmallInt AbsoluteDataOffset() const{
+            return this->_offset + this->DataOffset();
+        }
 
-        [[nodiscard]] UnsignedSmallInt Offset() const;
-        void SetOffset(UnsignedSmallInt otherOffset);
+        [[nodiscard]] UnsignedSmallInt AbsoluteKeyOffset() const{
+            return this->_offset;
+        }
 
-        [[nodiscard]] UnsignedSmallInt KeySize() const;
-        void SetKeySize(UnsignedSmallInt otherSize);
+        void SetDataOffset(const UnsignedSmallInt otherOffset){
+            this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
+        }
 
-        [[nodiscard]] UnsignedSmallInt Size()const;
+        [[nodiscard]] UnsignedSmallInt DataOffset() const{
+            return this->flags_offset & OFFSET_MASK;
+        }
 
-        [[nodiscard]] Flag GetFlag() const;
-        void SetFlag(Flag otherFlag);
+        void SetDataSize(const UnsignedSmallInt otherSize){
+            this->_dataSize = otherSize;
+        }
 
-        [[nodiscard]] bool Empty() const;
-        [[nodiscard]] bool Used() const;
-        [[nodiscard]] bool ForwardPointer() const;
-        [[nodiscard]] bool Dead() const;
-        [[nodiscard]] bool Default() const;
+        [[nodiscard]] UnsignedSmallInt Offset() const{
+            return this->_offset;
+        }
+
+        void SetOffset(const UnsignedSmallInt otherOffset){
+            this->_offset = otherOffset;
+        }
+
+        [[nodiscard]] UnsignedSmallInt KeySize() const{
+            return this->_keySize;
+        }
+
+        void SetKeySize(const UnsignedSmallInt otherSize){
+            this->_keySize = otherSize;
+        }
+
+        [[nodiscard]] UnsignedSmallInt Size() const{
+            return this->_dataSize + this->_keySize;
+        }
+
+        [[nodiscard]] UnsignedSmallInt DataSize() const{
+            return this->_dataSize;
+        }
+
+        void SetFlag(const Flag otherFlag){
+            this->flags_offset = (this->flags_offset & OFFSET_MASK) | ((otherFlag << 14) & FLAGS_MASK);
+        }
+
+        [[nodiscard]] Flag GetFlag() const{
+            return static_cast<Flag>((this->flags_offset & FLAGS_MASK) >> 14);
+        }
+
+        [[nodiscard]] bool Empty() const { return this->GetFlag() == SLOT_EMPTY; }
+        [[nodiscard]] bool Used() const { return this->GetFlag() == SLOT_USED; }
+        [[nodiscard]] bool ForwardPointer() const { return this->GetFlag() == SLOT_FORWARDED; }
+        [[nodiscard]] bool Dead() const { return this->GetFlag() == SLOT_DEAD; }
+        [[nodiscard]] bool Default() const{
+            return this->flags_offset == 0 && this->_dataSize == 0;
+        }
     };
 
     struct SlotDirectoryDefragment{
-        Int indexPosition;
-        SlotDirectory slotDirectory;
+        SlotDirectory _slotDirectory;
+        Int _indexPosition;
 
-        SlotDirectoryDefragment(
+       explicit SlotDirectoryDefragment(
             const SlotDirectory slotDirectory,
             const Int indexPosition
-        ){
-            this->slotDirectory = slotDirectory;
-            this->indexPosition = indexPosition;
-        }
-
-        static bool OrderAscendingByOffSet(const SlotDirectoryDefragment& lhs, const SlotDirectoryDefragment& rhs){
-            return lhs.slotDirectory.DataOffset() < rhs.slotDirectory.DataOffset();
-        }
+        ):  _slotDirectory(slotDirectory),
+            _indexPosition(indexPosition){}
     };
 }

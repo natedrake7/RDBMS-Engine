@@ -1,4 +1,5 @@
 ﻿#include <CoreEngine/DatabaseConstants.h>
+#include <CoreEngine/DataStorage/ExtentReservation.Templates.h>
 #include <Systemic/DataTypes/Value.h>
 #include <Systemic/DataStructures/BitMap.h>
 #include <CoreEngine/DataStorage/Row/Row.h>

@@ -3,7 +3,10 @@
 #include <Systemic/Guards/WriterGuard.h>
 #include <CoreEngine/Pages/GlobalAllocationPageView.h>
 #include <CoreEngine/Pages/Additional/Frame.h>
+
+#include "CoreEngine/CheckSum.h"
 #include "CoreEngine/BufferPool/StorageLayout.h"
+#include "Systemic/CheckSum.h"
 #include "Systemic/Guards/ReaderGuard.h"
 
 namespace CoreEngine::Storage{
@@ -39,7 +42,13 @@ namespace CoreEngine::Storage{
                 continue;
 
             if (frame->IsDirty()){
-                this->WriteFrameToDiskNoLock(frame);
+                try{
+                    this->WriteFrameToDiskNoLock(frame);
+                }
+                catch (...){
+                    frame->SetPinCount(0);
+                    throw;
+                }
             }
 
             this->ReleaseClaimedFrameNoLock(candidateId, frame);
@@ -55,21 +64,15 @@ namespace CoreEngine::Storage{
         auto* header = frame->Header();
 
         header->_checkSum = 0;
-        //use systemic.checksum
+        header->_checkSum = CheckSum::Crc32Fast<StorageLayout::PAGE_SIZE>(frame->_data);
 
         const auto handle = this->_fileManager.GetHandle(Pages::SlotOf(identity));
 
-        try{
-            ::Storage::FileIO::Write(
-                handle,
-                frame->_data, StorageLayout::PAGE_SIZE,
-                Pages::PageOf(identity) * StorageLayout::PAGE_SIZE
-            );
-        }
-        catch (...){
-            frame->SetPinCount(0);
-            throw;
-        }
+        ::Storage::FileIO::Write(
+            handle,
+            frame->_data, StorageLayout::PAGE_SIZE,
+            Pages::PageOf(identity) * StorageLayout::PAGE_SIZE
+        );
 
         frame->MarkFlushed();
     }
@@ -185,7 +188,7 @@ namespace CoreEngine::Storage{
 
                 auto* frame = this->_memoryManager.GetFrame(frameId);
 
-                if (j >= loadedFrames) { //!VerifyChecksum(frame)
+                if (j >= loadedFrames || !VerifyFrameCheckSumNoLock(frame->Header(), frame->_data)) {
                     failedInfo._frames[failedInfo._count] = frameId;
                     failedInfo._pages[failedInfo._count] = currentPageId;
                     failedInfo._count++;
@@ -408,7 +411,11 @@ namespace CoreEngine::Storage{
 
             const auto handle = this->_fileManager.GetHandle(frame->SlotIndex());
 
-            this->WriteFrameToDiskNoLock(frame);
+            {
+                MultiThreading::ReaderGuard frameLatch(&frame->_latch);
+                this->WriteFrameToDiskNoLock(frame);
+            }
+
             if (std::ranges::find(touchedFiles, handle) == touchedFiles.end())
                 touchedFiles.push_back(handle);
         }
@@ -428,7 +435,7 @@ namespace CoreEngine::Storage{
 
         UnsignedInt framesWritten = 0;
 
-        for (auto step = 0; step < lookAhead && framesWritten < 8u; step++){
+        for (auto step = 0; step < lookAhead && framesWritten < WRITER_MAX_WRITES; step++){
             const auto frameId = (clockHand + step) % capacity;
             auto* frame = this->_memoryManager.GetFrame(frameId);
 
@@ -517,27 +524,27 @@ namespace CoreEngine::Storage{
 
                 claimedFrames.push_back(id);
             }
-        }
 
-        for (auto i = 0;i < claimedFrames.size();i++){
-            const auto frameId = claimedFrames[i];
-            auto* frame = this->_memoryManager.GetFrame(frameId);
+            for (auto i = 0;i < claimedFrames.size();i++){
+                const auto frameId = claimedFrames[i];
+                auto* frame = this->_memoryManager.GetFrame(frameId);
 
-            if constexpr (Flush){
-                if (frame->IsDirty()){
-                    try{
-                        this->WriteFrameToDiskNoLock(frame);
-                    }
-                    catch (...){
-                        for (auto j = i; j < claimedFrames.size(); j++)
-                            this->_memoryManager.GetFrame(claimedFrames[j])->SetPinCount(0);
-                        throw;
+                if constexpr (Flush){
+                    if (frame->IsDirty()){
+                        try{
+                            this->WriteFrameToDiskNoLock(frame);
+                        }
+                        catch (...){
+                            for (auto j = i; j < claimedFrames.size(); j++)
+                                this->_memoryManager.GetFrame(claimedFrames[j])->SetPinCount(0);
+                            throw;
+                        }
                     }
                 }
-            }
 
-            frame->MarkFlushed();
-            this->ReleaseClaimedFrameNoLock(frameId, frame);
+                frame->MarkFlushed();
+                this->ReleaseClaimedFrameNoLock(frameId, frame);
+            }
         }
 
         if constexpr (Flush){

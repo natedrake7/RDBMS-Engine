@@ -178,17 +178,19 @@ public:
         Int requiredPages
     );
 
-    template <typename TView>
+    template <PageLayout::PageViewType TView, typename... Args>
     [[nodiscard]] TView LazyAllocateSinglePage(
         const ::Memory::IAllocator* allocator,
-        const StorageTypes::Table* table
+        const StorageTypes::Table* table,
+        Args&&... args
     );
 
-    template<typename TVIew>
+    template<PageLayout::PageViewType TView, typename... Args>
     [[nodiscard]]
-    TVIew LazyAllocateTablePage(
+    TView LazyAllocateTablePage(
         const ::Memory::IAllocator* allocator,
-        const StorageTypes::Table* table
+        const StorageTypes::Table* table,
+        Args&&... args
     );
 
     void UpdateSystemCatalog(const ::Memory::IAllocator* allocator)const;

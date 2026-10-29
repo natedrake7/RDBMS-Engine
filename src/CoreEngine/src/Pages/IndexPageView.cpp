@@ -41,6 +41,7 @@ namespace CoreEngine::Pages{
 
     void IndexPageView::SetTreeType(const Constants::TreeType treeType) const{
         this->GetAdditionalHeader()->SetTreeType(treeType);
+        this->_frame->MarkDirty();
     }
 
     bool IndexPageView::IsEmpty() const{
@@ -141,10 +142,12 @@ namespace CoreEngine::Pages{
 
     void IndexPageView::SetLeftSibling(const page_id_t previousPage) const{
         this->GetAdditionalHeader()->previousNode = previousPage;
+        this->_frame->MarkDirty();
     }
 
     void IndexPageView::SetRightSibling(const page_id_t nextPage) const{
         this->GetAdditionalHeader()->nextNode = nextPage;
+        this->_frame->MarkDirty();
     }
 
     page_id_t IndexPageView::LeftSibling() const{
@@ -257,15 +260,5 @@ namespace CoreEngine::Pages{
         tuple.SetPageId(pageId);
 
         return tuple;
-    }
-
-    void IndexPageView::RemoveKeyFromChild(const Int indexPosition) const{
-        auto slot = this->GetSlotDirectory(indexPosition);
-        if (indexPosition == 0)
-            return;
-
-        slot.SetOffset(slot.AbsoluteDataOffset());
-        slot.SetDataSize(slot.DataSize() - slot.KeySize());
-        this->UpdateSlotDirectory(slot, indexPosition);
     }
 }

@@ -64,7 +64,7 @@ namespace CoreEngine::StorageTypes{
 
             [[nodiscard]] bool HasNext() const;
 
-            template<typename TView>
-            [[nodiscard]] TView Next();
+            template<PageLayout::PageViewType TView, typename... Args>
+            [[nodiscard]] TView Next(Args&&... args);
     };
 }

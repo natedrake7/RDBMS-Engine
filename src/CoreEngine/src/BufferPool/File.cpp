@@ -149,10 +149,10 @@ namespace Storage::FileIO{
             openFlags |= O_CREAT;
 
 #ifdef O_DIRECT
-        if (HasFlag(flags, FileOpenFlags::Direct))
+        if (HasFlag(flags, ::Storage::FileOpenFlags::Direct))
             openFlags |= O_DIRECT;
 #endif
-        if (HasFlag(flags, FileOpenFlags::WriteThrough))
+        if (HasFlag(flags, ::Storage::FileOpenFlags::WriteThrough))
             openFlags |= O_DSYNC;
 
         const int fd = ::open(path.c_str(), openFlags, 0644);

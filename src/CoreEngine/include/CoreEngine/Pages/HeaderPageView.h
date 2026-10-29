@@ -29,7 +29,7 @@ namespace CoreEngine::Pages{
 
             [[nodiscard]] DatabaseHeader GetDatabaseHeader() const;
 
-            [[nodiscard]] StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
+            [[nodiscard]] const StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
 
             void SetDatabaseHeader(const DatabaseHeader& header) const;
             void SetTableHeader(const StorageTypes::TableHeader& header, SmallInt ordinalPosition) const;

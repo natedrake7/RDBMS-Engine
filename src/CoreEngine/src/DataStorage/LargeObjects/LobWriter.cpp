@@ -1,17 +1,17 @@
 ﻿#include <CoreEngine/DataStorage/LargeObjects/LobWriter.h>
+#include <CoreEngine/DataStorage/ExtentReservation.Templates.h>
 #include <Systemic/Memory/IAllocator.h>
 #include <CoreEngine/DataStorage/Table.h>
 
 namespace CoreEngine::StorageTypes{
     void LobWriter::InitializeRootView(){
-        this->_rootView = this->_reservation.Next<Pages::LobRootView>();
+        this->_rootView = this->_reservation.Next<Pages::LobRootView>(this->_length);
         this->_rootPageId = this->_rootView.PageId();
     }
 
     void LobWriter::OpenDataPage(){
-        this->_currentDataView = this->_reservation.Next<Pages::LobDataView>();
+        this->_currentDataView = this->_reservation.Next<Pages::LobDataView>(this->_rootPageId, this->_dataPageCount);
         this->_currentBytesUsed = 0;
-        this->_currentDataView.Initialize(this->_rootPageId, this->_dataPageCount);
     }
 
     void LobWriter::CloseDataPage(){
@@ -25,8 +25,7 @@ namespace CoreEngine::StorageTypes{
             !this->_currentIndexView.IsValid()
             || this->_currentIndexView.ChildCount() == Pages::LobLayout::INDEX_FANOUT
         ){
-            this->_currentIndexView = this->_reservation.Next<Pages::LobIndexView>();
-            this->_currentIndexView.Initialize(this->_rootPageId);
+            this->_currentIndexView = this->_reservation.Next<Pages::LobIndexView>(this->_rootPageId);
             this->_rootChildren[this->_rootChildrenCount++] = this->_currentIndexView.PageId();
         }
     }
@@ -170,7 +169,7 @@ namespace CoreEngine::StorageTypes{
     DataTypes::LobReference LobWriter::Finish(){
         assert(!this->_finished);
 
-        this->_rootView.Initialize(this->_length);
+        this->_rootView.SetTotalLength(this->_length);
         if (this->_isStaging){
             if (this->_length > 0)
                 this->_rootView.WriteInline(0, this->_stage, this->_length);
