@@ -5,9 +5,9 @@
 #include <Systemic/DataTypes/DataTypes.h>
 #include <CoreEngine/DataStorage/FilterColumnInfo.h>
 #include <CoreEngine/DataStorage/Table.h>
+#include <CoreEngine/DataStorage/Table.Templates.h>
 
 namespace CoreEngine::VectorizedKernels{
-
     namespace Detail{
         using CastKernelTable = DataStructures::StaticArray<
             DataStructures::StaticArray<Expressions::VectorizedKernelFunction, DATATYPE_COUNT>,

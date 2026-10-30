@@ -431,21 +431,20 @@ namespace CoreEngine::StorageTypes {
         const Accessors::PageAccessor pageAccessor,
         ExtentReservation& extentReservation,
         const SerializedRow& payload
-    )
-    {
-        const auto newPage = extentReservation.Next<Pages::PageView>();
-        const auto pfs = pageAccessor.GetAssociatedPfsPage(newPage.PageId());
+    ){
+        const auto page = extentReservation.Next<Pages::PageView>();
+
+        MultiThreading::WriterGuard pageLock(&page.Latch());
+
+        const auto pageId = page.PageId();
+        const auto pfs = pageAccessor.GetAssociatedPfsPage(pageId);
 
         MultiThreading::WriterGuard pfsLatch(&pfs.Latch());
-        MultiThreading::WriterGuard pageLock(&newPage.Latch());
 
-        const auto _ = newPage.InsertRow(payload);
-        pfs.SetPageMetaData(&newPage);
+        const auto index = page.InsertRow(payload);
+        pfs.SetPageMetaData(&page);
 
-        Errors::RuntimeStatus result;
-        result.rid._pageId = newPage.PageId();
-        result.rid._index = 0;
-        return result;
+        return Errors::RuntimeStatus(pageId, index);
     }
 
     Errors::RuntimeStatus Table::HeapInsert(
@@ -454,45 +453,47 @@ namespace CoreEngine::StorageTypes {
         const SerializedRow& payload
     )const{
         const auto pageAccessor = this->_db->GetPageAccessor();
+        const auto* allocator = executionContext.GetAllocator();
 
         if (this->IsEmpty())
             return Table::HeapInsertToNewPage(pageAccessor, extentReservation, payload);
 
         const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
-        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
-        allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(executionContext.GetAllocator());
+        allocationPage.GetAllocatedExtents(&allocatedExtents, 0);
 
-        const auto rowCategory = Pages::PageFreeSpaceView::ObjectSizeToCategory(payload.Size());
+        const auto required = payload.Size() + Pages::SlotDirectory::SIZE;
+        const auto rowCategory = Pages::PageFreeSpaceView::RequiredCategory(required);
 
         Errors::RuntimeStatus result;
-        for (const auto extentId : tableExtentIds){
+        for (const auto extentId : allocatedExtents){
             const auto extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
+            auto pfs = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
 
             for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++){
-                auto pfs = pageAccessor.GetAssociatedPfsPage(pageId);
+                {
+                    MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
 
-                MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
-
-                if (!pfs.IsAllocatedAs(pageId, PageLayout::PageType::DATA))
-                    continue;
-
-                const auto pageSizeCategory = pfs.GetPageSizeCategory(pageId);
-                if (rowCategory > pageSizeCategory)
-                    continue;
+                    if (!pfs.IsAllocatedAs(pageId, PageLayout::PageType::DATA) || pfs.GetPageSizeCategory(pageId) < rowCategory)
+                        continue;
+                }
 
                 auto page = pageAccessor.GetPage<Pages::PageView>(pageId);
 
                 MultiThreading::WriterGuard pageLock(&page.Latch());
 
-                if (payload.Size() > page.BytesLeft())
+                if (!page.EnsureContiguousSpace(allocator, required))
                     continue;
 
                 const auto index = page.InsertRow(payload);
-                pfs.SetPageMetaData(&page);
 
-                result.rid._pageId = pageId;
-                result.rid._index = index;
+                {
+                    MultiThreading::WriterGuard pfsLatch(&pfs.Latch());          // page → PFS
+                    pfs.SetPageMetaData(&page);
+                }
+
+                result.rid = RID(pageId, index);
                 return result;
             }
         }
@@ -575,26 +576,25 @@ namespace CoreEngine::StorageTypes {
 
         const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
-        DataStructures::PolymorphicArray<extent_id_t> tableExtentIds;
-        allocationPage.GetAllocatedExtents(&tableExtentIds, 0);
+        DataStructures::PolymorphicArray<extent_id_t> allocatedExtents;
+        allocationPage.GetAllocatedExtents(&allocatedExtents, 0);
 
-        for (const auto& extentId : tableExtentIds){
-            const auto extentFirstPageId = extentId * StorageLayout::EXTENT_SIZE;
+        for (const auto extentId : allocatedExtents){
+            const auto extentFirstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
-            const auto pageFreeSpacePage = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
-
-            const auto pageId = (allocationPage.PageId() != extentFirstPageId)
-                                    ? extentFirstPageId
-                                    : extentFirstPageId + 1;
+            const auto pfs = pageAccessor.GetAssociatedPfsPage(extentFirstPageId);
 
             Expressions::EvaluationContext evaluationContext(
                 Expressions::EvaluationContext::EvaluationContextType::SingleRow,
                 &executionContext
             );
 
-            for (page_id_t extentPageId = pageId; extentPageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; extentPageId++){
-                if (pageFreeSpacePage.GetPageType(extentPageId) != PageLayout::PageType::DATA)
-                    break;
+            for (page_id_t pageId = extentFirstPageId; pageId < extentFirstPageId + StorageLayout::EXTENT_SIZE; pageId++){
+                {
+                    MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
+                    if (!pfs.IsAllocatedAs(pageId, PageLayout::PageType::DATA))
+                        continue;
+                }
 
                 auto page = pageAccessor.GetPage<Pages::PageView>(pageId);
 
@@ -602,7 +602,7 @@ namespace CoreEngine::StorageTypes {
                     continue;
 
                 for (Int i = 0; i < page.PageSize(); i++) {
-                    auto row = RID(extentPageId, i);
+                    auto row = RID(pageId, i);
                     evaluationContext._rids = &row;
 
                     const auto value = Expressions::EvaluateExpression(expression, evaluationContext);

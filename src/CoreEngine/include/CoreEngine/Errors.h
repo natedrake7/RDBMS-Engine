@@ -69,6 +69,12 @@ namespace Errors {
             return *this;
         }
 
+        explicit RuntimeStatus(const page_id_t pageId, const Int index)
+        :   message(DataTypes::String::Null()),
+            primaryKey(DataTypes::Indexing::Key()),
+            rid(pageId, index),
+            code(RuntimeError::Ok){}
+
         [[nodiscard]] bool IsOk()const { return this->code == RuntimeError::Ok;}
     };
 

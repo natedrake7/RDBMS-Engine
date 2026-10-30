@@ -357,10 +357,9 @@ namespace CoreEngine{
         // Step 1: Allocate extents from GAM page
         {
             DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> localRuns(allocator, extentsToAllocate);
-            auto currentAllocationPageId = table->GetAllocationPageId();
-
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
+            auto currentAllocationPageId = table->GetAllocationPageId();
             auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->_header._lastGamIndex));
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed

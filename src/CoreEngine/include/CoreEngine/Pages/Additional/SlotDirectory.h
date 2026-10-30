@@ -21,7 +21,7 @@ namespace CoreEngine::Pages{
             SLOT_DEAD       = 3
         };
 
-        static constexpr UnsignedTinyInt SIZE = 8;
+        inline static constexpr UnsignedTinyInt SIZE = 4 * sizeof(UnsignedSmallInt);
 
         SlotDirectory()
         :   flags_offset(0), _dataSize(0),
@@ -103,6 +103,11 @@ namespace CoreEngine::Pages{
             return this->flags_offset == 0 && this->_dataSize == 0;
         }
     };
+
+    static_assert(
+        sizeof(SlotDirectory) == SlotDirectory::SIZE,
+        "SlotDirectory size mismatch"
+    );
 
     struct SlotDirectoryDefragment{
         SlotDirectory _slotDirectory;
