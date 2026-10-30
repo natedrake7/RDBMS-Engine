@@ -3,6 +3,7 @@
 #include <limits>
 
 #include <Systemic/DataTypes/DataTypes.h>
+#include <Systemic/Functions/MathFunctions.h>
 
 /**
  * @name Storage layout
@@ -28,6 +29,10 @@ namespace CoreEngine::StorageLayout{
 
     inline constexpr size_t EXTENT_SIZE = 8;
     inline constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
+
+    [[nodiscard]] inline constexpr UnsignedInt ExtentsToAllocate(const Int numberOfPages) {
+        return Math::Ceil<UnsignedInt>(static_cast<float>(numberOfPages) / static_cast<float>(StorageLayout::EXTENT_SIZE));
+    }
     /** @} End of: Page and extent geometry */
 
     /**
@@ -69,7 +74,7 @@ namespace CoreEngine::StorageLayout{
     }
 
     static_assert(
-        PageAddress::SEGMENT_SIZE % CoreEngine::StorageLayout::EXTENT_SIZE == 0,
+        PageAddress::SEGMENT_SIZE % StorageLayout::EXTENT_SIZE == 0,
         "an extent never straddles two segments"
     );
 

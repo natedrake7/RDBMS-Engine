@@ -52,9 +52,11 @@ namespace CoreEngine {
     struct sysTable;
 
     struct DatabaseHeader {
-        // UnsignedInt _formatVersion;       // StorageLayout::FILE_ORMAT_VERSION of the code that created the file
         page_id_t _lastPfsPageId;
         gam_index_t _lastGamIndex;
+        UnsignedSmallInt _formatVersion;       // StorageLayout::FILE_FORMAT_VERSION of the code that created the file
+
+        UnsignedSmallInt _reserved;
 
         DatabaseHeader();
         DatabaseHeader(
@@ -63,8 +65,13 @@ namespace CoreEngine {
         );
 
         // Throws when the file was written with another layout version
-        void ValidateFormatVersion(const DataTypes::StringView& databaseName) const;
+        void ValidateFormatVersion() const;
     };
+
+    static_assert(
+        sizeof(DatabaseHeader) == sizeof(page_id_t) + sizeof(gam_index_t) + 2 * sizeof(UnsignedSmallInt),
+        "sizeof() Database header size does not computed size"
+    );
 
 class Database final{
     MultiThreading::Mutex gamPageMutex;
@@ -79,9 +86,9 @@ class Database final{
     DataStructures::SortedDirectory<std::string_view, Directory::SchemaEntry> _schemas;
     DataStructures::SortedDirectory<Directory::TableKey, Directory::TableEntry> _tables;
 
-    DatabaseHeader header;
+    DatabaseHeader _header;
 
-    Int id;
+    Int _id;
     UnsignedSmallInt _nextOrdinal;
 
     Accessors::PageAccessor _pageAccessor;
@@ -94,8 +101,6 @@ class Database final{
     );
 
     void ApplyRecoveryLog(const Logging::LogEntry& logEntry)const;
-
-    [[nodiscard]] static Int CalculateExtentsToAllocate(Int pagesToAllocate);
 
     Pages::GlobalAllocationPageView RollToNewGamPageNoLock();
     Pages::AllocationPageView FindOrRollToNewAllocationPage(

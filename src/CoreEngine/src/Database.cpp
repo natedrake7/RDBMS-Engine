@@ -24,12 +24,19 @@
 
 namespace CoreEngine{
     DatabaseHeader::DatabaseHeader()
-        : _lastPfsPageId(0), _lastGamIndex(StorageLayout::FIRST_GAM_INDEX){}
+        :   _lastPfsPageId(0), _lastGamIndex(StorageLayout::FIRST_GAM_INDEX),
+            _formatVersion(StorageLayout::FILE_FORMAT_VERSION), _reserved(0){}
 
     DatabaseHeader::DatabaseHeader(
         const page_id_t pfsPageId,
         const gam_index_t gamIndex
-    ): _lastPfsPageId(pfsPageId), _lastGamIndex(gamIndex){}
+    ):  _lastPfsPageId(pfsPageId), _lastGamIndex(gamIndex),
+        _formatVersion(StorageLayout::FILE_FORMAT_VERSION), _reserved(0){}
+
+    void DatabaseHeader::ValidateFormatVersion() const{
+        if (this->_formatVersion != StorageLayout::FILE_FORMAT_VERSION)
+            throw std::runtime_error("Database::ValidateFormatVersion: invalid format version");
+    }
 
     void Database::PopulateFilenames(
         const ::Memory::IAllocator* tempAllocator,
@@ -64,17 +71,13 @@ namespace CoreEngine{
 
     }
 
-    Int Database::CalculateExtentsToAllocate(const Int pagesToAllocate) {
-        return static_cast<Int>(std::ceil(static_cast<float>(pagesToAllocate) / static_cast<float>(StorageLayout::EXTENT_SIZE)));
-    }
-
     Pages::GlobalAllocationPageView Database::RollToNewGamPageNoLock(){
-        const auto nextGamIndex = this->header._lastGamIndex + 1;
+        const auto nextGamIndex = this->_header._lastGamIndex + 1;
         if (nextGamIndex > StorageLayout::MAX_GAM_INDEX)
             throw std::runtime_error("Database::RollToNewGamPageNoLock: data file reached its maximum size");
 
         auto gamPage = this->_pageAccessor.CreatePage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(nextGamIndex), nextGamIndex);
-        this->header._lastGamIndex = nextGamIndex;
+        this->_header._lastGamIndex = nextGamIndex;
         return gamPage;
     }
 
@@ -124,12 +127,12 @@ namespace CoreEngine{
         const Accessors::PageAccessor pageAccessor,
         const Int databaseId,
         const DataTypes::StringView& dbName
-    ): id(databaseId), _nextOrdinal(0), _pageAccessor(pageAccessor){
+    ): _id(databaseId), _nextOrdinal(0), _pageAccessor(pageAccessor){
         DataTypes::String file,sysFile;
         Database::PopulateFilenames(allocator, dbName, file, sysFile);
 
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
-        this->header = headerPage.GetDatabaseHeader();
+        this->_header = headerPage.GetDatabaseHeader();
         this->_tables.SetAllocator(&this->_allocator);
         this->_schemas.SetAllocator(&this->_allocator);
     }
@@ -139,7 +142,7 @@ namespace CoreEngine{
     void Database::Destroy() const{
         {
             const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
-            headerPage.SetDatabaseHeader(this->header);
+            headerPage.SetDatabaseHeader(this->_header);
 
             for (auto& [key, table] : this->_tables){
                 headerPage.SetTableHeader(table->GetPhysicalHeader(), table->GetOrdinalPosition());
@@ -346,7 +349,7 @@ namespace CoreEngine{
         const StorageTypes::Table* table,
         const Int requiredPages
     ){
-        const auto extentsToAllocate =  Database::CalculateExtentsToAllocate(requiredPages);
+        const auto extentsToAllocate =  StorageLayout::ExtentsToAllocate(requiredPages);
 
         //pre account for required allocation page
         DataStructures::PolymorphicArray<StorageTypes::ExtentSegment> segmentsRuns(allocator, extentsToAllocate);
@@ -358,7 +361,7 @@ namespace CoreEngine{
 
             MultiThreading::WriterGuard gamLock(&this->gamPageMutex);
 
-            auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->header._lastGamIndex));
+            auto gamPage = this->_pageAccessor.GetPage<Pages::GlobalAllocationPageView>(StorageLayout::GamPageId(this->_header._lastGamIndex));
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
             bool newAllocationPageRequired = currentAllocationPageId == INVALID_PAGE_ID;
@@ -434,9 +437,9 @@ namespace CoreEngine{
                     for (page_id_t pageId = firstPageId; pageId < firstPageId + StorageLayout::EXTENT_SIZE; pageId++) {
                         const auto pfsPageId = StorageLayout::PfsPageId(pageId);
 
-                        if (pfsPageId > this->header._lastPfsPageId) {
+                        if (pfsPageId > this->_header._lastPfsPageId) {
                             this->_pageAccessor.CreatePage<Pages::PageFreeSpaceView>(pfsPageId);
-                            this->header._lastPfsPageId = pfsPageId;
+                            this->_header._lastPfsPageId = pfsPageId;
                         }
                     }
                 }

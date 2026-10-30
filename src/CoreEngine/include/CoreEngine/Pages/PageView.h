@@ -107,25 +107,34 @@ namespace CoreEngine::Pages{
             return this->initialOffset + PackedByte::WordIndex(extentId);
         }
 
-        [[nodiscard]] bool GetBit(const std::size_t bitIndex) const noexcept {
+        [[nodiscard]] inline constexpr bool GetBit(const std::size_t bitIndex) const noexcept {
             return PackedByte::GetBit(
                 this->_frame->_data[this->GetByteIndex(bitIndex)],
                 PackedByte::BitIndex(bitIndex)
             );
         }
 
-        void SetBit(const std::size_t bitIndex) const noexcept {
+        inline constexpr void SetBit(const std::size_t bitIndex) const noexcept {
             PackedByte::SetBit<true>(
                 &this->_frame->_data[this->GetByteIndex(bitIndex)],
                 PackedByte::BitIndex(bitIndex)
             );
         }
 
-        void ClearBit(const std::size_t bitIndex) const noexcept {
+        inline constexpr void ClearBit(const std::size_t bitIndex) const noexcept {
             PackedByte::SetBit<false>(
                 &this->_frame->_data[this->GetByteIndex(bitIndex)],
                 PackedByte::BitIndex(bitIndex)
             );
+        }
+
+        [[noreturn, gnu::cold]] inline static void ThrowRowDoesNotFit(){
+            throw std::runtime_error("PageView::Insert: Row does not fit in page");
+        }
+
+        inline static void CheckRowFits(const PageHeader* header, const UnsignedSmallInt size){
+            if (size + SlotDirectory::SIZE > header->_bytesLeft) [[unlikely]]
+                ThrowRowDoesNotFit();
         }
 
     public:

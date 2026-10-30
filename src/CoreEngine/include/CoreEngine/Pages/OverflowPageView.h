@@ -17,7 +17,9 @@ namespace CoreEngine::Pages{
         static constexpr auto TYPE = PageLayout::PageType::OVERFLOW_TYPE;
         static constexpr bool IS_SYSTEM = false;
 
-        static void Initialize(const Frame* frame){}
+        static void Initialize(const Frame* frame){
+            PageView::Initialize(frame);
+        }
 
         OverflowPageView();
         explicit OverflowPageView(Frame* frame);

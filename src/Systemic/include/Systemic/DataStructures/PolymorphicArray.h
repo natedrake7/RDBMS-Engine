@@ -19,10 +19,10 @@ namespace DataStructures{
 
         const Memory::IAllocator* _allocator;
         T* _data;
-        Int _size;
-        Int _capacity;
+        data_size_t _size;
+        data_size_t _capacity;
 
-        static void Relocate(T* to, T* from, const Int count){
+        static void Relocate(T* to, T* from, const data_size_t count){
             if (count == 0)
                 return;
 
@@ -34,7 +34,7 @@ namespace DataStructures{
             }
         }
 
-        static void Copy(T* to, const T* from, const Int count){
+        static void Copy(T* to, const T* from, const data_size_t count){
             if (count == 0)
                 return;
 
@@ -51,7 +51,7 @@ namespace DataStructures{
                 this->Reserve(this->_capacity == 0 ? 1 : this->_capacity * 2);
         }
 
-        void GrowTo(const Int required){
+        void GrowTo(const data_size_t required){
             assert(this->_allocator != nullptr && "PolymorphicArray:GrowTo: array growth called by no allocator was present");
 
             if (required <= this->_capacity)
@@ -71,11 +71,11 @@ namespace DataStructures{
             :   _allocator(allocator), _data(nullptr),
                 _size(0), _capacity(0){}
 
-        PolymorphicArray(const Memory::IAllocator* allocator, const Int capacity)
+        PolymorphicArray(const Memory::IAllocator* allocator, const data_size_t capacity)
             :   _allocator(allocator), _data(static_cast<T*>(this->_allocator->AllocateRaw(capacity * sizeof(T), alignof(T)))),
                 _size(0), _capacity(capacity){}
 
-        PolymorphicArray(const Memory::IAllocator* allocator, const Int capacity, T value)
+        PolymorphicArray(const Memory::IAllocator* allocator, const data_size_t capacity, T value)
             :   _allocator(allocator), _data(static_cast<T*>(allocator->AllocateRaw(capacity * sizeof(T), alignof(T)))),
                 _size(capacity), _capacity(capacity){
             std::uninitialized_fill_n(this->_data, capacity, value);
@@ -166,7 +166,7 @@ namespace DataStructures{
             this->_size = 0;
         }
 
-        void SetNewSize(const Int newSize) requires TRIVIALLY_COPIABLE{
+        void SetNewSize(const data_size_t newSize) requires TRIVIALLY_COPIABLE{
             assert(newSize >= 0 && newSize <= this->_capacity && "PolymorphicArray::SetNewSize: size exceeds capacity");
             this->_size = newSize;
         }
@@ -203,7 +203,7 @@ namespace DataStructures{
             this->Emplace(value);
         }
 
-        void Insert(T value, const Int index){
+        void Insert(T value, const data_size_t index){
             assert(index >= 0 && index <= this->_size && "PolymorphicArray::Insert: index out of range");
 
             this->GrowIfFull();
@@ -226,7 +226,7 @@ namespace DataStructures{
             ++this->_size;
         }
 
-        void Insert(const T& value, const Int index, const Int count){
+        void Insert(const T& value, const data_size_t index, const data_size_t count){
             assert(!(index != 0 && index > this->_size) && "PolymorphicArray Insert: Index is out of range.");
 
             if (count == 0)
@@ -237,7 +237,7 @@ namespace DataStructures{
 
             auto* const first = this->_data + index;
             auto* const oldEnd = this->_data + this->_size;
-            const Int tail = this->_size - index;                   // elements that move right by `count`
+            const data_size_t tail = this->_size - index;                   // elements that move right by `count`
 
             if constexpr (TRIVIALLY_COPIABLE){
                 std::memmove(static_cast<void*>(first + count), first, tail * sizeof(T));
@@ -263,7 +263,7 @@ namespace DataStructures{
             this->Resize(this->_capacity);
         }
 
-        void MemoryCopy(const void* src, const Int size) requires TRIVIALLY_COPIABLE{
+        void MemoryCopy(const void* src, const data_size_t size) requires TRIVIALLY_COPIABLE{
             this->GrowTo(this->_size + size);
             PolymorphicArray::Copy(this->_data + this->_size, static_cast<const T*>(src), size);
             this->_size += size;
@@ -305,11 +305,11 @@ namespace DataStructures{
             this->_size = index;
         }
 
-        T& At(const Int index){
+        T& At(const data_size_t index){
             return this->_data[index];
         }
 
-        const T& At(const Int index) const{
+        const T& At(const data_size_t index) const{
             return this->_data[index];
         }
 
@@ -348,7 +348,7 @@ namespace DataStructures{
 
         void SetAllocator(const Memory::IAllocator* allocator) { this->_allocator = allocator; }
 
-        void SetData(T* data, const Int size) requires TRIVIALLY_COPIABLE{
+        void SetData(T* data, const data_size_t size) requires TRIVIALLY_COPIABLE{
             this->_data = data;
             this->_size = size;
         }

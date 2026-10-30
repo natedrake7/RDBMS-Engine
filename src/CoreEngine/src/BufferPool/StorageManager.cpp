@@ -575,7 +575,7 @@ namespace CoreEngine::Storage{
 #ifdef _WIN32
         constexpr auto PAGE_FILE_FLAGS = ::Storage::FileOpenFlags::Direct | ::Storage::FileOpenFlags::Async;
 #else
-        constexpr auto PAGE_FILE_FLAGS = FileOpenFlags::Direct;
+        constexpr auto PAGE_FILE_FLAGS = ::Storage::FileOpenFlags::Direct;
 #endif
 
         this->_fileManager.OpenFile(slotIndex, filename, mode, PAGE_FILE_FLAGS);

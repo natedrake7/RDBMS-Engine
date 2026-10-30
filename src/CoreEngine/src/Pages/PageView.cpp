@@ -254,7 +254,9 @@ namespace CoreEngine::Pages{
     Int PageView::InsertRow(const StorageTypes::SerializedRow& payload) const{
         const auto rowSize = payload.Size();
         const auto offset = this->NewInsertOffset();
+        auto* header = this->_frame->Header();
 
+        PageView::CheckRowFits(header, rowSize);
         std::memcpy(this->_frame->_data + offset, payload.Data(), rowSize);
 
         const SlotDirectory newSlot(
@@ -263,12 +265,9 @@ namespace CoreEngine::Pages{
         );
         this->InsertNewSlot(newSlot);
 
-        auto* header = this->_frame->Header();
-
         header->_size++;
         header->ConsumeBytesNoLock(rowSize + SlotDirectory::SIZE);
         this->_frame->MarkDirty();
-
         return header->_size - 1;
     }
 
@@ -285,11 +284,13 @@ namespace CoreEngine::Pages{
         const auto offSetCopy = nextOffset;
         const auto rowSize = payload.Size();
 
+        auto* header = this->_frame->Header();
+
+        PageView::CheckRowFits(header, rowSize);
+
         std::memcpy(this->_frame->_data + nextOffset, payload.Data(), rowSize);
 
         this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize, 0);
-
-        auto* header = this->_frame->Header();
 
         header->_size++;
         header->ConsumeBytesNoLock(rowSize + SlotDirectory::SIZE);
@@ -360,6 +361,8 @@ namespace CoreEngine::Pages{
         assert(slot.DataSize() >= ROW_ID_SIZE && "PageView::SetForwardPointer: row smaller than a RID");
 
         std::memcpy(this->_frame->_data + slot.AbsoluteDataOffset(), rid, ROW_ID_SIZE);
+
+        this->_frame->Header()->FragmentBytesNoLock(slot.DataSize() - ROW_ID_SIZE);
 
         slot.SetDataSize(ROW_ID_SIZE);
         slot.SetFlag(SlotDirectory::SLOT_FORWARDED);

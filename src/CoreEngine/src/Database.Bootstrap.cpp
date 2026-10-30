@@ -51,9 +51,9 @@ namespace CoreEngine{
 
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
 
-        const auto tableHeaders = catalog.SelectTables(allocator, this->id);
+        const auto tableHeaders = catalog.SelectTables(allocator, this->_id);
 
-        const auto schemas = catalog.SelectSchemas(allocator, this->id);
+        const auto schemas = catalog.SelectSchemas(allocator, this->_id);
 
         // Only the database and schema names: table keys point into each TableSchema's own arena.
         // The entries live in the directories' arrays, which allocate from _allocator themselves.

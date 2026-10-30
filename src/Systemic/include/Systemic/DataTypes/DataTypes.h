@@ -23,14 +23,14 @@ typedef uint64_t session_id_t;
 
 static inline constexpr session_id_t INVALID_SESSION_ID = 0;
 
-typedef uint8_t UnsignedTinyInt;
-typedef uint16_t UnsignedSmallInt;
-typedef uint32_t UnsignedInt;
-typedef uint64_t UnsignedBigInt;
-typedef int8_t TinyInt;
-typedef int16_t SmallInt;
-typedef int32_t Int;
-typedef int64_t BigInt;
+typedef uint8_t     UnsignedTinyInt;
+typedef uint16_t    UnsignedSmallInt;
+typedef uint32_t    UnsignedInt;
+typedef uint64_t    UnsignedBigInt;
+typedef int8_t      TinyInt;
+typedef int16_t     SmallInt;
+typedef int32_t     Int;
+typedef int64_t     BigInt;
 
 typedef uint8_t byte_t;
 
