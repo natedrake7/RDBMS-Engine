@@ -27,10 +27,12 @@ typedef uint8_t     UnsignedTinyInt;
 typedef uint16_t    UnsignedSmallInt;
 typedef uint32_t    UnsignedInt;
 typedef uint64_t    UnsignedBigInt;
+typedef __uint128_t UnsignedHugeInt;
 typedef int8_t      TinyInt;
 typedef int16_t     SmallInt;
 typedef int32_t     Int;
 typedef int64_t     BigInt;
+typedef __int128_t  HugeInt;
 
 typedef uint8_t byte_t;
 
@@ -92,16 +94,25 @@ enum class DataType : UnsignedTinyInt{
         = DataTypes::Traits::Concatenation{},
         = DataTypes::Traits::CaseInsensitiveComparison{}
     ]] = 0,
+
     Bool     [[= DataTypes::Traits::Comparison{}]] = 1,
     TinyInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 2,
     SmallInt [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 3,
     Int      [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 4,
     BigInt   [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 5,
-    Decimal  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 6,
-    DateTime [[= DataTypes::Traits::Comparison{}]] = 7,
-    Guid     [[= DataTypes::Traits::Comparison{}]] = 8,
-    Json  = 9,
-    Null = 10
+    HugeInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 6,
+
+    UnsignedTinyInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 7,
+    UnsignedSmallInt [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 8,
+    UnsignedInt      [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 9,
+    UnsignedBigInt   [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 10,
+    UnsignedHugeInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 11,
+
+    Decimal  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 12,
+    DateTime [[= DataTypes::Traits::Comparison{}]] = 13,
+    Guid     [[= DataTypes::Traits::Comparison{}]] = 14,
+    Json  = 15,
+    Null = 16
 };
 
 static constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
@@ -214,6 +225,12 @@ namespace DataTypes{
         SmallInt,
         Int,
         BigInt,
+        HugeInt,
+        UnsignedTinyInt,
+        UnsignedSmallInt,
+        UnsignedInt,
+        UnsignedBigInt,
+        UnsignedHugeInt,
         Decimal,
         DateTime,
         Guid,

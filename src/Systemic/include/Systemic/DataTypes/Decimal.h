@@ -36,7 +36,7 @@ namespace DataTypes {
             || std::is_same_v<T, MultiplicationDigitsBuffer>;
 
     class Decimal final {
-        DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE> _data;
+        UnsignedHugeInt _data;
 
         static constexpr Int LowNibble(const DataBuffer& buffer, Int index);
         static constexpr Int HighNibble(const DataBuffer& buffer, Int index);
