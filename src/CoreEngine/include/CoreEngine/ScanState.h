@@ -6,37 +6,31 @@
 namespace CoreEngine {
     struct ScanState {
         extent_id_t _extentId;
-        StorageTypes::RID _lastRID;
+        page_offset_t _nextOffset;
 
-        bool canFetchMore;
+        bool _canFetchMore;
 
-        ScanState(){
-            this->_extentId = 0;
-            this->canFetchMore = false;
-        }
+        ScanState()
+            : _extentId(INVALID_EXTENT_ID), _nextOffset(0), _canFetchMore(false){}
 
         [[nodiscard]] Int GetNextKeyIndex()const{
-            return (this->_lastRID._index == INVALID_PAGE_INDEX_ID)
-                ? 0
-                : this->_lastRID._index + 1;
+            return this->_nextOffset;
         }
 
         [[nodiscard]] page_id_t GetPageId(const page_id_t extentFirstPageId)const {
-            return this->_lastRID._pageId == INVALID_PAGE_ID
-                ? extentFirstPageId
-                : this->_lastRID._pageId;
+            return StorageLayout::ExtentFirstPageId(this->_extentId) + this->_nextOffset;
         }
 
-        void Update(const extent_id_t extentId, const StorageTypes::RID* rowId){
+        void Update(const extent_id_t extentId, const page_offset_t nextOffset){
             this->_extentId = extentId;
-            this->_lastRID = *rowId;
+            this->_nextOffset = nextOffset;
+            this->_canFetchMore = true;
         }
 
         void Reset(){
-            this->_extentId = 0;
-            this->_lastRID._index = INVALID_PAGE_INDEX_ID;
-            this->_lastRID._pageId = INVALID_PAGE_ID;
-            this->canFetchMore = false;
+            this->_extentId = INVALID_EXTENT_ID;
+            this->_nextOffset = 0;
+            this->_canFetchMore = false;
         }
     };
 

@@ -104,8 +104,8 @@ namespace CoreEngine::VectorizedKernels{
             return table;
         }
 
-        inline constexpr auto COLUMN_MATERIALIZERS = MakeTypeTable<StorageTypes::TableMaterializationFunction>(
-            []<typename T>(){ return &StorageTypes::Table::MaterializeColumn<T>; }
+        inline constexpr auto COLUMN_DECODERS = MakeTypeTable<StorageTypes::ColumnDecodeFunction>(
+            []<typename T>(){ return &StorageTypes::Table::DecodeVariableColumn<T>; }
         );
         inline constexpr auto PAGE_MATERIALIZERS = MakeTypeTable<StorageTypes::PageMaterializationFunction>(
             []<typename T>(){ return &StorageTypes::Table::MaterializeColumnFromPage<T>; }
@@ -123,38 +123,35 @@ namespace CoreEngine::VectorizedKernels{
         inline constexpr auto LOGICAL_KERNELS = MakeLogicalKernelTable();
     }
 
-    class JumpTables{
-
-
-    public:
-        static inline constexpr StorageTypes::PageMaterializationFunction GetPageMaterializationFunction(const DataType type){
+    namespace JumpTables{
+       inline constexpr StorageTypes::PageMaterializationFunction GetPageMaterializationFunction(const DataType type){
             return Detail::PAGE_MATERIALIZERS[static_cast<std::size_t>(type)];
         }
 
-        static inline constexpr StorageTypes::TableMaterializationFunction GetMaterializationFunction(const DataType type){
-            return Detail::COLUMN_MATERIALIZERS[static_cast<std::size_t>(type)];
+       inline constexpr StorageTypes::ColumnDecodeFunction GetColumnDecodeFunction(const DataType type){
+            return Detail::COLUMN_DECODERS[static_cast<std::size_t>(type)];
         }
 
-        static inline constexpr Expressions::VectorizedKernelFunction GetConstantKernel(const DataType type){
+       inline constexpr Expressions::VectorizedKernelFunction GetConstantKernel(const DataType type){
             return Detail::CONSTANT_KERNELS[static_cast<std::size_t>(type)];
         }
 
-        static inline constexpr Expressions::VectorizedKernelFunction GetBinaryKernel(
+       inline constexpr Expressions::VectorizedKernelFunction GetBinaryKernel(
             const Expressions::BinaryOperator _operator,
             const DataType type
         ){
             return Detail::BINARY_KERNELS[static_cast<std::size_t>(_operator)][static_cast<std::size_t>(type)];
         }
 
-        static inline constexpr Expressions::VectorizedKernelFunction GetLogicalKernel(const Expressions::LogicalType type){
+       inline constexpr Expressions::VectorizedKernelFunction GetLogicalKernel(const Expressions::LogicalType type){
             return Detail::LOGICAL_KERNELS[static_cast<std::size_t>(type)];
         }
 
-        static inline constexpr Expressions::VectorizedKernelFunction GetCastKernel(const DataType fromType, const DataType toType){
+       inline constexpr Expressions::VectorizedKernelFunction GetCastKernel(const DataType fromType, const DataType toType){
             return Detail::CAST_KERNELS[static_cast<std::size_t>(fromType)][static_cast<std::size_t>(toType)];
         }
 
-        static inline constexpr Expressions::VectorizedKernelFunction GetVariableKernel(const DataType type){
+       inline constexpr Expressions::VectorizedKernelFunction GetVariableKernel(const DataType type){
             return Detail::VARIABLE_KERNELS[static_cast<std::size_t>(type)];
         }
     };

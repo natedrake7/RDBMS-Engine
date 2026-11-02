@@ -19,6 +19,7 @@ namespace Expressions{
 }
 
 namespace CoreEngine::StorageTypes{
+    struct ScanPlan;
     class IdentityManager;
     struct ChunkInsertState;
     struct InsertPlan;
@@ -393,8 +394,9 @@ namespace CoreEngine::StorageTypes{
             );
             void HeapScan(
                 const ExecutionContext& executionContext,
-                DataStructures::PolymorphicArray<RID>* result,
-                ScanState& state
+                const ScanPlan& scanPlan,
+                ScanState& state,
+                DataChunk* chunk
             )const;
             void TemporaryDatabaseHeapScan(
                 DataStructures::PolymorphicArray<RID>* result,
@@ -540,6 +542,16 @@ namespace CoreEngine::StorageTypes{
                 UnsignedSmallInt slotIndex,
                 column_index_t ordinalPosition
             );
+
+            template <typename T>
+            void DecodeVariableColumn(
+                const ::Memory::IAllocator* allocator,
+                const object_t* const* rows,
+                Int count,
+                DataVector* out,
+                UnsignedInt start,
+                column_index_t ordinal
+            ) const;
         /** @} End of: Materialization Functions*/
 
         /**

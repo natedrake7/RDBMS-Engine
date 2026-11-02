@@ -19,7 +19,7 @@ namespace CoreEngine::Pages{
         auto* header = this->_frame->Header();
 
         header->IncrementSizeNoLock();
-        header->ConsumeBytesNoLock(size + SlotDirectory::SIZE);
+        header->ConsumeBytesNoLock(size + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->MarkDirty();
 
         return OverflowPtr(header->_pageId, header->_size - 1);

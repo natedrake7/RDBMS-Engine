@@ -17,6 +17,8 @@
 #include <Systemic/Macros.h>
 
 #include "CoreEngine/BufferPool/StorageLayout.h"
+#include "Systemic/Converter.h"
+#include "Systemic/Functions/StringFunctions.h"
 
 #if IS_GCC
     #include <cmath>
@@ -33,9 +35,19 @@ namespace CoreEngine{
     ):  _lastPfsPageId(pfsPageId), _lastGamIndex(gamIndex),
         _formatVersion(StorageLayout::FILE_FORMAT_VERSION), _reserved(0){}
 
-    void DatabaseHeader::ValidateFormatVersion() const{
-        if (this->_formatVersion != StorageLayout::FILE_FORMAT_VERSION)
-            throw std::runtime_error("Database::ValidateFormatVersion: invalid format version");
+    void DatabaseHeader::ValidateFormatVersion(const ::Memory::IAllocator* allocator, const DataTypes::StringView& databaseName) const{
+        if (this->_formatVersion == StorageLayout::FILE_FORMAT_VERSION)
+            return;
+
+        const auto str = DataTypes::String::Concat(
+            allocator,
+            "Database '", databaseName,
+            "' was written with file format version ", Converter::IntToStr(this->_formatVersion, allocator),
+            ", this build reads version ", Converter::IntToStr(StorageLayout::FILE_FORMAT_VERSION, allocator),
+            ". Recreate the database."
+        );
+
+        throw std::runtime_error(std::string(str.Data(), str.Size()));
     }
 
     void Database::PopulateFilenames(
@@ -133,6 +145,8 @@ namespace CoreEngine{
 
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
         this->_header = headerPage.GetDatabaseHeader();
+        this->_header.ValidateFormatVersion(allocator, DataTypes::StringView::ViewOf(dbName));
+
         this->_tables.SetAllocator(&this->_allocator);
         this->_schemas.SetAllocator(&this->_allocator);
     }
@@ -223,18 +237,6 @@ namespace CoreEngine{
 
         return nullptr;
     }
-
-    // void DatabaseHeader::ValidateFormatVersion(const DataTypes::StringView& databaseName) const{
-    //     if (this->_formatVersion == StorageLayout::FILE_FORMAT_VERSION)
-    //         return;
-    //
-    //     throw std::runtime_error(
-    //         "Database '" + std::string(databaseName.Data(), databaseName.Size())
-    //         + "' was written with file format version " + std::to_string(this->_formatVersion)
-    //         + ", this build reads version " + std::to_string(StorageLayout::FILE_FORMAT_VERSION)
-    //         + ". Recreate the database."
-    //     );
-    // }
 
     void Database::DeleteTable(const DataTypes::String& tableName){
         const StorageTypes::Table* table = nullptr;

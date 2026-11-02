@@ -27,11 +27,11 @@ namespace CoreEngine::StorageTypes{
             return static_cast<row_size_t>(
                 (StorageLayout::INDEX_PAGE_DEFAULT_SIZE / (2 * Indexing::BTree::MIN_TREE_DEGREE))
                 - this->ClusteredKeySize()
-                - Pages::SlotDirectory::SIZE
+                - PageLayout::SLOT_DIRECTORY_SIZE
             );
         }
 
-        return StorageLayout::PAGE_SIZE_WITHOUT_HEADER - Pages::SlotDirectory::SIZE;
+        return StorageLayout::PAGE_SIZE_WITHOUT_HEADER - PageLayout::SLOT_DIRECTORY_SIZE;
     }
 
     row_size_t Table::ClusteredKeySize() const{

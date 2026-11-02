@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include <string>
 #include <limits>
 #include <stdexcept>
@@ -13,6 +12,10 @@
 #include <Systemic/DataTypes/StringView.h>
 
 class Converter {
+    template<typename T>
+    inline static constexpr size_t ITOS_BUFFER_SIZE =
+        std::numeric_limits<T>::digits10 + 4;
+
     template<DataTypes::Primitive T>
     static T StrToInt(const char* data, const Int size){
         static_assert(std::is_integral_v<T>, "T must be integral type");
@@ -60,6 +63,8 @@ public:
             return StrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
         }
         else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
+
+        std::unreachable();
     }
 
     template<DataTypes::Primitive INT_TYPE, DataTypes::IsStringLike STR_TYPE>
@@ -83,6 +88,8 @@ public:
             return TryStrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
         }
         else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
+
+        std::unreachable();
     }
 
     template<DataTypes::Primitive T>
@@ -125,36 +132,43 @@ public:
         return input.Size() <= size;
     }
 
-    // static bool AssertOverflow(const T leftValue, const T rightValue){
-    //     static_assert(std::is_integral_v<T>, "T must be integral type");
-    //
-    //     return ((rightValue > 0 && leftValue > std::numeric_limits<T>::max() - rightValue) ||
-    //         (rightValue < 0 && leftValue < std::numeric_limits<T>::min() - rightValue));
-    // }
-
-
     template<DataTypes::Primitive T>
     static auto IntToStr(const T input, const ::Memory::IAllocator* allocator){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        char buffer[ITOS_BUFFER_SIZE]{};
-        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<BigInt>(input));
+        char buffer[ITOS_BUFFER_SIZE<T>];
 
-        return DataTypes::String(buffer, len, allocator);
+        const auto [end, ec] = std::to_chars(
+            buffer,
+            buffer + sizeof(buffer),
+            input
+        );
+
+        if (ec != std::errc{}) [[unlikely]]
+            throw std::runtime_error("Integer conversion failed");
+
+        return DataTypes::String(static_cast<const char*>(buffer), static_cast<data_size_t>(end - buffer), allocator);
     }
 
     template<DataTypes::Primitive T>
     static DataTypes::StringValue IntToStringValue(const T input, const ::Memory::IAllocator* allocator){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
-        char buffer[ITOS_BUFFER_SIZE]{};
-        const auto len = std::snprintf(buffer, sizeof(buffer), "%lld", static_cast<BigInt>(input));
+        char buffer[ITOS_BUFFER_SIZE<T>];
 
-        return DataTypes::StringValue::Create(allocator, buffer, len);
+        const auto [end, ec] = std::to_chars(
+            buffer,
+            buffer + sizeof(buffer),
+            input
+        );
+
+        if (ec != std::errc{}) [[unlikely]]
+            throw std::runtime_error("Integer conversion failed");
+
+        return DataTypes::StringValue::Create(allocator, buffer, static_cast<data_size_t>(end - buffer));
     }
 
     static DataTypes::String DecimalToStr(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){
         return input.ToString(allocator);
     }
-
 };

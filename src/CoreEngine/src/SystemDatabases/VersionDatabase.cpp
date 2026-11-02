@@ -30,11 +30,11 @@ namespace CoreEngine {
         this->lastUsedPageId = INVALID_PAGE_ID;
         const auto headerPage = this->_pageAccessor.GetPage<Pages::HeaderPageView>(StorageLayout::HEADER_PAGE_ID);
         this->header = headerPage.GetDatabaseHeader();
+        this->header.ValidateFormatVersion(baseContext.GetAllocator(), sysDbName);
     }
 
-    VersionDatabase::VersionDatabase(): _pageAccessor(){
-        this->lastUsedPageId = INVALID_PAGE_ID;
-    }
+    VersionDatabase::VersionDatabase()
+        : lastUsedPageId(INVALID_PAGE_ID),_pageAccessor(){}
 
     VersionDatabase::~VersionDatabase(){
         this->_allocator.Release();

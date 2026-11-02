@@ -65,7 +65,7 @@ namespace CoreEngine {
         );
 
         // Throws when the file was written with another layout version
-        void ValidateFormatVersion() const;
+        void ValidateFormatVersion(const ::Memory::IAllocator* allocator, const DataTypes::StringView& databaseName) const;
     };
 
     static_assert(

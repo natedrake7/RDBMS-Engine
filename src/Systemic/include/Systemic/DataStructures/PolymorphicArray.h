@@ -357,8 +357,8 @@ namespace DataStructures{
 
         [[nodiscard]] bool HasAllocator() const { return this->_allocator != nullptr; }
 
-        [[nodiscard]] Int Size() const { return this->_size; }
-        [[nodiscard]] Int Capacity() const { return this->_capacity; }
+        [[nodiscard]] data_size_t Size() const { return this->_size; }
+        [[nodiscard]] data_size_t Capacity() const { return this->_capacity; }
         [[nodiscard]] bool Empty() const { return this->_size == 0; }
 
         [[nodiscard]] T* Data() { return this->_data; }

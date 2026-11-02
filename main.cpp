@@ -139,6 +139,14 @@ int main(){
 
     static auto& server = Network::Server::Get();
 
+    try{
+        server.Initialize();
+    }
+    catch (const std::exception& e){
+        std::cerr << "Server failed to start: " << e.what() << std::endl;
+        return 1;
+    }
+
     serverRunning.store(true);
 
     static std::string ipAddress = "127.0.0.1";
@@ -154,8 +162,6 @@ int main(){
     //     std::ref(server.GetDatabases()),
     //     std::ref(server.GetDatabasesLatch())
     // );
-
-    server.Initialize();
 
     CommandLineInterface(server);
 

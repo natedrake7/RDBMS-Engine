@@ -348,7 +348,7 @@ namespace DataTypes{
     }
 
 	String DateTime::ToString(const ::Memory::IAllocator* allocator, const StringView& format) const{
-        auto buffer = this->ToStringBuffer(format);
+        const auto buffer = this->ToStringBuffer(format);
         return String(buffer.Data(), buffer.Size(), allocator);
     }
 

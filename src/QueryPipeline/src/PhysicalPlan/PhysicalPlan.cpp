@@ -17,7 +17,7 @@
 #include <CoreEngine/Vectorization/Vectorization.h>
 #include <CoreEngine/BufferPool/StorageManager.h>
 #include <CoreEngine/Contexts/OutputSchema.h>
-#include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
+#include <../../../CoreEngine/include/CoreEngine/DataStorage/ColumnDecoders/ColumnDecodeInfo.h>
 #include <CoreEngine/Evaluators/VectorizedPushedDownFilter.h>
 
 #include "Systemic/Guards/WriterGuard.h"
@@ -112,8 +112,6 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-    void PlanNode::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){ }
-
     const CoreEngine::OutputSchema* PlanNode::GetSchema() const{
         return this->_schema;
     }
@@ -121,37 +119,36 @@ namespace QueryPipeline::PhysicalPlan {
     bool PlanNode::UsesExternalStorage() const{ return this->temporaryTableId != INVALID_TABLE_ID; }
 
     PhysicalMaterialize::PhysicalMaterialize(
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo>& materializationInfo,
+        CoreEngine::StorageTypes::ScanPlan& scanPlan,
         PlanNode* child,
         const CoreEngine::OutputSchema* schema,
         const UnsignedSmallInt slotIndex
-    ):  PlanNode(schema), _materializationInfo(std::move(materializationInfo)),
+    ):  PlanNode(schema), _scanPlan(std::move(scanPlan)),
         child(child), _slotIndex(slotIndex){
-        assert(this->_materializationInfo.Size() == this->_schema->_columns.Size());
+        assert(this->_scanPlan._size == this->_schema->_columns.Size());
     }
 
     ExecutionResult PhysicalMaterialize::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
-
-        const auto* allocator = context.GetAllocator();
-
-        const auto columnsSize = this->_materializationInfo.Size();
-        const auto rowCount = result.selectionVector->selectedRidsCount;
-
-        result.dataChunk.AllocateColumns(allocator, rowCount, columnsSize);
-        for (Int index = 0; index < columnsSize; index++){
-            const auto& info = this->_materializationInfo[index];
-
-            auto* vector = CoreEngine::DataVector::FlatVector(allocator, info._type,  rowCount);
-            // Read from the table ordinal, write to the output position: with pruning these differ.
-            info._function(context, result.selectionVector, vector, this->_slotIndex, info._ordinalPosition);
-            result.dataChunk.SetColumn(vector, index);
-        }
-
-        result.dataChunk._numberOfRows = rowCount;
-        result.dataChunk._numberOfColumns = columnsSize;
-
-        result.selectionVector = nullptr;
+        //
+        // const auto* allocator = context.GetAllocator();
+        //
+        // const auto rowCount = result.selectionVector->selectedRidsCount;
+        //
+        // result.dataChunk.AllocateColumns(allocator, rowCount, this->_scanPlan._size);
+        // for (Int index = 0; index < this->_scanPlan._size; index++){
+        //     const auto& columnInfo = this->_scanPlan._info[index];
+        //
+        //     auto* vector = CoreEngine::DataVector::FlatVector(allocator, columnInfo._type,  rowCount);
+        //     // Read from the table ordinal, write to the output position: with pruning these differ.
+        //     columnInfo._function(context, result.selectionVector, vector, this->_slotIndex, columnInfo._ordinalPosition);
+        //     result.dataChunk.SetColumn(vector, index);
+        // }
+        //
+        // result.dataChunk._numberOfRows = rowCount;
+        // result.dataChunk._numberOfColumns = this->_scanPlan._size;
+        //
+        // result.selectionVector = nullptr;
         return result;
     }
 
@@ -553,9 +550,11 @@ namespace QueryPipeline::PhysicalPlan {
         context.SetTable(tablePtr, this->table->_slotIndex);
         DataStructures::PolymorphicArray<CoreEngine::StorageTypes::RID> rows(context.GetAllocator());
 
+        auto plan = CoreEngine::StorageTypes::ScanPlan::Create(context.GetAllocator(), context.GetBatchSize());
+
         tablePtr->HeapScan(context, &rows, this->state);
 
-        result.canFetchMore = this->state.canFetchMore;
+        result.canFetchMore = this->state._canFetchMore;
 
         if (result.canFetchMore == false)
             this->state.Reset();
@@ -565,10 +564,6 @@ namespace QueryPipeline::PhysicalPlan {
         result.selectionVector->selectedRidsCount = rows.Size();
         result.selectionVector->isIdentity = true;
         return result;
-    }
-
-    void PhysicalTableScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->state._lastRID = *rid;
     }
 
     PhysicalIndexScan::PhysicalIndexScan(
@@ -616,11 +611,6 @@ namespace QueryPipeline::PhysicalPlan {
         result.selectionVector->selectedRidsCount = rids.Size();
         result.selectionVector->isIdentity = true;
         return result;
-    }
-
-    void PhysicalIndexScan::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->state.pageId = rid->_pageId;
-        this->state.lastFetchedKeyIndex =  rid->_index;
     }
 
     PhysicalIndexSeek::PhysicalIndexSeek(
@@ -730,10 +720,6 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalProject::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->child->UpdateScanState(rid);
-    }
-
     PhysicalFilter::PhysicalFilter(
         PlanNode *child,
         Expressions::Expression* filter,
@@ -766,10 +752,6 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    void PhysicalFilter::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->child->UpdateScanState(rid);
-    }
-
     PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
         : PlanNode(child->GetSchema()), top(top), child(child){}
 
@@ -785,10 +767,6 @@ namespace QueryPipeline::PhysicalPlan {
         this->top = 0;
         result.canFetchMore = false;
         return result;
-    }
-
-    void PhysicalTop::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->child->UpdateScanState(rid);
     }
 
     PhysicalDistinct::PhysicalDistinct(PlanNode *child)
@@ -826,10 +804,6 @@ namespace QueryPipeline::PhysicalPlan {
         // result.results = std::move(results);
 
         return result;
-    }
-
-    void PhysicalDistinct::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->child->UpdateScanState(rid);
     }
 
     bool PhysicalOrderBy::CanBeSortedInMemory(const bool canFetchMore) const{
@@ -917,10 +891,6 @@ namespace QueryPipeline::PhysicalPlan {
         // }
 
         return result;
-    }
-
-    void PhysicalOrderBy::UpdateScanState(const CoreEngine::StorageTypes::RID* rid){
-        this->child->UpdateScanState(rid);
     }
 
     PhysicalInsert::PhysicalInsert(

@@ -7,7 +7,7 @@ namespace CoreEngine::Pages{
         page_offset_t _index;
 
         OverflowPtr() = default;
-        OverflowPtr(const page_id_t pageId, const page_offset_t index)
+        explicit OverflowPtr(const page_id_t pageId, const page_offset_t index)
             : _pageId(pageId), _index(index) {}
     };
 

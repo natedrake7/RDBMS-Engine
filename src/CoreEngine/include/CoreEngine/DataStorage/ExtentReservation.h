@@ -57,8 +57,8 @@ namespace CoreEngine::StorageTypes{
                 const Table* table
             );
 
-            ExtentReservation(const ExtentReservation& other) = delete;
-            ExtentReservation& operator=(const ExtentReservation& other) = delete;
+            ExtentReservation(const ExtentReservation&) = delete;
+            ExtentReservation& operator=(const ExtentReservation&) = delete;
             ExtentReservation(ExtentReservation&& other) noexcept;
             ExtentReservation& operator=(ExtentReservation&& other) noexcept;
 

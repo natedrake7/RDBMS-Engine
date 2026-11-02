@@ -63,7 +63,7 @@ namespace DataTypes {
     const UnsignedTinyInt* Guid::GetData() const{ return this->_data; }
 
     String Guid::ToString(const ::Memory::IAllocator* allocator) const {
-        auto buffer = this->ToStringBuffer();
+        const auto buffer = this->ToStringBuffer();
         return String(buffer.Data(), GUID_STRING_SIZE, allocator);
     }
 

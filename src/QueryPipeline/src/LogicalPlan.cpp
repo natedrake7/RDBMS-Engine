@@ -9,7 +9,7 @@
 #include <QueryPipeline/DatabaseConstants.h>
 #include <CoreEngine/Contexts/OutputSchema.h>
 #include <QueryPipeline/Parser.h>
-#include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
+#include <../../CoreEngine/include/CoreEngine/DataStorage/ColumnDecoders/ColumnDecodeInfo.h>
 #include <CoreEngine/Evaluators/Kernels/Vectorized/Vectorized.JumpTables.h>
 #include <CoreEngine/Evaluators/Kernels/Vectorized/VectorizedKernels.h>
 
@@ -69,28 +69,24 @@ namespace QueryPipeline {
         const auto* allocator = context._compileContext.GetAllocator();
         const auto numOfColumns = context._referencedColumns.GetSlotCount(this->_slotIndex);
 
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> materializationInfo(
-            allocator,
-            numOfColumns
-        );
+        auto scanPlan = CoreEngine::StorageTypes::ScanPlan::Create(allocator, numOfColumns);
 
         auto* childPhysical = this->child->ToPhysical(context);
 
+        UnsignedInt counter = 0;
         context._referencedColumns.ForEachColumn(this->_slotIndex, [&](
             const column_index_t ordinalPosition,
             const DataType dataType
         ){
-            materializationInfo.Push(
-            CoreEngine::StorageTypes::ColumnMaterializationInfo(
-                    CoreEngine::VectorizedKernels::JumpTables::GetMaterializationFunction(dataType),
+            scanPlan._info[counter++] = CoreEngine::StorageTypes::ColumnDecodeInfo(
+                    CoreEngine::VectorizedKernels::JumpTables::GetColumnDecodeFunction(dataType),
                     ordinalPosition,
                     dataType
-                )
             );
         });
 
         return context._compileContext.Allocate<PhysicalPlan::PhysicalMaterialize>(
-            materializationInfo, childPhysical,
+            scanPlan, childPhysical,
             childPhysical->GetSchema(), this->_slotIndex
         );
     }

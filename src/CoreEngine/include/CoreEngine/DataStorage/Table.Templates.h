@@ -99,4 +99,47 @@ namespace CoreEngine::StorageTypes{
             _vector->SetNullValue(index, outNull);
         }
     }
+
+    template <typename T>
+    void Table::DecodeVariableColumn(
+        const ::Memory::IAllocator* allocator,
+        const object_t* const* __restrict__ rows,
+        const Int count,
+        DataVector* __restrict__ out,
+        const UnsignedInt start,
+        const column_index_t ordinal
+    ) const{
+        const auto entryOffset = sizeof(RowHeader) + ordinal * sizeof(RowEntry);
+
+        auto* __restrict__ values = out->DataAs<T>() + start;
+        for (Int i = 0;i < count; i++){
+            const auto* row = rows[i];
+
+            RowEntry entry;
+            std::memcpy(&entry, row + entryOffset, sizeof(entry));
+
+            const bool isNull = entry.IsNull();
+            out->SetNullValue(start + i, isNull);
+            if (isNull)
+                continue;
+
+            const auto* value = row + entry.Offset();
+            if constexpr(DataTypes::Primitive<T>)
+                std::memcpy(&values[i], value, sizeof(T));
+            else{
+                if (entry.Type() != RowEntry::INLINE) [[unlikely]]
+                    throw std::logic_error("DecodeColumn: overflow and LOB columns are not supported yet");
+
+                if constexpr (DataTypes::IsStringValue<T>)
+                    values[i] = DataTypes::StringValue::Create(allocator, reinterpret_cast<const char*>(value), entry.Size());
+                else if constexpr (DataTypes::IsDecimal<T>)
+                    values[i] = DataTypes::Decimal(value, entry.Size());
+                else if constexpr (DataTypes::IsJson<T>)
+                    values[i] = DataTypes::JsonBinary(allocator, value, entry.Size());
+                else
+                    static_assert(DataTypes::AlwaysFalse<T>, "Unsupported type");
+            }
+        }
+
+    }
 }

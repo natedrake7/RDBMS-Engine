@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <Systemic/DataTypes/DataTypes.h>
 
+#include "CoreEngine/Pages/PageLayout.h"
+
 namespace CoreEngine::Pages{
     struct SlotDirectory{
     private:
@@ -20,8 +22,6 @@ namespace CoreEngine::Pages{
             SLOT_FORWARDED  = 2,
             SLOT_DEAD       = 3
         };
-
-        inline static constexpr UnsignedTinyInt SIZE = 4 * sizeof(UnsignedSmallInt);
 
         SlotDirectory()
         :   flags_offset(0), _dataSize(0),
@@ -105,7 +105,7 @@ namespace CoreEngine::Pages{
     };
 
     static_assert(
-        sizeof(SlotDirectory) == SlotDirectory::SIZE,
+        sizeof(SlotDirectory) == PageLayout::SLOT_DIRECTORY_SIZE,
         "SlotDirectory size mismatch"
     );
 

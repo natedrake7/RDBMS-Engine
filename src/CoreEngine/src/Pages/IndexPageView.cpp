@@ -21,7 +21,7 @@ namespace CoreEngine::Pages{
 
         auto* headerPtr = this->_frame->Header();
         headerPtr->IncrementSizeNoLock();
-        headerPtr->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytesNoLock(newSlot.Size() + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->MarkDirty();
     }
 
@@ -99,7 +99,7 @@ namespace CoreEngine::Pages{
 
         headerPtr->IncrementSizeNoLock();
         this->_frame->MarkDirty();
-        headerPtr->ConsumeBytesNoLock(static_cast<Int>(newSlot.Size()) + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytesNoLock(static_cast<Int>(newSlot.Size()) + PageLayout::SLOT_DIRECTORY_SIZE);
     }
 
     void IndexPageView::InsertChild(
@@ -122,7 +122,7 @@ namespace CoreEngine::Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, sizeof(page_id_t), key->Size());
 
 
-        this->_frame->Header()->ConsumeBytesNoLock(sizeof(page_id_t) + key->Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->ConsumeBytesNoLock(sizeof(page_id_t) + key->Size() + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->Header()->_size++;
         this->_frame->MarkDirty();
     }
@@ -137,7 +137,7 @@ namespace CoreEngine::Pages{
 
         this->_frame->Header()->_size++;
         this->_frame->MarkDirty();
-        this->_frame->Header()->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
+        this->_frame->Header()->ConsumeBytesNoLock(newSlot.Size() + PageLayout::SLOT_DIRECTORY_SIZE);
     }
 
     void IndexPageView::SetLeftSibling(const page_id_t previousPage) const{
@@ -185,7 +185,7 @@ namespace CoreEngine::Pages{
 
         auto* headerPtr = this->_frame->Header();
         headerPtr->IncrementSizeNoLock();
-        headerPtr->ConsumeBytesNoLock(newSlot.Size() + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytesNoLock(newSlot.Size() + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->MarkDirty();
     }
 
@@ -207,7 +207,7 @@ namespace CoreEngine::Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, size, tuple.key.Size());
 
         auto* headerPtr = this->_frame->Header();
-        headerPtr->ConsumeBytesNoLock(size + tuple.key.Size() + SlotDirectory::SIZE);
+        headerPtr->ConsumeBytesNoLock(size + tuple.key.Size() + PageLayout::SLOT_DIRECTORY_SIZE);
         headerPtr->IncrementSizeNoLock();
         this->_frame->MarkDirty();
     }

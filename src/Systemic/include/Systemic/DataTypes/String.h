@@ -15,19 +15,24 @@ namespace DataTypes{
         void CalculateCapacity(data_size_t size);
         [[nodiscard]] bool CanFit(data_size_t size) const;
 
+        explicit String(char* str, data_size_t size, const ::Memory::IAllocator* allocator);
+
         public:
             String();
-            String(const ::Memory::IAllocator* allocator);
+            explicit String(const ::Memory::IAllocator* allocator);
             String(const ::Memory::IAllocator* allocator, data_size_t size);
 
             template<IsStringLike T>
-            String(const T& str, const ::Memory::IAllocator* allocator);
-            String(const char* str, data_size_t size, const ::Memory::IAllocator* allocator);
+            explicit String(const T& str, const ::Memory::IAllocator* allocator);
 
-            String(const object_t* str, data_size_t size, const ::Memory::IAllocator* allocator);
-            String(object_t* str, data_size_t size, const ::Memory::IAllocator* allocator);
+            explicit String(const char* str, data_size_t size, const ::Memory::IAllocator* allocator);
+            explicit String(const object_t* str, data_size_t size, const ::Memory::IAllocator* allocator);
+            explicit String(object_t* str, data_size_t size, const ::Memory::IAllocator* allocator);
 
-            String(char* str, data_size_t size, const ::Memory::IAllocator* allocator);
+            static String Adopt(
+                char* data, data_size_t size, const ::Memory::IAllocator* allocator
+            );
+
 
             String(const String& other);
             String& operator=(const String& other);

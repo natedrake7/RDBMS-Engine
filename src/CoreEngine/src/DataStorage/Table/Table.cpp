@@ -463,7 +463,7 @@ namespace CoreEngine::StorageTypes {
         DataStructures::PolymorphicArray<extent_id_t> allocatedExtents(executionContext.GetAllocator());
         allocationPage.GetAllocatedExtents(&allocatedExtents, 0);
 
-        const auto required = payload.Size() + Pages::SlotDirectory::SIZE;
+        const auto required = payload.Size() + PageLayout::SLOT_DIRECTORY_SIZE;
         const auto rowCategory = Pages::PageFreeSpaceView::RequiredCategory(required);
 
         Errors::RuntimeStatus result;
@@ -503,8 +503,9 @@ namespace CoreEngine::StorageTypes {
 
     void Table::HeapScan(
         const ExecutionContext& executionContext,
-        DataStructures::PolymorphicArray<RID>* result,
-        ScanState& state
+        const ScanPlan& scanPlan,
+        ScanState& state,
+        DataChunk* chunk
     )const{
         if(this->IsEmpty())
             return;
@@ -512,39 +513,48 @@ namespace CoreEngine::StorageTypes {
         const auto pageAccessor = this->_db->GetPageAccessor();
 
         const auto& snapshot = executionContext.GetSnapshot();
+        const auto batchSize = executionContext.GetBatchSize();
 
         const auto allocationPage = pageAccessor.GetPage<Pages::AllocationPageView>(this->_physicalHeader.GetAllocationPageId());
 
         DataStructures::PolymorphicArray<extent_id_t> tableExtentIds(executionContext.GetAllocator());
         allocationPage.GetAllocatedExtents(&tableExtentIds, state._extentId);
 
-        state.canFetchMore = false;
+        state._canFetchMore = false;
         RID rid;
         for (const auto extentId : tableExtentIds){
             const auto firstPageId = StorageLayout::ExtentFirstPageId(extentId);
-            const auto pfs = pageAccessor.GetAssociatedPfsPage(firstPageId);
 
-            MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
-            for (page_id_t currentPageId = state.GetPageId(firstPageId); currentPageId < firstPageId + StorageLayout::EXTENT_SIZE; currentPageId++){
-                if (!pfs.IsAllocatedAs(currentPageId, PageLayout::PageType::DATA))
-                    continue;
+            UnsignedInt mask = 0;
+            {
+                const auto pfs = pageAccessor.GetAssociatedPfsPage(firstPageId);
+                MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
+                mask = pfs.ExtentPagesOfType(firstPageId, PageLayout::PageType::DATA);
+            }
 
-                auto page = pageAccessor.GetPage<Pages::PageView>(currentPageId);
+            if (extentId == state._extentId)
+                mask &= 0xFFu << state._nextOffset;
+
+            for (; mask != 0; mask &= mask - 1){
+                const auto offset = std::countr_zero(mask);
+                auto page = pageAccessor.GetPage<Pages::PageView>(firstPageId + offset);
 
                 MultiThreading::ReaderGuard pageLock(&page.Latch());
 
-                if (page.IsEmpty())
+                if (page.IsEmpty() || page.GetPageType() != PageLayout::PageType::DATA)
                     continue;
 
-                for (Int index = state.GetNextKeyIndex(); index < page.PageSize(); index++){
-                    if (!page.RetrieveVisibleRow(snapshot, index, &rid))
-                        continue;
-                    result->Push(rid);
+                if (chunk->_numberOfRows + page.PageSize() > batchSize){
+                    state.Update(extentId, offset);
+                    return;
                 }
 
+                for (Int i = 0;i < page.PageSize(); i++)
+                    if (page.RetrieveVisibleRow(snapshot, i, &rid)) [[likely]]
+                        result->Push(rid);
+
                 if (result->Size() >= executionContext.GetBatchSize()) {
-                    state.canFetchMore = true;
-                    state.Update(extentId, result->Back());
+                    state.Update(extentId, offset + 1);
                     return;
                 }
             }
@@ -552,6 +562,7 @@ namespace CoreEngine::StorageTypes {
 
         state.Reset();
     }
+    static_assert(Constants::DEFAULT_BATCH_SIZE >= PageLayout::MAX_PAGE_SLOTS);
 
     void Table::TemporaryDatabaseHeapScan(
         DataStructures::PolymorphicArray<RID>* result,

@@ -1,9 +1,7 @@
 #pragma once
 #include <cstddef>
 #include <limits>
-
 #include <Systemic/DataTypes/DataTypes.h>
-#include <Systemic/Functions/MathFunctions.h>
 
 /**
  * @name Storage layout
@@ -31,7 +29,7 @@ namespace CoreEngine::StorageLayout{
     inline constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
 
     [[nodiscard]] inline constexpr UnsignedInt ExtentsToAllocate(const Int numberOfPages) {
-        return Math::Ceil<UnsignedInt>(static_cast<float>(numberOfPages) / static_cast<float>(StorageLayout::EXTENT_SIZE));
+        return (numberOfPages + EXTENT_SIZE - 1) / EXTENT_SIZE;
     }
     /** @} End of: Page and extent geometry */
 

@@ -58,13 +58,13 @@ namespace DataTypes {
 		static void ValidateDate(Int year, Int month, Int day, Int hour, Int minute, Int second);
 
 	public:
-		DateTime();
+		explicit DateTime();
 		explicit DateTime(BigInt timestamp);
 
-        DateTime(const DateTime& other) = default;
-        DateTime& operator=(const DateTime& other) = default;
-	    DateTime(DateTime&& other) = default;
-	    DateTime& operator=(DateTime&& other) = default;
+        DateTime(const DateTime&) = default;
+        DateTime& operator=(const DateTime&) = default;
+	    DateTime(DateTime&&) = default;
+	    DateTime& operator=(DateTime&&) = default;
 
 		[[nodiscard]] Int GetYears() const;
 		[[nodiscard]] UnsignedInt GetMonths() const;

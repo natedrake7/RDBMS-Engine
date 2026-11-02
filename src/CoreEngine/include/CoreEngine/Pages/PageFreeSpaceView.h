@@ -46,7 +46,9 @@ namespace CoreEngine::Pages{
             void SetPageAllocationStatus(page_id_t pageId, page_size_t bytesLeft) const;
             void SetPageType(page_id_t pageId, PageLayout::PageType pageType) const;
 
-            [[nodiscard]] bool IsAllocatedAs(page_id_t pageId, PageLayout::PageType pageType) const;
+            [[nodiscard]] bool IsAllocatedAs(page_id_t pageId, PageLayout::PageType type) const;
+
+            [[nodiscard]] UnsignedInt ExtentPagesOfType(page_id_t firstPageId, PageLayout::PageType type) const;
 
             [[nodiscard]] static byte_t inline constexpr ObjectSizeToCategory(const row_size_t size){
                 // Direct mapping to 7levels (0-7)

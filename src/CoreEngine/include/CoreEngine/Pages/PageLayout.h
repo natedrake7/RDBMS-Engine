@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <Systemic/DataTypes/DataTypes.h>
 #include <meta>
+#include <CoreEngine/BufferPool/StorageLayout.h>
 
 namespace CoreEngine::Pages{
     class PageView;
@@ -41,4 +42,9 @@ namespace CoreEngine::PageLayout{
         HIGH = 2,
         SYSTEM = 3,
     };
+
+    inline constexpr UnsignedTinyInt SLOT_DIRECTORY_SIZE = 4 * sizeof(UnsignedSmallInt);
+
+    inline constexpr Int MAX_PAGE_SLOTS = StorageLayout::PAGE_SIZE_WITHOUT_HEADER / SLOT_DIRECTORY_SIZE;
+
 }

@@ -270,7 +270,7 @@ T Value::Get(const ::Memory::IAllocator* allocator) const{
         return this->AsString(allocator);
     else static_assert(sizeof(T) == 0, "Value::Get<T>: unsupported type");
 
-    return {};
+    std::unreachable();
 }
 
 struct ValueComparator {

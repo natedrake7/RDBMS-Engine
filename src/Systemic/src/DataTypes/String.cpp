@@ -41,67 +41,44 @@ namespace DataTypes{
         return *this;
     }
 
-    String::String(){
-        this->_allocator = nullptr;
-        this->_data = nullptr;
-        this->_size = 0;
-        this->_capacity = 0;
-    }
+    String::String()
+        :   _allocator(nullptr), _data(nullptr),
+            _size(0), _capacity(0) {}
 
     String::String(const Memory::IAllocator* allocator)
         : _allocator(allocator), _data(nullptr), _size(0), _capacity(0) {}
 
-    String::String(const Memory::IAllocator* allocator, const data_size_t size){
-        this->_allocator = allocator;
+    String::String(const Memory::IAllocator* allocator, const data_size_t size)
+        :   _allocator(allocator), _data(static_cast<char*>(allocator->AllocateRaw(size))),
+            _size(0), _capacity(size){}
 
-        this->_size = 0;
-        this->_capacity = size;
-
-        this->_data = static_cast<char*>(allocator->AllocateRaw(size));
-    }
-
-    String::String(const object_t* str, const data_size_t size, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_data = static_cast<char*>(allocator->AllocateRaw(size));
-
+    String::String(const object_t* str, const data_size_t size, const Memory::IAllocator* allocator)
+        :   _allocator(allocator), _data(static_cast<char*>(allocator->AllocateRaw(size))),
+            _size(size), _capacity(size){
         std::memcpy(this->_data, str, size);
-        this->_size = size;
-        this->_capacity = size;
     }
 
-    String::String(object_t* str, const data_size_t size, const ::Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_data = reinterpret_cast<char*>(str);
-        this->_size = size;
-        this->_capacity = size;
+    String::String(object_t* str, const data_size_t size, const ::Memory::IAllocator* allocator)
+        :   _allocator(allocator), _data(reinterpret_cast<char*>(str)),
+            _size(size), _capacity(size){}
+
+    String String::Adopt(char* data, const data_size_t size, const Memory::IAllocator* allocator){
+        return String(data ,size, allocator);
     }
 
-    String::String(const char* str, const data_size_t size, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-        this->_data = static_cast<char*>(allocator->AllocateRaw(size));
-
+    String::String(const char* str, const data_size_t size, const Memory::IAllocator* allocator)
+        :   _allocator(allocator), _data(static_cast<char*>(allocator->AllocateRaw(size))),
+            _size(size), _capacity(size){
         std::memcpy(this->_data, str, size);
-
-        this->_size = size;
-        this->_capacity = size;
     }
 
-    String::String(char* str, const data_size_t size, const Memory::IAllocator* allocator){
-        this->_allocator = allocator;
-
-        this->_data = str;
-
-        this->_size = size;
-        this->_capacity = size;
-    }
+    String::String(char* str, const data_size_t size, const Memory::IAllocator* allocator)
+        :   _allocator(allocator), _data(str),
+            _size(size), _capacity(size){}
 
     String::String(const String& other)
-        :   _allocator(other._allocator), _data(nullptr),
+        :   _allocator(other._allocator), _data(static_cast<char*>(this->_allocator->AllocateRaw(other._size))),
             _size(other._size), _capacity(other._size){
-        if (other._data == nullptr)
-            return;
-
-        this->_data = static_cast<char*>(this->_allocator->AllocateRaw(other._size));
         std::memcpy(this->_data, other._data, other._size);
     }
 

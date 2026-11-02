@@ -13,9 +13,9 @@ namespace CoreEngine::StorageTypes{
             );
         }
 
-        const auto& [_firstExtentId, _count] = this->_segments[this->_segmentIndex];
-
         while (this->_segmentIndex < this->_segments.Size()){
+            const auto& [_firstExtentId, _count] = this->_segments[this->_segmentIndex];
+
             const page_id_t pageId = (_firstExtentId + this->_segmentOffset) * StorageLayout::EXTENT_SIZE + this->_extentIndex++;
 
             if (this->_extentIndex == StorageLayout::EXTENT_SIZE){

@@ -8,6 +8,8 @@
 
 #include <Systemic/DataTypes/DataTypes.h>
 
+#include "CpuFeatures.h"
+
 namespace CheckSum {
 
     namespace Detail {
@@ -197,10 +199,10 @@ namespace CheckSum {
         x3 = Detail::Fold512(x2, k512, x3);
 
         // 4 x 128 bits -> 128 bits
-        const __m128i a = _mm512_extracti32x4_epi32(x3, 0);
-        const __m128i b = _mm512_extracti32x4_epi32(x3, 1);
-        const __m128i c = _mm512_extracti32x4_epi32(x3, 2);
-        const __m128i d = _mm512_extracti32x4_epi32(x3, 3);
+        const auto a = _mm512_extracti32x4_epi32(x3, 0);
+        const auto b = _mm512_extracti32x4_epi32(x3, 1);
+        const auto c = _mm512_extracti32x4_epi32(x3, 2);
+        const auto d = _mm512_extracti32x4_epi32(x3, 3);
         __m128i r = Detail::Fold128(a, K384, d);
         r = Detail::Fold128(b, K256, r);
         r = Detail::Fold128(c, K128, r);
@@ -216,8 +218,8 @@ namespace CheckSum {
     requires (Size % 256 == 0 && Size >= 256)
     [[nodiscard]] inline UnsignedInt Crc32Fast(const object_t* data) noexcept {
 #if defined(__GNUC__) || defined(__clang__)
-        static const bool hasAvx512 = __builtin_cpu_supports("avx512f") && __builtin_cpu_supports("vpclmulqdq");
-        if (hasAvx512)
+        const auto [_avx512f, _, _vpclmulqdq] = Cpu::Features();
+        if (_avx512f && _vpclmulqdq)
             return Crc32Avx512<Size>(data);
 #endif
         return Crc32<Size>(data);

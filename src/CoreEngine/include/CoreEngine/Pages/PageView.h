@@ -82,14 +82,31 @@ namespace CoreEngine::Pages{
         Frame* _frame;
         UnsignedSmallInt initialOffset;
 
-        void SetPageId(page_id_t pageId) const;
+        void SetPageId(const page_id_t pageId) const{
+            this->_frame->Header()->_pageId = pageId;
+        }
 
-        [[nodiscard]] page_offset_t NewInsertOffset() const;
-        [[nodiscard]] static Int SlotDirectoryOffSet(Int indexPosition);
-        [[nodiscard]] static Int SlotDirectoriesToMoveOffSet(Int indexPosition, Int slotToMove);
+        [[nodiscard]] page_offset_t NewInsertOffset() const{
+            const auto* headerPtr = this->_frame->Header();
+            return StorageLayout::PAGE_SIZE
+                - headerPtr->_bytesLeft
+                - headerPtr->_size * PageLayout::SLOT_DIRECTORY_SIZE;
+        }
+
+        [[nodiscard]] inline static constexpr Int SlotDirectoryOffSet(const Int indexPosition){
+            return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + 1) * PageLayout::SLOT_DIRECTORY_SIZE;
+        }
+
+        [[nodiscard]] inline static constexpr Int SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
+            return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + slotToMove) * PageLayout::SLOT_DIRECTORY_SIZE;
+        }
+
+        [[nodiscard]] inline bool IndexOutOfBounds(const Int indexPosition) const{
+            return indexPosition >= this->_frame->Header()->_size;
+        }
+
         void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition)const;
 
-        [[nodiscard]] bool IndexOutOfBounds(Int indexPosition) const;
         void AdjustSlotDirectories(
             Int indexPosition,
             page_offset_t offset,
@@ -97,11 +114,15 @@ namespace CoreEngine::Pages{
             key_size_t keySize
         ) const;
 
-        [[nodiscard]] Int RawDataSize()const;
+        [[nodiscard]] inline bool IsIndexPage()const{
+            return this->_frame->Header()->Type() == PageLayout::PageType::INDEXED;
+        }
 
-        void InsertFirstRow(const StorageTypes::SerializedRow& payload) const;
-
-        [[nodiscard]] bool IsIndexPage()const;
+        [[nodiscard]] inline Int RawDataSize()const{
+            return this->IsIndexPage()
+                       ? StorageLayout::INDEX_PAGE_DEFAULT_SIZE
+                       : StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
+        }
 
         [[nodiscard]] size_t GetByteIndex(const extent_id_t extentId) const noexcept{
             return this->initialOffset + PackedByte::WordIndex(extentId);
@@ -133,7 +154,7 @@ namespace CoreEngine::Pages{
         }
 
         inline static void CheckRowFits(const PageHeader* header, const UnsignedSmallInt size){
-            if (size + SlotDirectory::SIZE > header->_bytesLeft) [[unlikely]]
+            if (size + PageLayout::SLOT_DIRECTORY_SIZE > header->_bytesLeft) [[unlikely]]
                 ThrowRowDoesNotFit();
         }
 

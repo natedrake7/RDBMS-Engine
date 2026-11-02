@@ -17,26 +17,6 @@ namespace CoreEngine::Pages{
             _bytesLeft(static_cast<page_size_t>(StorageLayout::PAGE_SIZE - StorageLayout::PAGE_HEADER_SIZE)),
             _fragmentedBytes(0), _flags(0){}
 
-
-    void PageView::SetPageId(const page_id_t pageId) const{
-        this->_frame->Header()->_pageId = pageId;
-    }
-
-    page_offset_t PageView::NewInsertOffset() const{
-        const auto* headerPtr = this->_frame->Header();
-        return StorageLayout::PAGE_SIZE
-            - headerPtr->_bytesLeft
-            - headerPtr->_size * SlotDirectory::SIZE;
-    }
-
-    Int PageView::SlotDirectoryOffSet(const Int indexPosition){
-        return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + 1) * SlotDirectory::SIZE;
-    }
-
-    Int PageView::SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-        return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + slotToMove) * SlotDirectory::SIZE;
-    }
-
     void PageView::UpdateSlotDirectory(
         const SlotDirectory slotDirectory,
         const Int indexPosition
@@ -44,12 +24,8 @@ namespace CoreEngine::Pages{
         std::memcpy(
             this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
             &slotDirectory,
-            SlotDirectory::SIZE
+            PageLayout::SLOT_DIRECTORY_SIZE
         );
-    }
-
-    bool PageView::IndexOutOfBounds(const Int indexPosition) const{
-        return indexPosition >= this->_frame->Header()->_size;
     }
 
     void PageView::AdjustSlotDirectories(
@@ -59,9 +35,9 @@ namespace CoreEngine::Pages{
         const key_size_t keySize
     ) const{
         const auto slotsToMove = this->_frame->Header()->_size - indexPosition;
-        const auto slotBytesToMove = slotsToMove * SlotDirectory::SIZE;
+        const auto slotBytesToMove = slotsToMove * PageLayout::SLOT_DIRECTORY_SIZE;
         const auto srcOffset = Pages::PageView::SlotDirectoriesToMoveOffSet(indexPosition, slotsToMove);
-        const auto dstOffset = srcOffset - SlotDirectory::SIZE;
+        const auto dstOffset = srcOffset - PageLayout::SLOT_DIRECTORY_SIZE;
 
         std::memmove(
             this->_frame->_data + dstOffset,
@@ -71,30 +47,6 @@ namespace CoreEngine::Pages{
 
         const auto slot = SlotDirectory(offset, keySize, rowSize, keySize, SlotDirectory::SLOT_USED);
         this->UpdateSlotDirectory(slot, indexPosition);
-    }
-
-    Int PageView::RawDataSize() const{
-        return this->IsIndexPage()
-                   ? StorageLayout::INDEX_PAGE_DEFAULT_SIZE
-                   : StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
-    }
-
-    void PageView::InsertFirstRow(const StorageTypes::SerializedRow& payload) const{
-        const auto rowSize = payload.Size();
-        const auto offSet = this->NewInsertOffset();
-
-        std::memcpy(this->_frame->_data + offSet, payload.Data(), rowSize);
-
-        const auto newSlot = SlotDirectory(offSet, 0, rowSize, 0, SlotDirectory::SLOT_USED);
-        this->InsertNewSlot(newSlot);
-
-        this->_frame->MarkDirty();
-        this->_frame->Header()->IncrementSizeNoLock();
-        this->_frame->Header()->ConsumeBytesNoLock(rowSize + SlotDirectory::SIZE);
-    }
-
-    bool PageView::IsIndexPage() const{
-        return this->_frame->Header()->Type() == PageLayout::PageType::INDEXED;
     }
 
     PageView::PageView()
@@ -143,7 +95,7 @@ namespace CoreEngine::Pages{
         std::memcpy(
             &slot,
             this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
-            SlotDirectory::SIZE
+            PageLayout::SLOT_DIRECTORY_SIZE
         );
         return slot;
     }
@@ -152,7 +104,7 @@ namespace CoreEngine::Pages{
         std::memcpy(
             this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(this->_frame->Header()->_size),
             &slotDirectory,
-            SlotDirectory::SIZE
+            PageLayout::SLOT_DIRECTORY_SIZE
         );
     }
 
@@ -189,7 +141,7 @@ namespace CoreEngine::Pages{
             offset += slot.Size();
         }
 
-        header->_bytesLeft = static_cast<page_size_t>(StorageLayout::PAGE_SIZE - offset - slotCount * SlotDirectory::SIZE);
+        header->_bytesLeft = static_cast<page_size_t>(StorageLayout::PAGE_SIZE - offset - slotCount * PageLayout::SLOT_DIRECTORY_SIZE);
         header->_fragmentedBytes = 0;
         this->_frame->MarkDirty();
     }
@@ -201,7 +153,7 @@ namespace CoreEngine::Pages{
             header->FragmentBytesNoLock(slot.Size());
         }
 
-        header->_bytesLeft = static_cast<page_size_t>(header->_bytesLeft + (header->_size - size) * SlotDirectory::SIZE);
+        header->_bytesLeft = static_cast<page_size_t>(header->_bytesLeft + (header->_size - size) * PageLayout::SLOT_DIRECTORY_SIZE);
         header->_size = size;
         this->_frame->MarkDirty();
     }
@@ -233,7 +185,7 @@ namespace CoreEngine::Pages{
             this->_frame->Header()->IncrementSizeNoLock();
         }
 
-        this->_frame->Header()->ConsumeBytesNoLock(movedSlots * SlotDirectory::SIZE + (offset - startOffset));
+        this->_frame->Header()->ConsumeBytesNoLock(movedSlots * PageLayout::SLOT_DIRECTORY_SIZE + (offset - startOffset));
         this->_frame->MarkDirty();
 
         donorPage->Truncate(donorNewSize);
@@ -266,7 +218,7 @@ namespace CoreEngine::Pages{
         this->InsertNewSlot(newSlot);
 
         header->_size++;
-        header->ConsumeBytesNoLock(rowSize + SlotDirectory::SIZE);
+        header->ConsumeBytesNoLock(rowSize + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->MarkDirty();
         return header->_size - 1;
     }
@@ -293,7 +245,7 @@ namespace CoreEngine::Pages{
         this->AdjustSlotDirectories(indexPosition, offSetCopy, rowSize, 0);
 
         header->_size++;
-        header->ConsumeBytesNoLock(rowSize + SlotDirectory::SIZE);
+        header->ConsumeBytesNoLock(rowSize + PageLayout::SLOT_DIRECTORY_SIZE);
         this->_frame->MarkDirty();
     }
 
@@ -453,10 +405,10 @@ namespace CoreEngine::Pages{
 
         const auto moved = header->_size - indexPosition - 1;
         const auto lowest = PageView::SlotDirectoryOffSet(header->_size - 1);
-        std::memmove(this->_frame->_data + lowest + SlotDirectory::SIZE, this->_frame->_data + lowest, moved * SlotDirectory::SIZE);
+        std::memmove(this->_frame->_data + lowest + PageLayout::SLOT_DIRECTORY_SIZE, this->_frame->_data + lowest, moved * PageLayout::SLOT_DIRECTORY_SIZE);
 
         header->_size--;
-        header->_bytesLeft = static_cast<page_size_t>(header->_bytesLeft + SlotDirectory::SIZE);   // the freed entry borders the gap
+        header->_bytesLeft = static_cast<page_size_t>(header->_bytesLeft + PageLayout::SLOT_DIRECTORY_SIZE);   // the freed entry borders the gap
         this->_frame->MarkDirty();
     }
 

@@ -10,10 +10,12 @@
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Vectorization/Vectorization.h>
 
+#include "../../../CoreEngine/include/CoreEngine/DataStorage/ColumnDecoders/ColumnDecodeInfo.h"
+
 namespace CoreEngine {
     namespace StorageTypes
     {
-        struct ColumnMaterializationInfo;
+        struct ColumnDecodeInfo;
     }
 
     struct SelectionVector;
@@ -106,7 +108,6 @@ namespace QueryPipeline::PhysicalPlan {
             CoreEngine::ScanState& state
         ) const;
         virtual ExecutionResult Execute(CoreEngine::ExecutionContext& context) = 0;
-        virtual void UpdateScanState(const CoreEngine::StorageTypes::RID* rid);
 
         [[nodiscard]] const CoreEngine::OutputSchema* GetSchema() const;
 
@@ -120,13 +121,13 @@ namespace QueryPipeline::PhysicalPlan {
      * @{
      */
     class PhysicalMaterialize: public PlanNode{
-        DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo> _materializationInfo;
+        CoreEngine::StorageTypes::ScanPlan _scanPlan;
         PlanNode* child;
         UnsignedSmallInt _slotIndex;
 
         public:
             explicit PhysicalMaterialize(
-                DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ColumnMaterializationInfo>& materializationInfo,
+                CoreEngine::StorageTypes::ScanPlan& scanPlan,
                 PlanNode* child,
                 const CoreEngine::OutputSchema* schema,
                 UnsignedSmallInt slotIndex
@@ -271,7 +272,6 @@ namespace QueryPipeline::PhysicalPlan {
             Expressions::Expression* expression
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalIndexScan final : public PlanNode {
@@ -295,7 +295,6 @@ namespace QueryPipeline::PhysicalPlan {
             bool isClustered = false
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalIndexSeek final : public PlanNode {
@@ -353,7 +352,6 @@ namespace QueryPipeline::PhysicalPlan {
             UnsignedSmallInt slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalFilter final : public PlanNode {
@@ -368,7 +366,6 @@ namespace QueryPipeline::PhysicalPlan {
             UnsignedSmallInt slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalTop final : public PlanNode {
@@ -377,7 +374,6 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalTop(PlanNode* child, BigInt top);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalDistinct final : public PlanNode {
@@ -385,7 +381,6 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         explicit PhysicalDistinct(PlanNode* child);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     class PhysicalOrderBy final : public PlanNode {
@@ -399,7 +394,6 @@ namespace QueryPipeline::PhysicalPlan {
     public:
         PhysicalOrderBy(PlanNode* child, DataStructures::PolymorphicArray<Statements::OrderColumn*>& expressions);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
-        void UpdateScanState(const CoreEngine::StorageTypes::RID* rid) override;
     };
 
     /** @} End of Select Processing Classes */
