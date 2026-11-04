@@ -5,6 +5,7 @@
 #include <Systemic/DataStructures/StaticArray.h>
 #include <Systemic/Functions/MathFunctions.h>
 #include <Systemic/DataTypes/DataTypes.h>
+#include <Systemic/Constants.h>
 
 
 namespace DataTypes {
@@ -16,1037 +17,822 @@ namespace DataTypes {
         HalfEven = 2
     };
 
-    static constexpr Int DECIMAL_ARRAY_SIZE = 20;
-    static constexpr Int DECIMAL_MAX_NUMBER_OF_DIGITS = (DECIMAL_ARRAY_SIZE - 1) * 2;
-    static constexpr Int DECIMAL_TEMPORARY_BUFFER_SIZE = 2 * DECIMAL_ARRAY_SIZE;
-    static constexpr Int DECIMAL_MULTIPLICATION_BUFFER_SIZE = 4 * DECIMAL_ARRAY_SIZE;
-
-    static constexpr Int DECIMAL_ZERO = 0x00;
-    static constexpr Int DECIMAL_HEADER_INDEX = 0;
-    static constexpr Int DECIMAL_DIGITS_START_INDEX = 1;
-
-    using DataBuffer = DataStructures::StaticArray<byte_t, DECIMAL_ARRAY_SIZE>;
-    using StringBuffer = DataStructures::StaticArray<char, 2 * DECIMAL_ARRAY_SIZE>;
-    using DigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_TEMPORARY_BUFFER_SIZE>;
-    using MultiplicationDigitsBuffer = DataStructures::StaticArray<Int, DECIMAL_MULTIPLICATION_BUFFER_SIZE>;
-
-    template<typename T>
-    concept IsDecimalBuffer = std::is_same_v<T, DataBuffer>
-            || std::is_same_v<T, DigitsBuffer>
-            || std::is_same_v<T, MultiplicationDigitsBuffer>;
-
-    class Decimal final {
-        UnsignedHugeInt _data;
-
-        static constexpr Int LowNibble(const DataBuffer& buffer, Int index);
-        static constexpr Int HighNibble(const DataBuffer& buffer, Int index);
-
-        static constexpr byte_t PackNibbles(Int highNibble, Int lowNibble);
-
-        static constexpr DigitsBuffer Unpack(const DataBuffer& bytes);
-
-        static constexpr DigitsBuffer ToBase100(const DataBuffer& bytes);
-        static constexpr MultiplicationDigitsBuffer Base100ToDigits(const MultiplicationDigitsBuffer& input);
-        static constexpr MultiplicationDigitsBuffer MultiplyBase100(
-            const DigitsBuffer& leftDigits,
-            const DigitsBuffer& rightDigits
-
-        );
-        static constexpr Comparators::Comparator CompareDigitsArray(
-            const DigitsBuffer& lhs,
-            const DigitsBuffer& rhs
-        );
-        static constexpr void SubtractDigits(
-            DigitsBuffer& lhs,
-            const DigitsBuffer& rhs
-        );
-        static constexpr DigitsBuffer DivideDigits(
-            const DigitsBuffer& lhs,
-            const DigitsBuffer& rhs
-        );
-
-        static constexpr DigitsBuffer LongDivide(
-            const DigitsBuffer& dividend,
-            const DigitsBuffer& divisor,
-            DigitsBuffer& remainderOut
-        );
-        static constexpr DataBuffer Pack(
-            const DigitsBuffer& digits,
-            bool isPositive,
-            fraction_index_t fractionIndex
-        );
-
-        static constexpr DataBuffer Pack(
-            const MultiplicationDigitsBuffer& digits,
-            bool isPositive,
-            fraction_index_t fractionIndex
-        );
-
-        static constexpr fraction_index_t DetermineResultFractionIndex(
-            fraction_index_t leftFractionIndex,
-            fraction_index_t rightFractionIndex
-        );
-
-        static constexpr Decimal Add(
-            DataBuffer& lhs,
-            DataBuffer& rhs,
-            fraction_index_t fractionIndex,
-            bool isPositive
-        );
-
-        static constexpr void PadFractionalParts(
-            DataBuffer& left,
-            DataBuffer& right,
-            fraction_index_t leftFractionIndex,
-            fraction_index_t rightFractionIndex
-        );
-
-        static constexpr void PadNonFractionalParts(
-            DataBuffer& left,
-            DataBuffer& right,
-            fraction_index_t& leftFractionIndex,
-            fraction_index_t& rightFractionIndex
-        );
-
-        static constexpr Decimal Subtract(
-            DataBuffer& lhs,
-            const DataBuffer& rhs,
-            fraction_index_t fractionIndex,
-            bool isPositive
-        );
-
-        static constexpr Decimal Multiply(
-            const DataBuffer& lhs,
-            const DataBuffer& rhs,
-            fraction_index_t fractionIndex,
-            bool isPositive
-        );
-
-        template<DecimalRoundingMode Mode>
-        static constexpr Decimal Divide(
-            const DataBuffer& dividend,
-            const DataBuffer& divisor,
-            bool isPositive
-        );
-
-        template <IsDecimalBuffer T>
-        static constexpr void TrimLeadingZeros(
-            T& digits,
-            fraction_index_t& fractionIndex
-        );
-
-        template <IsDecimalBuffer T>
-        static constexpr void TrimTrailingZeros(
-            T& digits,
-            fraction_index_t fractionIndex
-        );
-
-        template <IsDecimalBuffer T>
-        static constexpr void PadDecimalParts(
-            T& digits,
-            fraction_index_t& fractionIndex
-        );
-
-        [[nodiscard]] static constexpr byte_t CreateSignAndFractionByte(
-            const bool isPositive,
-            const fraction_index_t fractionIndex
-        ){
-            return (isPositive << 7) | (fractionIndex & 0x7F);
-        }
-
-        [[nodiscard]] static constexpr Comparators::Comparator Compare(const Decimal& lhs, const Decimal& rhs);
-        template<IsDecimalBuffer T>
-        [[nodiscard]] static constexpr bool IsZeroMagnitude(const  T& buffer);
-        [[nodiscard]] static constexpr Comparators::Comparator CompareMagnitude(
-            const DataBuffer& lhs,
-            const DataBuffer& rhs,
-            Int size
-        );
-
-        template<IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
-        static constexpr bool DetermineRoundUp(
-            const BUFFER& digits,
-            Int digitsToKeep
-        );
-
-        template<IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
-        static constexpr void RoundToScale(
-            BUFFER& digits,
-            fraction_index_t& fractionIndex,
-            Int targetScale
-        );
-
-        static constexpr void RoundToScale(
-            MultiplicationDigitsBuffer& digits,
-            fraction_index_t& fractionIndex,
-            Int targetScale,
-            DecimalRoundingMode mode
-        );
-
-    public:
-        constexpr Decimal();
-
-        template <IsInteger T>
-        explicit constexpr Decimal(T value);
-
-        explicit constexpr Decimal(const byte_t* data, Int dataSize);
-        explicit constexpr Decimal(const StringView& value);
-
-        [[nodiscard]] constexpr bool IsPositive() const;
-        [[nodiscard]] constexpr fraction_index_t GetFractionIndex() const;
-        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator) const;
-        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator) const;
-        [[nodiscard]] constexpr StringBuffer ToBufferString() const;
-
-        [[nodiscard]] constexpr const byte_t* Data() const;
-        [[nodiscard]] constexpr Int Size() const;
-
-        [[nodiscard]] constexpr const DataBuffer& GetDataBuffer() const;
-        [[nodiscard]] static constexpr Int Size(Int precision);
-
-        [[nodiscard]] double ToDouble() const;
-
-        constexpr friend std::ostream& operator<<(std::ostream& os, const Decimal& decimal);
-
-        constexpr friend Decimal operator+(const Decimal& left, const Decimal& right);
-        constexpr friend Decimal operator-(const Decimal& left, const Decimal& right);
-        constexpr friend Decimal operator*(const Decimal& left, const Decimal& right);
-        constexpr friend Decimal operator/(const Decimal& left, const Decimal& right);
-        constexpr friend Decimal operator%(const Decimal& left, const Decimal& right);
-
-        constexpr friend bool operator==(const Decimal& left, const Decimal& right);
-        constexpr friend bool operator>=(const Decimal& left, const Decimal& right);
-        constexpr friend bool operator>(const Decimal& left, const Decimal& right);
-        constexpr friend bool operator<(const Decimal& left, const Decimal& right);
-        constexpr friend bool operator<=(const Decimal& left, const Decimal& right);
-
-        template <IsInteger T>
-        constexpr Decimal& operator=(T value);
-
-        template <IsInteger T>
-        [[nodiscard]] constexpr T ToInt() const;
-
-        template<DecimalRoundingMode T>
-        static constexpr void RoundToScale(Decimal& value, Int precision);
+    enum class DecimalStatus : UnsignedTinyInt{
+        Ok = 0,
+        Overflow = 1,
+        DivideByZero = 2,
+        InvalidFormat = 3
     };
-}
 
-namespace DataTypes{
-    template <IsDecimalBuffer T>
-    constexpr void Decimal::TrimLeadingZeros(T& digits, fraction_index_t& fractionIndex){
-        Int leadingZeroesIndex = 0;
+    inline constexpr Int DECIMAL_MINIMUM_DIVISION_SCALE = 6;
+    inline constexpr Int DECIMAL_STRING_SIZE = MAX_DECIMAL_PRECISION + 3;   // sign + leading zero + '.' + digits
+    inline constexpr Int DECIMAL_KEY_SIZE = 16;
 
-        if constexpr (std::is_same_v<T, DataBuffer>)
-            leadingZeroesIndex = 1;
+    struct DecimalType{
+        UnsignedTinyInt _precision;
+        UnsignedTinyInt _scale;
 
-        while (leadingZeroesIndex < fractionIndex && digits[leadingZeroesIndex] == DECIMAL_ZERO)
-            leadingZeroesIndex++;
+        constexpr explicit DecimalType()
+            : _precision(0), _scale(0){}
+        constexpr explicit DecimalType(const Int precision, const Int scale)
+            : _precision(static_cast<UnsignedTinyInt>(precision)), _scale(static_cast<UnsignedTinyInt>(scale)){}
 
-        if (leadingZeroesIndex == 0) return;
+        [[nodiscard]] friend constexpr bool operator==(const DecimalType&, const DecimalType&) = default;
 
-        if constexpr (std::is_same_v<T, DataBuffer>)
-            digits.Remove(DECIMAL_DIGITS_START_INDEX, leadingZeroesIndex);
-        else
-            digits.Remove(0, leadingZeroesIndex);
-
-        fractionIndex -= static_cast<fraction_index_t>(leadingZeroesIndex);
-    }
-
-    template <IsDecimalBuffer T>
-    constexpr void Decimal::TrimTrailingZeros(T& digits, fraction_index_t fractionIndex){
-        for (auto i = digits.Size() - 1; i > fractionIndex; --i) {
-            if (digits[i] != 0) break;
-            digits.Pop();
-        }
-    }
-
-    template <IsDecimalBuffer T>
-    constexpr void Decimal::PadDecimalParts(T& digits, fraction_index_t& fractionIndex){
-        if (fractionIndex % 2 != 0) {
-            digits.Insert(0, 0);
-            fractionIndex++;
+        [[nodiscard]] constexpr bool IsValid() const{
+            return this->_precision >= 1
+            && this->_precision <= MAX_DECIMAL_PRECISION
+            && this->_scale <= this->_precision;
         }
 
-        const auto fractionalPart = digits.Size() - fractionIndex;
-        if (fractionalPart % 2 != 0) digits.Push(DECIMAL_ZERO);
-    }
+        [[nodiscard]] static constexpr Int IntegerDigits(const Int precision, const Int scale){
+            return precision - scale;
+        }
 
-    template <IsDecimalBuffer T>
-    constexpr bool Decimal::IsZeroMagnitude(const T& buffer){
-        Int i = 0;
-        while (i < buffer.Size() && buffer[i] == 0) i++;
-        return i == buffer.Size();
-    }
+        [[nodiscard]] constexpr Int IntegerDigits()const{
+            return this->_precision - this->_scale;
+        }
 
-    template <IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
-    constexpr bool Decimal::DetermineRoundUp(
-        const BUFFER& digits,
-        const Int digitsToKeep
-    ){
-        if constexpr (Mode == DecimalRoundingMode::Truncate)
+        [[nodiscard]] static constexpr DecimalType Capped(const Int precision, const Int scale){
+            if (precision < MAX_DECIMAL_PRECISION)
+                return DecimalType(precision, scale);
+
+            const auto integerDigits = IntegerDigits(precision, scale);
+            const auto keptScale = Math::Max(
+                Math::Min(scale, DECIMAL_MINIMUM_DIVISION_SCALE),
+                MAX_DECIMAL_PRECISION - integerDigits
+            );
+            return DecimalType(MAX_DECIMAL_PRECISION, Math::Min(scale, keptScale));
+        }
+
+        [[nodiscard]] static constexpr DecimalType ForAdd(const DecimalType lhs, const DecimalType rhs){
+            const auto scale = Math::Max(lhs._scale, rhs._scale);
+            return Capped(Math::Max(lhs.IntegerDigits(), rhs.IntegerDigits()) + scale + 1, scale);
+        }
+
+        // The largest product of p1 and p2 digits always fits in p1 + p2 digits
+        [[nodiscard]] static constexpr DecimalType ForMultiply(const DecimalType lhs, const DecimalType rhs){
+            return Capped(lhs._precision + rhs._precision, lhs._scale + rhs._scale);
+        }
+
+        [[nodiscard]] static constexpr DecimalType ForDivide(const DecimalType lhs, const DecimalType rhs){
+            const Int scale = Math::Max(DECIMAL_MINIMUM_DIVISION_SCALE, lhs._scale + rhs._precision + 1);
+            return Capped(lhs.IntegerDigits() + rhs._scale + scale, scale);
+        }
+
+        template<IsInteger T>
+        [[nodiscard]] static consteval DecimalType ForInteger(){
+            return DecimalType(Math::Min(Math::LimitsDigits10<T>() + 1, MAX_DECIMAL_PRECISION), 0);
+        }
+
+        [[nodiscard]] static constexpr bool CanAddOverflow(const DecimalType lhs, const DecimalType rhs){
+            return Math::Max(lhs.IntegerDigits(), rhs.IntegerDigits()) + Math::Max(lhs._scale, rhs._scale) + 1 > MAX_DECIMAL_PRECISION;
+        }
+
+        [[nodiscard]] static constexpr bool CanMultiplyOverflow(const DecimalType lhs, const DecimalType rhs){
+            return lhs._precision + rhs._precision > MAX_DECIMAL_PRECISION;
+        }
+
+        // Dropping digits can round up by one integer digit: 999.995 needs 4 of them at scale 2
+        [[nodiscard]] static constexpr bool CanCastOverflow(const DecimalType from, const DecimalType to){
+            return to._scale >= from._scale
+                ? from.IntegerDigits() > to.IntegerDigits()
+                : from.IntegerDigits() >= to.IntegerDigits();
+        }
+    };
+
+    namespace DecimalDetail
+    {
+        inline constexpr auto POW10 = []{
+            std::array<UnsignedHugeInt, MAX_DECIMAL_PRECISION + 1> table{};
+            table[0] = 1;
+            for (Int i = 1; i <= MAX_DECIMAL_PRECISION; i++)
+                table[i] = table[i - 1] * 10;
+            return table;
+        }();
+
+        inline constexpr Int WIDE_STEP_DIGITS = 19;
+
+        inline constexpr UnsignedHugeInt MAX_MAGNITUDE = POW10[MAX_DECIMAL_PRECISION] - 1;
+
+        struct Wide{
+            UnsignedBigInt _limbs[4]{};
+
+            [[nodiscard]] static constexpr Wide From(const UnsignedHugeInt value){
+                Wide wide;
+                wide._limbs[0] = static_cast<UnsignedBigInt>(value);
+                wide._limbs[1] = static_cast<UnsignedBigInt>(value >> 64);
+                return wide;
+            }
+
+            [[nodiscard]] constexpr bool FitsInHugeInt() const{
+                return (this->_limbs[2] | this->_limbs[3]) == 0;
+            }
+
+            [[nodiscard]] constexpr bool IsOdd() const{
+                return (this->_limbs[0] & 1) != 0;
+            }
+
+            [[nodiscard]] constexpr UnsignedHugeInt LowHugeInt() const{
+                return (static_cast<UnsignedHugeInt>(this->_limbs[1]) << 64) | this->_limbs[0];
+            }
+
+            [[nodiscard]] static constexpr Wide Multiply(const UnsignedHugeInt left, const UnsignedHugeInt right){
+                const auto leftLimbs[2] = {
+                    static_cast<UnsignedBigInt>(left),
+                    static_cast<UnsignedBigInt>(left >> 64)
+                };
+
+                const auto rightLimbs[2] = {
+                    static_cast<UnsignedBigInt>(right),
+                    static_cast<UnsignedBigInt>(right >> 64)
+                };
+
+                Wide result;
+                for (Int i = 0; i < 2; i++){
+                    UnsignedHugeInt carry = 0;
+                    for (Int j = 0; j < 2; j++){
+                        carry += static_cast<UnsignedHugeInt>(leftLimbs[i]) * rightLimbs[j] + result._limbs[i + j];
+                        result._limbs[i + j] = static_cast<UnsignedBigInt>(carry);
+                        carry >>= 64;
+                    }
+                    result._limbs[i + 2] = static_cast<UnsignedBigInt>(carry);
+                }
+                return result;
+            }
+
+            [[nodiscard]] constexpr bool MultiplySmall(const UnsignedBigInt factor){
+                UnsignedHugeInt carry = 0;
+                for (auto& limb : this->_limbs){
+                    carry += static_cast<UnsignedHugeInt>(limb) * factor;
+                    limb = static_cast<UnsignedBigInt>(carry);
+                    carry >>= 64;
+                }
+                return carry == 0;
+            }
+
+            [[nodiscard]] constexpr bool MultiplyPow10(Int digits){
+                while (digits > 0){
+                    const auto step = Math::Min(digits, WIDE_STEP_DIGITS);
+                    if (!this->MultiplySmall(static_cast<UnsignedBigInt>(POW10[step])))
+                        return false;
+                    digits -= step;
+                }
+                return true;
+            }
+
+            constexpr UnsignedBigInt DivideSmall(const UnsignedBigInt divisor){
+                UnsignedHugeInt remainder = 0;
+                for (Int i = 3; i >= 0; i--){
+                    const auto current = (remainder << 64) | this->_limbs[i];
+                    this->_limbs[i] = static_cast<UnsignedBigInt>(current / divisor);
+                    remainder = current % divisor;
+                }
+                return static_cast<UnsignedBigInt>(remainder);
+            }
+
+            [[nodiscard]] friend constexpr std::strong_ordering operator<=>(const Wide& lhs, const Wide& rhs){
+                for (Int i = 3; i >= 0; i--){
+                    if (lhs._limbs[i] != rhs._limbs[i])
+                        return lhs._limbs[i] <=> rhs._limbs[i];
+                }
+                return std::strong_ordering::equal;
+            }
+
+            constexpr void ShiftLeftOne(){
+                for (Int i = 3; i > 0; i--)
+                    this->_limbs[i] = (this->_limbs[i] << 1) | (this->_limbs[i - 1] >> 63);
+                this->_limbs[0] <<= 1;
+            }
+
+            constexpr void Subtract(const Wide& other){
+                UnsignedBigInt borrow = 0;
+                for (Int i = 0; i < 4; i++){
+                    const auto value = this->_limbs[i];
+                    const auto subtrahend = other._limbs[i];
+                    const auto difference = value - subtrahend - borrow;
+                    borrow = (value < subtrahend) || (value == subtrahend && borrow != 0) ? 1 : 0;
+                    this->_limbs[i] = difference;
+                }
+            }
+
+            [[nodiscard]] static constexpr Wide Divide(const Wide& dividend, const Wide& divisor, Wide& remainder){
+                Wide quotient;
+                remainder = Wide();
+                for (Int bit = 255; bit >= 0; bit--){
+                    remainder.ShiftLeftOne();
+                    remainder._limbs[0] |= (dividend._limbs[bit / 64] >> (bit % 64)) & 1;
+                    if (remainder >= divisor){
+                        remainder.Subtract(divisor);
+                        quotient._limbs[bit / 64] |= UnsignedBigInt{1} << (bit % 64);
+                    }
+                }
+                return quotient;
+            }
+        };
+
+        [[nodiscard]] constexpr bool ShouldRoundUp(
+            const DecimalRoundingMode mode,
+            const Int firstDroppedDigit,
+            const bool restIsNonZero,
+            const bool isOdd
+        ){
+            switch (mode){
+            case DecimalRoundingMode::Truncate:
+                return false;
+            case DecimalRoundingMode::HalfUp:
+                return firstDroppedDigit >= 5;
+            case DecimalRoundingMode::HalfEven:
+                return firstDroppedDigit > 5 || (firstDroppedDigit == 5 && (restIsNonZero || isOdd));
+            }
             return false;
-        else{
-            const auto firstDigitDropped = digits[digitsToKeep];
-            if constexpr (Mode == DecimalRoundingMode::HalfUp)
-                return firstDigitDropped >= 5;
-            else if constexpr (Mode == DecimalRoundingMode::HalfEven){
-                if (firstDigitDropped < 5)
-                    return false;
+        }
 
-                if (firstDigitDropped > 5)
-                    return true;
+        // value / 10^digits, rounded by magnitude. Used only when the value may not fit in 128 bits.
+        [[nodiscard]] constexpr Wide DividePow10Rounded(Wide value, Int digits, const DecimalRoundingMode mode, bool& carriedOut){
+            carriedOut = false;
+            if (digits <= 0)
+                return value;
 
-                auto restNonZero = false;
-                for (Int i = digitsToKeep + 1; i < digits.Size(); i++)
-                    if (digits[i] != 0){
-                        restNonZero = true;
+            bool restIsNonZero = false;
+            while (digits > 1){
+                const auto step = std::min(digits - 1, WIDE_STEP_DIGITS);
+                restIsNonZero |= value.DivideSmall(static_cast<UnsignedBigInt>(POW10[step])) != 0;
+                digits -= step;
+            }
+
+            const auto dropped = static_cast<Int>(value.DivideSmall(10));
+            if (ShouldRoundUp(mode, dropped, restIsNonZero, value.IsOdd())){
+                carriedOut = true;
+                for (auto& limb : value._limbs){
+                    if (++limb != 0){
+                        carriedOut = false;
                         break;
                     }
-                return restNonZero || (digitsToKeep > 0 && (digits[digitsToKeep - 1] & 1));
-            }
-            else
-                static_assert(DataTypes::AlwaysFalse<Decimal>, "Decimal::DetermineRoundUp: Invalid mode given");
-        }
-    }
-
-    template <IsDecimalBuffer BUFFER, DecimalRoundingMode Mode>
-    constexpr void Decimal::RoundToScale(
-        BUFFER& digits,
-        fraction_index_t& fractionIndex,
-        const Int targetScale
-    ){
-        if (digits.Size() <= fractionIndex + targetScale)
-            return;
-
-        const auto digitsToKeep = fractionIndex + targetScale;
-        const auto roundUp = Decimal::DetermineRoundUp<BUFFER, Mode>(digits, digitsToKeep);
-
-        while (digits.Size() > digitsToKeep)
-            digits.Pop();
-
-        if (roundUp){
-            Int i = digitsToKeep - 1;
-            for (; i >= 0; i--){
-                if (++digits[i] < 10)
-                    break;
-                digits[i] = 0;
+                }
             }
 
-            if (i < 0){
-                digits.Insert(0, 1);
-                fractionIndex++;
+            return value;
+        }
+
+        [[nodiscard]] constexpr bool IsDigit(const char c){ return c >= '0' && c <= '9'; }
+    }
+
+    class [[gnu::packed]] Decimal final {
+        HugeInt _mantissa;
+
+        using StringBuffer = DataStructures::StaticArray<char, DECIMAL_STRING_SIZE>;
+
+        [[nodiscard]] constexpr UnsignedHugeInt Magnitude() const{
+            return this->_mantissa < 0
+                ? UnsignedHugeInt{0} - static_cast<UnsignedHugeInt>(this->_mantissa)
+                : static_cast<UnsignedHugeInt>(this->_mantissa);
+        }
+
+        [[nodiscard]] static constexpr Decimal FromMagnitude(const UnsignedHugeInt magnitude, const bool isNegative){
+            const auto mantissa = static_cast<HugeInt>(magnitude);
+            return Decimal::FromMantissa(isNegative ? -mantissa : mantissa);
+        }
+
+        [[noreturn, gnu::cold]] static constexpr void Throw(const DecimalStatus status){
+            switch (status){
+            case DecimalStatus::Overflow:
+                throw std::overflow_error("Decimal: value does not fit the precision");
+            case DecimalStatus::DivideByZero:
+                throw std::domain_error("Decimal: division by zero");
+            default:
+                throw std::invalid_argument("Decimal: invalid format");
             }
         }
-    }
 
-template <IsInteger T>
-constexpr Decimal::Decimal(T value){
-    static_assert(std::is_integral_v<T>, "Decimal::Decimal(T value): T must be an integer");
-
-    const auto isPositive = value >= 0;
-    auto absValue = Math::Abs<T>(value);
-
-    Int numberOfDigits = 1;
-    for (auto tempVal = absValue / 10; tempVal > 0; tempVal /= 10)
-        numberOfDigits++;
-
-    const auto leadingZeros = numberOfDigits % 2;
-    const fraction_index_t fractionIndex = numberOfDigits + leadingZeros;
-
-    DigitsBuffer digits;
-    digits.SetSize(fractionIndex);
-
-    for (Int i = fractionIndex - 1; i >= leadingZeros; --i){
-        digits[i] = static_cast<Int>(absValue % 10);
-        absValue /= 10;
-    }
-
-    this->_data = Decimal::Pack(digits, isPositive, fractionIndex);
-}
-
-template <IsInteger T>
-constexpr Decimal& Decimal::operator=(T value){
-    static_assert(std::is_integral_v<T>, "Decimal::operator=(T value): T must be an integer");
-    *this = Decimal(value);
-    return *this;
-}
-
-template <IsInteger T>
-constexpr T Decimal::ToInt()const{
-    const auto positive = this->IsPositive();
-    const auto fractionIndex = Decimal::GetFractionIndex();
-
-    using UnsignedType = std::make_unsigned_t<T>;
-    UnsignedType unsignedNum = 0;
-
-    const auto loopCount = ((fractionIndex + 1) / 2);
-
-    for (Int i = DECIMAL_DIGITS_START_INDEX; i <= loopCount; ++i){
-        const auto high = static_cast<UnsignedType>(Decimal::HighNibble(this->_data, i));
-        unsignedNum = unsignedNum * 10 + high;
-        const auto low  = static_cast<UnsignedType>(Decimal::LowNibble(this->_data, i));
-        unsignedNum = unsignedNum * 10 + low;
-    }
-
-    return positive ? static_cast<T>(unsignedNum) : -static_cast<T>(unsignedNum);
-}
-
-constexpr void Decimal::RoundToScale(
-    MultiplicationDigitsBuffer& digits,
-    fraction_index_t& fractionIndex,
-    const Int targetScale,
-    const DecimalRoundingMode mode
-){
-    switch (mode){
-    case DecimalRoundingMode::Truncate:
-        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::Truncate>(digits, fractionIndex, targetScale);
-    case DecimalRoundingMode::HalfUp:
-        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfUp>(digits, fractionIndex, targetScale);
-    case DecimalRoundingMode::HalfEven:
-        return Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfEven>(digits, fractionIndex, targetScale);
-    }
-}
-
-constexpr Decimal::Decimal() {
-    this->_data.Push(Decimal::CreateSignAndFractionByte(true, 0));
-    this->_data.Push(DECIMAL_ZERO);
-}
-
-constexpr Decimal::Decimal(const StringView& value){
-    if (value.Empty()){
-        *this = Decimal();
-        return;
-    }
-
-    Int i = 0;
-    const bool isPositive = value[0] != '-';
-    if (value[0] == '-' || value[0] == '+')
-        i++;
-
-    while (i + 1 < value.Size() && value[i] == '0' && value[i + 1] != '.')
-        i++;
-
-    Int intCount = 0, fractionalCount = 0;
-    bool hasDot = false;
-    for (Int k = i; k < value.Size(); k++) {
-        if (value[k] == '.')
-            hasDot = true;
-        else if (!hasDot)
-            intCount++;
-        else
-            fractionalCount++;
-    }
-
-    const auto leadingPad = intCount % 2;
-    const auto fractionalPad = fractionalCount % 2;
-
-    const fraction_index_t fractionIndex = intCount + leadingPad;
-    const Int totalSize = fractionIndex + fractionalPad + fractionalCount;
-
-    DigitsBuffer digits;
-    digits.SetSize(totalSize);
-
-    Int digitsAfterPad = leadingPad;
-    for (Int k = i; k < value.Size(); k++){
-        if (value[k] == '.')
-            continue;
-        digits[digitsAfterPad++] = value[k] - '0';
-    }
-
-    this->_data = Decimal::Pack(digits, isPositive, fractionIndex);
-}
-
-constexpr Decimal::Decimal(const byte_t* data, const Int dataSize){
-    this->_data.SetData(data, dataSize);
-}
-
-constexpr DataBuffer Decimal::Pack(const DigitsBuffer& digits, const bool isPositive, const fraction_index_t fractionIndex){
-    DataBuffer result;
-    result.Push(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
-
-    for (Int i = 0; i < digits.Size(); i += 2) {
-        const Int high = digits[i];
-        const Int low  = (i + 1 < digits.Size()) ? digits[i+1] : 0;
-        result.Push((high << 4) | low);
-    }
-
-    return result;
-}
-
-constexpr DataBuffer Decimal::Pack(
-    const MultiplicationDigitsBuffer& digits,
-    const bool isPositive,
-    const fraction_index_t fractionIndex
-){
-    DataBuffer result;
-    result.Push(Decimal::CreateSignAndFractionByte(isPositive, fractionIndex));
-
-    for (Int i = 0; i < digits.Size(); i += 2) {
-        const Int high = digits[i];
-        const Int low  = (i + 1 < digits.Size()) ? digits[i+1] : 0;
-        result.Push((high << 4) | low);
-    }
-
-    return result;
-}
-
-constexpr Decimal operator+(const Decimal &left, const Decimal &right){
-    const auto leftSign = left.IsPositive();
-    const auto rightSign = right.IsPositive();
-
-    auto leftFractionIndex = left.GetFractionIndex();
-    auto rightFractionIndex = right.GetFractionIndex();
-
-    const auto fractionIndex = Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
-
-    auto leftCopy = left.GetDataBuffer();
-    auto rightCopy = right.GetDataBuffer();
-
-    Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-    Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-    //both same sign, add them and use the sign afterward
-    if (leftSign == rightSign)
-        return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
-
-    //else they have different signs,
-    //so subtract them
-    const auto comparisonResult = Decimal::CompareMagnitude(leftCopy, rightCopy, leftCopy.Size() - 1);
-
-    if (comparisonResult == Comparators::Comparator::Equal)
-        return Decimal();
-
-    return comparisonResult == Comparators::Comparator::Greater
-               ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
-               : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, rightSign);
-}
-
-constexpr Decimal operator-(const Decimal &left, const Decimal &right){
-    const bool leftSign = left.IsPositive();
-    const bool rightSign = right.IsPositive();
-
-    auto leftFractionIndex = left.GetFractionIndex();
-    auto rightFractionIndex = right.GetFractionIndex();
-
-    const auto fractionIndex = Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
-
-    auto leftCopy = left.GetDataBuffer();
-    auto rightCopy = right.GetDataBuffer();
-
-    Decimal::PadFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-    Decimal::PadNonFractionalParts(leftCopy, rightCopy, leftFractionIndex, rightFractionIndex);
-
-    if (leftSign == rightSign){
-        const auto comparisonResult = Decimal::CompareMagnitude(leftCopy, rightCopy, leftCopy.Size() - 1);
-
-        if (comparisonResult == Comparators::Comparator::Equal)
-            return Decimal();
-
-        return comparisonResult == Comparators::Comparator::Greater
-                   ? Decimal::Subtract(leftCopy, rightCopy, fractionIndex, leftSign)
-                   : Decimal::Subtract(rightCopy, leftCopy, fractionIndex, !leftSign);
-    }
-
-    return Decimal::Add(leftCopy, rightCopy, fractionIndex, leftSign);
-}
-
-constexpr Decimal operator*(const Decimal &left, const Decimal &right){
-    return Decimal::Multiply(
-        left.GetDataBuffer(),
-        right.GetDataBuffer(),
-        left.GetFractionIndex() + right.GetFractionIndex(),
-        left.IsPositive() == right.IsPositive()
-    );
-}
-
-constexpr Decimal operator/(const Decimal& left, const Decimal& right){
-    return Decimal::Divide<DecimalRoundingMode::HalfUp>(
-        left.GetDataBuffer(),
-        right.GetDataBuffer(),
-        left.IsPositive() == right.IsPositive()
-    );
-}
-
-//TODO use modulo
-constexpr Decimal operator%(const Decimal& left, const Decimal& right){
-    return Decimal::Divide<DecimalRoundingMode::HalfUp>(
-        left.GetDataBuffer(),
-        right.GetDataBuffer(),
-        left.IsPositive() == right.IsPositive()
-    );
-}
-
-constexpr Int Decimal::Size(const Int precision){
-    return precision / 2 + 1 + 1; //+1 for sign and fraction index, +1 for alignment
-}
-
-constexpr bool operator==(const Decimal& left, const Decimal& right){
-    return Decimal::Compare(left, right) == Comparators::Comparator::Equal;
-}
-
-constexpr bool operator>=(const Decimal& left, const Decimal& right){
-    return Decimal::Compare(left, right) >= Comparators::Comparator::Equal;
-}
-
-constexpr bool operator>(const Decimal& left, const Decimal& right){
-    return Decimal::Compare(left, right) == Comparators::Comparator::Greater;
-}
-
-constexpr bool operator<(const Decimal& left, const Decimal& right){
-    return Decimal::Compare(left, right) == Comparators::Comparator::Less;
-}
-
-constexpr bool operator<=(const Decimal& left, const Decimal& right){
-    return Decimal::Compare(left, right) <= Comparators::Comparator::Equal;
-}
-
-constexpr bool Decimal::IsPositive() const { return ( this->_data[DECIMAL_HEADER_INDEX] >> 7 ) & 0x01; }
-
-constexpr fraction_index_t Decimal::GetFractionIndex() const { return static_cast<fraction_index_t>(this->_data[DECIMAL_HEADER_INDEX] & 0x7F); }
-
-constexpr const byte_t* Decimal::Data() const { return this->_data.Data(); }
-
-constexpr Int Decimal::Size() const { return this->_data.Size(); }
-
-constexpr const DataBuffer& Decimal::GetDataBuffer() const { return this->_data; }
-
-constexpr StringBuffer Decimal::ToBufferString() const{
-    const auto isPositive = this->IsPositive();
-
-    StringBuffer buffer;
-
-    if (!isPositive) buffer.Push('-');
-
-    const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + !isPositive;
-
-    Int strCounter = !isPositive;
-    for (int i = DECIMAL_DIGITS_START_INDEX; i < this->_data.Size(); i++){
-        if (strCounter == fractionIndex && fractionIndex != 0)
-            buffer.Push('.');
-
-        buffer.Push(static_cast<char>('0' + Decimal::HighNibble(this->_data, i)));
-        strCounter++;
-
-        if (strCounter == fractionIndex && fractionIndex != 0)
-            buffer.Push('.');
-
-        buffer.Push(static_cast<char>('0' + Decimal::LowNibble(this->_data, i)));
-        strCounter++;
-    }
-
-    return buffer;
-}
-
-constexpr Comparators::Comparator Decimal::Compare(const Decimal& lhs, const Decimal& rhs){
-    const auto leftSign = lhs.IsPositive();
-    const auto rightSign = rhs.IsPositive();
-
-    if (leftSign != rightSign)
-        return Comparators::Compare<bool>(leftSign, rightSign);
-
-    const auto leftFractionIndex = lhs.GetFractionIndex();
-    const auto rightFractionIndex = rhs.GetFractionIndex();
-
-    if (leftFractionIndex != rightFractionIndex)
-        return Comparators::Compare<fraction_index_t>(leftFractionIndex, rightFractionIndex);
-
-    const auto& leftData = lhs.GetDataBuffer();
-    const auto& rightData = rhs.GetDataBuffer();
-
-    const auto commonSize = Math::Min<Int>(leftData.Size(), rightData.Size()) - 1;
-    const auto result = Decimal::CompareMagnitude(leftData, rightData, commonSize);
-    if (result != Comparators::Comparator::Equal)
-        return result;
-
-    return Comparators::Compare<Int>(leftData.Size(), rightData.Size());
-}
-
-constexpr Comparators::Comparator Decimal::CompareMagnitude(
-    const DataBuffer& lhs,
-    const DataBuffer& rhs,
-    const Int size
-){
-    if consteval {
-        for (Int i = 1; i <= size; ++i)
-            if (lhs[i] != rhs[i])
-                return Comparators::Compare<UnsignedTinyInt>(lhs[i], rhs[i]);
-        return Comparators::Comparator::Equal;
-    }
-
-    const auto result = std::memcmp(
-        lhs.Data() + DECIMAL_DIGITS_START_INDEX,
-        rhs.Data() + DECIMAL_DIGITS_START_INDEX,
-        static_cast<size_t>(size)
-    );
-    return Comparators::Compare<Int>(result, 0);
-}
-
-constexpr Int Decimal::LowNibble(const DataBuffer& buffer, const Int index){
-    return (buffer[index] & 0x0F);
-}
-
-constexpr Int Decimal::HighNibble(const DataBuffer& buffer, const Int index){
-    return (buffer[index] >> 4);
-}
-
-constexpr byte_t Decimal::PackNibbles(const Int highNibble, const Int lowNibble){
-    return static_cast<byte_t>((highNibble << 4) | lowNibble);
-}
-
-constexpr DigitsBuffer Decimal::Unpack(const DataBuffer& bytes){
-    DigitsBuffer digits;
-
-    for (Int i = DECIMAL_DIGITS_START_INDEX; i < bytes.Size(); i++) {
-        digits.Push(Decimal::HighNibble(bytes, i));
-        digits.Push(Decimal::LowNibble(bytes, i));
-    }
-
-    return digits;
-}
-
-constexpr DigitsBuffer Decimal::ToBase100(const DataBuffer& bytes){
-    DigitsBuffer digits;
-    for (Int i = DECIMAL_DIGITS_START_INDEX; i < bytes.Size(); i++)
-        digits.Push(Decimal::HighNibble(bytes, i) * 10 + Decimal::LowNibble(bytes, i));
-
-    return digits;
-}
-
-constexpr MultiplicationDigitsBuffer Decimal::Base100ToDigits(const MultiplicationDigitsBuffer& input){
-    MultiplicationDigitsBuffer digits;
-    for (Int i = 0; i < input.Size(); ++i) {
-        digits.Push(input[i] / 10);
-        digits.Push(input[i] % 10);
-    }
-    return digits;
-}
-
-constexpr MultiplicationDigitsBuffer Decimal::MultiplyBase100(
-    const DigitsBuffer& leftDigits,
-    const DigitsBuffer& rightDigits
-){
-    MultiplicationDigitsBuffer result;
-    result.SetSize(leftDigits.Size() + rightDigits.Size());
-
-    for (Int i = leftDigits.Size() - 1; i >= 0; --i) {
-        const Int ld = leftDigits[i];
-        if (ld == 0) continue;                      // skip zero BCD digit – no contribution
-
-        for (Int j = rightDigits.Size() - 1; j >= 0; --j) {
-            const Int rd = rightDigits[j];
-            if (rd == 0) continue;                  // skip zero BCD digit – no contribution
-
-            result[i + j + 1] += ld * rd;
+        static constexpr void Check(const DecimalStatus status){
+            if (status != DecimalStatus::Ok) [[unlikely]]
+                Decimal::Throw(status);
         }
-    }
 
-    for (Int k = result.Size() - 1; k > 0; k--) {
-        if (result[k] >= 100) {
-            result[k - 1] += result[k] / 100;
-            result[k] %= 100;
+        constexpr explicit Decimal(const HugeInt mantissa)
+            : _mantissa(mantissa){}
+
+    public:
+        constexpr explicit Decimal()
+            : _mantissa(0){};
+
+        [[nodiscard]] static constexpr Decimal FromMantissa(const HugeInt mantissa){
+            return Decimal(mantissa);
         }
-    }
 
-    return result;
-}
+        [[nodiscard]] constexpr HugeInt Mantissa() const{ return this->_mantissa; }
+        [[nodiscard]] constexpr bool IsNegative() const{ return this->_mantissa < 0; }
+        [[nodiscard]] constexpr bool IsZero() const{ return this->_mantissa == 0; }
 
-constexpr Comparators::Comparator Decimal::CompareDigitsArray(
-    const DigitsBuffer& lhs,
-    const DigitsBuffer& rhs
-){
-    Int lhsI = 0;
-    while (lhsI < lhs.Size() && lhs[lhsI] == 0) lhsI++;
-
-    Int rhsI = 0;
-    while (rhsI < rhs.Size() && rhs[rhsI] == 0) rhsI++;
-
-    const auto lhsSize = lhs.Size() - lhsI;
-    const auto rhsSize = rhs.Size() - rhsI;
-
-    if (lhsSize != rhsSize)
-        return Comparators::Compare(lhsSize, rhsSize);
-
-    for (; lhsI < lhs.Size(); lhsI++)
-        if (lhs[lhsI] != rhs[rhsI++])
-            return Comparators::Compare(lhs[lhsI],  rhs[rhsI++]);
-
-    return Comparators::Comparator::Equal;
-}
-
-constexpr void Decimal::SubtractDigits(
-    DigitsBuffer& lhs,
-    const DigitsBuffer& rhs
-){
-    Int lhsI = lhs.Size() - 1;
-    Int rhsI = rhs.Size() - 1;
-    Int borrow = 0;
-
-    for (; lhsI >= 0 && rhsI >= 0; --lhsI, --rhsI){
-        Int d = lhs[lhsI] - rhs[rhsI] - borrow;
-        if (d < 0){
-            d += 10;
-            borrow = 1;
+        [[nodiscard]] constexpr bool FitsPrecision(const Int precision) const{
+            return this->Magnitude() < DecimalDetail::POW10[precision];
         }
-        else borrow = 0;
 
-        lhs[lhsI] = d;
-    }
-
-    for (; lhsI >= 0 && borrow; --lhsI){
-        Int d = lhs[lhsI] - borrow;
-        if (d < 0){
-            d += 10;
-            borrow = 1;
+        [[nodiscard]] static constexpr DecimalStatus TryAdd(const Decimal& left, const Decimal& right, Decimal* out){
+            HugeInt sum = 0;
+            if (__builtin_add_overflow(left.Mantissa(), right.Mantissa(), &sum))
+                return DecimalStatus::Overflow;
+            *out = Decimal::FromMantissa(sum);
+            return out->Magnitude() > DecimalDetail::MAX_MAGNITUDE ? DecimalStatus::Overflow : DecimalStatus::Ok;
         }
-        else borrow = 0;
-        lhs[lhsI] = d;
-    }
-}
 
-constexpr DigitsBuffer Decimal::DivideDigits(
-    const DigitsBuffer& lhs,
-    const DigitsBuffer& rhs
-){
-    DigitsBuffer result;
-    result.SetSize(lhs.Size() + rhs.Size());
-
-    for (Int i = lhs.Size() - 1; i >= 0; --i) {
-        for (Int j = rhs.Size() - 1; j >= 0; --j) {
-            const auto pos = i + j + 1;
-            result[pos] += lhs[i] * rhs[j];
+        [[nodiscard]] static constexpr DecimalStatus TrySubtract(const Decimal& left, const Decimal& right, Decimal* out){
+            HugeInt difference = 0;
+            if (__builtin_sub_overflow(left.Mantissa(), right.Mantissa(), &difference))
+                return DecimalStatus::Overflow;
+            *out = Decimal::FromMantissa(difference);
+            return out->Magnitude() > DecimalDetail::MAX_MAGNITUDE ? DecimalStatus::Overflow : DecimalStatus::Ok;
         }
-    }
 
-    // Step 3: fix carries
-    for (Int k = result.Size() - 1; k > 0; k--) {
-        result[k-1] += result[k] / 10;
-        result[k] %= 10;
-    }
-
-    return result;
-}
-
-constexpr DigitsBuffer Decimal::LongDivide(
-    const DigitsBuffer& dividend,
-    const DigitsBuffer& divisor,
-    DigitsBuffer& remainderOut
-){
-    DigitsBuffer quotient;
-    quotient.SetSize(dividend.Size());
-
-    for (Int i = 0; i < dividend.Size(); ++i){
-        remainderOut.Push(dividend[i]);
-
-        Int quotientDigit = 0;
-        while (Decimal::CompareDigitsArray(remainderOut, divisor) != Comparators::Comparator::Less){
-            Decimal::SubtractDigits(remainderOut, divisor);
-            ++quotientDigit;
+        [[nodiscard]] static constexpr Decimal AddUnchecked(const Decimal& left, const Decimal& right){
+            return Decimal::FromMantissa(left.Mantissa() + right.Mantissa());
         }
-        quotient[i] = quotientDigit;
-    }
 
-    return quotient;
-}
-
-constexpr fraction_index_t Decimal::DetermineResultFractionIndex(
-    const fraction_index_t leftFractionIndex,
-    const fraction_index_t rightFractionIndex
-){
-    return Math::Max<fraction_index_t>(leftFractionIndex, rightFractionIndex);
-}
-
-constexpr Decimal Decimal::Add(
-    DataBuffer& lhs,
-    DataBuffer& rhs,
-    fraction_index_t fractionIndex,
-    const bool isPositive
-){
-    lhs.Insert(DECIMAL_DIGITS_START_INDEX, DECIMAL_ZERO);
-    rhs.Insert(DECIMAL_DIGITS_START_INDEX, DECIMAL_ZERO);
-    fractionIndex += 2;
-
-    Int carry = 0;
-    for (auto i = lhs.Size() - 1; i > 0; i--){
-        const Int lowNibble = Decimal::LowNibble(lhs, i) + Decimal::LowNibble(rhs, i) + carry;
-        const Int highNibble = Decimal::HighNibble(lhs, i) + Decimal::HighNibble(rhs, i) + (lowNibble / 10);
-        carry = highNibble / 10;
-        lhs[i] = Decimal::PackNibbles(highNibble % 10, lowNibble % 10);
-    }
-
-    Decimal::TrimLeadingZeros<DataBuffer>(lhs, fractionIndex);
-    lhs[DECIMAL_HEADER_INDEX] = Decimal::CreateSignAndFractionByte(isPositive, fractionIndex);
-    return Decimal(lhs.Data(), lhs.Size());
-}
-
-constexpr void Decimal::PadFractionalParts(
-    DataBuffer& left, DataBuffer& right,
-    const fraction_index_t leftFractionIndex,
-    const fraction_index_t rightFractionIndex
-){
-    const auto leftFracDigits = left.Size() * 2 - leftFractionIndex;
-    const auto rightFracDigits = right.Size() * 2 - rightFractionIndex;
-    const auto maxFracDigits = std::max(leftFracDigits, rightFracDigits);
-
-    if (leftFracDigits < maxFracDigits) {
-        const auto digitsToAdd = maxFracDigits - leftFracDigits;
-        const auto bytesToAdd = (digitsToAdd + 1) / 2;
-        for (auto i = 0; i < bytesToAdd; i++)
-            left.Push(DECIMAL_ZERO);
-    }
-
-    if (rightFracDigits < maxFracDigits) {
-        const auto digitsToAdd = maxFracDigits - rightFracDigits;
-        const auto bytesToAdd = (digitsToAdd + 1) / 2;
-        for (auto i = 0; i < bytesToAdd; i++)
-            right.Push(DECIMAL_ZERO);
-    }
-}
-
-constexpr void Decimal::PadNonFractionalParts(
-    DataBuffer& left,
-    DataBuffer& right,
-    fraction_index_t& leftFractionIndex,
-    fraction_index_t& rightFractionIndex
-){
-    const auto leftNonFracSize = leftFractionIndex / 2;
-    const auto rightNonFracSize = rightFractionIndex / 2;
-    const auto maxNonFracSize = std::max(leftNonFracSize, rightNonFracSize);
-
-    // Pad left with leading zeros if needed
-    if (leftNonFracSize < maxNonFracSize) {
-        left.Insert(DECIMAL_DIGITS_START_INDEX, maxNonFracSize - leftNonFracSize, DECIMAL_ZERO);
-        leftFractionIndex += static_cast<fraction_index_t>((maxNonFracSize - leftNonFracSize) * 2);
-    }
-
-    // Pad right with leading zeros if needed
-    if (rightNonFracSize < maxNonFracSize) {
-        right.Insert(DECIMAL_DIGITS_START_INDEX, maxNonFracSize - rightNonFracSize, DECIMAL_ZERO);
-        rightFractionIndex += static_cast<fraction_index_t>((maxNonFracSize - rightNonFracSize) * 2);
-    }
-}
-
-constexpr Decimal Decimal::Subtract(
-    DataBuffer& lhs,
-    const DataBuffer& rhs,
-    fraction_index_t fractionIndex,
-    const bool isPositive
-){
-    Int borrow = 0;
-    for (Int i = lhs.Size() - 1; i > 0; i--) {
-        Int lowNibble = Decimal::LowNibble(lhs, i) - Decimal::LowNibble(rhs, i) - borrow;
-        if (lowNibble < 0){
-            lowNibble += 10;
-            borrow = 1;
+        [[nodiscard]] static constexpr Decimal SubtractUnchecked(const Decimal& left, const Decimal& right){
+            return Decimal::FromMantissa(left.Mantissa() - right.Mantissa());
         }
-        else borrow = 0;
 
-        Int highNibble = Decimal::HighNibble(lhs, i) - Decimal::HighNibble(rhs, i) - borrow;
-        if (highNibble < 0){
-            highNibble += 10;
-            borrow = 1;
+        // Only when DecimalType::CanMultiplyOverflow is false
+        [[nodiscard]] static constexpr Decimal MultiplyUnchecked(const Decimal& left, const Decimal& right){
+            return Decimal::FromMantissa(left.Mantissa() * right.Mantissa());
         }
-        else borrow = 0;
+        [[nodiscard]] friend constexpr Decimal operator+(const Decimal& left, const Decimal& right){
+            Decimal result;
+            Decimal::Check(Decimal::TryAdd(left, right, &result));
+            return result;
+        }
 
-        lhs[i] = Decimal::PackNibbles(highNibble, lowNibble);
-    }
-    Decimal::TrimLeadingZeros(lhs, fractionIndex);
-    lhs[DECIMAL_HEADER_INDEX] = Decimal::CreateSignAndFractionByte(isPositive, fractionIndex);
+        [[nodiscard]] friend constexpr Decimal operator-(const Decimal& left, const Decimal& right){
+            Decimal result;
+            Decimal::Check(Decimal::TrySubtract(left, right, &result));
+            return result;
+        }
 
-    return Decimal(lhs.Data(), lhs.Size());
-}
+        [[nodiscard]] friend constexpr Decimal operator-(const Decimal& value){
+            return Decimal::FromMantissa(-value.Mantissa());
+        }
 
-constexpr Decimal Decimal::Multiply(
-    const DataBuffer& lhs,
-    const DataBuffer& rhs,
-    fraction_index_t fractionIndex,
-    const bool isPositive
-){
+        // The sign follows the dividend, as in C++ and SQL
+        [[nodiscard]] friend constexpr Decimal operator%(const Decimal& left, const Decimal& right){
+            if (right.IsZero())
+                Decimal::Throw(DecimalStatus::DivideByZero);
+            return Decimal::FromMantissa(left.Mantissa() % right.Mantissa());
+        }
 
-    const auto leftUnpacked = Decimal::ToBase100(lhs);
-    const auto rightUnpacked = Decimal::ToBase100(rhs);
-    const auto productUnpacked = Decimal::MultiplyBase100(leftUnpacked, rightUnpacked);
+        [[nodiscard]] friend constexpr bool operator==(const Decimal& left, const Decimal& right){
+            return left.Mantissa() == right.Mantissa();
+        }
 
-    auto productDigits = Decimal::Base100ToDigits(productUnpacked);
-    Decimal::TrimLeadingZeros(productDigits, fractionIndex);
-    Decimal::TrimTrailingZeros(productDigits, fractionIndex);
+        [[nodiscard]] friend constexpr std::strong_ordering operator<=>(const Decimal& left, const Decimal& right){
+            return left.Mantissa() <=> right.Mantissa();
+        }
 
-    const Int maxScale = DECIMAL_MAX_NUMBER_OF_DIGITS - 3 - fractionIndex;
-    if (maxScale < 0)
-        throw std::runtime_error("Decimal multiplication overflow");
+        [[nodiscard]] static constexpr DecimalStatus TryMultiply(
+            const Decimal& left,
+            const Decimal& right,
+            const Int droppedDigits,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            assert(droppedDigits >= 0 && "Decimal::TryMultiply: the result scale cannot exceed the sum of the input scales");
 
-    Decimal::RoundToScale<MultiplicationDigitsBuffer, DecimalRoundingMode::HalfUp>(productDigits, fractionIndex, maxScale);
-    Decimal::PadDecimalParts<MultiplicationDigitsBuffer>(productDigits, fractionIndex);
-    const auto packed = Decimal::Pack(productDigits, isPositive, fractionIndex);
-    return Decimal(packed.Data(), packed.Size());
-}
+            // The common case: the exact product fits 128 bits
+            HugeInt product = 0;
+            if (droppedDigits <= MAX_DECIMAL_PRECISION && !__builtin_mul_overflow(left.Mantissa(), right.Mantissa(), &product)){
+                if (droppedDigits == 0)
+                    *out = Decimal::FromMantissa(product);
+                else
+                    (void)Decimal::TryRescale(Decimal::FromMantissa(product), droppedDigits, 0, mode, out);
 
-template <DecimalRoundingMode Mode>
-constexpr Decimal Decimal::Divide(
-    const DataBuffer& dividend,
-    const DataBuffer& divisor,
-    const bool isPositive
-){
+                return out->Magnitude() > DecimalDetail::MAX_MAGNITUDE ? DecimalStatus::Overflow : DecimalStatus::Ok;
+            }
 
-    auto leftDigits  = Decimal::Unpack(dividend);
-    auto rightDigits = Decimal::Unpack(divisor);
+            bool carriedOut = false;
+            const auto rounded = DecimalDetail::DividePow10Rounded(
+                DecimalDetail::Wide::Multiply(left.Magnitude(), right.Magnitude()),
+                droppedDigits,
+                mode,
+                carriedOut
+            );
 
-    if (Decimal::IsZeroMagnitude<DigitsBuffer>(rightDigits))
-        throw std::runtime_error("Decimal division by zero");
+            if (carriedOut || !rounded.FitsInHugeInt() || rounded.LowHugeInt() > DecimalDetail::MAX_MAGNITUDE)
+                return DecimalStatus::Overflow;
 
-    const Int leftFractionIndex = dividend[DECIMAL_HEADER_INDEX] & 0x7F;
-    const Int rightFractionIndex = divisor [DECIMAL_HEADER_INDEX] & 0x7F;
+            *out = Decimal::FromMagnitude(rounded.LowHugeInt(), left.IsNegative() != right.IsNegative());
+            return DecimalStatus::Ok;
+        }
 
-    const Int leftFractionalSize = leftDigits.Size()  - leftFractionIndex;
-    const Int rightFractionalSize = rightDigits.Size() - rightFractionIndex;
+            [[nodiscard]] static constexpr DecimalStatus TryDivide(
+            const Decimal& left,
+            const Decimal& right,
+            const Int scaleShift,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            if (right.IsZero())
+                return DecimalStatus::DivideByZero;
 
-    const Int targetScale = Math::Max<Int>(leftFractionalSize, rightFractionalSize);
-    const Int shift = rightFractionalSize - leftFractionalSize + targetScale + 1;
-    for (Int k = 0; k < shift; ++k)
-        leftDigits.Push(0);
+            const auto isNegative = left.IsNegative() != right.IsNegative();
 
-    DigitsBuffer remainderOut;
-    auto quotient = Decimal::LongDivide(
-        leftDigits,
-        rightDigits,
-        remainderOut
-    );
+            // A divisor this large rounds every 38-digit dividend to zero, and would not fit the shift below
+            if (scaleShift <= -(MAX_DECIMAL_PRECISION + 1)){
+                *out = Decimal();
+                return DecimalStatus::Ok;
+            }
 
-    fraction_index_t fractionIndex = quotient.Size() - (targetScale + 1);
-    Decimal::TrimLeadingZeros<DigitsBuffer>(quotient, fractionIndex);
+            auto dividend = DecimalDetail::Wide::From(left.Magnitude());
+            auto divisor = DecimalDetail::Wide::From(right.Magnitude());
 
-    if (!Decimal::IsZeroMagnitude<DigitsBuffer>(remainderOut))
-        quotient.Push(1);
+            if (scaleShift >= 0){
+                if (!dividend.MultiplyPow10(scaleShift))
+                    return DecimalStatus::Overflow;
+            }
+            else if (!divisor.MultiplyPow10(-scaleShift))
+                return DecimalStatus::Overflow;
 
-    Decimal::RoundToScale<DigitsBuffer, Mode>(quotient, fractionIndex, targetScale);
+            UnsignedHugeInt quotient = 0;
+            bool roundUp = false;
 
-    Decimal::TrimTrailingZeros<DigitsBuffer>(quotient, fractionIndex);
-    Decimal::PadDecimalParts<DigitsBuffer>(quotient, fractionIndex);
+            if (dividend.FitsInHugeInt() && divisor.FitsInHugeInt()){
+                const auto numerator = dividend.LowHugeInt();
+                const auto denominator = divisor.LowHugeInt();
+                quotient = numerator / denominator;
+                const auto remainder = numerator % denominator;
+                const auto half = remainder > denominator - remainder ? 1 : remainder == denominator - remainder ? 0 : -1;
+                roundUp = mode == DecimalRoundingMode::HalfUp
+                    ? half >= 0
+                    : mode == DecimalRoundingMode::HalfEven && (half > 0 || (half == 0 && (quotient & 1) != 0));
+            }
+            else{
+                DecimalDetail::Wide remainder;
+                const auto wideQuotient = DecimalDetail::Wide::Divide(dividend, divisor, remainder);
+                if (!wideQuotient.FitsInHugeInt())
+                    return DecimalStatus::Overflow;
 
-    const auto sign = isPositive || Decimal::IsZeroMagnitude<DigitsBuffer>(quotient);
-    const auto packed = Decimal::Pack(quotient, sign, fractionIndex);
-    return Decimal(packed.Data(), packed.Size());
-}
+                quotient = wideQuotient.LowHugeInt();
+                remainder.ShiftLeftOne();
+                const auto order = remainder <=> divisor;
+                constexpr std::__cmp_cat::__literal_zero zeroOrder(nullptr);
+                roundUp = mode == DecimalRoundingMode::HalfUp
+                    ? order >= zeroOrder
+                    : mode == DecimalRoundingMode::HalfEven && (order > zeroOrder || (order == zeroOrder && (quotient & 1) != 0));
+            }
 
-constexpr std::ostream & operator<<(std::ostream &os, const Decimal &decimal){
-    const auto buffer = decimal.ToBufferString();
-    os.write(buffer.Data(), buffer.Size());
-    return os;
-}
+            if (quotient > DecimalDetail::MAX_MAGNITUDE)
+                return DecimalStatus::Overflow;
+            if (roundUp)
+                quotient++;
+            if (quotient > DecimalDetail::MAX_MAGNITUDE)
+                return DecimalStatus::Overflow;
+
+            *out = Decimal::FromMagnitude(quotient, isNegative);
+            return DecimalStatus::Ok;
+        }
+
+        // ---- changing scale -----------------------------------------------------------------------------
+
+        // Checks against 38 digits only. Going into a column or a cast target, use TryCast.
+        [[nodiscard]] static constexpr DecimalStatus TryRescale(
+            const Decimal& value,
+            const Int fromScale,
+            const Int toScale,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            if (toScale >= fromScale){
+                const auto digits = toScale - fromScale;
+                if (digits > MAX_DECIMAL_PRECISION){
+                    if (!value.IsZero())
+                        return DecimalStatus::Overflow;
+                    *out = Decimal();
+                    return DecimalStatus::Ok;
+                }
+
+                HugeInt scaled = 0;
+                if (__builtin_mul_overflow(value.Mantissa(), static_cast<HugeInt>(DecimalDetail::POW10[digits]), &scaled))
+                    return DecimalStatus::Overflow;
+
+                *out = Decimal::FromMantissa(scaled);
+                return out->Magnitude() > DecimalDetail::MAX_MAGNITUDE ? DecimalStatus::Overflow : DecimalStatus::Ok;
+            }
+
+            const auto digits = fromScale - toScale;
+            if (digits > MAX_DECIMAL_PRECISION){
+                *out = Decimal();
+                return DecimalStatus::Ok;
+            }
+
+            const auto divisor = DecimalDetail::POW10[digits];
+            const auto magnitude = value.Magnitude();
+            auto quotient = magnitude / divisor;
+            const auto remainder = magnitude % divisor;
+
+            const auto half = divisor / 2;
+            const bool roundUp = mode == DecimalRoundingMode::HalfUp
+                ? remainder >= half
+                : mode == DecimalRoundingMode::HalfEven && (remainder > half || (remainder == half && (quotient & 1) != 0));
+            if (roundUp)
+                quotient++;
+
+            *out = Decimal::FromMagnitude(quotient, value.IsNegative());
+            return DecimalStatus::Ok;
+        }
+
+        [[nodiscard]] static constexpr DecimalStatus TryCast(
+            const Decimal& value,
+            const Int fromScale,
+            const DecimalType to,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            const auto status = Decimal::TryRescale(value, fromScale, to._scale, mode, out);
+            if (status != DecimalStatus::Ok)
+                return status;
+            return out->FitsPrecision(to._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
+        }
+
+        [[nodiscard]] static constexpr Decimal ScaleUpUnchecked(const Decimal& value, const Int digits){
+            return Decimal::FromMantissa(value.Mantissa() * static_cast<HugeInt>(DecimalDetail::POW10[digits]));
+        }
+
+        template<IsInteger T>
+        [[nodiscard]] static constexpr DecimalStatus TryFromInteger(const T value, const Int scale, Decimal* out){
+            if (std::in_range<HugeInt>(value) == false)
+                return DecimalStatus::Overflow;
+
+            const auto mantissa = Decimal::FromMantissa(static_cast<HugeInt>(value));
+            if (mantissa.Magnitude() > DecimalDetail::MAX_MAGNITUDE)
+                return DecimalStatus::Overflow;
+            return Decimal::TryRescale(mantissa, 0, scale, DecimalRoundingMode::Truncate, out);
+        }
+
+        template<IsInteger T>
+        [[nodiscard]] static constexpr DecimalStatus TryFromInteger(const T value, const DecimalType type, Decimal* out){
+            const auto status = Decimal::TryFromInteger(value, static_cast<Int>(type._scale), out);
+            if (status != DecimalStatus::Ok)
+                return status;
+            return out->FitsPrecision(type._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
+        }
+
+        template<IsInteger T>
+        [[nodiscard]] constexpr DecimalStatus TryToInteger(const Int scale, const DecimalRoundingMode mode, T* out) const{
+            Decimal whole;
+            const auto status = Decimal::TryRescale(*this, scale, 0, mode, &whole);
+            if (status != DecimalStatus::Ok)
+                return status;
+            if (!std::in_range<T>(whole.Mantissa()))
+                return DecimalStatus::Overflow;
+            *out = static_cast<T>(whole.Mantissa());
+            return DecimalStatus::Ok;
+        }
+
+        // Accepts [+-]digits[.digits]. The result has the given scale: extra fraction digits are rounded.
+        [[nodiscard]] static constexpr DecimalStatus TryParse(
+            const StringView& text,
+            const Int scale,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            const auto* data = text.Data();
+            const auto size = static_cast<Int>(text.Size());
+            Int position = 0;
+
+            bool isNegative = false;
+            if (position < size && (data[position] == '-' || data[position] == '+'))
+                isNegative = data[position++] == '-';
+
+            UnsignedHugeInt magnitude = 0;
+            Int digitsSeen = 0;
+            Int fractionDigits = 0;
+            bool inFraction = false;
+            Int firstDropped = -1;
+            bool restIsNonZero = false;
+
+            for (; position < size; position++){
+                const auto c = data[position];
+                if (c == '.'){
+                    if (inFraction)
+                        return DecimalStatus::InvalidFormat;
+                    inFraction = true;
+                    continue;
+                }
+                if (!DecimalDetail::IsDigit(c))
+                    return DecimalStatus::InvalidFormat;
+
+                digitsSeen++;
+                const auto digit = static_cast<Int>(c - '0');
+
+                if (inFraction && fractionDigits == scale){
+                    if (firstDropped < 0)
+                        firstDropped = digit;
+                    else
+                        restIsNonZero |= digit != 0;
+                    continue;
+                }
+
+                if (magnitude > (DecimalDetail::MAX_MAGNITUDE - digit) / 10)
+                    return DecimalStatus::Overflow;
+                magnitude = magnitude * 10 + digit;
+                fractionDigits += inFraction;
+            }
+
+            if (digitsSeen == 0)
+                return DecimalStatus::InvalidFormat;
+
+            for (; fractionDigits < scale; fractionDigits++){
+                if (magnitude > DecimalDetail::MAX_MAGNITUDE / 10)
+                    return DecimalStatus::Overflow;
+                magnitude *= 10;
+            }
+
+            if (firstDropped >= 0 && DecimalDetail::ShouldRoundUp(mode, firstDropped, restIsNonZero, (magnitude & 1) != 0))
+                magnitude++;
+            if (magnitude > DecimalDetail::MAX_MAGNITUDE)
+                return DecimalStatus::Overflow;
+
+            *out = Decimal::FromMagnitude(magnitude, isNegative);
+            return DecimalStatus::Ok;
+        }
+
+        [[nodiscard]] static constexpr DecimalStatus TryParse(
+            const StringView& text,
+            const DecimalType type,
+            const DecimalRoundingMode mode,
+            Decimal* out
+        ){
+            const auto status = Decimal::TryParse(text, static_cast<Int>(type._scale), mode, out);
+            if (status != DecimalStatus::Ok)
+                return status;
+            return out->FitsPrecision(type._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
+        }
+
+        // A SQL literal: the precision and scale come from how it is written, so "1.50" is DECIMAL(3,2)
+        [[nodiscard]] static constexpr DecimalStatus TryParseLiteral(const StringView& text, DecimalType* type, Decimal* out){
+            const auto* data = text.Data();
+            const auto size = static_cast<Int>(text.Size());
+            Int position = 0;
+            if (position < size && (data[position] == '-' || data[position] == '+'))
+                position++;
+
+            Int scale = 0;
+            Int significant = 0;
+            bool inFraction = false;
+            bool any = false;
+            for (; position < size; position++){
+                if (data[position] == '.'){
+                    if (inFraction)
+                        return DecimalStatus::InvalidFormat;
+                    inFraction = true;
+                    continue;
+                }
+                if (!DecimalDetail::IsDigit(data[position]))
+                    return DecimalStatus::InvalidFormat;
+                any = true;
+                scale += inFraction;
+                if (significant > 0 || data[position] != '0' || inFraction)
+                    significant++;
+            }
+
+            if (!any)
+                return DecimalStatus::InvalidFormat;
+            if (significant > MAX_DECIMAL_PRECISION || scale > MAX_DECIMAL_PRECISION)
+                return DecimalStatus::Overflow;
+
+            const auto status = Decimal::TryParse(text, scale, DecimalRoundingMode::Truncate, out);
+            if (status == DecimalStatus::Ok)
+                *type = DecimalType(std::max({significant, scale, 1}), scale);
+            return status;
+        }
+
+        [[nodiscard]] constexpr StringBuffer ToStringBuffer(const Int scale) const{
+            char reversed[DECIMAL_STRING_SIZE]{};
+            Int length = 0;
+            auto magnitude = this->Magnitude();
+            Int written = 0;
+
+            while (magnitude != 0 || written <= scale){
+                if (written == scale && scale > 0)
+                    reversed[length++] = '.';
+
+                reversed[length++] = static_cast<char>('0' + static_cast<Int>(magnitude % 10));
+                magnitude /= 10;
+                written++;
+            }
+
+            if (this->IsNegative())
+                reversed[length++] = '-';
+
+            char forward[DECIMAL_STRING_SIZE]{};
+            for (Int i = 0; i < length; i++)
+                forward[i] = reversed[length - 1 - i];
+
+            return StringBuffer(forward, length);
+        }
+
+        [[nodiscard]] static constexpr Decimal Multiply(
+            const Decimal& left, const Decimal& right, const Int droppedDigits, const DecimalRoundingMode mode
+        ){
+            Decimal result;
+            Decimal::Check(Decimal::TryMultiply(left, right, droppedDigits, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] static constexpr Decimal Divide(
+            const Decimal& left, const Decimal& right, const Int scaleShift, const DecimalRoundingMode mode
+        ){
+            Decimal result;
+            Decimal::Check(Decimal::TryDivide(left, right, scaleShift, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] static constexpr Decimal Rescale(
+            const Decimal& value, const Int fromScale, const Int toScale, const DecimalRoundingMode mode
+        ){
+            Decimal result;
+            Decimal::Check(Decimal::TryRescale(value, fromScale, toScale, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] static constexpr Decimal Cast(
+            const Decimal& value, const Int fromScale, const DecimalType to, const DecimalRoundingMode mode
+        ){
+            Decimal result;
+            Decimal::Check(Decimal::TryCast(value, fromScale, to, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] static constexpr Decimal Parse(const StringView& text, const Int scale, const DecimalRoundingMode mode){
+            Decimal result;
+            Decimal::Check(Decimal::TryParse(text, scale, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] static constexpr Decimal Parse(const StringView& text, const DecimalType type, const DecimalRoundingMode mode){
+            Decimal result;
+            Decimal::Check(Decimal::TryParse(text, type, mode, &result));
+            return result;
+        }
+
+        [[nodiscard]] constexpr double ToDouble(const Int scale) const{
+            return static_cast<double>(static_cast<long double>(this->Mantissa()) / static_cast<long double>(DecimalDetail::POW10[scale]));
+        }
+
+        [[nodiscard]] constexpr long double Interpolate(const Int scale) const{
+            return static_cast<long double>(this->Mantissa()) / static_cast<long double>(DecimalDetail::POW10[scale]);
+        }
+
+        // Big-endian with the sign bit flipped: memcmp order == numeric order, for values of one scale
+        constexpr void EncodeKey(object_t* out) const{
+            auto bits = static_cast<UnsignedHugeInt>(this->Mantissa()) ^ (UnsignedHugeInt{1} << 127);
+            for (Int i = DECIMAL_KEY_SIZE - 1; i >= 0; i--){
+                out[i] = static_cast<object_t>(bits);
+                bits >>= 8;
+            }
+        }
+
+        [[nodiscard]] static constexpr Decimal DecodeKey(const object_t* data){
+            UnsignedHugeInt bits = 0;
+            for (Int i = 0; i < DECIMAL_KEY_SIZE; i++)
+                bits = (bits << 8) | data[i];
+            return Decimal::FromMantissa(static_cast<HugeInt>(bits ^ (UnsignedHugeInt{1} << 127)));
+        }
+
+        [[nodiscard]] constexpr std::size_t Hash() const{
+            // Multiples of 10^scale have zero low bits. The multiply moves every bit upward and the shift
+            // brings them back down, so round numbers still reach all the buckets of a power-of-two table.
+            const auto bits = static_cast<UnsignedHugeInt>(this->Mantissa());
+            const auto mixed = (static_cast<UnsignedBigInt>(bits) * 0x9E3779B97F4A7C15ULL)
+                ^ (static_cast<UnsignedBigInt>(bits >> 64) * 0xC2B2AE3D27D4EB4FULL);
+            return static_cast<std::size_t>(mixed ^ (mixed >> 32));
+        }
+
+        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, Int scale) const;
+        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator, Int scale) const;
+    };
+
+    static_assert(sizeof(Decimal) == sizeof(HugeInt) && alignof(Decimal) == 1);
+    static_assert(std::is_trivially_copyable_v<Decimal> && std::is_trivially_destructible_v<Decimal>);
 }
 
 template<>
-class std::numeric_limits<DataTypes::Decimal> {
+struct std::hash<DataTypes::Decimal> {
+    constexpr size_t operator()(const DataTypes::Decimal& value) const noexcept {
+        return value.Hash();
+    }
+};
+
+template<>
+struct std::numeric_limits<DataTypes::Decimal> {
     static constexpr bool is_specialized = true;
 
     static constexpr DataTypes::Decimal min() noexcept {
-        static constexpr DataTypes::StringView MIN_VIEW = "-9999999999999999.9999";
-        static constexpr DataTypes::Decimal VALUE(MIN_VIEW);
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(Math::MinLimit<HugeInt>());
         return VALUE;
     }
 
     static constexpr DataTypes::Decimal max() noexcept {
-        static constexpr DataTypes::StringView MAX_VIEW = "9999999999999999.9999";
-        static constexpr DataTypes::Decimal VALUE(MAX_VIEW);
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(Math::MaxLimit<HugeInt>());
         return VALUE;
     }
 

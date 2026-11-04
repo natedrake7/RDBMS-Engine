@@ -1,11 +1,11 @@
 ﻿#pragma once
 #include <CoreEngine/Evaluators/Kernels/Vectorized/Vectorized.Binary.h>
 #include <CoreEngine/Evaluators/Kernels/Vectorized/VectorizedKernels.h>
-#include <CoreEngine/DataStorage/ColumnMaterializationInfo.h>
 #include <Systemic/DataTypes/DataTypes.h>
 #include <CoreEngine/DataStorage/FilterColumnInfo.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/DataStorage/Table.Templates.h>
+#include "CoreEngine/DataStorage/ColumnDecoders/ColumnDecodeInfo.h"
 
 namespace CoreEngine::VectorizedKernels{
     namespace Detail{
@@ -22,7 +22,7 @@ namespace CoreEngine::VectorizedKernels{
         template <typename Fn, typename Make>
         consteval auto MakeTypeTable(Make make){
             DataStructures::StaticArray<Fn, DATATYPE_COUNT> table{};
-            template for (constexpr auto e : Reflection::Enumerators<DataType>){
+            template for (constexpr auto e :Reflection::Enumerators<DataType>){
                 using T = DataTypes::StorageOf<([:e:])>;
                 if constexpr (!std::is_void_v<T>)
                     table[static_cast<std::size_t>([:e:])] = make.template operator()<T>();

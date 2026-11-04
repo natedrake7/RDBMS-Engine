@@ -134,7 +134,7 @@ namespace Expressions {
             const DataType returnType,
             const bool allowImplicitCast,
             const bool additionalValidations
-        ) : name(std::move(name)),
+        ) : name(name),
             minArgs(minArgs),
             maxArgs(maxArgs),
             expectedTypes(expectedTypes),

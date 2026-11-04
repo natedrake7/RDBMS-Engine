@@ -108,7 +108,7 @@ namespace CoreEngine::VectorizedKernels{
 
         const auto* childVector = castExpr->childExpr->vectorizedKernel(castExpr->childExpr, context, chunk);
 
-        const auto* __restrict childData = childVector->template DataAs<TFrom>();
+        auto* __restrict childData = childVector->template DataAs<TFrom>();
 
         if (childVector->IsConstant()){
             const auto isNull = childVector->GetNullValue(0);

@@ -3,43 +3,14 @@
 #include <Systemic/DataTypes/StringValue.h>
 
 namespace DataTypes {
-    String Decimal::ToString(const ::Memory::IAllocator* allocator) const{
-        const auto isPositive = this->IsPositive();
-
-        String result(allocator, this->_data.Size());
-
-        if (!isPositive) result[0] = '-';
-
-        const fraction_index_t fractionIndex = Decimal::GetFractionIndex() + !isPositive;
-
-        Int strCounter = !isPositive;
-        for (int i = DECIMAL_DIGITS_START_INDEX; i < this->_data.Size(); i++){
-            if (strCounter == fractionIndex){
-                result[strCounter] = '.';
-
-                i--;
-                strCounter++;
-
-                continue;
-            }
-
-            result[strCounter] = static_cast<char>((this->_data[i] >> 4) & 0x0F);
-            strCounter++;
-        }
-
-        if (result.Last() == '0')
-            result.Pop();
-
-        return result;
+    String Decimal::ToString(const ::Memory::IAllocator* allocator, const Int scale) const{
+        const auto buffer = this->ToStringBuffer(scale);
+        return String(buffer.Data(), static_cast<data_size_t>(buffer.Size()), allocator);
     }
 
-    StringValue Decimal::ToStringValue(const Memory::IAllocator* allocator) const{
-        const auto bufferStr = this->ToBufferString();
-        return StringValue::Create(allocator, bufferStr.Data(), bufferStr.Size());
-    }
-
-    double Decimal::ToDouble() const{
-        // return std::stod(this->ToString());
+    StringValue Decimal::ToStringValue(const ::Memory::IAllocator* allocator, const Int scale) const{
+        const auto buffer = this->ToStringBuffer(scale);
+        return StringValue::Create(allocator, buffer.Data(), static_cast<data_size_t>(buffer.Size()));
     }
 }
 

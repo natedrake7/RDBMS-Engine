@@ -34,4 +34,9 @@ namespace Math{
     inline constexpr T MaxLimit(){
         return std::numeric_limits<T>::max();
     }
+
+    template<DataTypes::IsInteger T>
+    inline constexpr Int LimitsDigits10(){
+        return std::numeric_limits<T>::digits10;
+    }
 }

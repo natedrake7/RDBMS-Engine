@@ -28,11 +28,15 @@ typedef uint16_t    UnsignedSmallInt;
 typedef uint32_t    UnsignedInt;
 typedef uint64_t    UnsignedBigInt;
 typedef __uint128_t UnsignedHugeInt;
+
 typedef int8_t      TinyInt;
 typedef int16_t     SmallInt;
 typedef int32_t     Int;
 typedef int64_t     BigInt;
 typedef __int128_t  HugeInt;
+
+typedef float       Float;
+typedef double      Double;
 
 typedef uint8_t byte_t;
 
@@ -108,14 +112,17 @@ enum class DataType : UnsignedTinyInt{
     UnsignedBigInt   [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 10,
     UnsignedHugeInt  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 11,
 
-    Decimal  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 12,
-    DateTime [[= DataTypes::Traits::Comparison{}]] = 13,
-    Guid     [[= DataTypes::Traits::Comparison{}]] = 14,
-    Json  = 15,
-    Null = 16
+    Float  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]     = 12,
+    Double  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]    = 13,
+
+    Decimal  [[= DataTypes::Traits::Comparison{}, = DataTypes::Traits::Arithmetic{}]]  = 14,
+    DateTime [[= DataTypes::Traits::Comparison{}]] = 15,
+    Guid     [[= DataTypes::Traits::Comparison{}]] = 16,
+    Json  = 17,
+    Null = 18
 };
 
-static constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
+inline constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
 
 inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
     return lhs > rhs ? lhs : rhs;
@@ -232,6 +239,8 @@ namespace DataTypes{
         UnsignedBigInt,
         UnsignedHugeInt,
         Decimal,
+        Float,
+        Double,
         DateTime,
         Guid,
         JsonBinary,

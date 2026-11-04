@@ -61,7 +61,7 @@ namespace DataTypes{
         [[nodiscard]] static JsonBinary ToJsonBinary(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast = false);
 
         template<typename TFrom, typename TTo>
-        [[nodiscard]] static TTo To(const TFrom& input, const Memory::IAllocator* allocator);
+        [[nodiscard]] static TTo To(TFrom& input, const Memory::IAllocator* allocator);
 
         [[nodiscard]] static bool CanBeParsedToType(DataType toType, const Value& value);
         static void DeduceIntegerType(Value& value);
@@ -162,7 +162,7 @@ namespace DataTypes{
     }
 
     template <typename TFrom, typename TTo>
-    TTo Coercions::To(const TFrom& input, const Memory::IAllocator* allocator){
+    TTo Coercions::To(TFrom& input, const Memory::IAllocator* allocator){
         // identity (covers String->String, Decimal->Decimal, Guid->Guid, ...)
         if constexpr (std::is_same_v<TFrom, TTo>)
             return input;
