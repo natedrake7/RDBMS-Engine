@@ -203,7 +203,6 @@ namespace Expressions{
 
         Value value;
 
-        explicit ConstantExpression(const Value& value);
         explicit ConstantExpression(Value& value);
         explicit ConstantExpression(Value&& value);
 
@@ -418,10 +417,10 @@ namespace Expressions{
         static inline constexpr auto TYPE = ExpressionTypeOf<CastExpression>;
 
         Expression* childExpr;
-        DataType targetType;
+        DataTypes::TypeInfo _typeInfo;
         bool isTryCast;
 
-        CastExpression(Expression* expression, DataType targetType, bool isTryCast);
+        CastExpression(Expression* expression, DataTypes::TypeInfo typeInfo, bool isTryCast);
 
         static void BindRowKernel(Expression* self);
         static void BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema);

@@ -33,6 +33,7 @@ namespace QueryPipeline::Parsing{
         Identifier              [[=Spelled("identifier"), = AsName]],
         Variable                [[=Spelled("variable")]],
         IntegerLiteral          [[=Spelled("integer literal")]],
+        FloatLiteral            [[=Spelled("float literal")]],
         DecimalLiteral          [[=Spelled("decimal literal")]],
         StringLiteral           [[=Spelled("string literal")]],
         UnicodeStringLiteral    [[=Spelled("unicode string literal")]],
@@ -143,10 +144,25 @@ namespace QueryPipeline::Parsing{
         False,
 
         Bool                    [[=AsName]],
+
         TinyInt                 [[=AsName]],
+        UnsignedTinyInt         [[=AsName]],
+
         SmallInt                [[=AsName]],
+        UnsignedSmallInt        [[=AsName]],
+
         Int                     [[=AsName]],
+        UnsignedInt             [[=AsName]],
+
         BigInt                  [[=AsName]],
+        UnsignedBigInt          [[=AsName]],
+
+        HugeInt                 [[=AsName]],
+        UnsignedHugeInt         [[=AsName]],
+
+        Float                   [[=AsName]],
+        Double                  [[=AsName]],
+
         Decimal                 [[=AsName]],
         DateTime                [[=AsName]],
         Guid                    [[=AsName]],

@@ -11,6 +11,9 @@
 #include <Systemic/DataTypes/LobReference.h>
 #include <Systemic/Serialization/JsonParser.h>
 
+#include "DataTypes.StaticData.h"
+#include "TypeInfo.h"
+
 namespace Memory{
     class IAllocator;
 }
@@ -33,8 +36,9 @@ class Value{
     Storage _data{};
 
     data_size_t _size = 0;
+    DataTypes::TypeInfo _typeInfo;
+
     column_index_t _columnIndex = 0;
-    DataType _type = DataType::Null;
     bool _isNull = true;
     bool _isLob = false;
 
@@ -70,14 +74,10 @@ class Value{
     template<typename T>
     void WriteInline(const T& value){
         static_assert(sizeof(T) <= sizeof(Storage), "Value::WriteInline: type does not fit inline storage");
+
         std::memcpy(&this->_data, &value, sizeof(T));
-
-        if constexpr  (DataTypes::IsDecimal<T>)
-            this->_size = value.Size();
-        else
-            this->_size = sizeof(T);
-
-        this->_type = DataTypes::DataTypeOf<T>();
+        this->_size = sizeof(T);
+        this->_typeInfo._type = DataTypes::DataTypeOf<T>();
         this->_isNull = false;
     }
 
@@ -85,19 +85,24 @@ class Value{
 
     public:
         [[nodiscard]] static constexpr bool IsInline(const DataType type){
-            return type != DataType::String && type != DataType::Json;
+            return !DataTypes::IsVariableLengthType(type);
         }
 
-        explicit Value(column_index_t index = 0);
+        explicit Value() = default;
+        Value(const Value&) = delete;
+        Value& operator=(const Value&) = delete;
+
+        Value(Value&&) = default;
+        Value& operator=(Value&&) = default;
 
         Value(const std::string& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const DataTypes::StringView& data, const Memory::IAllocator* allocator, column_index_t index = 0);
         Value(const Serialization::JsonValue& data, const Memory::IAllocator* allocator, column_index_t index = 0);
 
         template<DataTypes::TriviallyCopiable T>
-        explicit Value(T other, const column_index_t index = 0){
+        explicit Value(T value, const column_index_t index = 0){
             this->_columnIndex = index;
-            this->WriteInline(other);
+            this->WriteInline(value);
         }
 
         template<DataTypes::NonTriviallyCopiable T>
@@ -108,7 +113,7 @@ class Value{
         ){
             this->_columnIndex = index;
             this->_isNull = false;
-            this->_type = DataTypes::DataTypeOf<T>();
+            this->_typeInfo._type = DataTypes::DataTypeOf<T>();
 
             if constexpr (DataTypes::IsStringLike<T> || DataTypes::IsJson<T>){
                 auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(other.Size()));
@@ -143,10 +148,18 @@ class Value{
 
         static Value Null(column_index_t columnIndex = 0);
 
-        void SetColumnIndex(column_index_t otherIndex);
-        void SetType(DataType otherType);
+        void SetColumnIndex(const column_index_t columnIndex){
+            this->_columnIndex = columnIndex;
+        }
 
-        void SetNull();
+        void SetTypeInfo(const DataTypes::TypeInfo typeInfo){
+            this->_typeInfo = typeInfo;
+        }
+
+        void SetNull(){
+            this->_isNull = true;
+            this->_size = 0;
+        }
 
         template<DataTypes::Primitive T>
         void Set(T other){
@@ -167,30 +180,31 @@ class Value{
                 this->_data._external = buffer;
                 this->_size = other.Size();
             }
-            else if constexpr (DataTypes::IsDecimal<T>){
-                std::memcpy(&this->_data, &other, sizeof(DataTypes::Decimal));
-                this->_size = sizeof(DataTypes::Decimal);
-            }
             else
                 static_assert(DataTypes::AlwaysFalse<T>, "Value::Value<T>: unsupported type");
 
-            this->_type = DataTypes::DataTypeOf<T>();
+            this->_typeInfo._type = DataTypes::DataTypeOf<T>();
             this->_isNull = false;
             this->_columnIndex = 0;
         }
 
-        [[nodiscard]] bool IsInline() const;
-        [[nodiscard]] data_size_t Size() const;
-        [[nodiscard]] const object_t* Data() const;
+        [[nodiscard]] bool IsInline() const{
+            return Value::IsInline(this->_typeInfo._type);
+        }
+
+        [[nodiscard]] data_size_t Size() const{
+            return this->_size;
+        }
+
+        [[nodiscard]] const object_t* Data() const{
+            return this->IsInline()
+                ? reinterpret_cast<const object_t*>(&this->_data)
+                : this->_data._external;
+        }
 
         template<DataTypes::Primitive T>
         [[nodiscard]] T Data() const{
-            return *reinterpret_cast<const T*>(&this->_data);
-        }
-
-        template<DataTypes::IsDecimal T>
-        [[nodiscard]] T Data()const{
-            return *reinterpret_cast<const T*>(&this->_data);
+            return this->ReadInline<T>();
         }
 
         [[nodiscard]] bool IsNull() const{
@@ -201,8 +215,8 @@ class Value{
             return this->_columnIndex;
         }
 
-        [[nodiscard]] DataType GetType() const{
-            return this->_type;
+        [[nodiscard]] DataTypes::TypeInfo GetType() const{
+            return this->_typeInfo;
         }
 
         [[nodiscard]] bool IsLob() const{
@@ -224,9 +238,10 @@ class Value{
         [[nodiscard]] DataTypes::JsonBinary AsJson(const ::Memory::IAllocator* allocator)const;
         [[nodiscard]] DataTypes::LobReference AsLobReference() const;
 
-        [[nodiscard]] bool IsIntegral()const;
-        // friend std::ostream& operator<<(std::ostream& os, const Value& field);
-
+        [[nodiscard]] bool IsIntegral()const{
+            return this->_typeInfo._type >= DataType::TinyInt
+                && this->_typeInfo._type <= DataType::BigInt;
+        }
         [[nodiscard]] bool ParseAsBoolFromString()const;
 
         [[nodiscard]] long double Interpolate()const;

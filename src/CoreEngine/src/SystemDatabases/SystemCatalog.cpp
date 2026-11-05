@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <CoreEngine/DataStorage/Table.h>
 #include <CoreEngine/Evaluators/Expression.h>
 #include "CoreEngine/BufferPool/StorageManager.h"

@@ -321,7 +321,7 @@ namespace QueryPipeline::PhysicalPlan {
         columnOrdinals.SetNewSize(this->columns.Size());
 
         for (const auto* column : this->columns){
-            const auto type = ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type.name));
+            const auto type = ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type._name));
             const auto fixedSize = DataTypes::FixedColumnSize(type);
             const bool isDecimal = type == DataType::Decimal;
 

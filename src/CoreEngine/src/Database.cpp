@@ -17,7 +17,7 @@
 #include <Systemic/Macros.h>
 
 #include "CoreEngine/BufferPool/StorageLayout.h"
-#include "Systemic/Converter.h"
+#include "Systemic/IntegerConverter.h"
 #include "Systemic/Functions/StringFunctions.h"
 
 #if IS_GCC
@@ -42,8 +42,8 @@ namespace CoreEngine{
         const auto str = DataTypes::String::Concat(
             allocator,
             "Database '", databaseName,
-            "' was written with file format version ", Converter::IntToStr(this->_formatVersion, allocator),
-            ", this build reads version ", Converter::IntToStr(StorageLayout::FILE_FORMAT_VERSION, allocator),
+            "' was written with file format version ", IntegerConverter::IntToStr(this->_formatVersion, allocator),
+            ", this build reads version ", IntegerConverter::IntToStr(StorageLayout::FILE_FORMAT_VERSION, allocator),
             ". Recreate the database."
         );
 

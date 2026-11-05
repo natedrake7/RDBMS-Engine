@@ -41,7 +41,7 @@ namespace DataTypes {
     }
 
     class Guid {
-        UnsignedTinyInt _data[GUID_SIZE]{};
+        UnsignedTinyInt _data[GUID_SIZE];
 
         using StringBuffer = DataStructures::StaticArray<char, GUID_STRING_SIZE>;
 
@@ -64,8 +64,10 @@ namespace DataTypes {
         }
 
     public:
-        constexpr explicit Guid() = default;
-        explicit constexpr Guid(const object_t* data){
+        constexpr explicit Guid()
+            : _data(){}
+        explicit constexpr Guid(const object_t* data)
+            : _data(){
             if consteval{
                 for (Int i = 0; i < GUID_SIZE; i++)
                     this->_data[i] = data[i];
@@ -114,9 +116,9 @@ namespace DataTypes {
             if (size != GUID_STRING_SIZE)
                 return false;
 
-            bool hasAllHyphens = false;
+            bool hasAllHyphens = true;
             for (const auto pos: GuidDetail::HYPHENS_POSITIONS)
-                hasAllHyphens = text[pos] == '-';
+                hasAllHyphens &= text[pos] == '-';
             if (!hasAllHyphens)
                 return false;
 
@@ -142,6 +144,13 @@ namespace DataTypes {
             return true;
         }
 
+        [[nodiscard]] inline static constexpr Guid Parse(const StringView& str){
+            Guid out;
+            if (!Guid::TryParse(str, &out))
+                throw std::invalid_argument("Guid::Parse: invalid format");
+            return out;
+        }
+
         [[nodiscard]] inline static constexpr bool Validate(const StringView& str){
             Guid ignoredOut;
             return Guid::TryParse(str, &ignoredOut);
@@ -161,7 +170,7 @@ namespace DataTypes {
         }
 
         [[nodiscard]] inline friend constexpr bool operator==(const Guid& lhs, const Guid& rhs) noexcept{
-            return __builtin_memcmp(lhs._data, rhs._data, GUID_SIZE);
+            return __builtin_memcmp(lhs._data, rhs._data, GUID_SIZE) == 0;
         }
 
         [[nodiscard]] friend constexpr std::strong_ordering operator<=>(const Guid& lhs, const Guid& rhs) noexcept{

@@ -28,7 +28,8 @@ class Variable {
             other.normalizedName = DataTypes::String::Null();
         }
 
-        Variable(const Variable& other) = default;
+        Variable(const Variable&) = delete;
+        Variable& operator=(const Variable&) = delete;
 
         Variable& operator=(Variable&& other)noexcept{
             if (this == &other)
@@ -45,7 +46,6 @@ class Variable {
             return *this;
         }
 
-        Variable& operator=(const Variable& other) = default;
 
         [[nodiscard]] const Value& GetValue() const { return this->value; }
         [[nodiscard]] Value& GetValue(){return this->value;}
@@ -53,11 +53,11 @@ class Variable {
         [[nodiscard]] const DataTypes::String& GetName() const { return this->name; }
         [[nodiscard]] const DataTypes::String& GetNormalizedName() const { return this->normalizedName; }
 
-        [[nodiscard]] DataType GetType() const { return this->value.GetType(); }
-        void SetType(const DataType type) { this->value.SetType(type); }
+        [[nodiscard]] DataTypes::TypeInfo GetType() const { return this->value.GetType(); }
+
+        void SetType(const DataTypes::TypeInfo type) { this->value.SetTypeInfo(type); }
 
         void SetValue(Value& other) { this->value = std::move(other); }
-        void SetValue(const Value& other) { this->value = other; }
 
         void SetName(DataTypes::String& other) {
             this->name = std::move(other);

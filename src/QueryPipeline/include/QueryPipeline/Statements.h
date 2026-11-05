@@ -79,21 +79,6 @@ namespace QueryPipeline::Statements {
         [[nodiscard]] bool Validate() const;
     };
 
-    struct ColumnType {
-        DataTypes::String name;
-        int size;
-
-        DecimalType decimal;
-
-        ColumnType();
-        explicit ColumnType(DataTypes::String&& name);
-        explicit ColumnType(const DataTypes::String& name);
-        ColumnType(const DataTypes::String& name, Int size);
-        ColumnType(DataTypes::String& name, Int size);
-        ColumnType(const DataTypes::String& name, DecimalType decimal);
-        ColumnType(DataTypes::String& name, DecimalType decimal);
-    };
-
     struct Identity {
         SmallInt seed;
         SmallInt incrementFactor;
@@ -104,7 +89,7 @@ namespace QueryPipeline::Statements {
 
     struct NewColumn {
         ColumnName name;
-        ColumnType type;
+        DataTypes::TypeInfo _typeInfo;
         Identity* identity;
         Value defaultValue;
 
@@ -126,7 +111,7 @@ namespace QueryPipeline::Statements {
 
     struct AlterColumn {
         ColumnName name;
-        ColumnType type;
+        DataTypes::TypeInfo _typeInfo;
 
         Int columnId;
         column_index_t index;
@@ -216,7 +201,7 @@ namespace QueryPipeline::Statements {
     struct DeclareVariableStatement final : Statement {
         Variable variable;
         Expressions::Expression* expression;
-        DataType type;
+        DataTypes::TypeInfo _typeInfo;
 
         DeclareVariableStatement();
 
@@ -228,7 +213,8 @@ namespace QueryPipeline::Statements {
     struct SetVariableStatement final : Statement {
         Variable variable;
         Expressions::Expression* expression;
-        DataType type;
+        
+        DataTypes::TypeInfo _typeInfo;
 
         SetVariableStatement();
 
@@ -243,7 +229,7 @@ namespace QueryPipeline::Statements {
         DataTypes::String role;
 
         Errors::CompilationStatus CompileDerived(QueryContext& context) override;
-        constexpr Security::Permission RequiredPermissions() const override;
+        [[nodiscard]] constexpr Security::Permission RequiredPermissions() const override;
         LogicalPlan* ToLogical(QueryContext& context) override;
     };
 

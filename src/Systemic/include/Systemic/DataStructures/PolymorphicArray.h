@@ -281,7 +281,7 @@ namespace DataStructures{
             this->_size = newSize;
         }
 
-        void Reserve(Int newCapacity){
+        void Reserve(data_size_t newCapacity){
             if (newCapacity <= this->_capacity)
                 return;
 

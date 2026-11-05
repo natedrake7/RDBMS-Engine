@@ -172,17 +172,7 @@ namespace Expressions{
 
     bool ColumnExpression::HasTableAlias() const { return !this->tableAlias.Empty();}
 
-    ConstantExpression::ConstantExpression(const Value &value)
-        : value(value){
-        this->expressionType = ConstantExpression::TYPE;
-    }
-
-    ConstantExpression::ConstantExpression(Value &value)
-        : value(std::move(value)){
-        this->expressionType = ConstantExpression::TYPE;
-    }
-
-    ConstantExpression::ConstantExpression(Value&& value)
+    ConstantExpression::ConstantExpression(Value& value)
         : value(std::move(value)){
         this->expressionType = ConstantExpression::TYPE;
     }
@@ -895,9 +885,9 @@ namespace Expressions{
 
     CastExpression::CastExpression(
         Expression* expression,
-        const DataType targetType,
+        const DataTypes::TypeInfo typeInfo,
         const bool isTryCast
-    ): childExpr(expression), targetType(targetType), isTryCast(isTryCast) {
+    ): childExpr(expression), _typeInfo(typeInfo), isTryCast(isTryCast) {
         this->expressionType = CastExpression::TYPE;
     }
 
@@ -905,17 +895,17 @@ namespace Expressions{
         auto* castExpression = self->As<CastExpression>();
         Expressions::BindExpressionRowKernel(castExpression->childExpr);
         const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
-        castExpression->rowKernel = CoreEngine::RowKernels::LookupCastKernel(childExprType, castExpression->targetType);
+        castExpression->rowKernel = CoreEngine::RowKernels::LookupCastKernel(childExprType, castExpression->_typeInfo);
     }
 
     void CastExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
         auto* castExpression = self->As<CastExpression>();
         Expressions::BindAndResolveExpressionKernel(castExpression->childExpr, schema);
         const auto childExprType = GetExpressionReturnType(castExpression->childExpr);
-        castExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetCastKernel(childExprType, castExpression->targetType);
+        castExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetCastKernel(childExprType, castExpression->_typeInfo);
     }
 
-    DataType CastExpression::GetReturnType() const{ return this->targetType; }
+    DataType CastExpression::GetReturnType() const{ return this->_typeInfo; }
 
     CoreEngine::DataVector* EvaluateExpression(
         const Expression* expression,

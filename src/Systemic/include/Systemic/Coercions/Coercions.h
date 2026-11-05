@@ -1,5 +1,5 @@
 #pragma once
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <Systemic/DataStructures/ConstexprHashSet.h>
 #include <Systemic/DataTypes/Value.h>
 #include <Systemic/DataTypes/Guid.h>
@@ -21,27 +21,28 @@ namespace DataTypes{
     };
 
     class Coercions {
-    static inline void ThrowException(DataType type, DataType toType);
+        [[noreturn]] static void ThrowNonExistentType(DataType type);
+        [[noreturn]] static void ThrowException(DataType type, DataType toType);
 
-    [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
 
-    [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
-    [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
+        [[nodiscard]] static constexpr CoercionType GetCoercionType(DataType fromType, DataType toType);
 
-    [[nodiscard]] static bool CanGetTinyInt(const Value& value);
-    [[nodiscard]] static bool CanGetBool(const Value& value);
-    [[nodiscard]] static bool CanGetSmallInt(const Value& value);
-    [[nodiscard]] static bool CanGetInt(const Value& value);
-    [[nodiscard]] static bool CanGetBigInt(const Value& value);
-    [[nodiscard]] static bool CanGetString(const Value& value);
-    [[nodiscard]] static bool CanGetGuid(const Value& value);
-    [[nodiscard]] static bool CanGetDateTime(const Value& value);
-    [[nodiscard]] static bool CanGetDecimal(const Value& value);
-    [[nodiscard]] static bool CanGetJsonBinary(const Value& value);
+        [[nodiscard]] static bool ParseAsBoolFromString(const Value& value);
+        [[nodiscard]] static bool ParseAsBoolFromString(const Value& value, bool& outVal);
 
-    static void DownCastFromSmallInt(Value& value);
-    static void DownCastFromInt(Value& value);
-    static void DownCastFromBigInt(Value& value);
+        [[nodiscard]] static bool CanGetTinyInt(const Value& value);
+        [[nodiscard]] static bool CanGetBool(const Value& value);
+        [[nodiscard]] static bool CanGetSmallInt(const Value& value);
+        [[nodiscard]] static bool CanGetInt(const Value& value);
+        [[nodiscard]] static bool CanGetBigInt(const Value& value);
+        [[nodiscard]] static bool CanGetString(const Value& value);
+        [[nodiscard]] static bool CanGetGuid(const Value& value);
+        [[nodiscard]] static bool CanGetDateTime(const Value& value);
+        [[nodiscard]] static bool CanGetDecimal(const Value& value);
+        [[nodiscard]] static bool CanGetJsonBinary(const Value& value);
+
+        static void DeduceSignedIntegerType(Value& value);
+        static void DeduceUnsignedIntegerType(Value& value);
 
     public:
         [[nodiscard]] constexpr static bool IsCoercionAllowed(DataType fromType, DataType toType, bool explicitCast = false);

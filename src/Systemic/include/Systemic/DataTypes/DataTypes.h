@@ -122,15 +122,85 @@ enum class DataType : UnsignedTinyInt{
     Null = 18
 };
 
-inline constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
-
-inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
-    return lhs > rhs ? lhs : rhs;
-}
-
 static_assert(Reflection::IsContiguous<DataType>(),
     "Datatypes are not contiguous. Consider making them contiguous for better performance"
 );
+
+inline constexpr auto DATATYPE_COUNT = Reflection::EnumCount<DataType>;
+
+namespace DataTypes::Detail{
+    inline constexpr bool IsSignedIntegerType(const DataType type){
+        return type >= DataType::TinyInt && type <= DataType::HugeInt;
+    }
+
+    inline constexpr bool IsUnsignedIntegerType(const DataType type){
+        return type >= DataType::UnsignedTinyInt && type <= DataType::UnsignedHugeInt;
+    }
+
+    inline constexpr bool IsIntegerType(const DataType type){
+        return IsSignedIntegerType(type) || IsUnsignedIntegerType(type);
+    }
+
+    inline constexpr bool IsFloatingPointType(const DataType type){
+        return type == DataType::Float || type == DataType::Double;
+    }
+
+    inline constexpr bool IsNumericType(const DataType type){
+        return IsIntegerType(type) || IsFloatingPointType(type) || type == DataType::Decimal;
+    }
+
+    // Lowest to highest. DataType values never change, so a new type only has to be placed here.
+    inline constexpr DataType PROMOTION_ORDER[] = {
+        DataType::Null,
+        DataType::String,
+        DataType::Bool,
+        DataType::TinyInt, DataType::UnsignedTinyInt,
+        DataType::SmallInt, DataType::UnsignedSmallInt,
+        DataType::Int, DataType::UnsignedInt,
+        DataType::BigInt, DataType::UnsignedBigInt,
+        DataType::HugeInt, DataType::UnsignedHugeInt,
+        DataType::Decimal, DataType::Float, DataType::Double,
+        DataType::DateTime,
+        DataType::Guid,
+        DataType::Json
+    };
+
+    static_assert(std::size(PROMOTION_ORDER) == DATATYPE_COUNT, "PROMOTION_ORDER needs exactly one entry per DataType");
+
+    inline constexpr std::size_t PromotionRank(const DataType type){
+        for (std::size_t i = 0; i < std::size(PROMOTION_ORDER); i++)
+            if (PROMOTION_ORDER[i] == type)
+                return i;
+        return DATATYPE_COUNT;
+    }
+
+    inline constexpr DataType ComputePromotion(const DataType lhs, const DataType rhs){
+        const auto leftRank = PromotionRank(lhs), rightRank = PromotionRank(rhs);
+        const auto higher = leftRank > rightRank ? lhs : rhs;
+        const auto lower = leftRank > rightRank ? rhs : lhs;
+
+        // A signed type below an unsigned one can't hold it: the next type up is the wider signed one
+        return IsUnsignedIntegerType(higher) && IsSignedIntegerType(lower)
+            ? PROMOTION_ORDER[PromotionRank(higher) + 1]
+            : higher;
+    }
+
+    inline constexpr auto PROMOTION_TABLE = []{
+        std::array<std::array<DataType, DATATYPE_COUNT>, DATATYPE_COUNT> table{};
+        for (std::size_t i = 0; i < DATATYPE_COUNT; i++)
+            for (std::size_t j = 0; j < DATATYPE_COUNT; j++)
+                table[i][j] = ComputePromotion(static_cast<DataType>(i), static_cast<DataType>(j));
+        return table;
+    }();
+}
+
+inline constexpr DataType PromoteType(const DataType lhs, const DataType rhs){
+    return DataTypes::Detail::PROMOTION_TABLE[static_cast<std::size_t>(lhs)][static_cast<std::size_t>(rhs)];
+}
+
+static_assert(PromoteType(DataType::Int, DataType::UnsignedInt) == DataType::BigInt);
+static_assert(PromoteType(DataType::UnsignedBigInt, DataType::BigInt) == DataType::HugeInt);
+static_assert(PromoteType(DataType::Null, DataType::Int) == DataType::Int);
 
 enum class StringComparisonType: UnsignedTinyInt{
     Equals = 0,
@@ -158,7 +228,6 @@ namespace DataTypes{
     template <typename T>
     concept NonPrimitiveType = std::is_same_v<T, String>
         || std::is_same_v<T, JsonBinary>
-        || std::is_same_v<T, Decimal>
         || std::is_same_v<T, StringValue>;
 
     template<typename T>
@@ -167,8 +236,7 @@ namespace DataTypes{
                         && !NonPrimitiveType<T>;
 
     template<typename T>
-    concept TriviallyCopiable = Primitive<T>
-            || std::is_same_v<T, Decimal>;
+    concept TriviallyCopiable = Primitive<T>;
 
     template<typename T>
     concept NonTriviallyCopiable = !TriviallyCopiable<T>;
@@ -238,9 +306,9 @@ namespace DataTypes{
         UnsignedInt,
         UnsignedBigInt,
         UnsignedHugeInt,
-        Decimal,
         Float,
         Double,
+        Decimal,
         DateTime,
         Guid,
         JsonBinary,
@@ -248,13 +316,16 @@ namespace DataTypes{
     >;
 
     static_assert(DataTypeStorage::SIZE == DATATYPE_COUNT, "DataTypeStorage needs exactly one entry per DataType");
+    static_assert(std::is_same_v<DataTypeStorage::At<static_cast<std::size_t>(DataType::Float)>, Float>);
+    static_assert(std::is_same_v<DataTypeStorage::At<static_cast<std::size_t>(DataType::Double)>, Double>);
+    static_assert(std::is_same_v<DataTypeStorage::At<static_cast<std::size_t>(DataType::Decimal)>, Decimal>);
 
     template<DataType TYPE>
     using StorageOf = DataTypeStorage::At<static_cast<std::size_t>(TYPE)>;
 
     template <typename T>
     constexpr static DataType DataTypeOf(){
-        if constexpr (std::is_same_v<T, DataTypes::String>)
+        if constexpr (std::is_same_v<T, String>)
             return DataType::String;
         else{
             constexpr auto index = DataTypeStorage::IndexOf<T>();

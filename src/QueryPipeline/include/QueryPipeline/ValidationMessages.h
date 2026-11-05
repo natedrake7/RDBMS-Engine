@@ -1,5 +1,5 @@
 #pragma once
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <Systemic/DataTypes/DataTypes.h>
 #include <Systemic/DataTypes/DataTypes.StaticData.h>
 
@@ -54,11 +54,11 @@ namespace QueryPipeline::Messages{
     inline constexpr DataTypes::StringView USE_DATABASE_FAIL = "Failed to use Database";
 
     inline DataTypes::String INSERT_ROWS_FROM_CHILD_QUERY(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = Converter::IntToStr<Int>(count, allocator);
+        const auto parsedInt = IntegerConverter::IntToStr<Int>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from child query");
     }
     inline DataTypes::String INSERT_ROWS_FROM_FIELDS(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = Converter::IntToStr<Int>(count, allocator);
+        const auto parsedInt = IntegerConverter::IntToStr<Int>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from fields");
     }
 
@@ -159,7 +159,7 @@ namespace QueryPipeline::Messages{
         const DataTypes::StringView& columnType,
         const Int valueSize
     ){
-        const auto valueSizeStr = Converter::IntToStr<Int>(valueSize, allocator);
+        const auto valueSizeStr = IntegerConverter::IntToStr<Int>(valueSize, allocator);
         return DataTypes::String::Concat(allocator, "Cannot alter column: ", columnName, "of type: ", columnType, " to new size: ", valueSizeStr);
     }
 
@@ -314,7 +314,7 @@ namespace QueryPipeline::Messages{
         const ::Memory::IAllocator* allocator,
         const Int index
     ){
-        const auto parsedInt = Converter::IntToStr<Int>(index, allocator);
+        const auto parsedInt = IntegerConverter::IntToStr<Int>(index, allocator);
         return DataTypes::String::Concat(
             allocator, "Invalid value: ", parsedInt, " specified in order by clause. Must be greater than or equal to 1 and smaller than the projection count"
         );

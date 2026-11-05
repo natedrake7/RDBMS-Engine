@@ -2,10 +2,12 @@
 
 #include <CoreEngine/Evaluators/Expression.h>
 #include <CoreEngine/Evaluators/Expressions.Additional.h>
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <Systemic/DataTypes/JsonBinary.h>
 #include <Systemic/DataTypes/Value.h>
 #include <Systemic/Memory/IAllocator.h>
+
+#include "Systemic/Coercions/Coercions.h"
 
 namespace QueryPipeline::Parsing{
 
@@ -270,8 +272,11 @@ namespace QueryPipeline::Parsing{
             return this->ParsePostfix();
 
         //Fold the sign into the literal where we can.
-        if (this->Check(TokenType::IntegerLiteral) || this->Check(TokenType::DecimalLiteral))
-            return this->ParseNumericLiteral(true);
+        if (
+            this->Check(TokenType::IntegerLiteral)
+            || this->Check(TokenType::DecimalLiteral)
+            || this->Check(TokenType::FloatLiteral)
+        ) return this->ParseNumericLiteral(true);
 
         auto* operand = this->ParseUnary();
         if (operand == nullptr)
@@ -324,6 +329,7 @@ namespace QueryPipeline::Parsing{
 
             case TokenType::IntegerLiteral:
             case TokenType::DecimalLiteral:
+            case TokenType::FloatLiteral:
                 return this->ParseNumericLiteral(false);
 
             case TokenType::Variable:
@@ -393,37 +399,67 @@ namespace QueryPipeline::Parsing{
     }
 
     bool SqlParser::MakeNumericValue(const Token& token, const bool negated, Value& value) const{
-        if (token.type == TokenType::IntegerLiteral){
-            if (!Converter::TryStrToInt<BigInt>(token.View())){
-                this->Fail("integer literal is out of range");
+        switch (token.type){
+        case TokenType::IntegerLiteral:
+            return this->MakeIntegerValue(token, negated, value);
+        case TokenType::FloatLiteral:
+            return this->MakeFloatValue(token, negated, value);
+        case TokenType::DecimalLiteral:
+            return this->MakeDecimalValue(token, negated, value);
+        default:
+            return this->Fail("SqlParser::MakeNumericValue: expected a literal");
+        }
+    }
+
+    bool SqlParser::MakeIntegerValue(const Token& token, bool negated, Value& value) const{
+        constexpr auto UNSIGNED_HUGE_MAX = ~static_cast<UnsignedHugeInt>(0);
+        constexpr auto HUGE_MAX = UNSIGNED_HUGE_MAX >> 1;
+        constexpr auto BIG_MAX = static_cast<UnsignedHugeInt>(~static_cast<UnsignedBigInt>(0) >> 1);
+
+        UnsignedHugeInt magnitude = 0;
+        for (Int i = 0; i < token._length; i++){
+            const auto digit = static_cast<UnsignedHugeInt>(token._text[i] - '0');
+            if (magnitude > (UNSIGNED_HUGE_MAX - digit) / 10){
+                (void)this->Fail("integer literal is out of range");
                 return false;
             }
 
-            const auto number = Converter::StrToInt<BigInt>(token.View());
-            value = Value(negated ? -number : number, 0);
+            magnitude = magnitude * 10 + digit;
+        }
+
+        if (negated){
+            if (magnitude > HUGE_MAX + 1){
+                (void)this->Fail("integer literal is out of range");
+                return false;
+            }
+
+            const auto number = static_cast<HugeInt>(0 - magnitude);
+            if (magnitude <= BIG_MAX + 1)
+                value = Value(static_cast<BigInt>(number), 0);
+            else
+                value = Value(number, 0);
 
             return true;
         }
 
-        if (token._length + 1 > MAX_DECIMAL_LITERAL_LENGTH){
-            this->Fail("decimal literal is too long");
-            return false;
-        }
+        DataTypes::Coercions::DeduceIntegerType()
 
-        //Decimal has no unary minus, so the sign is prepended before it is parsed.
-        char buffer[MAX_DECIMAL_LITERAL_LENGTH];
-        Int length = 0;
+        if (magnitude <= BIG_MAX)
+            value = Value(static_cast<BigInt>(magnitude), 0);
+        else if (magnitude <= HUGE_MAX)
+            value = Value(static_cast<HugeInt>(magnitude), 0);
+        else
+            value = Value(magnitude, 0);
 
-        if (negated)
-            buffer[length++] = '-';
+        return true;(void)
+    }
 
-        std::memcpy(buffer + length, token._text, token._length);
-        length += token._length;
+    bool SqlParser::MakeDecimalValue(const Token& token, bool negated, Value& value) const
+    {
+    }
 
-        const auto decimal = DataTypes::Decimal(DataTypes::StringView(buffer, length));
-        value = Value(decimal, 0);
-
-        return true;
+    bool SqlParser::MakeFloatValue(const Token& token, bool negated, Value& value) const
+    {
     }
 
     Expressions::Expression* SqlParser::ParseNumericLiteral(const bool negated){
@@ -433,7 +469,7 @@ namespace QueryPipeline::Parsing{
         if (!this->MakeNumericValue(token, negated, value))
             return nullptr;
 
-        return this->_allocator->Allocate<Expressions::ConstantExpression>(std::move(value));
+        return this->_allocator->Allocate<Expressions::ConstantExpression>(value);
     }
 
     Expressions::Expression* SqlParser::ParseVariable(){
@@ -515,14 +551,14 @@ namespace QueryPipeline::Parsing{
         if (!this->Expect(TokenType::As))
             return nullptr;
 
-        ParsedDataType target;
-        if (!this->ParseDataType(target))
+        DataTypes::TypeInfo typeInfo;
+        if (!this->ParseDataType(typeInfo))
             return nullptr;
 
         if (!this->Expect(TokenType::RightParen))
             return nullptr;
 
-        return this->_allocator->Allocate<Expressions::CastExpression>(child, target.type, isTryCast);
+        return this->_allocator->Allocate<Expressions::CastExpression>(child, typeInfo, isTryCast);
     }
 
     Expressions::Expression* SqlParser::ParseSwitch(){
@@ -643,14 +679,14 @@ namespace QueryPipeline::Parsing{
         return index < TOKEN_DATA_TYPES.size() ? TOKEN_DATA_TYPES[index] : std::nullopt;
     }
 
-    bool SqlParser::ParseDataType(ParsedDataType& result){
+    bool SqlParser::ParseDataType(DataTypes::TypeInfo& typeInfo){
         const auto type = SqlParser::DataTypeOfToken(this->Current().type);
         if (!type.has_value()){
             this->Fail("expected a data type");
             return false;
         }
 
-        result.type = *type;
+        typeInfo._type = *type;
         switch (*type){
             case DataType::String: {
                 this->Advance();
@@ -659,7 +695,7 @@ namespace QueryPipeline::Parsing{
                     return false;
 
                 if (this->Match(TokenType::Max))
-                    result.size = MAX_STRING_SIZE;
+                    typeInfo._maxLength = MAX_STRING_SIZE;
                 else {
                     if (!this->Check(TokenType::IntegerLiteral)){
                         this->Fail("expected a string width or MAX");
@@ -667,12 +703,12 @@ namespace QueryPipeline::Parsing{
                     }
 
                     const auto& width = this->Advance();
-                    if (!Converter::TryStrToInt<Int>(width.View())){
+                    if (!IntegerConverter::TryStrToInt<Int>(width.View())){
                         this->Fail("string width is out of range");
                         return false;
                     }
 
-                    result.size = Converter::StrToInt<Int>(width.View());
+                    typeInfo._maxLength = IntegerConverter::StrToInt<Int>(width.View());
                 }
 
                 return this->Expect(TokenType::RightParen);
@@ -689,7 +725,7 @@ namespace QueryPipeline::Parsing{
                 }
 
                 const auto& precision = this->Advance();
-                result.precision = static_cast<TinyInt>(Converter::StrToInt<Int>(precision.View()));
+                typeInfo._decimal._precision = static_cast<TinyInt>(IntegerConverter::StrToInt<Int>(precision.View()));
 
                 if (!this->Expect(TokenType::Comma))
                     return false;
@@ -700,7 +736,7 @@ namespace QueryPipeline::Parsing{
                 }
 
                 const auto& scale = this->Advance();
-                result.scale = static_cast<TinyInt>(Converter::StrToInt<Int>(scale.View()));
+                typeInfo._decimal._scale = static_cast<TinyInt>(IntegerConverter::StrToInt<Int>(scale.View()));
 
                 return this->Expect(TokenType::RightParen);
             }

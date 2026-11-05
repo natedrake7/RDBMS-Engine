@@ -2,7 +2,7 @@
 #include <QueryPipeline/Statements.h>
 
 #include <CoreEngine/Evaluators/Expression.h>
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <Systemic/DataTypes/DataTypes.StaticData.h>
 #include <Systemic/DataTypes/Value.h>
 #include <Systemic/Memory/IAllocator.h>
@@ -142,12 +142,12 @@ namespace QueryPipeline::Parsing{
         }
 
         const auto& count = this->Advance();
-        if (!Converter::TryStrToInt<BigInt>(count.View())){
+        if (!IntegerConverter::TryStrToInt<BigInt>(count.View())){
             this->Fail("the TOP row count is out of range");
             return false;
         }
 
-        top = Converter::StrToInt<BigInt>(count.View());
+        top = IntegerConverter::StrToInt<BigInt>(count.View());
 
         return !parenthesised || this->Expect(TokenType::RightParen);
     }
@@ -478,7 +478,7 @@ namespace QueryPipeline::Parsing{
         if (!this->ParseColumnName(column->name))
             return nullptr;
 
-        if (!this->ParseColumnType(column->type))
+        if (!this->ParseDataType(column->_typeInfo))
             return nullptr;
 
         if (this->Match(TokenType::Primary)){
@@ -528,18 +528,18 @@ namespace QueryPipeline::Parsing{
 
         auto* identity = this->_allocator->Allocate<Statements::Identity>();
 
-        if (!this->Check(TokenType::IntegerLiteral) || !Converter::TryStrToInt<SmallInt>(this->Current().View()))
+        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<SmallInt>(this->Current().View()))
             return this->Fail("expected an identity seed");
 
-        identity->seed = Converter::StrToInt<SmallInt>(this->Advance().View());
+        identity->seed = IntegerConverter::StrToInt<SmallInt>(this->Advance().View());
 
         if (!this->Expect(TokenType::Comma))
             return nullptr;
 
-        if (!this->Check(TokenType::IntegerLiteral) || !Converter::TryStrToInt<SmallInt>(this->Current().View()))
+        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<SmallInt>(this->Current().View()))
             return this->Fail("expected an identity increment");
 
-        identity->incrementFactor = Converter::StrToInt<SmallInt>(this->Advance().View());
+        identity->incrementFactor = IntegerConverter::StrToInt<SmallInt>(this->Advance().View());
         identity->cacheBlock = Constants::DEFAULT_IDENTITY_CACHE_BLOCK;
 
         return this->Expect(TokenType::RightParen) ? identity : nullptr;
@@ -728,7 +728,7 @@ namespace QueryPipeline::Parsing{
         if (action == TokenType::Alter){
             auto* alterColumn = this->_allocator->Allocate<Statements::AlterColumn>();
 
-            if (!this->ParseColumnName(alterColumn->name) || !this->ParseColumnType(alterColumn->type))
+            if (!this->ParseColumnName(alterColumn->name) || !this->ParseDataType(alterColumn->type))
                 return nullptr;
 
             statement->column.alterColumn = alterColumn;
@@ -762,18 +762,16 @@ namespace QueryPipeline::Parsing{
 
         auto name = this->MakeString(this->Advance());
 
-        auto declaredType = DataType::Null;
-        bool hasDeclaredType = false;
+        DataTypes::TypeInfo declaredTypeInfo;
+        auto hasDeclaredType = false;
 
         if (SqlParser::DataTypeOfToken(this->Current().type)){
-            ParsedDataType parsed;
-            if (!this->ParseDataType(parsed))
+            if (!this->ParseDataType(declaredTypeInfo))
                 return nullptr;
 
-            if (parsed.type == DataType::Json)
+            if (declaredTypeInfo._type == DataType::Json)
                 return this->Fail("json is not a valid variable type");
 
-            declaredType = parsed.type;
             hasDeclaredType = true;
         }
 
@@ -796,7 +794,10 @@ namespace QueryPipeline::Parsing{
             statement->variable.SetValue(nullValue);
             statement->variable.SetName(name);
             statement->expression = expression;
-            statement->type = hasDeclaredType ? declaredType : statement->variable.GetType();
+
+            statement->_typeInfo = hasDeclaredType
+                ? declaredTypeInfo
+                : statement->variable.GetType();
 
             return statement;
         }
@@ -806,7 +807,10 @@ namespace QueryPipeline::Parsing{
         statement->variable.SetValue(nullValue);
         statement->variable.SetName(name);
         statement->expression = expression;
-        statement->type = hasDeclaredType ? declaredType : statement->variable.GetType();
+
+        statement->_typeInfo = hasDeclaredType
+            ? declaredTypeInfo
+            : statement->variable.GetType();
 
         return statement;
     }
@@ -840,23 +844,6 @@ namespace QueryPipeline::Parsing{
         }
 
         return this->ParseIdentifier(column.name);
-    }
-
-    bool SqlParser::ParseColumnType(Statements::ColumnType& columnType){
-        ParsedDataType parsed;
-        if (!this->ParseDataType(parsed))
-            return false;
-
-        auto name = DataTypes::String(Reflection::EnumName<DataType>(parsed.type), this->_allocator);
-
-        if (parsed.type == DataType::Decimal)
-            columnType = Statements::ColumnType(name, Statements::DecimalType(parsed.precision, parsed.scale));
-        else if (parsed.type == DataType::String)
-            columnType = Statements::ColumnType(name, parsed.size);
-        else
-            columnType = Statements::ColumnType(name);
-
-        return true;
     }
 
     bool SqlParser::ParseIdentifier(DataTypes::String& identifier){

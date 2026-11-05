@@ -5,7 +5,7 @@
 #include <vector>
 #include <sstream>
 
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <Client/Decoding/ResultDecoder.h>
 #include <Systemic/Network/PayloadReader.h>
 #include <Systemic/Network/PayloadWriter.h>
@@ -131,7 +131,7 @@ namespace Client {
             }
 
             if (parameter == "-P") {
-                this->_parameters._port = Converter::StrToInt<Int>(connectionString[++i]);
+                this->_parameters._port = IntegerConverter::StrToInt<Int>(connectionString[++i]);
                 continue;
             }
             if (parameter == "-h") {

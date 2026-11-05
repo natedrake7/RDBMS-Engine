@@ -160,20 +160,43 @@ namespace QueryPipeline::Parsing{
     }
 
     Token Lexer::ScanNumber(const char* tokenStart){
-        while (!this->AtEnd() && Lexer::IsDigit(*this->_current))
+        auto type = TokenType::IntegerLiteral;
+
+        while (Lexer::IsDigit(this->Peek()))
             ++this->_current;
 
         //A '.' only continues the number when a digit follows, so both "t1.col" and a
         //trailing "1." keep the dot as a token of its own.
-        if (this->Peek() != '.' || !Lexer::IsDigit(this->Peek(1)))
-            return this->Emit(TokenType::IntegerLiteral, tokenStart, static_cast<Int>(this->_current - tokenStart));
+        if (this->Peek() == '.' || !Lexer::IsDigit(this->Peek(1))){
+            type = TokenType::DecimalLiteral;
+            ++this->_current; //consume '.'
 
-        ++this->_current; //consume '.'
+            while (Lexer::IsDigit(this->Peek()))
+                ++this->_current;
+        }
 
-        while (!this->AtEnd() && Lexer::IsDigit(*this->_current))
-            ++this->_current;
 
-        return this->Emit(TokenType::DecimalLiteral, tokenStart, static_cast<Int>(this->_current - tokenStart));
+        if (this->Peek() == 'e' || this->Peek() == 'E'){
+            const auto signLength = this->Peek(1) == '+' || this->Peek(1) == '-';
+
+            if (Lexer::IsDigit(this->Peek(1 + signLength))){
+                type = TokenType::FloatLiteral;
+                this->_current += 1 + signLength;
+
+                while (Lexer::IsDigit(this->Peek()))
+                    ++this->_current;
+            }
+        }
+
+        const auto length = static_cast<Int>(this->_current - tokenStart);
+
+        //"12abc" is a typo, not the number 12 with the alias abc.
+        if (Lexer::IsIdentifierStart(this->Peek())){
+            static constexpr auto INVALID_NUMBER_MESSAGE = DataTypes::StringView("invalid number provided");
+            return this->Fail(INVALID_NUMBER_MESSAGE, tokenStart, length);
+        }
+
+        return this->Emit(type, tokenStart, length);
     }
 
     Token Lexer::ScanString(const TokenType type){

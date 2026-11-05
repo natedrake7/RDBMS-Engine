@@ -11,7 +11,7 @@
 #include <Systemic/DataTypes/StringValue.h>
 #include <Systemic/DataTypes/StringView.h>
 
-class Converter {
+class IntegerConverter {
     template<typename T>
     inline static constexpr size_t ITOS_BUFFER_SIZE =
         std::numeric_limits<T>::digits10 + 4;
@@ -92,44 +92,31 @@ public:
         std::unreachable();
     }
 
-    template<DataTypes::Primitive T>
-    static bool TryDownCast(const BigInt input){
-        static_assert(std::is_integral_v<T>, "T must be integral type");
-        return !(input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max());
+    template<DataTypes::IsInteger TInput, DataTypes::IsInteger TOutput>
+    inline static constexpr bool CanDownCast(const TInput input){
+        return !(
+            input < std::numeric_limits<TOutput>::min()
+            || input > std::numeric_limits<TOutput>::max()
+        );
     }
 
-    template<DataTypes::Primitive T>
-    static bool TryDownCast(const BigInt input, T& output){
-        static_assert(std::is_integral_v<T>, "T must be integral type");
-
-        if (!(input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max())) {
-            output = static_cast<T>(input);
+    template<DataTypes::IsInteger TInput, DataTypes::IsInteger TOutput>
+    inline static constexpr bool TryDownCast(const TInput input, TOutput& output){
+        if (!(input < std::numeric_limits<TOutput>::min() || input > std::numeric_limits<TOutput>::max())) {
+            output = static_cast<TOutput>(input);
             return true;
         }
 
         return false;
     }
 
-    template<DataTypes::Primitive T>
-    static T DownCast(const BigInt input){
-        static_assert(std::is_integral_v<T>, "T must be integral type");
-
-        if (input < std::numeric_limits<T>::min() || input > std::numeric_limits<T>::max())
-            throw std::out_of_range("Converter::DownCast: Value is out of range of the target type.");
-
-        return static_cast<T>(input);
-    }
-
-    static DataTypes::Decimal Stod(const DataTypes::StringView& input) {
-        return DataTypes::Decimal(input);
-    }
-
-    // True when the Decimal's encoded payload fits within `size` bytes (column width check).
-    static bool DecimalFitsInSize(
-        const DataTypes::Decimal &input,
-        const UnsignedInt size
-    ){
-        return input.Size() <= size;
+    template<DataTypes::IsInteger TInput, DataTypes::IsInteger TOutput>
+    inline static constexpr TOutput DownCast(const TInput input){
+        assert(
+            input < std::numeric_limits<TOutput>::min() && input > std::numeric_limits<TOutput>::max()
+            && "Converter::DownCast: Value is out of range of the target type."
+        );
+        return static_cast<TOutput>(input);
     }
 
     template<DataTypes::Primitive T>
@@ -166,9 +153,5 @@ public:
             throw std::runtime_error("Integer conversion failed");
 
         return DataTypes::StringValue::Create(allocator, buffer, static_cast<data_size_t>(end - buffer));
-    }
-
-    static DataTypes::String DecimalToStr(const DataTypes::Decimal& input, const ::Memory::IAllocator* allocator){
-        return input.ToString(allocator);
     }
 };

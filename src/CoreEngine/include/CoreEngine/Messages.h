@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 
 namespace CoreEngine::Messages{
     static constexpr auto NO_ROWS_TO_INSERT = DataTypes::StringView("No rows to insert");
@@ -15,7 +15,7 @@ namespace CoreEngine::Messages{
     static constexpr DataTypes::StringView TABLE_LAYOUT_TOO_LARGE =  "Row cannot fit in a page: reduce key or fixed-size columns";
 
     static DataTypes::String NUMBER_OF_ROWS_AFFECTED(const ::Memory::IAllocator* allocator, const Int numberOfRows){
-        const auto numberOfRowsStr = Converter::IntToStr<Int>(numberOfRows, allocator);
+        const auto numberOfRowsStr = IntegerConverter::IntToStr<Int>(numberOfRows, allocator);
         return DataTypes::String::Concat(allocator, "Number of rows affected: ", numberOfRowsStr);
     }
 }

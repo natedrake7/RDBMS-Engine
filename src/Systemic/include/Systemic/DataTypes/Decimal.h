@@ -1,6 +1,4 @@
 ﻿#pragma once
-
-#include <Systemic/Comparators.h>
 #include <Systemic/DataTypes/String.h>
 #include <Systemic/DataStructures/StaticArray.h>
 #include <Systemic/Functions/MathFunctions.h>
@@ -32,7 +30,7 @@ namespace DataTypes {
         UnsignedTinyInt _precision;
         UnsignedTinyInt _scale;
 
-        constexpr explicit DecimalType()
+        constexpr DecimalType()
             : _precision(0), _scale(0){}
         constexpr explicit DecimalType(const Int precision, const Int scale)
             : _precision(static_cast<UnsignedTinyInt>(precision)), _scale(static_cast<UnsignedTinyInt>(scale)){}
@@ -138,12 +136,12 @@ namespace DataTypes {
             }
 
             [[nodiscard]] static constexpr Wide Multiply(const UnsignedHugeInt left, const UnsignedHugeInt right){
-                const auto leftLimbs[2] = {
+                const UnsignedBigInt leftLimbs[2] = {
                     static_cast<UnsignedBigInt>(left),
                     static_cast<UnsignedBigInt>(left >> 64)
                 };
 
-                const auto rightLimbs[2] = {
+                const UnsignedBigInt rightLimbs[2] = {
                     static_cast<UnsignedBigInt>(right),
                     static_cast<UnsignedBigInt>(right >> 64)
                 };
@@ -317,6 +315,10 @@ namespace DataTypes {
         constexpr explicit Decimal()
             : _mantissa(0){};
 
+        static constexpr void ThrowIfFailed(const DecimalStatus status){
+            Decimal::Check(status);
+        }
+
         [[nodiscard]] static constexpr Decimal FromMantissa(const HugeInt mantissa){
             return Decimal(mantissa);
         }
@@ -473,10 +475,9 @@ namespace DataTypes {
                 quotient = wideQuotient.LowHugeInt();
                 remainder.ShiftLeftOne();
                 const auto order = remainder <=> divisor;
-                constexpr std::__cmp_cat::__literal_zero zeroOrder(nullptr);
                 roundUp = mode == DecimalRoundingMode::HalfUp
-                    ? order >= zeroOrder
-                    : mode == DecimalRoundingMode::HalfEven && (order > zeroOrder || (order == zeroOrder && (quotient & 1) != 0));
+                    ? order >= nullptr
+                    : mode == DecimalRoundingMode::HalfEven && (order > nullptr || (order == nullptr && (quotient & 1) != 0));
             }
 
             if (quotient > DecimalDetail::MAX_MAGNITUDE)
@@ -554,6 +555,30 @@ namespace DataTypes {
 
         [[nodiscard]] static constexpr Decimal ScaleUpUnchecked(const Decimal& value, const Int digits){
             return Decimal::FromMantissa(value.Mantissa() * static_cast<HugeInt>(DecimalDetail::POW10[digits]));
+        }
+
+        [[nodiscard]] static constexpr std::strong_ordering Compare(
+            const Decimal& left,
+            const Int leftScale,
+            const Decimal& right,
+            const Int rightScale
+        ){
+            if (leftScale == rightScale)
+                return left <=> right;
+
+            if (left.IsNegative() != right.IsNegative())
+                return left.IsNegative() ? std::strong_ordering::less : std::strong_ordering::greater;
+
+            auto leftWide = DecimalDetail::Wide::From(left.Magnitude());
+            auto rightWide = DecimalDetail::Wide::From(right.Magnitude());
+            const auto scale = Math::Max(leftScale, rightScale);
+            (void)leftWide.MultiplyPow10(scale - leftScale);       // at most 76 digits: always fits 256 bits
+            (void)rightWide.MultiplyPow10(scale - rightScale);
+
+            const auto order = leftWide <=> rightWide;
+            return left.IsNegative()
+                ? nullptr <=> order
+                : order;
         }
 
         template<IsInteger T>
@@ -827,16 +852,16 @@ struct std::numeric_limits<DataTypes::Decimal> {
     static constexpr bool is_specialized = true;
 
     static constexpr DataTypes::Decimal min() noexcept {
-        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(Math::MinLimit<HugeInt>());
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(-static_cast<HugeInt>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
         return VALUE;
     }
 
     static constexpr DataTypes::Decimal max() noexcept {
-        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(Math::MaxLimit<HugeInt>());
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(static_cast<HugeInt>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
         return VALUE;
     }
 
-    static constexpr int digits10 = 34;  // max base-10 precision
+    static constexpr int digits10 = 38;  // max base-10 precision
     static constexpr int radix = 10;     // base of your decimal
 };
 

@@ -68,7 +68,7 @@ namespace DataTypes{
     }
 
     inline static constexpr bool IsVariableLengthType(const DataType type){
-        return type == DataType::String || type == DataType::Json || type == DataType::Decimal;
+        return type == DataType::String || type == DataType::Json;
     }
 
     inline static constexpr block_size_t FixedColumnSize(const DataType type){
@@ -130,7 +130,7 @@ static constexpr auto SQL_TYPES_NAMES = []<std::size_t... I>(std::index_sequence
 static constexpr DataType JSON_TYPES_NAMES[]{
     DataType::Null, //NULL
     DataType::Bool,
-    DataType::Decimal,
+    DataType::Double,
     DataType::String,
     DataType::String, //Array
     DataType::String, //Object

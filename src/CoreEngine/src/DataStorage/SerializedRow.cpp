@@ -1,7 +1,7 @@
 #include <CoreEngine/DataStorage/Row/SerializedRow.h>
 
 #include <Systemic/DataTypes/Value.h>
-#include <Systemic/Converter.h>
+#include <Systemic/IntegerConverter.h>
 #include <CoreEngine/Contexts/ExecutionContext.h>
 #include <CoreEngine/DataStorage/Row/Row.h>
 #include <CoreEngine/Pages/Additional/RawRowReference.h>

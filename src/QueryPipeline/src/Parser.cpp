@@ -133,7 +133,7 @@ namespace QueryPipeline{
 
         Parsing::Diagnostic diagnostic;
         DataStructures::PolymorphicArray<Parsing::Token> tokens(allocator);
-        const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView(query), tokens, diagnostic);
+        const auto tokenizeStatus = Parsing::Tokenize(DataTypes::StringView::ViewOf(query), tokens, diagnostic);
         if (!tokenizeStatus){
             context.status = Errors::ParserStatus(true, diagnostic.message, allocator);
             return context;
@@ -157,7 +157,7 @@ namespace QueryPipeline{
         return context;
     }
 
-    Cursor* Parser::CompileNext(QueryContext& context, session_id_t sessionId){
+    Cursor* Parser::CompileNext(QueryContext& context, const session_id_t sessionId){
         static const auto& server = Network::Server::Get();
         static auto& transactionManager = CoreEngine::TransactionManager::Get();
 

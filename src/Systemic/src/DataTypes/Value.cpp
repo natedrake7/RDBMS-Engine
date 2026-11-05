@@ -140,9 +140,6 @@ Value::Value(
     this->_isLob = true;
 }
 
-Value::Value(const column_index_t index)
-    : _columnIndex(index) {}
-
 Value::Value(
     const std::string& data,
     const Memory::IAllocator* allocator,
@@ -155,7 +152,7 @@ Value::Value(
     this->_size = data.size();
 
     this->_columnIndex = index;
-    this->_type = DataType::String;
+    this->_typeInfo._type = DataType::String;
     this->_isNull = false;
 }
 
@@ -169,7 +166,7 @@ Value::Value(
     this->_data._external = buffer;
     this->_size = data.Size();
     this->_columnIndex = index;
-    this->_type = DataType::String;
+    this->_typeInfo._type = DataType::String;
     this->_isNull = false;
 }
 
@@ -183,29 +180,9 @@ Value::Value(
     this->_data._external = buffer;
     this->_size = data.Size();
     this->_columnIndex = index;
-    this->_type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
+    this->_typeInfo._type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
     this->_isNull = false;
 }
-
-// Value Value::FromMove(
-//     object_t* data,
-//     const Int size,
-//     const DataType type,
-//     const Memory::IAllocator* allocator,
-//     const column_index_t index
-// ){
-//     return Value(data, size, type, allocator, index);
-// }
-//
-// Value Value::FromExternalStorage(
-//     const object_t* data,
-//     const Int size,
-//     const DataType type,
-//     const Memory::IAllocator* allocator,
-//     const column_index_t index
-// ){
-//     return Value(data, size, type, allocator, index);
-// }
 
 Value Value::FromExternalStorage(
     const object_t* data,
@@ -237,27 +214,6 @@ Value Value::Null(const column_index_t columnIndex){
     return Value(columnIndex);
 }
 
-void Value::SetColumnIndex(const column_index_t otherIndex) { this->_columnIndex = otherIndex; }
-
-void Value::SetType(const DataType otherType){ this->_type = otherType; }
-
-void Value::SetNull(){
-    this->_isNull = true;
-    this->_size = 0;
-}
-
-bool Value::IsInline() const{
-    return Value::IsInline(this->_type);
-}
-
-data_size_t Value::Size() const{ return this->_size; }
-
-const object_t* Value::Data() const{
-    return this->IsInline()
-        ? reinterpret_cast<const object_t*>(&this->_data)
-        : this->_data._external;
-}
-
 bool Value::AsBool() const {
     return DataTypes::Coercions::ToBool(*this);
 }
@@ -283,7 +239,7 @@ DataTypes::String Value::AsString(const ::Memory::IAllocator* allocator) const {
 }
 
 std::string Value::AsStdString() const{
-    return std::string(reinterpret_cast<const char*>(this->Data()), this->_size);
+    return {reinterpret_cast<const char*>(this->Data()), this->_size};
 }
 
 DataTypes::StringView Value::AsStringView() const{
@@ -310,11 +266,6 @@ DataTypes::JsonBinary Value::AsJson(const ::Memory::IAllocator* allocator) const
 
 DataTypes::LobReference Value::AsLobReference() const{
     return this->_data._lob;
-}
-
-bool Value::IsIntegral() const{
-    return this->_type >= DataType::TinyInt
-        && this->_type <= DataType::BigInt;
 }
 
 bool Value::ParseAsBoolFromString() const{

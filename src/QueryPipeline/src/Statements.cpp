@@ -62,7 +62,7 @@ namespace QueryPipeline::Statements {
     }
 
    DeclareVariableStatement::DeclareVariableStatement()
-       : expression(nullptr), type(DataType::Null){}
+       : expression(nullptr){}
 
     Errors::CompilationStatus DeclareVariableStatement::CompileDerived(QueryContext& context) {
         const auto variableType = this->variable.GetType();
@@ -104,7 +104,7 @@ namespace QueryPipeline::Statements {
     }
 
     SetVariableStatement::SetVariableStatement()
-        : expression(nullptr), type(DataType::Null){}
+        : expression(nullptr), _typeInfo(DataType::Null){}
 
     Errors::CompilationStatus SetVariableStatement::CompileDerived(QueryContext& context) {
         const auto datatype = this->variable.GetType();
@@ -296,40 +296,6 @@ namespace QueryPipeline::Statements {
         );
     }
 
-    ColumnType::ColumnType(){
-        this->size = 0;
-    }
-
-    ColumnType::ColumnType(DataTypes::String&& name)
-        : name(std::move(name)), size(0){}
-
-    ColumnType::ColumnType(const DataTypes::String& name){
-        this->name = name;
-        this->size = 0;
-    }
-
-    ColumnType::ColumnType(const DataTypes::String& name, const Int size){
-        this->name = name;
-        this->size = size;
-    }
-
-    ColumnType::ColumnType(DataTypes::String& name, const Int size){
-        this->name = std::move(name);
-        this->size = size;
-    }
-
-    ColumnType::ColumnType(const DataTypes::String& name, const DecimalType decimal){
-        this->size = 0;
-        this->name = name;
-        this->decimal = decimal;
-    }
-
-    ColumnType::ColumnType(DataTypes::String& name, const DecimalType decimal){
-        this->name = std::move(name);
-        this->decimal = decimal;
-        this->size = 0;
-    }
-
     Errors::CompilationStatus Identity::Validate(const QueryContext& context) const{
         if (this->incrementFactor <= 0)
             return Errors::CompilationStatus::Error(
@@ -494,17 +460,17 @@ namespace QueryPipeline::Statements {
         UnsignedSmallInt columnSize;
         std::ostringstream os;
 
-        column->type.name.ToLowerInPlace();
-        if (!ColumnSizesByName::TryGetValue(DataTypes::StringView::ViewOf(column->type.name), columnSize)) {
+        column->type._name.ToLowerInPlace();
+        if (!ColumnSizesByName::TryGetValue(DataTypes::StringView::ViewOf(column->type._name), columnSize)) {
             return Errors::CompilationStatus::Error(
-                Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type.name)
+                Messages::DATATYPE_DOES_NOT_EXIST(context.GetAllocator(), column->type._name)
             );
         }
 
         if (columnSize != 0)
             column->type.size = columnSize;
 
-        const auto dataType = ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type.name));
+        const auto dataType = ColumnTypesByName::Get(DataTypes::StringView::ViewOf(column->type._name));
 
         if (dataType == DataType::Decimal) {
             if (!column->type.decimal.Validate()) {
@@ -1060,7 +1026,7 @@ namespace QueryPipeline::Statements {
 
             if (constantExpr->value.IsNull()) {
                 if (columnHeader.isNullable){
-                    constantExpr->value.SetType(columnType);
+                    constantExpr->value.SetTypeInfo(columnType);
                     return Errors::CompilationStatus::Ok();
                 }
 
@@ -1516,13 +1482,13 @@ namespace QueryPipeline::Statements {
         newColumn->index = headers.size();
 
         DataType columnType;
-        const auto columnTypeToLower = newColumn->type.name.ToLower();
+        const auto columnTypeToLower = newColumn->type._name.ToLower();
         const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         if (!ColumnTypesByName::TryGetValue(columnTypeView, columnType)) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
-                    newColumn->type.name,
+                    newColumn->type._name,
                     columnTypeView
                 )
             );
@@ -1570,14 +1536,14 @@ namespace QueryPipeline::Statements {
             );
         }
 
-        const auto columnTypeToLower = alterColumn->type.name.ToLower();
+        const auto columnTypeToLower = alterColumn->type._name.ToLower();
         const auto columnTypeView = DataTypes::StringView::ViewOf(columnTypeToLower);
         DataType columnType;
         if (!ColumnTypesByName::TryGetValue(columnTypeView, columnType)) {
             return Errors::CompilationStatus::Error(
                 Messages::INVALID_COLUMN_TYPE_SPECIFIED(
                     context.GetAllocator(),
-                    alterColumn->type.name,
+                    alterColumn->type._name,
                     columnTypeView
                 )
             );
@@ -1598,7 +1564,7 @@ namespace QueryPipeline::Statements {
                     context.GetAllocator(),
                     alterColumn->name.name,
                     SQL_TYPES_NAMES[header.dataType],
-                    DataTypes::StringView::ViewOf(alterColumn->type.name)
+                    DataTypes::StringView::ViewOf(alterColumn->type._name)
                 )
             );
         }
@@ -2544,7 +2510,7 @@ namespace QueryPipeline::Statements {
 
     Expressions::Expression* TypedNull(const QueryContext& context, const DataType type){
         auto value = Value::Null();
-        value.SetType(type);
+        value.SetTypeInfo(type);
         return context.GetAllocator()->Allocate<Expressions::ConstantExpression>(value);
     }
 

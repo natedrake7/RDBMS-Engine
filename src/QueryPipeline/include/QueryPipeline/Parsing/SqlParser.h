@@ -4,6 +4,11 @@
 #include <Systemic/DataStructures/PolymorphicArray.h>
 #include <Systemic/DataTypes/DataTypes.h>
 
+namespace DataTypes
+{
+    struct TypeInfo;
+}
+
 class Value;
 
 namespace Memory{
@@ -32,22 +37,6 @@ namespace QueryPipeline::Statements{
 }
 
 namespace QueryPipeline::Parsing{
-
-    /**
-     * A parsed type reference. CAST only cares about @c type, while CREATE TABLE also
-     * needs the width of STRING(n) and the precision/scale of DECIMAL(p,s).
-     */
-    struct ParsedDataType {
-        DataType type;
-
-        Int size;        //STRING(n); MAX_STRING_SIZE for STRING(MAX), 0 when not a string
-        TinyInt precision;
-        TinyInt scale;
-
-        ParsedDataType()
-            : type(DataType::Null), size(0), precision(0), scale(0){}
-    };
-
     static constexpr Int MAX_STRING_SIZE = -1;
 
     /**
@@ -106,6 +95,9 @@ namespace QueryPipeline::Parsing{
 
         //Shared by expression literals and by DEFAULT clauses.
         [[nodiscard]] bool MakeNumericValue(const Token& token, bool negated, Value& value) const;
+        [[nodiscard]] bool MakeIntegerValue(const Token& token, bool negated, Value& value) const;
+        [[nodiscard]] bool MakeDecimalValue(const Token& token, bool negated, Value& value) const;
+        [[nodiscard]] bool MakeFloatValue(const Token& token, bool negated, Value& value) const;
 
         [[nodiscard]] bool IsFunctionCallAhead() const;
 
@@ -145,7 +137,6 @@ namespace QueryPipeline::Parsing{
         [[nodiscard]] bool ParseWhereClause(Statements::WhereClause& where);
         [[nodiscard]] bool ParseTop(BigInt& top);
         [[nodiscard]] bool ParseColumnName(Statements::ColumnName& column);
-        [[nodiscard]] bool ParseColumnType(Statements::ColumnType& columnType);
         [[nodiscard]] bool ParseIdentifier(DataTypes::String& identifier);
         [[nodiscard]] bool ParseOptionalAlias(DataTypes::String& alias);
         [[nodiscard]] bool ParseLiteralValue(Value& value);
@@ -193,7 +184,7 @@ namespace QueryPipeline::Parsing{
              * Parses a type reference: BOOL, INT, STRING(n), STRING(MAX), DECIMAL(p,s),
              * and the rest of the dataType rule.
              */
-            [[nodiscard]] bool ParseDataType(ParsedDataType& result);
+            [[nodiscard]] bool ParseDataType(DataTypes::TypeInfo& typeInfo);
 
             /**
              * Copies a token's text into the arena. Identifiers and string literals are
