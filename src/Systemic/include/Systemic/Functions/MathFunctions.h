@@ -36,7 +36,7 @@ namespace Math{
     }
 
     template<DataTypes::IsInteger T>
-    inline constexpr Int LimitsDigits10(){
+    inline constexpr Int32_t LimitsDigits10(){
         return std::numeric_limits<T>::digits10;
     }
 }

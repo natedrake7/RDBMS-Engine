@@ -8,7 +8,7 @@
 #include "CoreEngine/Pages/LargeObjects/LobDataView.h"
 
 namespace CoreEngine::StorageTypes{
-    enum class LobReadStatus : UnsignedTinyInt{
+    enum class LobReadStatus : UInt8_t{
         Ok = 0,
         Corrupt = 1
     };
@@ -20,15 +20,15 @@ namespace CoreEngine::StorageTypes{
         Pages::LobRootView _rootView;
         Pages::LobIndexView _indexView;
 
-        UnsignedInt _indexRootSlot;
+        UInt32_t _indexRootSlot;
 
-        UnsignedBigInt _length;
-        UnsignedBigInt _position;               // for sequential Read()
-        UnsignedTinyInt _level;
+        UInt64_t _length;
+        UInt64_t _position;               // for sequential Read()
+        UInt8_t _level;
         LobReadStatus _status;
 
         [[nodiscard]] bool InitializeRootView();
-        [[nodiscard]] bool InitializeIndexView(UnsignedInt rootSlot);
+        [[nodiscard]] bool InitializeIndexView(UInt32_t rootSlot);
         [[nodiscard]] page_id_t DataPageId(const Pages::LobLayout::Position& position);
         [[nodiscard]] Pages::LobDataView FetchDataPage(const Pages::LobLayout::Position& position);
 
@@ -40,11 +40,11 @@ namespace CoreEngine::StorageTypes{
             LobReader(LobReader&&) noexcept = default;
             LobReader& operator=(LobReader&&) noexcept = default;
 
-            [[nodiscard]] UnsignedBigInt Length()const{
+            [[nodiscard]] UInt64_t Length()const{
                 return this->_length;
             }
 
-            [[nodiscard]] UnsignedBigInt Position()const{
+            [[nodiscard]] UInt64_t Position()const{
                 return this->_position;
             }
 
@@ -60,8 +60,8 @@ namespace CoreEngine::StorageTypes{
                 return this->_status;
             }
 
-            [[nodiscard]] UnsignedInt ReadAt(UnsignedBigInt offset, object_t* buffer, UnsignedInt size);
-            [[nodiscard]] UnsignedInt Read(object_t* buffer, UnsignedInt size);
+            [[nodiscard]] UInt32_t ReadAt(UInt64_t offset, object_t* buffer, UInt32_t size);
+            [[nodiscard]] UInt32_t Read(object_t* buffer, UInt32_t size);
 
     };
 }

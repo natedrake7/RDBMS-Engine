@@ -15,7 +15,7 @@ namespace QueryPipeline::Parsing{
 
     bool SqlParser::ParseStatements(
         DataStructures::PolymorphicArray<Statements::Statement*>* statements,
-        const Int databaseId
+        const Int32_t databaseId
     ){
         if (this->AtEnd()){
             this->Fail("expected a statement");
@@ -36,7 +36,7 @@ namespace QueryPipeline::Parsing{
         return true;
     }
 
-    Statements::Statement* SqlParser::ParseStatement(const Int databaseId){
+    Statements::Statement* SqlParser::ParseStatement(const Int32_t databaseId){
         Statements::Statement* statement = nullptr;
         switch (this->Current().type){
             case TokenType::Select:
@@ -131,7 +131,7 @@ namespace QueryPipeline::Parsing{
         return (statement->orderBy == nullptr) ? nullptr : statement;
     }
 
-    bool SqlParser::ParseTop(BigInt& top){
+    bool SqlParser::ParseTop(Int64_t& top){
         this->Advance(); //TOP
 
         const auto parenthesised = this->Match(TokenType::LeftParen);
@@ -142,12 +142,12 @@ namespace QueryPipeline::Parsing{
         }
 
         const auto& count = this->Advance();
-        if (!IntegerConverter::TryStrToInt<BigInt>(count.View())){
+        if (!IntegerConverter::TryStrToInt<Int64_t>(count.View())){
             this->Fail("the TOP row count is out of range");
             return false;
         }
 
-        top = IntegerConverter::StrToInt<BigInt>(count.View());
+        top = IntegerConverter::StrToInt<Int64_t>(count.View());
 
         return !parenthesised || this->Expect(TokenType::RightParen);
     }
@@ -177,7 +177,7 @@ namespace QueryPipeline::Parsing{
 
     Statements::DataSource* SqlParser::ParseTableName(const bool allowAlias){
         DataTypes::String parts[3];
-        Int count = 0;
+        Int32_t count = 0;
 
         do {
             if (count == 3)
@@ -528,18 +528,18 @@ namespace QueryPipeline::Parsing{
 
         auto* identity = this->_allocator->Allocate<Statements::Identity>();
 
-        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<SmallInt>(this->Current().View()))
+        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<Int16_t>(this->Current().View()))
             return this->Fail("expected an identity seed");
 
-        identity->seed = IntegerConverter::StrToInt<SmallInt>(this->Advance().View());
+        identity->seed = IntegerConverter::StrToInt<Int16_t>(this->Advance().View());
 
         if (!this->Expect(TokenType::Comma))
             return nullptr;
 
-        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<SmallInt>(this->Current().View()))
+        if (!this->Check(TokenType::IntegerLiteral) || !IntegerConverter::TryStrToInt<Int16_t>(this->Current().View()))
             return this->Fail("expected an identity increment");
 
-        identity->incrementFactor = IntegerConverter::StrToInt<SmallInt>(this->Advance().View());
+        identity->incrementFactor = IntegerConverter::StrToInt<Int16_t>(this->Advance().View());
         identity->cacheBlock = Constants::DEFAULT_IDENTITY_CACHE_BLOCK;
 
         return this->Expect(TokenType::RightParen) ? identity : nullptr;

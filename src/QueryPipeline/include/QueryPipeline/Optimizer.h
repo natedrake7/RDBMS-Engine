@@ -24,7 +24,7 @@ namespace QueryPipeline {
     class CompileContext;
 
     namespace PipelineConstants {
-        enum class JoinAlgorithm : UnsignedTinyInt;
+        enum class JoinAlgorithm : UInt8_t;
     }
 
     class LogicalTableScan;
@@ -38,12 +38,12 @@ namespace Expressions {
 
 namespace QueryPipeline {
     struct JoinConditionInfo {
-        Int leftSlotIndex;
-        Int leftColumnId;
+        Int32_t leftSlotIndex;
+        Int32_t leftColumnId;
         column_index_t leftColumnIndex;
 
-        Int rightSlotIndex;
-        Int rightColumnId;
+        Int32_t rightSlotIndex;
+        Int32_t rightColumnId;
         column_index_t rightColumnIndex;
 
         bool isEqualityJoin;
@@ -111,7 +111,7 @@ namespace QueryPipeline {
     struct IndexSeekColumnAnalysisResults {
         bool canIndexSeek;
         bool needsParameterBinding;
-        Int columnId;
+        Int32_t columnId;
         SeekRange range;
 
         Expressions::Expression* expression;
@@ -148,12 +148,12 @@ namespace QueryPipeline {
         DataStructures::PolymorphicArray<Statements::JoinStatement*> orderedJoins;
         bool isReordered;
 
-        JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, Int size);
+        JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, Int32_t size);
     };
 
     struct JoinOrderAnalyzeInfo {
-        BigInt rowCount;
-        UnsignedSmallInt slotIndex;
+        Int64_t rowCount;
+        UInt16_t slotIndex;
         table_id_t tableId;
         bool hasIndex;
 
@@ -165,14 +165,14 @@ namespace QueryPipeline {
 
         JoinOrderAnalyzeInfo(
             const table_id_t tableId,
-            const BigInt rowCount,
+            const Int64_t rowCount,
             const bool hasIndex
         ):  rowCount(rowCount), slotIndex(0), tableId(tableId),
             hasIndex(hasIndex), joinStatement(nullptr){}
 
         JoinOrderAnalyzeInfo(
             const table_id_t tableId,
-            const BigInt rowCount,
+            const Int64_t rowCount,
             const bool hasIndex,
             Statements::JoinStatement* joinStatement
         ):  rowCount(rowCount), slotIndex(0), tableId(tableId),
@@ -187,14 +187,14 @@ namespace QueryPipeline {
     };
 
     struct PredicatePushDownResult {
-        Dictionary<UnsignedSmallInt, Expressions::Expression*> _tablePredicatesDict;
+        Dictionary<UInt16_t, Expressions::Expression*> _tablePredicatesDict;
         Expressions::Expression* remainingPredicate;
 
         PredicatePushDownResult() {
             this->remainingPredicate = nullptr;
         }
 
-        [[nodiscard]] Expressions::Expression* PushDownFilter(const UnsignedSmallInt slotIndex) const {
+        [[nodiscard]] Expressions::Expression* PushDownFilter(const UInt16_t slotIndex) const {
             Expressions::Expression* filter = nullptr;
             this->_tablePredicatesDict.TryGetValue(slotIndex, filter);
             return filter;
@@ -302,17 +302,17 @@ namespace QueryPipeline {
             bool& isEqualityJoin
         );
 
-        [[nodiscard]] DataStructures::PolymorphicArray<Int> CheckPredicatesSorting(
+        [[nodiscard]] DataStructures::PolymorphicArray<Int32_t> CheckPredicatesSorting(
             const CoreEngine::Catalog::TableStatistics& tableStats,
             const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
         ) const;
 
         [[nodiscard]] JoinAlgorithmAnalysisResult CreateMergeJoinKeys(
             const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
-            const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
-            const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
-            Int leftTableId,
-            Int rightTableId
+            const DataStructures::PolymorphicArray<Int32_t>& leftKeyColumns,
+            const DataStructures::PolymorphicArray<Int32_t>& rightKeyColumns,
+            Int32_t leftTableId,
+            Int32_t rightTableId
         ) const;
 
     public:
@@ -330,8 +330,8 @@ namespace QueryPipeline {
             const CoreEngine::Catalog::TableStatistics& tableStatistics
         );
         [[nodiscard]] JoinAlgorithmAnalysisResult ChooseJoinAlgorithm(
-            Int leftTableId,
-            Int rightTableId,
+            Int32_t leftTableId,
+            Int32_t rightTableId,
             Expressions::Expression* joinCondition
         ) const;
     };

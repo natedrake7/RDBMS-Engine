@@ -37,27 +37,27 @@ namespace DataTypes {
     }
 
     bool Coercions::CanGetTinyInt(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::Bool:
             case DataType::TinyInt:
                 return true;
             case DataType::SmallInt:
-                return IntegerConverter::TryDownCast<TinyInt>(value.AsSmallInt());
+                return IntegerConverter::TryDownCast<Int8_t>(value.AsSmallInt());
             case DataType::Int:
-                return IntegerConverter::TryDownCast<TinyInt>(value.AsInt());
+                return IntegerConverter::TryDownCast<Int8_t>(value.AsInt());
             case DataType::BigInt:
-                return IntegerConverter::TryDownCast<TinyInt>(value.AsBigInt());
+                return IntegerConverter::TryDownCast<Int8_t>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return IntegerConverter::TryStrToInt<TinyInt>(value.AsStringView());
+                return IntegerConverter::TryStrToInt<Int8_t>(value.AsStringView());
             default:
                 return false;
         }
     }
 
     bool Coercions::CanGetBool(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::TinyInt:
                 return IntegerConverter::TryDownCast<bool>(value.AsTinyInt());
             case DataType::SmallInt:
@@ -80,44 +80,44 @@ namespace DataTypes {
     }
 
     bool Coercions::CanGetSmallInt(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::Bool:
             case DataType::TinyInt:
             case DataType::SmallInt:
                 return true;
             case DataType::Int:
-                return IntegerConverter::TryDownCast<SmallInt>(value.AsInt());
+                return IntegerConverter::TryDownCast<Int16_t>(value.AsInt());
             case DataType::BigInt:
-                return IntegerConverter::TryDownCast<SmallInt>(value.AsBigInt());
+                return IntegerConverter::TryDownCast<Int16_t>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return IntegerConverter::TryStrToInt<SmallInt>(value.AsStringView());
+                return IntegerConverter::TryStrToInt<Int16_t>(value.AsStringView());
             default:
                 return false;
         }
     }
 
     bool Coercions::CanGetInt(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::Bool:
             case DataType::TinyInt:
             case DataType::SmallInt:
             case DataType::Int:
                 return true;
             case DataType::BigInt:
-                return IntegerConverter::TryDownCast<Int>(value.AsBigInt());
+                return IntegerConverter::TryDownCast<Int32_t>(value.AsBigInt());
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return IntegerConverter::TryStrToInt<Int>(value.AsStringView());
+                return IntegerConverter::TryStrToInt<Int32_t>(value.AsStringView());
             default:
                 return false;
         }
     }
 
     bool Coercions::CanGetBigInt(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::Bool:
             case DataType::TinyInt:
             case DataType::SmallInt:
@@ -127,7 +127,7 @@ namespace DataTypes {
             case DataType::Decimal:
                 return false;
             case DataType::String:
-                return IntegerConverter::TryStrToInt<BigInt>(value.AsStringView());
+                return IntegerConverter::TryStrToInt<Int64_t>(value.AsStringView());
             default:
                 return false;
         }
@@ -136,7 +136,7 @@ namespace DataTypes {
     bool Coercions::CanGetString(const Value& value) { return true; }
 
     bool Coercions::CanGetGuid(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::Guid:
                 return true;
             case DataType::String:
@@ -147,7 +147,7 @@ namespace DataTypes {
     }
 
     bool Coercions::CanGetDateTime(const Value& value) {
-        switch (value.GetType()) {
+        switch (value.TypeInfo()) {
             case DataType::DateTime:
                 return true;
             case DataType::String:
@@ -162,7 +162,7 @@ namespace DataTypes {
     }
 
     bool Coercions::CanGetJsonBinary(const Value& value){
-        switch (value.GetType()){
+        switch (value.TypeInfo()){
         case DataType::Json:
             return true;
         case DataType::String:
@@ -174,19 +174,39 @@ namespace DataTypes {
     }
 
     void Coercions::DeduceSignedIntegerType(Value& value){
+
     }
 
     bool Coercions::ToBool(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType._type) {
         case DataType::TinyInt:
-            return IntegerConverter::DownCast<bool>(*reinterpret_cast<const TinyInt*>(value.Data()));
+            return IntegerConverter::DownCast<Int8_t, bool>(value.Data<Int8_t>());
         case DataType::SmallInt:
-            return IntegerConverter::DownCast<bool>(*reinterpret_cast<const SmallInt*>(value.Data()));
+            return IntegerConverter::DownCast<Int16_t, bool>(value.Data<Int16_t>());
         case DataType::Int:
-            return IntegerConverter::DownCast<bool>(*reinterpret_cast<const Int*>(value.Data()));
+            return IntegerConverter::DownCast<Int32_t, bool>(value.Data<Int32_t>());
         case DataType::BigInt:
-            return IntegerConverter::DownCast<bool>(*reinterpret_cast<const BigInt*>(value.Data()));
+            return IntegerConverter::DownCast<Int64_t, bool>(value.Data<Int64_t>());
+        case DataType::HugeInt:
+            return IntegerConverter::DownCast<Int128_t, bool>(value.Data<Int128_t>());
+
+        case DataType::UnsignedTinyInt:
+            return IntegerConverter::DownCast<UInt8_t, bool>(value.Data<UInt8_t>());
+        case DataType::UnsignedSmallInt:
+            return IntegerConverter::DownCast<UInt16_t, bool>(value.Data<UInt16_t>());
+        case DataType::UnsignedInt:
+            return IntegerConverter::DownCast<UInt32_t, bool>(value.Data<UInt32_t>());
+        case DataType::UnsignedBigInt:
+            return IntegerConverter::DownCast<UInt64_t, bool>(value.Data<UInt64_t>());
+        case DataType::UnsignedHugeInt:
+            return IntegerConverter::DownCast<UInt128_t, bool>(value.Data<UInt128_t>());
+
+        case DataType::Float:
+            return IntegerConverter::DownCast<Float, bool>(value.Data<Float>());
+        case DataType::Double:
+            return IntegerConverter::DownCast<Double, bool>(value.Data<Double>());
+
         case DataType::Decimal:
             return false;
         case DataType::String:
@@ -199,21 +219,21 @@ namespace DataTypes {
         return false;
     }
 
-    TinyInt Coercions::ToTinyInt(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+    Int8_t Coercions::ToTinyInt(const Value& value, const bool explicitCast) {
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return *reinterpret_cast<const TinyInt*>(value.Data());
+            return *reinterpret_cast<const Int8_t*>(value.Data());
         case DataType::SmallInt:
-            return IntegerConverter::DownCast<TinyInt>(*reinterpret_cast<const SmallInt*>(value.Data()));
+            return IntegerConverter::DownCast<Int8_t>(*reinterpret_cast<const Int16_t*>(value.Data()));
         case DataType::Int:
-            return IntegerConverter::DownCast<TinyInt>(*reinterpret_cast<const Int*>(value.Data()));
+            return IntegerConverter::DownCast<Int8_t>(*reinterpret_cast<const Int32_t*>(value.Data()));
         case DataType::BigInt:
-            return IntegerConverter::DownCast<TinyInt>(*reinterpret_cast<const BigInt*>(value.Data()));
+            return IntegerConverter::DownCast<Int8_t>(*reinterpret_cast<const Int64_t*>(value.Data()));
         case DataType::Decimal:
-            return value.Data<Decimal>().ToInt<TinyInt>();
+            return value.Data<Decimal>().ToInt<Int8_t>();
         case DataType::String:
-            return IntegerConverter::StrToInt<TinyInt>(value.AsStringView());
+            return IntegerConverter::StrToInt<Int8_t>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -222,21 +242,21 @@ namespace DataTypes {
         return -1;
     }
 
-    SmallInt Coercions::ToSmallInt(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+    Int16_t Coercions::ToSmallInt(const Value& value, const bool explicitCast) {
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return value.Data<TinyInt>();
+            return value.Data<Int8_t>();
         case DataType::SmallInt:
-            return value.Data<SmallInt>();
+            return value.Data<Int16_t>();
         case DataType::Int:
-            return value.Data<Int>();
+            return value.Data<Int32_t>();
         case DataType::BigInt:
-            return IntegerConverter::DownCast<SmallInt>(value.Data<BigInt>());
+            return IntegerConverter::DownCast<Int16_t>(value.Data<Int64_t>());
         case DataType::Decimal:
-            return value.Data<Decimal>().ToInt<SmallInt>();
+            return value.Data<Decimal>().ToInt<Int16_t>();
         case DataType::String:
-            return IntegerConverter::StrToInt<SmallInt>(value.AsStringView());
+            return IntegerConverter::StrToInt<Int16_t>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -245,21 +265,21 @@ namespace DataTypes {
         return -1;
     }
 
-    Int Coercions::ToInt(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+    Int32_t Coercions::ToInt(const Value& value, const bool explicitCast) {
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return value.Data<TinyInt>();
+            return value.Data<Int8_t>();
         case DataType::SmallInt:
-            return value.Data<SmallInt>();
+            return value.Data<Int16_t>();
         case DataType::Int:
-            return value.Data<Int>();
+            return value.Data<Int32_t>();
         case DataType::BigInt:
-            return IntegerConverter::DownCast<Int>(value.Data<BigInt>());
+            return IntegerConverter::DownCast<Int32_t>(value.Data<Int64_t>());
         case DataType::Decimal:
-            return value.Data<Decimal>().ToInt<Int>();
+            return value.Data<Decimal>().ToInt<Int32_t>();
         case DataType::String:
-            return IntegerConverter::StrToInt<Int>(value.AsStringView());
+            return IntegerConverter::StrToInt<Int32_t>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -268,21 +288,21 @@ namespace DataTypes {
         return -1;
     }
 
-    BigInt Coercions::ToBigInt(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+    Int64_t Coercions::ToBigInt(const Value& value, const bool explicitCast) {
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return value.Data<TinyInt>();
+            return value.Data<Int8_t>();
         case DataType::SmallInt:
-            return value.Data<SmallInt>();
+            return value.Data<Int16_t>();
         case DataType::Int:
-            return value.Data<Int>();
+            return value.Data<Int32_t>();
         case DataType::BigInt:
-            return value.Data<BigInt>();
+            return value.Data<Int64_t>();
         case DataType::Decimal:
-            return value.Data<Decimal>().ToInt<BigInt>();
+            return value.Data<Decimal>().ToInt<Int64_t>();
         case DataType::String:
-            return IntegerConverter::StrToInt<BigInt>(value.AsStringView());
+            return IntegerConverter::StrToInt<Int64_t>(value.AsStringView());
         case DataType::Bool:
             return value.AsBool();
         default:
@@ -292,16 +312,16 @@ namespace DataTypes {
     }
 
     String Coercions::ToString(const ::Memory::IAllocator* allocator, const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return IntegerConverter::IntToStr<TinyInt>(value.Data<TinyInt>(), allocator);
+            return IntegerConverter::IntToStr<Int8_t>(value.Data<Int8_t>(), allocator);
         case DataType::SmallInt:
-            return IntegerConverter::IntToStr<SmallInt>(value.Data<SmallInt>(), allocator);
+            return IntegerConverter::IntToStr<Int16_t>(value.Data<Int16_t>(), allocator);
         case DataType::Int:
-            return IntegerConverter::IntToStr<Int>(value.Data<Int>(), allocator);
+            return IntegerConverter::IntToStr<Int32_t>(value.Data<Int32_t>(), allocator);
         case DataType::BigInt:
-            return IntegerConverter::IntToStr<BigInt>(value.Data<BigInt>(), allocator);
+            return IntegerConverter::IntToStr<Int64_t>(value.Data<Int64_t>(), allocator);
         case DataType::Decimal:
             return value.Data<Decimal>().ToString(allocator);
         case DataType::String:
@@ -325,7 +345,7 @@ namespace DataTypes {
     }
 
     StringView Coercions::ToStringView(const Value& value, bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::String:
             return StringView(reinterpret_cast<const char*>(value.Data()), value.Size());
@@ -349,7 +369,7 @@ namespace DataTypes {
     }
 
     Guid Coercions::ToGuid(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::Guid:
             return Guid(value.Data());
@@ -362,7 +382,7 @@ namespace DataTypes {
     }
 
     DateTime Coercions::ToDateTime(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::String: {
             DateTime date;
@@ -370,7 +390,7 @@ namespace DataTypes {
             return date;
         }
         case DataType::DateTime:
-            return DateTime(*reinterpret_cast<const BigInt*>(value.Data()));
+            return DateTime(*reinterpret_cast<const Int64_t*>(value.Data()));
         default:
             Coercions::ThrowException(valueType, DataType::DateTime);
         }
@@ -378,22 +398,22 @@ namespace DataTypes {
     }
 
     Decimal Coercions::ToDecimal(const Value& value, const bool explicitCast) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType) {
         case DataType::TinyInt:
-            return Decimal(value.Data<TinyInt>());
+            return Decimal::FromMantissa(value.Data<Int8_t>());
         case DataType::SmallInt:
-            return Decimal(value.Data<SmallInt>());
+            return Decimal::FromMantissa(value.Data<Int16_t>());
         case DataType::Int:
-            return Decimal(value.Data<Int>());
+            return Decimal::FromMantissa(value.Data<Int32_t>());
         case DataType::BigInt:
-            return Decimal(value.Data<BigInt>());
+            return Decimal::FromMantissa(value.Data<Int64_t>());
         case DataType::Decimal:
             return value.Data<Decimal>();
         case DataType::String:
-            return Decimal(value.AsStringView());
+            return Decimal::(value.AsStringView());
         case DataType::Bool:
-            return Decimal(value.AsBool());
+            return Decimal::FromMantissa(value.AsBool());
         case DataType::DateTime:
         case DataType::Guid:
         case DataType::Null:
@@ -404,7 +424,7 @@ namespace DataTypes {
     }
 
     JsonBinary Coercions::ToJsonBinary(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast){
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         switch (valueType){
         case DataType::Json:
             return JsonBinary(allocator, value.Data(), value.Size());
@@ -421,7 +441,7 @@ namespace DataTypes {
     }
 
     bool Coercions::CanBeParsedToType(const DataType toType, const Value& value) {
-        const auto valueType = value.GetType();
+        const auto valueType = value.TypeInfo();
         const auto coercionType = GetCoercionType(valueType, toType);
 
         if (coercionType == CoercionType::None)
@@ -457,12 +477,10 @@ namespace DataTypes {
     }
 
     void Coercions::DeduceIntegerType(Value& value) {
-        const auto dataType = value.GetType()._type;
+        const auto dataType = value.TypeInfo()._type;
         if (Detail::IsSignedIntegerType(dataType))
             DeduceSignedIntegerType(value);
         else if (Detail::IsUnsignedIntegerType(dataType))
             DeduceUnsignedIntegerType(value);
-
-        ThrowNonExistentType(dataType);
     }
 }

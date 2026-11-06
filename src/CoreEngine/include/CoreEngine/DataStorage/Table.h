@@ -78,11 +78,11 @@ namespace CoreEngine::StorageTypes{
         MultiThreading::Mutex _schemaMutex;
         const Schemas::TableSchema* _schema;
 
-        std::atomic<Int> _pins;
+        std::atomic<Int32_t> _pins;
         std::atomic<bool> _dropped;
 
         DataTypes::String _lowerName;
-        Int _schemaId;
+        Int32_t _schemaId;
 
         DataStructures::PolymorphicArray<IdentityManager> _identities;
         DataStructures::PolymorphicArray<Indexing::BTree*> _nonClusteredTrees;
@@ -111,8 +111,8 @@ namespace CoreEngine::StorageTypes{
 
         /** @} End of: Class Constructors and Destructors*/
 
-        void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int indexPos, Int pagesToAllocate);
-        void InsertExistingRowToNonClusteredIndexByHeap(Int indexPos, Int pagesToAllocate);
+        void InsertExistingRowsToNonClusteredIndexByClusteredIndex(Int32_t indexPos, Int32_t pagesToAllocate);
+        void InsertExistingRowToNonClusteredIndexByHeap(Int32_t indexPos, Int32_t pagesToAllocate);
         void RemoveColumnByClusteredIndex(column_index_t index);
         void RemoveColumnByHeap(column_index_t index)const;
         [[nodiscard]]
@@ -167,11 +167,11 @@ namespace CoreEngine::StorageTypes{
             template<typename ValueProvider>
             void EvaluateRow(RowSerializationContext& context, ValueProvider&& provider);
 
-            [[nodiscard]] Errors::RuntimeStatus PlanRow(const RowSerializationContext& context, UnsignedInt& outRowSize)const;
+            [[nodiscard]] Errors::RuntimeStatus PlanRow(const RowSerializationContext& context, UInt32_t& outRowSize)const;
 
             void WriteOffRowValues(const RowSerializationContext& context)const;
 
-            [[nodiscard]] SerializedRow WriteRow(const RowSerializationContext& context, UnsignedInt rowSize)const;
+            [[nodiscard]] SerializedRow WriteRow(const RowSerializationContext& context, UInt32_t rowSize)const;
 
             template<typename ValueProvider>
             SerializedRow SerializeRowGeneric(
@@ -296,8 +296,8 @@ namespace CoreEngine::StorageTypes{
             //     const DataTypes::RowIdentifier& data
             // );
             Errors::RuntimeStatus NonClusteredIndexInsertExistingRows(
-                Int indexPos,
-                Int pagesToAllocate
+                Int32_t indexPos,
+                Int32_t pagesToAllocate
             );
 
         /** @} End of: Insert Functions*/
@@ -311,7 +311,7 @@ namespace CoreEngine::StorageTypes{
             [[nodiscard]] bool IsClustered()const{
                 return this->_schema->_clusteredIndexOrdinalPosition != Schemas::TableSchema::NONE;
             }
-            [[nodiscard]] const Schemas::IndexSchema* GetNonClusteredIndexes(const Int indexPos) const{
+            [[nodiscard]] const Schemas::IndexSchema* GetNonClusteredIndexes(const Int32_t indexPos) const{
                 return &this->_schema->_indexes[this->IsClustered() + indexPos];
             }
             [[nodiscard]] const Schemas::IndexSchema* GetClusteredIndex() const{
@@ -325,7 +325,7 @@ namespace CoreEngine::StorageTypes{
                    ? Constants::TableType::CLUSTERED
                    : Constants::TableType::HEAP;
             }
-            [[nodiscard]] UnsignedSmallInt GetOrdinalPosition() const{
+            [[nodiscard]] UInt16_t GetOrdinalPosition() const{
                 return this->_schema->_ordinalPosition;
             }
             [[nodiscard]] Accessors::PageAccessor GetPageAccessor() const{
@@ -347,8 +347,8 @@ namespace CoreEngine::StorageTypes{
                 const DataTypes::Indexing::Key& maxKey,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex,
-                UnsignedSmallInt schemaWidth
+                UInt16_t slotIndex,
+                UInt16_t schemaWidth
             );
             void ClusteredIndexSeek(
                 const ExecutionContext& executionContext,
@@ -356,8 +356,8 @@ namespace CoreEngine::StorageTypes{
                 const DataTypes::Indexing::Key& key,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex,
-                UnsignedSmallInt schemaWidth
+                UInt16_t slotIndex,
+                UInt16_t schemaWidth
             );
             void SystemClusteredIndexSeek(
                 const ::Memory::IAllocator* allocator,
@@ -371,8 +371,8 @@ namespace CoreEngine::StorageTypes{
                 IndexState& state,
                 const Expressions::Expression* expression,
                 const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-                UnsignedSmallInt slotIndex,
-                UnsignedSmallInt schemaWidth
+                UInt16_t slotIndex,
+                UInt16_t schemaWidth
             );
             void ClusteredIndexScan(
                 const ExecutionContext& executionContext,
@@ -388,7 +388,7 @@ namespace CoreEngine::StorageTypes{
             void NonClusteredIndexScan(
                 const ExecutionContext& executionContext,
                 DataStructures::PolymorphicArray<RID>* selectedRows,
-                Int indexPos,
+                Int32_t indexPos,
                 IndexState& state,
                 const Expressions::Expression* expression
             );
@@ -401,7 +401,7 @@ namespace CoreEngine::StorageTypes{
             void TemporaryDatabaseHeapScan(
                 DataStructures::PolymorphicArray<RID>* result,
                 ScanState& state,
-                Int batchSize
+                Int32_t batchSize
             )const;
 
 
@@ -539,7 +539,7 @@ namespace CoreEngine::StorageTypes{
                 const ExecutionContext& context,
                 const SelectionVector* sv,
                 DataVector* __restrict__ _vector,
-                UnsignedSmallInt slotIndex,
+                UInt16_t slotIndex,
                 column_index_t ordinalPosition
             );
 
@@ -547,9 +547,9 @@ namespace CoreEngine::StorageTypes{
             void DecodeVariableColumn(
                 const ::Memory::IAllocator* allocator,
                 const object_t* const* rows,
-                Int count,
+                Int32_t count,
                 DataVector* out,
-                UnsignedInt start,
+                UInt32_t start,
                 column_index_t ordinal
             ) const;
         /** @} End of: Materialization Functions*/
@@ -559,18 +559,18 @@ namespace CoreEngine::StorageTypes{
         * Functions that manage indexes and pages
         * @{
         */
-            Int CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices);
+            Int32_t CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices);
             void UpdateAllocationPageId(page_id_t allocationPageId) const;
             page_id_t GetAllocationPageId()const;
 
             [[nodiscard]] page_id_t GetClusteredIndexPageId() const;
             void SetClusteredIndexPageId(page_id_t pageId) const;
 
-            [[nodiscard]] page_id_t GetNonClusteredIndexPageId(Int indexPosition) const;
-            void SetNonClusteredIndexPageId(page_id_t indexPageId, Int indexPosition);
+            [[nodiscard]] page_id_t GetNonClusteredIndexPageId(Int32_t indexPosition) const;
+            void SetNonClusteredIndexPageId(page_id_t indexPageId, Int32_t indexPosition);
 
             Indexing::BTree* GetClusteredIndexedTree();
-            Indexing::BTree* GetNonClusteredIndexTree(Int nonClusteredIndexId);
+            Indexing::BTree* GetNonClusteredIndexTree(Int32_t nonClusteredIndexId);
             [[nodiscard]] bool HasNonClusteredIndexes() const{
                 return this->_schema->_indexesCount > this->IsClustered();
             }
@@ -586,7 +586,7 @@ namespace CoreEngine::StorageTypes{
 
             ExtentReservation ReserveExtents(
                 const ::Memory::IAllocator* allocator,
-                Int requiredPages
+                Int32_t requiredPages
             )const;
 
             ExtentReservation LazyReservation(const ::Memory::IAllocator* allocator)const;
@@ -595,7 +595,7 @@ namespace CoreEngine::StorageTypes{
 
             void Truncate();
 
-            [[nodiscard]] key_size_t CalculateIndexKeySize(Int indexPos = -1) const;
+            [[nodiscard]] key_size_t CalculateIndexKeySize(Int32_t indexPos = -1) const;
             [[nodiscard]] Database* GetDatabase() const;
 
             int HandleRowOverflow(RID* rowPtr) const;
@@ -618,8 +618,8 @@ namespace CoreEngine::StorageTypes{
 
         /** @} End of System Catalog Integration Functions */
 
-        void ReseedIdentity(column_index_t ordinal, BigInt value);
+        void ReseedIdentity(column_index_t ordinal, Int64_t value);
 
-        void SetPrimaryKeyIndexedColumns(const column_index_t* _array, Int size);
+        void SetPrimaryKeyIndexedColumns(const column_index_t* _array, Int32_t size);
     };
 }

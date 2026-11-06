@@ -93,7 +93,7 @@ namespace Network {
         const DataTypes::String& username,
         const Security::Role *role
     )const{
-        Int userId = -1;
+        Int32_t userId = -1;
 
         if (!this->userManager.GrantRole(DataTypes::StringView::ViewOf(username), role, userId))
             return Errors::RuntimeStatus(
@@ -146,14 +146,14 @@ namespace Network {
           return false;
       }
 
-      return this->userManager.AddUser(result.primaryKey.AsInt<Int>(), userName, hashedPassword, role);
+      return this->userManager.AddUser(result.primaryKey.AsInt<Int32_t>(), userName, hashedPassword, role);
   }
 
   Errors::RuntimeStatus Server::UpdateUserById(
       const CoreEngine::ExecutionContext& context,
       const session_id_t callerSessionId,
-      const Int userId,
-      const Int roleId
+      const Int32_t userId,
+      const Int32_t roleId
   )const{
       const auto* currentSession = this->sessionManager.GetSession(callerSessionId);
 
@@ -200,7 +200,7 @@ namespace Network {
       return this->sessionManager.CloseSession(key);
   }
 
-  bool Server::UpdateSession(const session_id_t key, const Int databaseId)const{
+  bool Server::UpdateSession(const session_id_t key, const Int32_t databaseId)const{
       return this->sessionManager.UpdateSession(key, databaseId);
   }
 
@@ -250,7 +250,7 @@ namespace Network {
 
     CoreEngine::Database* Server::UseDatabase(
         const CoreEngine::ExecutionContext& context,
-        const Int databaseId
+        const Int32_t databaseId
     ){
         CoreEngine::Database* db = nullptr;
         const auto* allocator = context.GetAllocator();
@@ -282,7 +282,7 @@ namespace Network {
         return db;
     }
 
-    const Dictionary<Int, CoreEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
+    const Dictionary<Int32_t, CoreEngine::Database *> & Server::GetDatabases() const{ return this->databases; }
 
     MultiThreading::Mutex & Server::GetDatabasesLatch(){ return this->databasesLatch; }
 }

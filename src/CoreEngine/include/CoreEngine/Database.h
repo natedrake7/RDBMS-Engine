@@ -54,9 +54,9 @@ namespace CoreEngine {
     struct DatabaseHeader {
         page_id_t _lastPfsPageId;
         gam_index_t _lastGamIndex;
-        UnsignedSmallInt _formatVersion;       // StorageLayout::FILE_FORMAT_VERSION of the code that created the file
+        UInt16_t _formatVersion;       // StorageLayout::FILE_FORMAT_VERSION of the code that created the file
 
-        UnsignedSmallInt _reserved;
+        UInt16_t _reserved;
 
         DatabaseHeader();
         DatabaseHeader(
@@ -69,7 +69,7 @@ namespace CoreEngine {
     };
 
     static_assert(
-        sizeof(DatabaseHeader) == sizeof(page_id_t) + sizeof(gam_index_t) + 2 * sizeof(UnsignedSmallInt),
+        sizeof(DatabaseHeader) == sizeof(page_id_t) + sizeof(gam_index_t) + 2 * sizeof(UInt16_t),
         "sizeof() Database header size does not computed size"
     );
 
@@ -88,8 +88,8 @@ class Database final{
 
     DatabaseHeader _header;
 
-    Int _id;
-    UnsignedSmallInt _nextOrdinal;
+    Int32_t _id;
+    UInt16_t _nextOrdinal;
 
     Accessors::PageAccessor _pageAccessor;
 
@@ -114,7 +114,7 @@ public:
     Database(
         const ::Memory::IAllocator* allocator,
         Accessors::PageAccessor pageAccessor,
-        Int databaseId,
+        Int32_t databaseId,
         const DataTypes::StringView& dbName
     );
 
@@ -180,7 +180,7 @@ public:
     StorageTypes::ExtentReservation ReserveExtents(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::Table* table,
-        Int requiredPages
+        Int32_t requiredPages
     );
 
     template <PageLayout::PageViewType TView, typename... Args>
@@ -204,7 +204,7 @@ public:
         return this->_tables;
     }
 
-    [[nodiscard]] UnsignedSmallInt ReserveOrdinalNoLock();
+    [[nodiscard]] UInt16_t ReserveOrdinalNoLock();
 
     [[nodiscard]] MultiThreading::Mutex* DDLMutex(){
         return &this->_ddlMutex;

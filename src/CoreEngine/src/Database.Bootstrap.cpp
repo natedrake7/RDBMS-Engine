@@ -57,7 +57,7 @@ namespace CoreEngine{
 
         // Only the database and schema names: table keys point into each TableSchema's own arena.
         // The entries live in the directories' arrays, which allocate from _allocator themselves.
-        UnsignedInt stringSize = header.name.Size();
+        UInt32_t stringSize = header.name.Size();
         for (const auto& schema : schemas)
             stringSize += schema.name.Size();
 
@@ -80,7 +80,7 @@ namespace CoreEngine{
             auto* table = this->CreateTablePtr(schema, *headerPage.GetTableHeaderPtr(tableHeader.ordinalPosition));
             this->_tables.Append(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
 
-            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UnsignedSmallInt>(table->GetOrdinalPosition() + 1));
+            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UInt16_t>(table->GetOrdinalPosition() + 1));
         }
 
         if (!this->_tables.Seal())
@@ -101,7 +101,7 @@ namespace CoreEngine{
         if (!this->_schemas.Seal())
             throw std::runtime_error("Database::BootstrapSystem: duplicate system schema");
 
-        this->_tables.Reserve(static_cast<Int>(Catalog::SYSTEM_TABLES.size()));
+        this->_tables.Reserve(static_cast<Int32_t>(Catalog::SYSTEM_TABLES.size()));
 
         for (const auto& systemTable : Catalog::SYSTEM_TABLES){
             // The definition is scratch: Build copies everything it keeps into the schema's own arena
@@ -117,7 +117,7 @@ namespace CoreEngine{
             auto* table = this->CreateTablePtr(schema, physicalHeader);
             this->_tables.Append(Directory::TableEntry(table, Directory::TableKey(schema->_schemaId, schema->_lowerName)));
 
-            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UnsignedSmallInt>(table->GetOrdinalPosition() + 1));
+            this->_nextOrdinal = Math::Max(this->_nextOrdinal, static_cast<UInt16_t>(table->GetOrdinalPosition() + 1));
         }
 
         if (!this->_tables.Seal())

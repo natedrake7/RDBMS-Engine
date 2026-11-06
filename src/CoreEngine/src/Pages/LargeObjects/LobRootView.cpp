@@ -9,9 +9,9 @@ namespace CoreEngine::Pages{
         : PageView(framePtr){}
 
     void LobRootView::WriteInline(
-        const UnsignedInt offset,
+        const UInt32_t offset,
         const object_t* data,
-        const UnsignedInt size
+        const UInt32_t size
     ) const{
         assert(this->Level() == 0 && offset + size <= LobLayout::INLINE_CAPACITY);
 
@@ -19,7 +19,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    page_id_t LobRootView::Child(const UnsignedInt slot) const{
+    page_id_t LobRootView::Child(const UInt32_t slot) const{
         const auto* header = this->GetAdditionalHeader();
         assert(header->_level > 0 && slot < header->_childCount);
         page_id_t value;
@@ -36,7 +36,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void LobRootView::BulkAppendChildren(const page_id_t* children, const UnsignedInt count) const{
+    void LobRootView::BulkAppendChildren(const page_id_t* children, const UInt32_t count) const{
         if (count == 0)
             return;
 

@@ -100,14 +100,14 @@ namespace CoreEngine {
         }), "the catalog schema row");
 
         for (const auto& table : Catalog::SYSTEM_TABLES){
-            const auto tableId = static_cast<Int>(table.id);
+            const auto tableId = static_cast<Int32_t>(table.id);
 
             store(this->Insert(baseContext, Catalog::SysTableRow{
                 .databaseId = Constants::SYSTEM_CATALOG_ID,
                 .tableId = tableId,
                 .schemaId = SYSTEM_SCHEMA_ID,
                 .name = DataTypes::String(table.name, allocator),
-                .ordinalPosition = static_cast<SmallInt>(table.ordinal),
+                .ordinalPosition = static_cast<Int16_t>(table.ordinal),
                 .isSystem = true,
                 .createdAt = now,
                 .lastModified = now,
@@ -123,12 +123,12 @@ namespace CoreEngine {
                     .tableId = tableId,
                     .columnId = columnId,
                     .name = DataTypes::String(column.name, allocator),
-                    .dataType = static_cast<TinyInt>(column.type),
-                    .recordSize = static_cast<Int>(fixedSize != 0 ? fixedSize : column.size),
+                    .dataType = static_cast<Int8_t>(column.type),
+                    .recordSize = static_cast<Int32_t>(fixedSize != 0 ? fixedSize : column.size),
                     .precision = std::nullopt,
                     .scale = std::nullopt,
                     .isNullable = column.nullable,
-                    .ordinalPosition = static_cast<SmallInt>(ordinal),
+                    .ordinalPosition = static_cast<Int16_t>(ordinal),
                     .isSystem = true,
                     .createdAt = now,
                     .lastModified = now,
@@ -139,7 +139,7 @@ namespace CoreEngine {
                     store(this->Insert(baseContext, Catalog::SysIdentityColumnRow{
                         .tableId = tableId,
                         .columnId = columnId,
-                        .seedValue = static_cast<Int>(column.identityStart),
+                        .seedValue = static_cast<Int32_t>(column.identityStart),
                         .increment = Constants::DEFAULT_IDENTITY_INCREMENT,
                         .lastValue = column.identityStart,
                         .isCached = true,
@@ -173,7 +173,7 @@ namespace CoreEngine {
                 .tableId = tableId,
                 .constraintId = constraintId,
                 .name = keyName,
-                .constraintType = static_cast<TinyInt>(Schemas::ConstraintType::PrimaryKey),
+                .constraintType = static_cast<Int8_t>(Schemas::ConstraintType::PrimaryKey),
                 .isDisabled = false,
                 .constraintIndexId = indexId,
                 .createdAt = now,
@@ -181,7 +181,7 @@ namespace CoreEngine {
                 .lastModifiedBy = modifiedBy,
             }), "a catalog constraint row");
 
-            for (SmallInt position = 0; position < static_cast<SmallInt>(table.primaryKey.size()); position++){
+            for (Int16_t position = 0; position < static_cast<Int16_t>(table.primaryKey.size()); position++){
                 const auto columnId = SystemColumnId(table.id, table.primaryKey[position]);
 
                 store(this->Insert(baseContext, Catalog::SysIndexColumnRow{
@@ -210,7 +210,7 @@ namespace CoreEngine {
 
                 const auto row = this->SelectOne<Catalog::SysIdentityColumnRow>(
                     allocator,
-                    static_cast<Int>(systemTable.id),
+                    static_cast<Int32_t>(systemTable.id),
                     SystemColumnId(systemTable.id, ordinal)
                 );
                 if (!row)
@@ -325,7 +325,7 @@ namespace CoreEngine {
             .tableId = data[static_cast<column_index_t>(SysColumns::TableId)].AsInt(),
             .id = data[static_cast<column_index_t>(SysColumns::ColumnId)].AsInt(),
             .name = data[static_cast<column_index_t>(SysColumns::Name)].AsString(allocator),
-            .dataType = static_cast<UnsignedTinyInt>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
+            .dataType = static_cast<UInt8_t>(data[static_cast<column_index_t>(SysColumns::DataType)].AsTinyInt()),
             .recordSize = data[static_cast<column_index_t>(SysColumns::RecordSize)].AsInt(),
             .precision = data[static_cast<column_index_t>(SysColumns::Precision)].IsNull()
                 ? INVALID_DECIMAL_PRECISION
@@ -688,7 +688,7 @@ namespace CoreEngine {
     );
 
     auto* adminRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt<Int>(),
+        result.primaryKey.AsInt<Int32_t>(),
         DataTypes::String::FromView(Constants::ADMIN_NAME, tempAllocator),
         Constants::ADMIN_PERMISSIONS,
         true
@@ -703,7 +703,7 @@ namespace CoreEngine {
     );
 
     auto* dbOwnerRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt<Int>(),
+        result.primaryKey.AsInt<Int32_t>(),
         DataTypes::String::FromView(Constants::DB_OWNER_NAME, tempAllocator),
         Constants::DB_OWNER_PERMISSIONS,
         true
@@ -718,7 +718,7 @@ namespace CoreEngine {
     );
 
     auto* dbWriterRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt<Int>(),
+        result.primaryKey.AsInt<Int32_t>(),
         DataTypes::String::FromView(Constants::DB_WRITER_NAME, tempAllocator),
         Constants::DB_WRITER_PERMISSIONS,
         true
@@ -733,7 +733,7 @@ namespace CoreEngine {
     );
 
     auto* dbReaderRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt<Int>(),
+        result.primaryKey.AsInt<Int32_t>(),
         DataTypes::String::FromView(Constants::DB_READER_NAME, tempAllocator),
         Constants::DB_READER_PERMISSIONS,
         true
@@ -748,7 +748,7 @@ namespace CoreEngine {
     );
 
     auto* guestRole = tempAllocator->Allocate<Security::Role>(
-        result.primaryKey.AsInt<Int>(),
+        result.primaryKey.AsInt<Int32_t>(),
         DataTypes::String::FromView(Constants::GUEST_NAME, tempAllocator),
         Constants::GUEST_PERMISSIONS,
         true
@@ -762,7 +762,7 @@ namespace CoreEngine {
     Security::User SystemCatalog::InsertSystemUsers(
         const ExecutionContext& baseContext,
         const DataTypes::String& hashedPassword,
-        const Int defaultRoleId
+        const Int32_t defaultRoleId
     )const{
         const auto result =
             this->InsertUserToMasterDb(
@@ -775,7 +775,7 @@ namespace CoreEngine {
 
         const auto username = DataTypes::String(Constants::ADMIN_NAME.Data(), Constants::ADMIN_NAME.Size(), baseContext.GetAllocator());
         return Security::User(
-            result.primaryKey.AsInt<Int>(),
+            result.primaryKey.AsInt<Int32_t>(),
             username,
             hashedPassword,
             defaultRoleId,
@@ -790,7 +790,7 @@ namespace CoreEngine {
         const DataTypes::StringView& dbPath,
         const bool isSystem,
         const DataTypes::StringView& user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysDatabases);
@@ -817,10 +817,10 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus  SystemCatalog::InsertSchemaToMasterDb(
         const ExecutionContext& executionContext,
-        const Int databaseId,
+        const Int32_t databaseId,
         const DataTypes::StringView& schemaName,
         const DataTypes::StringView& user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysSchemas);
@@ -846,13 +846,13 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertTableToMasterDb(
         const ExecutionContext& executionContext,
-        const Int databaseId,
-        const Int schemaId,
+        const Int32_t databaseId,
+        const Int32_t schemaId,
         const DataTypes::StringView& tableName,
-        const SmallInt ordinalPosition,
+        const Int16_t ordinalPosition,
         const bool isSystem,
         const DataTypes::StringView& user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -882,17 +882,17 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertColumnToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
+        const Int32_t tableId,
         const DataTypes::StringView& columnName,
         const DataType columnType,
-        const Int columnSize,
-        const TinyInt precision,
-        const TinyInt scale,
+        const Int32_t columnSize,
+        const Int8_t precision,
+        const Int8_t scale,
         const bool isNullable,
-        const SmallInt ordinalPosition,
+        const Int16_t ordinalPosition,
         const bool isSystem,
         const DataTypes::StringView& user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysColumns);
@@ -910,7 +910,7 @@ namespace CoreEngine {
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(tableId, static_cast<column_index_t>(SysColumns::TableId)),
             Value(columnName, executionContext.GetAllocator(), static_cast<column_index_t>(SysColumns::Name)),
-            Value(static_cast<TinyInt>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
+            Value(static_cast<Int8_t>(columnType), static_cast<column_index_t>(SysColumns::DataType)),
             Value(columnSize, static_cast<column_index_t>(SysColumns::RecordSize)),
             std::move(precisionField),
             std::move(scaleField),
@@ -933,12 +933,12 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertIndexToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
+        const Int32_t tableId,
         const DataTypes::StringView& indexName,
         const bool isClustered,
         const bool isDisabled,
         const DataTypes::StringView& user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
         StorageTypes::Table* table = this->CatalogTable(CatalogTables::SysIndexes);
@@ -966,11 +966,11 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertIndexColumnToMasterDb(
     const ExecutionContext& executionContext,
-    const Int indexId,
-    const Int columnId,
-    const SmallInt & ordinalPosition,
+    const Int32_t indexId,
+    const Int32_t columnId,
+    const Int16_t & ordinalPosition,
     const bool  isIncluded,
-    const Int version,
+    const Int32_t version,
     const bool isDeleted) const{
     StorageTypes::Table* table = this->CatalogTable(CatalogTables::SysIndexColumns);
     const auto currentDate = DataTypes::DateTime::Now();
@@ -994,13 +994,13 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertConstraintToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
+        const Int32_t tableId,
         const DataTypes::StringView&  constraintName,
         const Schemas::ConstraintType& constraintType,
         const bool  isDisabled,
-        const Int *constraintIndexId,
+        const Int32_t *constraintIndexId,
         const DataTypes::StringView&  user,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -1015,7 +1015,7 @@ namespace CoreEngine {
     const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
         Value(tableId, static_cast<column_index_t>(SysConstraints::TableId)),
         Value(constraintName, executionContext.GetAllocator(), static_cast<column_index_t>(SysConstraints::Name)),
-        Value(static_cast<TinyInt>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
+        Value(static_cast<Int8_t>(constraintType), static_cast<column_index_t>(SysConstraints::Type)),
         Value(isDisabled, static_cast<column_index_t>(SysConstraints::IsDisabled)),
         std::move(constraintField),
         Value(currentDate, static_cast<column_index_t>(SysConstraints::CreatedAt)),
@@ -1035,10 +1035,10 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertConstraintColumnToMasterDb(
         const ExecutionContext& executionContext,
-        const Int constraintId,
-        const Int columnId,
-        const SmallInt ordinalPosition,
-        const Int version,
+        const Int32_t constraintId,
+        const Int32_t columnId,
+        const Int16_t ordinalPosition,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -1063,14 +1063,14 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertIdentityColumnToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
-        const Int columnId,
-        const Int seedValue,
-        const Int increment,
-        const BigInt lastValue,
+        const Int32_t tableId,
+        const Int32_t columnId,
+        const Int32_t seedValue,
+        const Int32_t increment,
+        const Int64_t lastValue,
         const bool  isCached,
-        const Int cacheBlock,
-        const Int version,
+        const Int32_t cacheBlock,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -1098,9 +1098,9 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertDefaultValuesToMasterDb(
         const ExecutionContext& executionContext,
-        const Int columnId,
+        const Int32_t columnId,
         const Value &value,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -1127,10 +1127,10 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertTableStatisticsToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
-        const BigInt rowCount,
-        const Int rowSize,
-        const Int pageCount
+        const Int32_t tableId,
+        const Int64_t rowCount,
+        const Int32_t rowSize,
+        const Int32_t pageCount
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysTableStats);
 
@@ -1150,9 +1150,9 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertColumnStatisticsToMasterDb(
     const ExecutionContext& executionContext,
-    const Int columnId,
-    const BigInt distinctCount,
-    const BigInt nullCount
+    const Int32_t columnId,
+    const Int64_t distinctCount,
+    const Int64_t nullCount
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysColumnStats);
 
@@ -1172,11 +1172,11 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertColumnHistogramsToMasterDb(
         const ExecutionContext& executionContext,
-        const Int columnId,
+        const Int32_t columnId,
         const Value &min,
         const Value &max,
-        const Int rowCount,
-        const BigInt distinctCount
+        const Int32_t rowCount,
+        const Int64_t distinctCount
     ) const {
         auto* table = this->CatalogTable(CatalogTables::SysColumnHistograms);
 
@@ -1200,10 +1200,10 @@ namespace CoreEngine {
 
     Errors::RuntimeStatus SystemCatalog::InsertIndexStatisticsToMasterDb(
         const ExecutionContext& executionContext,
-        const Int tableId,
-        const Int indexId,
-        const BigInt leafPages,
-        const TinyInt depth,
+        const Int32_t tableId,
+        const Int32_t indexId,
+        const Int64_t leafPages,
+        const Int8_t depth,
         const DataTypes::Decimal &averageFragmentation
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysIndexStats);
@@ -1228,7 +1228,7 @@ namespace CoreEngine {
         const DataTypes::StringView& roleName,
         const Security::Permission &permissions,
         const bool isSystem,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysRoles);
@@ -1238,7 +1238,7 @@ namespace CoreEngine {
 
         const auto fields = DataStructures::PolymorphicArray<Value>::From(executionContext.GetAllocator(),
             Value(roleName, executionContext.GetAllocator(), static_cast<column_index_t>(SysRoles::RoleName)),
-            Value(static_cast<Int>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
+            Value(static_cast<Int32_t>(permissions), static_cast<column_index_t>(SysRoles::Permissions)),
             Value(isSystem, static_cast<column_index_t>(SysRoles::IsSystemRole)),
             Value(currentDate, static_cast<column_index_t>(SysRoles::CreatedAt)),
             Value(currentDate, static_cast<column_index_t>(SysRoles::LastModifiedAt)),
@@ -1257,9 +1257,9 @@ namespace CoreEngine {
         const ExecutionContext& executionContext,
         const DataTypes::StringView& username,
         const DataTypes::StringView& passwordHash,
-        const Int roleId,
+        const Int32_t roleId,
         const bool isActive,
-        const Int version,
+        const Int32_t version,
         const bool isDeleted
     ) const{
 
@@ -1379,7 +1379,7 @@ namespace CoreEngine {
         return SystemCatalog::ToDatabaseHeader(allocator, &selectedDatabases[0], tablePtr);
     }
 
-Catalog::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAllocator* allocator, const Int databaseId) const{
+Catalog::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAllocator* allocator, const Int32_t databaseId) const{
     auto* tablePtr = this->CatalogTable(CatalogTables::SysDatabases);
     DataStructures::PolymorphicArray<StorageTypes::RID> selectedDatabases(allocator);
 
@@ -1394,7 +1394,7 @@ Catalog::DatabaseHeader SystemCatalog::SelectDatabaseById(const ::Memory::IAlloc
     return SystemCatalog::ToDatabaseHeader(allocator, &selectedDatabases[0], tablePtr);
 }
 
-DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int databaseId) const{
+DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSchemas(const ::Memory::IAllocator* allocator, const Int32_t databaseId) const{
     auto* tablePtr = this->CatalogTable(CatalogTables::SysSchemas);
     DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 2);
 
@@ -1410,7 +1410,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         return schemas;
     }
 
-    Dictionary<DataTypes::String, Catalog::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, const Int databaseId) const{
+    Dictionary<DataTypes::String, Catalog::SchemaHeader> SystemCatalog::SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, const Int32_t databaseId) const{
         const auto& schemas = this->SelectSchemas(allocator, databaseId);
 
         Dictionary<DataTypes::String, Catalog::SchemaHeader> selectedSchemas;
@@ -1423,9 +1423,9 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     bool SystemCatalog::SchemaExists(
         const ::Memory::IAllocator* allocator,
-        const Int databaseId,
+        const Int32_t databaseId,
         const DataTypes::StringView& schema,
-        Int* schemaId
+        Int32_t* schemaId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedSchemas(allocator, 1);
         auto* table = this->CatalogTable(CatalogTables::SysSchemas);
@@ -1456,7 +1456,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::TableHeader> SystemCatalog::SelectTables(
         const ::Memory::IAllocator* allocator,
-        const Int databaseId
+        const Int32_t databaseId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator, 10);
 
@@ -1484,8 +1484,8 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::TableHeader SystemCatalog::SelectTable(
         const ::Memory::IAllocator* allocator,
-        const Int databaseId,
-        const Int tableId
+        const Int32_t databaseId,
+        const Int32_t tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedTables(allocator);
         auto* sysTablesPtr = this->CatalogTable(CatalogTables::SysTables);
@@ -1510,11 +1510,11 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::TableHeader SystemCatalog::SelectTable(
         const ::Memory::IAllocator* allocator,
-        const Int databaseId,
+        const Int32_t databaseId,
         const DataTypes::StringView& tableName,
         const DataTypes::StringView& schema
     ) const{
-        Int schemaId = -1;
+        Int32_t schemaId = -1;
         if (!this->SchemaExists(allocator, databaseId, schema, &schemaId) && !schema.Empty())
             return {};
 
@@ -1553,7 +1553,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
             ._table = &tableHeader
         };
 
-        UnsignedInt indexesColumnsCount = 0, constraintsColumnsCount = 0;
+        UInt32_t indexesColumnsCount = 0, constraintsColumnsCount = 0;
 
         definition._columns = this->SelectColumns(allocator, tableId);
         definition._constraints = this->SelectConstraints(allocator, tableId);
@@ -1584,7 +1584,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::ConstraintsHeader> SystemCatalog::SelectConstraints(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedConstraints(allocator);
         auto* constraintsTable = this->CatalogTable(CatalogTables::SysConstraints);
@@ -1618,8 +1618,8 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::ColumnHeader SystemCatalog::SelectColumnById(
         const ::Memory::IAllocator* allocator,
-        const Int tableId,
-        const Int columnId
+        const Int32_t tableId,
+        const Int32_t columnId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedColumns(allocator, 1);
         auto* sysColumns = this->CatalogTable(CatalogTables::SysColumns);
@@ -1636,7 +1636,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::ColumnHeader> SystemCatalog::SelectColumns(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedColumns(allocator, 10);
         auto* sysColumns = this->CatalogTable(CatalogTables::SysColumns);
@@ -1661,7 +1661,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Dictionary<DataTypes::String, Catalog::ColumnHeader> SystemCatalog::SelectColumnsToDictionary(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         const auto columns = this->SelectColumns(allocator, tableId);
 
@@ -1674,7 +1674,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::IndexHeader> SystemCatalog::SelectIndexes(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedIndexes(allocator);
@@ -1694,7 +1694,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         return selectedIndexHeaders;
     }
 
-    Catalog::IndexHeader SystemCatalog::SelectIndexById(const ::Memory::IAllocator* allocator, const Int indexId) const{
+    Catalog::IndexHeader SystemCatalog::SelectIndexById(const ::Memory::IAllocator* allocator, const Int32_t indexId) const{
         auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexes);
         DataStructures::PolymorphicArray<StorageTypes::RID> selectedIndexes(allocator, 1);
 
@@ -1713,7 +1713,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexId(
         const ::Memory::IAllocator* allocator,
-        const Int indexId
+        const Int32_t indexId
     ) const{
         auto* sysIndexes = this->CatalogTable(CatalogTables::SysIndexColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator);
@@ -1736,13 +1736,13 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         return indexColumns;
     }
 
-    Dictionary<Int, Catalog::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(
+    Dictionary<Int32_t, Catalog::IndexColumnsHeader> SystemCatalog::SelectIndexColumnsByIndexIdToDictionary(
         const ::Memory::IAllocator* allocator,
-        const Int indexId
+        const Int32_t indexId
     ) const{
         const auto indexColumns = this->SelectIndexColumnsByIndexId(allocator, indexId);
 
-        Dictionary<Int, Catalog::IndexColumnsHeader> indexColumnsDict;
+        Dictionary<Int32_t, Catalog::IndexColumnsHeader> indexColumnsDict;
 
         for (const auto& indexColumn : indexColumns)
             indexColumnsDict.Add(indexColumn.columnId, indexColumn);
@@ -1752,7 +1752,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableId(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysIdentityColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 10);
@@ -1775,13 +1775,13 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         return columns;
     }
 
-    Dictionary<Int , Catalog::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(
+    Dictionary<Int32_t , Catalog::IdentityColumnsHeader> SystemCatalog::SelectIdentityColumnsByTableIdToDictionary(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         const auto columns = this->SelectIdentityColumnsByTableId(allocator, tableId);
 
-        Dictionary<Int, Catalog::IdentityColumnsHeader> dict;
+        Dictionary<Int32_t, Catalog::IdentityColumnsHeader> dict;
         for(const auto& column : columns)
             dict.Add(column.columnId, column);
 
@@ -1790,7 +1790,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintId(
         const ::Memory::IAllocator* allocator,
-        const Int constraintId
+        const Int32_t constraintId
     ) const{
         auto* sysIndexes = this->CatalogTable(CatalogTables::SysConstraintColumns);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 2);
@@ -1813,13 +1813,13 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
         return constraintColumns;
     }
 
-    Dictionary<Int, Catalog::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(
+    Dictionary<Int32_t, Catalog::ConstraintsColumnsHeader> SystemCatalog::SelectConstraintColumnsByConstraintIdToDictionary(
         const ::Memory::IAllocator* allocator,
-        const Int constraintId
+        const Int32_t constraintId
     ) const{
         const auto columns = this->SelectConstraintColumnsByConstraintId(allocator, constraintId);
 
-        Dictionary<Int, Catalog::ConstraintsColumnsHeader> constraintColumns;
+        Dictionary<Int32_t, Catalog::ConstraintsColumnsHeader> constraintColumns;
         for (const auto& constraint: columns)
             constraintColumns.Add(constraint.columnId, constraint);
 
@@ -1828,7 +1828,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::DefaultValuesHeader SystemCatalog::SelectDefaultValueByColumnId(
         const ::Memory::IAllocator* allocator,
-        const Int columnId
+        const Int32_t columnId
     ) const{
         auto* sysValues = this->CatalogTable(CatalogTables::SysDefaultValues);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 1);
@@ -1843,7 +1843,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::TableStatistics SystemCatalog::SelectTableStatisticsById(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const{
         auto* sysIndexes = this->CatalogTable(CatalogTables::SysTableStats);
         DataStructures::PolymorphicArray<StorageTypes::RID> rows(allocator, 1);
@@ -1859,7 +1859,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Catalog::ColumnStatistics SystemCatalog::SelectColumnStatisticsById(
         const ::Memory::IAllocator* allocator,
-        const Int columnId,
+        const Int32_t columnId,
         const DataType columnType
     ) const{
         auto* sysColumnStats = this->CatalogTable(CatalogTables::SysColumnStats);
@@ -1875,8 +1875,8 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::ColumnHistograms> SystemCatalog::SelectColumnHistogramsByColumnId(
         const ::Memory::IAllocator* allocator,
-        const Int tableId,
-        const Int columnId
+        const Int32_t tableId,
+        const Int32_t columnId
     ) const {
         auto columnHeader = this->SelectColumnById(allocator, tableId, columnId);
 
@@ -1895,7 +1895,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     DataStructures::PolymorphicArray<Catalog::IndexStatistics> SystemCatalog::SelectIndexStatisticsByTableId(
         const ::Memory::IAllocator* allocator,
-        const Int tableId
+        const Int32_t tableId
     ) const {
         DataStructures::PolymorphicArray<Catalog::IndexStatistics> result(allocator);
         auto* table = this->CatalogTable(CatalogTables::SysIndexStats);
@@ -1913,9 +1913,9 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     void SystemCatalog::UpdateIdentityByColumnId(
         const ::Memory::IAllocator* allocator,
-        const Int tableId,
-        const Int columnId,
-        const BigInt lastValue
+        const Int32_t tableId,
+        const Int32_t columnId,
+        const Int64_t lastValue
     )const{
         auto* table = this->CatalogTable(CatalogTables::SysIdentityColumns);
 
@@ -1930,10 +1930,10 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     void SystemCatalog::UpdateTableStatisticsById(
         const ::Memory::IAllocator* allocator,
-        const Int tableId,
-        const BigInt rowCount,
-        const Int rowSize,
-        const Int pageCount
+        const Int32_t tableId,
+        const Int64_t rowCount,
+        const Int32_t rowSize,
+        const Int32_t pageCount
     ) const{
 
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
@@ -1952,9 +1952,9 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     void SystemCatalog::UpdateColumnStatisticsById(
         const ::Memory::IAllocator* allocator,
-        const Int columnId,
-        const BigInt distinctCount,
-        const BigInt nullCount,
+        const Int32_t columnId,
+        const Int64_t distinctCount,
+        const Int64_t nullCount,
         const Value& min,
         const Value& max
     ) const{
@@ -1986,10 +1986,10 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     void SystemCatalog::UpdateIndexStatisticsById(
         const ::Memory::IAllocator* allocator,
-        const Int tableId,
-        const Int indexId,
-        const BigInt leafPages,
-        const TinyInt depth,
+        const Int32_t tableId,
+        const Int32_t indexId,
+        const Int64_t leafPages,
+        const Int8_t depth,
         const DataTypes::Decimal &averageFragmentation
     ) const {
         const auto updates = DataStructures::PolymorphicArray<Value>::From(
@@ -2008,12 +2008,12 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Errors::RuntimeStatus SystemCatalog::UpdateHistogramBucket(
         const ::Memory::IAllocator* allocator,
-        const Int columnId,
-        const Int histogramId,
+        const Int32_t columnId,
+        const Int32_t histogramId,
         const Value& min,
         const Value& max,
-        const Int rowCount,
-        const BigInt& distinctCount
+        const Int32_t rowCount,
+        const Int64_t& distinctCount
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysColumnHistograms);
 
@@ -2045,7 +2045,7 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
 
     Errors::RuntimeStatus SystemCatalog::UpdateColumnById(
         const ::Memory::IAllocator* allocator,
-        const Int columnId,
+        const Int32_t columnId,
         const DataStructures::PolymorphicArray<Value> &updates
     ) const{
         auto* table = this->CatalogTable(CatalogTables::SysColumns);
@@ -2057,8 +2057,8 @@ DataStructures::PolymorphicArray<Catalog::SchemaHeader> SystemCatalog::SelectSch
     Errors::RuntimeStatus SystemCatalog::UpdateUserById(
         const ExecutionContext& context,
         const DataTypes::StringView& username,
-        const Int userId,
-        const Int roleId
+        const Int32_t userId,
+        const Int32_t roleId
     ) const {
         auto* table = this->CatalogTable(CatalogTables::SysUsers);
 

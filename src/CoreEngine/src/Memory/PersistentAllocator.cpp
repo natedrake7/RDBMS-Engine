@@ -7,7 +7,7 @@
 
 
 namespace CoreEngine::Memory{
-    UnsignedInt PersistentAllocator::NewChunkCapacity(const UnsignedInt size) const{
+    UInt32_t PersistentAllocator::NewChunkCapacity(const UInt32_t size) const{
         if (size > Chunk::MAX_SIZE)
             return size;
 
@@ -17,7 +17,7 @@ namespace CoreEngine::Memory{
         return Math::Max(size, Math::Min(this->_tail->_size * 2, Chunk::MAX_SIZE));
     }
 
-    void PersistentAllocator::AllocateNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+    void PersistentAllocator::AllocateNewChunk(const UInt32_t size, const std::size_t alignment) const{
         const auto newChunkSize = this->NewChunkCapacity(size + Chunk::MaxPadding(alignment));
 
         if(GlobalMemoryManager::Get().TryReserveForMisc(newChunkSize) == false)
@@ -45,7 +45,7 @@ namespace CoreEngine::Memory{
         this->_tail = newChunk;
     }
 
-    void PersistentAllocator::TryFindNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+    void PersistentAllocator::TryFindNewChunk(const UInt32_t size, const std::size_t alignment) const{
         auto* node = this->_tail->_next;
         while (node != nullptr && node->AlignedOffset(alignment) + size > node->_size)
             node = node->_next;
@@ -61,7 +61,7 @@ namespace CoreEngine::Memory{
     PersistentAllocator::PersistentAllocator()
         : _head(nullptr), _tail(nullptr){}
 
-    PersistentAllocator::PersistentAllocator(const UnsignedInt size)
+    PersistentAllocator::PersistentAllocator(const UInt32_t size)
         : _head(nullptr), _tail(nullptr){
         this->AllocateNewChunk(size, ::Memory::DEFAULT_ALIGNMENT);
     }
@@ -93,7 +93,7 @@ namespace CoreEngine::Memory{
         return *this;
     }
 
-    void* PersistentAllocator::AllocateAligned(const UnsignedInt size, const std::size_t alignment)const{
+    void* PersistentAllocator::AllocateAligned(const UInt32_t size, const std::size_t alignment)const{
         if (this->_head == nullptr)
             this->AllocateNewChunk(size, alignment);
 
@@ -114,7 +114,7 @@ namespace CoreEngine::Memory{
             return;
 
         auto* node = this->_head;
-        UnsignedBigInt freedMemory = 0;
+        UInt64_t freedMemory = 0;
         while(node != nullptr){
             auto* next = node->_next;
             freedMemory += node->_size;

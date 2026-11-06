@@ -4,8 +4,8 @@
 
 #include "Systemic/Functions/MathFunctions.h"
 
-Int ThreadPool::DefaultWorkerCount(){
-    const auto logicalCores = static_cast<Int>(std::thread::hardware_concurrency());
+Int32_t ThreadPool::DefaultWorkerCount(){
+    const auto logicalCores = static_cast<Int32_t>(std::thread::hardware_concurrency());
     return Math::Max(2, logicalCores == 0 ? 4 : logicalCores);
 }
 
@@ -47,7 +47,7 @@ ThreadPool::~ThreadPool(){
     this->Stop();
 }
 
-void ThreadPool::Start(Int numberOfThreads){
+void ThreadPool::Start(Int32_t numberOfThreads){
     numberOfThreads = Math::Max(numberOfThreads, DefaultWorkerCount());
     for (int i  = 0; i < numberOfThreads; i++)
         this->workers.emplace_back(&ThreadPool::WorkerLoop, this);

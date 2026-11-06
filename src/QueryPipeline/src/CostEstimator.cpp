@@ -22,7 +22,7 @@ namespace QueryPipeline{
         this->previousRows = this->bucketSize * this->bucketIndex;
     }
 
-    Int CostEstimator::EstimateExpressionComplexity(const Expressions::Expression* expression){
+    Int32_t CostEstimator::EstimateExpressionComplexity(const Expressions::Expression* expression){
         if (expression == nullptr)
             return CostEstimator::DEFAULT_EXPRESSION_COMPLEXITY;
 
@@ -44,7 +44,7 @@ namespace QueryPipeline{
         }
     }
 
-    Int CostEstimator::EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr){
+    Int32_t CostEstimator::EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr){
         const auto leftCost = CostEstimator::EstimateExpressionComplexity(binaryExpr->left);
         const auto rightCost = CostEstimator::EstimateExpressionComplexity(binaryExpr->right);
 
@@ -53,7 +53,7 @@ namespace QueryPipeline{
         return leftCost + rightCost + operationCost;
     }
 
-    Int CostEstimator::EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr){
+    Int32_t CostEstimator::EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr){
         switch (binaryExpr) {
             case Expressions::BinaryOperator::Add:
             case Expressions::BinaryOperator::Subtract:
@@ -75,7 +75,7 @@ namespace QueryPipeline{
         }
     }
 
-    Int CostEstimator::EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr){
+    Int32_t CostEstimator::EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr){
         switch (logicalExpr->logicalType){
             case Expressions::LogicalType::And:
             case Expressions::LogicalType::Or:
@@ -89,8 +89,8 @@ namespace QueryPipeline{
         }
     }
 
-    Int CostEstimator::EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr){
-        Int cost = CostEstimator::FUNCTION_EXPRESSION_COMPLEXITY;
+    Int32_t CostEstimator::EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr){
+        Int32_t cost = CostEstimator::FUNCTION_EXPRESSION_COMPLEXITY;
 
         for (const auto& argument: functionExpr->arguments)
             cost += CostEstimator::EstimateExpressionComplexity(argument);
@@ -98,8 +98,8 @@ namespace QueryPipeline{
         return cost;
     }
 
-    Int CostEstimator::EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr){
-        Int cost = CostEstimator::BRANCH_EXPRESSION_COMPLEXITY;
+    Int32_t CostEstimator::EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr){
+        Int32_t cost = CostEstimator::BRANCH_EXPRESSION_COMPLEXITY;
 
         for (const auto& argument: branchExpr->arguments)
             cost += CostEstimator::EstimateExpressionComplexity(argument);
@@ -421,7 +421,7 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateFilterCost(
         const Expressions::Expression* filterExpression,
-        const BigInt inputRows,
+        const Int64_t inputRows,
         const double selectivity
     ){
         const auto expressionComplexity = CostEstimator::EstimateExpressionComplexity(filterExpression);
@@ -435,9 +435,9 @@ namespace QueryPipeline{
 
     double CostEstimator::EstimateProjectionCost(
         const std::vector<Expressions::Expression*>& projections,
-        const BigInt inputRows
+        const Int64_t inputRows
     ) {
-        Int totalExpressionComplexity = 0;
+        Int32_t totalExpressionComplexity = 0;
 
         for (const auto& expression : projections)
             totalExpressionComplexity += CostEstimator::EstimateExpressionComplexity(expression);
@@ -446,7 +446,7 @@ namespace QueryPipeline{
     }
 
     double CostEstimator::EstimateSortCost(
-        const BigInt inputRows,
+        const Int64_t inputRows,
         const std::vector<Expressions::Expression*>& sortExpressions
     ){
         if (inputRows <= 1) return 0.0;
@@ -455,7 +455,7 @@ namespace QueryPipeline{
 
         const auto comparison = castRows * std::log2(castRows);
 
-        Int totalExpressionComplexity = 0;
+        Int32_t totalExpressionComplexity = 0;
         for (const auto& expression : sortExpressions){
             totalExpressionComplexity += CostEstimator::EstimateExpressionComplexity(expression);
             totalExpressionComplexity += CostEstimator::EstimateExpressionComparisonCost(expression);

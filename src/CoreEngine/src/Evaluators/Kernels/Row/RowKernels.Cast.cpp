@@ -4,9 +4,9 @@
 namespace CoreEngine::RowKernels{
     template<typename...> struct TypeList {};
     using CastTypes = TypeList<
-        bool, TinyInt,
-        SmallInt, Int,
-        BigInt,
+        bool, Int8_t,
+        Int16_t, Int32_t,
+        Int64_t,
         DataTypes::Decimal,
         DataTypes::StringValue,
         DataTypes::Guid,
@@ -23,7 +23,7 @@ namespace CoreEngine::RowKernels{
                 !std::is_same_v<TFrom, TTo> &&
                 DataTypes::Coercions::IsCoercionAllowed(from, to, true)
             ){
-                table.cells[static_cast<Int>(from)][static_cast<Int>(to)]
+                table.cells[static_cast<Int32_t>(from)][static_cast<Int32_t>(to)]
                     = &CastRowKernel<TFrom, TTo>;
             }
         // else: pair can't be code-generated -> CastRowKernel<> is never named,
@@ -49,6 +49,6 @@ namespace CoreEngine::RowKernels{
     inline constexpr CastKernelTable CAST_KERNEL_TABLE = RegisterCastKernels();
 
     Expressions::RowKernelFunction LookupCastKernel(DataType fromType, DataType toType){
-        return CAST_KERNEL_TABLE.cells[static_cast<Int>(fromType)][static_cast<Int>(toType)];
+        return CAST_KERNEL_TABLE.cells[static_cast<Int32_t>(fromType)][static_cast<Int32_t>(toType)];
     }
 }

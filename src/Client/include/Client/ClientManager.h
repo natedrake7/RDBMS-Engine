@@ -10,10 +10,10 @@
 namespace Client {
     class ConnectionManager {
         ConnectionParameters _parameters;
-        UnsignedInt _nextRequestId;
+        UInt32_t _nextRequestId;
         bool _networkInitialized;
 
-        [[nodiscard]] UnsignedInt NextRequestId(){
+        [[nodiscard]] UInt32_t NextRequestId(){
             return this->_nextRequestId++;
         }
 
@@ -25,14 +25,14 @@ namespace Client {
 
         [[nodiscard]] bool SendFrame(
             Network::MessageType type,
-            UnsignedInt requestId,
+            UInt32_t requestId,
             const char* payload,
-            UnsignedInt payloadLength
+            UInt32_t payloadLength
         )const;
 
         [[nodiscard]] bool ReadFrame(Network::Header* header, std::vector<char>* payload)const;
 
-        [[nodiscard]] bool ReadQueryResponse(UnsignedInt requestId)const;
+        [[nodiscard]] bool ReadQueryResponse(UInt32_t requestId)const;
 
         public:
             ConnectionManager() = default;

@@ -60,7 +60,7 @@ namespace CoreEngine::Storage{
         StorageLayout::frame_id_t _frames[StorageLayout::EXTENT_SIZE];
         page_id_t _pages[StorageLayout::EXTENT_SIZE];
 
-        UnsignedInt _count;
+        UInt32_t _count;
         buffer_pool_slot_t _slot;
     };
 
@@ -71,8 +71,8 @@ namespace CoreEngine::Storage{
 
     class StorageManager final{
         FileDirectory _pageTable[StorageLayout::MAX_BUFFER_POOL_SLOTS];
-        UnsignedTinyInt _freeDbStack[StorageLayout::MAX_BUFFER_POOL_SLOTS];
-        UnsignedSmallInt _freeTopDbStack;
+        UInt8_t _freeDbStack[StorageLayout::MAX_BUFFER_POOL_SLOTS];
+        UInt16_t _freeTopDbStack;
 
         FileManager _fileManager;
         BufferPoolMemoryManager _memoryManager;
@@ -81,13 +81,13 @@ namespace CoreEngine::Storage{
         mutable MultiThreading::Mutex _stackMutex; //protects dbStack
         const Memory::PersistentAllocator _allocator;
 
-        std::atomic<UnsignedInt> _clockHand;
-        UnsignedInt _writerLastHand; // touched only by the writer thread
+        std::atomic<UInt32_t> _clockHand;
+        UInt32_t _writerLastHand; // touched only by the writer thread
 
         BackgroundWriter _writer;
 
-        inline static constexpr UnsignedInt WRITER_MIN_LOOKAHEAD = 256;
-        inline static constexpr UnsignedInt WRITER_MAX_WRITES = 128;   // 1 MB per round at 8 KB pages
+        inline static constexpr UInt32_t WRITER_MIN_LOOKAHEAD = 256;
+        inline static constexpr UInt32_t WRITER_MAX_WRITES = 128;   // 1 MB per round at 8 KB pages
 
         static_assert(
             WRITER_MAX_WRITES * StorageLayout::PAGE_SIZE == 1 * Constants::MB,
@@ -147,7 +147,7 @@ namespace CoreEngine::Storage{
     public:
         static StorageManager& Get();
 
-        void Initialize(UnsignedBigInt size);
+        void Initialize(UInt64_t size);
 
         void Shutdown();
 

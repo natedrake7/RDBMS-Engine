@@ -3,9 +3,9 @@
 #include <CoreEngine/Algorithms/Sort/SortingFunctions.h>
 
 void MergeSort::Merge(const MergeSortParameters& parameters){
-    Int i, j;
-    const Int n1 = parameters.mid - parameters.left + 1;
-    const Int n2 = parameters.right - parameters.mid;
+    Int32_t i, j;
+    const Int32_t n1 = parameters.mid - parameters.left + 1;
+    const Int32_t n2 = parameters.right - parameters.mid;
 
     std::vector<MaterializedRow> leftVec, rightVec;
 
@@ -17,7 +17,7 @@ void MergeSort::Merge(const MergeSortParameters& parameters){
 
     i = 0;
     j = 0;
-    Int k = parameters.left;
+    Int32_t k = parameters.left;
 
     while (i < n1 && j < n2){
         if (SortingFunctions::CompareRows(

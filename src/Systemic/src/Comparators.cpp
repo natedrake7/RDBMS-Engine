@@ -38,7 +38,7 @@ namespace Comparators{
             return std::memcmp(&lhs, &rhs, sizeof(DataTypes::StringValue)) == 0;
 
         return
-            std::memcmp(&lhs, &rhs, sizeof(Int) + DataTypes::StringValue::PrefixSize()) == 0
+            std::memcmp(&lhs, &rhs, sizeof(Int32_t) + DataTypes::StringValue::PrefixSize()) == 0
             && std::memcmp(lhs.Data(), rhs.Data(), lhsLength) == 0;
     }
 
@@ -99,7 +99,7 @@ namespace Comparators{
     }
 
     Comparator Compare(const Value& lhs, const Value& rhs){
-        const auto type = PromoteType(lhs.GetType(), rhs.GetType());
+        const auto type = PromoteType(lhs.TypeInfo(), rhs.TypeInfo());
         switch (type) {
         case DataType::String:
             return Compare(lhs.AsStringView(), rhs.AsStringView());

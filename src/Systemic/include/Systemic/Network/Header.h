@@ -3,7 +3,7 @@
 
 
 namespace Network{
-    enum class MessageType : UnsignedSmallInt {
+    enum class MessageType : UInt16_t {
         Invalid           = 0,
         // client -> server
         Authorize         = 1,
@@ -19,26 +19,26 @@ namespace Network{
         QueryComplete     = 134
     };
 
-    enum class HeaderFlags : UnsignedSmallInt {
+    enum class HeaderFlags : UInt16_t {
         None = 0,
         HasMore = 1 << 0
     };
 
-    enum class HeaderStatus : UnsignedTinyInt{
+    enum class HeaderStatus : UInt8_t{
         Incomplete = 0,   // wait for more bytes
         Ready      = 1,
         Malformed  = 2    // protocol violation - caller must close the connection
     };
 
     struct Header{
-        UnsignedInt _payloadLength;
+        UInt32_t _payloadLength;
         MessageType _messageType;
         HeaderFlags _frameFlags;
         request_id_t _requestId;
         statement_ordinal_t _statementOrdinal;
 
         static constexpr auto SIZE =
-                sizeof(UnsignedInt) + sizeof(MessageType)
+                sizeof(UInt32_t) + sizeof(MessageType)
                 + sizeof(HeaderFlags) + sizeof(request_id_t)
                 + sizeof(statement_ordinal_t);
 

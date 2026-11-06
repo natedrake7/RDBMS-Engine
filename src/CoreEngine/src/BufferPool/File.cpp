@@ -29,7 +29,7 @@ namespace Storage::FileIO{
         );
 
         [[noreturn]] void ThrowLastError(const char* what){
-            throw std::system_error(static_cast<Int>(GetLastError()), std::system_category(), what);
+            throw std::system_error(static_cast<Int32_t>(GetLastError()), std::system_category(), what);
         }
 
         struct ThreadIOEvent{
@@ -53,7 +53,7 @@ namespace Storage::FileIO{
             return event._event;
         }
 
-        [[nodiscard]] inline OVERLAPPED OverlappedAt(const UnsignedBigInt offset){
+        [[nodiscard]] inline OVERLAPPED OverlappedAt(const UInt64_t offset){
             return {
                 .Offset = static_cast<DWORD>(offset),
                 .OffsetHigh = static_cast<DWORD>(offset >> 32),
@@ -174,10 +174,10 @@ namespace Storage::FileIO{
 #endif
     }
 
-    UnsignedBigInt ReadScatter(
+    UInt64_t ReadScatter(
         const native_file_t file,
         const std::span<object_t* const> pages,
-        const UnsignedBigInt offset
+        const UInt64_t offset
     ){
         assert(!pages.empty() && pages.size() <= CoreEngine::StorageLayout::EXTENT_SIZE);
 #ifdef _WIN32
@@ -185,7 +185,7 @@ namespace Storage::FileIO{
 
         FILE_SEGMENT_ELEMENT segments[CoreEngine::StorageLayout::EXTENT_SIZE * ENTRIES_PER_PAGE + 1] = {};
 
-        UnsignedBigInt counter = 0;
+        UInt64_t counter = 0;
         for (auto* page: pages){
             assert(reinterpret_cast<std::uintptr_t>(page) % WINDOWS_MEMORY_PAGE == 0);
             for (auto part = 0; part < ENTRIES_PER_PAGE; part++){
@@ -214,8 +214,8 @@ namespace Storage::FileIO{
             PAGE_SIZE
         };
 
-        const auto total = static_cast<UnsignedBigInt>(pages.size()) * PAGE_SIZE;
-        UnsignedBigInt done = 0;
+        const auto total = static_cast<UInt64_t>(pages.size()) * PAGE_SIZE;
+        UInt64_t done = 0;
         while (done < total){
             // A short read can stop mid-buffer: continue from the first unfilled buffer
             const auto first = static_cast<size_t>(done / PAGE_SIZE);
@@ -226,7 +226,7 @@ namespace Storage::FileIO{
             const auto n = ::preadv(
                 file,
                 vectors + first,
-                static_cast<Int>(pages.size() - first),
+                static_cast<Int32_t>(pages.size() - first),
                 static_cast<off_t>(offset + done)
             );
 
@@ -237,25 +237,25 @@ namespace Storage::FileIO{
             }
             if (n == 0)
                 break;                                     // end of file
-            done += static_cast<UnsignedBigInt>(n);
+            done += static_cast<UInt64_t>(n);
         }
-        return static_cast<UnsignedInt>(done / PAGE_SIZE);
+        return static_cast<UInt32_t>(done / PAGE_SIZE);
 #endif
     }
 
-    UnsignedBigInt Read(
+    UInt64_t Read(
         native_file_t file,
         void* data,
-        const UnsignedBigInt size,
-        const UnsignedBigInt offset
+        const UInt64_t size,
+        const UInt64_t offset
     ){
         auto* bytes = static_cast<char*>(data);
-        UnsignedBigInt done = 0;
+        UInt64_t done = 0;
 
         while (done < size){
 #ifdef _WIN32
             auto overlapped = OverlappedAt(offset+ done);
-            const auto chunk = static_cast<DWORD>(Math::Min<UnsignedBigInt>(size - done, MAXDWORD));
+            const auto chunk = static_cast<DWORD>(Math::Min<UInt64_t>(size - done, MAXDWORD));
             const auto started = ReadFile(file, bytes + done, chunk, nullptr, &overlapped);
             const auto transferred = FinishIO(file, started, overlapped, "FileIO:Read");
 #else
@@ -269,7 +269,7 @@ namespace Storage::FileIO{
             if (transferred == 0)
                 break;                                   // end of file
 
-            done += static_cast<UnsignedBigInt>(transferred);
+            done += static_cast<UInt64_t>(transferred);
         }
 
         return done;
@@ -278,16 +278,16 @@ namespace Storage::FileIO{
     void Write(
         native_file_t file,
         const void* data,
-        const UnsignedBigInt size,
-        const UnsignedBigInt offset
+        const UInt64_t size,
+        const UInt64_t offset
     ){
         const auto* bytes = static_cast<const char*>(data);
-        UnsignedBigInt done = 0;
+        UInt64_t done = 0;
 
         while (done < size){
 #ifdef _WIN32
             auto overlapped = OverlappedAt(offset + done);
-            const auto chunk = static_cast<DWORD>(Math::Min<UnsignedBigInt>(size - done, MAXDWORD));
+            const auto chunk = static_cast<DWORD>(Math::Min<UInt64_t>(size - done, MAXDWORD));
             const auto started = WriteFile(file, bytes + done, chunk, nullptr, &overlapped);
             const auto transferred = FinishIO(file, started, overlapped, "FileIO:Write");
 #else
@@ -301,7 +301,7 @@ namespace Storage::FileIO{
             if (transferred == 0)
                 throw std::runtime_error("FileIO::Write: no progress");
 
-            done += static_cast<UnsignedBigInt>(transferred);
+            done += static_cast<UInt64_t>(transferred);
         }
     }
 

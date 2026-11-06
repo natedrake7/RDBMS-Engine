@@ -4,15 +4,15 @@
 #include <Systemic/DataTypes/DataTypes.h>
 
 namespace CoreEngine{
-    enum class ColumnOrigin: UnsignedTinyInt{
+    enum class ColumnOrigin: UInt8_t{
         Base = 0,
         Computed = 1
     };
 
     struct ColumnIdentity{
-        UnsignedSmallInt _slotIndex;
+        UInt16_t _slotIndex;
         column_index_t _ordinalPosition;
-        UnsignedSmallInt _virtualId;
+        UInt16_t _virtualId;
         ColumnOrigin _origin;
 
         ColumnIdentity()
@@ -22,23 +22,23 @@ namespace CoreEngine{
                 _origin(ColumnOrigin::Base){}
 
         ColumnIdentity(
-            const UnsignedSmallInt slotIndex,
+            const UInt16_t slotIndex,
             const column_index_t ordinalPosition
         ):  _slotIndex(slotIndex), _ordinalPosition(ordinalPosition),
             _virtualId(0), _origin(ColumnOrigin::Base){}
 
-        explicit ColumnIdentity(const UnsignedSmallInt virtualId)
+        explicit ColumnIdentity(const UInt16_t virtualId)
             :   _slotIndex(0), _ordinalPosition(0),
                 _virtualId(virtualId), _origin(ColumnOrigin::Computed){}
 
         static ColumnIdentity Base(
-            const UnsignedSmallInt slotIndex,
+            const UInt16_t slotIndex,
             const column_index_t ordinalPosition
         ){
             return ColumnIdentity(slotIndex, ordinalPosition);
         }
 
-        static ColumnIdentity Computed(const UnsignedSmallInt virtualId){
+        static ColumnIdentity Computed(const UInt16_t virtualId){
             return ColumnIdentity(virtualId);
         }
 
@@ -67,7 +67,7 @@ namespace CoreEngine{
             : _identity(identity), _type(type){}
 
         static SchemaColumn Base(
-            const UnsignedSmallInt slotIndex,
+            const UInt16_t slotIndex,
             const column_index_t ordinalPosition,
             const DataType& type
         ){
@@ -75,7 +75,7 @@ namespace CoreEngine{
         }
 
         static SchemaColumn Computed(
-            const UnsignedSmallInt virtualId,
+            const UInt16_t virtualId,
             const DataType type
         ){
             return SchemaColumn(ColumnIdentity::Computed(virtualId), type);
@@ -85,11 +85,11 @@ namespace CoreEngine{
     struct OutputSchema{
         DataStructures::PolymorphicArray<SchemaColumn> _columns;
 
-        OutputSchema(const ::Memory::IAllocator* allocator, const Int capacity)
+        OutputSchema(const ::Memory::IAllocator* allocator, const Int32_t capacity)
             : _columns(allocator, capacity){}
 
-        Int IndexOf(const ColumnIdentity& identity) const{
-            for (Int i = 0; i < _columns.Size(); ++i){
+        Int32_t IndexOf(const ColumnIdentity& identity) const{
+            for (Int32_t i = 0; i < _columns.Size(); ++i){
                 if (_columns[i]._identity == identity)
                     return i;
             }

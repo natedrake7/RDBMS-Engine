@@ -49,10 +49,10 @@ namespace CoreEngine::Indexing{
     class BTree final{
         StorageTypes::Table* table;
 
-        Int degree;
-        Int keySize;
+        Int32_t degree;
+        Int32_t keySize;
 
-        Int nonClusteredIndexId;
+        Int32_t nonClusteredIndexId;
         page_id_t rootPageId;
 
         Accessors::PageAccessor _pageAccessor;
@@ -66,20 +66,20 @@ namespace CoreEngine::Indexing{
             const Pages::IndexPageView& newChild
         );
 
-        static inline Int ScanLeafUpperBound(
+        static inline Int32_t ScanLeafUpperBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key,
-            Int left = 0
+            Int32_t left = 0
         );
-        static inline Int ScanLeafLowerBound(
+        static inline Int32_t ScanLeafLowerBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
-        static inline Int LeafLowerBound(
+        static inline Int32_t LeafLowerBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
-        static inline Int InternalNodeLowerBound(
+        static inline Int32_t InternalNodeLowerBound(
             const Pages::IndexPageView& page,
             const DataTypes::Indexing::Key& key
         );
@@ -104,7 +104,7 @@ namespace CoreEngine::Indexing{
         void SplitChild(
             const ExecutionContext& context,
             const Pages::IndexPageView& parent,
-            Int index,
+            Int32_t index,
             const Pages::IndexPageView& child,
             StorageTypes::ExtentReservation& extentReservation
         ) const;
@@ -114,20 +114,20 @@ namespace CoreEngine::Indexing{
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
-            Int index
+            Int32_t index
         );
         static void SplitInternalNodeNoLock(
             const ExecutionContext& context,
             const Pages::IndexPageView& parent,
             const Pages::IndexPageView& child,
             const Pages::IndexPageView& newChild,
-            Int index
+            Int32_t index
         );
 
         void SplitChildNoLock(
             const ExecutionContext& context,
             const Pages::IndexPageView& parent,
-            Int index,
+            Int32_t index,
             const Pages::IndexPageView& child,
             StorageTypes::ExtentReservation& extentReservation
         ) const;
@@ -153,15 +153,15 @@ namespace CoreEngine::Indexing{
         [[nodiscard]] Pages::IndexPageView SearchKey(const DataTypes::Indexing::Key& key) const;
         [[nodiscard]] Pages::IndexPageView SearchKeyWithAncestors(const DataTypes::Indexing::Key& key, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors) const;
         [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode() const;
-        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(TinyInt& depth) const;
+        [[nodiscard]] Pages::IndexPageView SearchLeftMostLeafNode(Int8_t& depth) const;
 
-        [[nodiscard]] Int CalculateTreeDegree(const StorageTypes::Table* otherTable, Constants::TreeType treeType, Int nonClusteredId)const;
+        [[nodiscard]] Int32_t CalculateTreeDegree(const StorageTypes::Table* otherTable, Constants::TreeType treeType, Int32_t nonClusteredId)const;
 
-        void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int& parentIndex);
+        void HandleUnderflow(const Pages::IndexPageView& node, DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors, Int32_t& parentIndex);
         void HandleRootUnderflow();
 
-        bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
-        bool TryBorrowFromRightSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int index)const;
+        bool TryBorrowFromLeftSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int32_t index)const;
+        bool TryBorrowFromRightSibling(Pages::IndexPageView& node, Pages::IndexPageView& parent, Int32_t index)const;
 
         // Leaf redistribution methods for improved space utilization
         [[nodiscard]] bool TryRedistributeLeaf(
@@ -170,7 +170,7 @@ namespace CoreEngine::Indexing{
             MultiThreading::ReaderGuard& parentLock,
             Pages::IndexPageView& child,
             MultiThreading::ReaderGuard& childLock,
-            Int childIndex
+            Int32_t childIndex
         )const;
 
         [[nodiscard]] bool TryRedistributeLeafWithLeftSibling(
@@ -191,9 +191,9 @@ namespace CoreEngine::Indexing{
             Pages::IndexPageView& leftNode,
             Pages::IndexPageView& rightNode,
             Pages::IndexPageView& parent,
-            Int parentKeyIndex,
+            Int32_t parentKeyIndex,
             DataStructures::PolymorphicArray<Pages::IndexPageView>& ancestors,
-            Int& parentIndex
+            Int32_t& parentIndex
         );
 
         void CalculateClusteredStatistics(
@@ -202,19 +202,19 @@ namespace CoreEngine::Indexing{
             Catalog::IndexStatistics& indexStatistics,
             Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
-            Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+            Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
         )const;
 
         void UpdatePfsPageNoLock(const Pages::IndexPageView& page)const;
 
     public:
-        static inline constexpr Int MIN_TREE_DEGREE = 2;
+        static inline constexpr Int32_t MIN_TREE_DEGREE = 2;
 
         explicit BTree(
             StorageTypes::Table *table,
             page_id_t indexPageId,
             Constants::TreeType treeType,
-            Int nonClusteredIndexId = -1
+            Int32_t nonClusteredIndexId = -1
         );
 
         Errors::RuntimeStatus InsertRow(
@@ -293,7 +293,7 @@ namespace CoreEngine::Indexing{
         void Scan(
             DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result,
             IndexState& state,
-            Int rowsToSelect
+            Int32_t rowsToSelect
         )const;
 
         void Scan(DataStructures::PolymorphicArray<DataTypes::RowIdentifier>* result, const Expressions::Expression* expression)const;
@@ -346,15 +346,15 @@ namespace CoreEngine::Indexing{
 
         void Remove(const DataTypes::Indexing::Key& key);
 
-        void SetBranchingFactor(Int branchingFactor);
+        void SetBranchingFactor(Int32_t branchingFactor);
 
-        [[nodiscard]] Int GetBranchingFactor() const;
+        [[nodiscard]] Int32_t GetBranchingFactor() const;
 
         void SetTreeType(Constants::TreeType treeType);
 
         [[nodiscard]] page_id_t GetFirstIndexPageId() const;
 
-        void InsertRowsToOtherTree(StorageTypes::ExtentReservation& extentReservation, Int indexPos)const;
+        void InsertRowsToOtherTree(StorageTypes::ExtentReservation& extentReservation, Int32_t indexPos)const;
 
         void InsertColumnToRow(column_index_t index, const Value& defaultValue)const;
 
@@ -366,7 +366,7 @@ namespace CoreEngine::Indexing{
             Catalog::IndexStatistics& indexStatistics,
             Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<CoreEngine::Catalog::ColumnStatistics>& columnStatistics,
-            Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+            Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
         )const;
     };
 }

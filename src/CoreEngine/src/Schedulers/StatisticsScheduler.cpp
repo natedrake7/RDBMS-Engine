@@ -19,23 +19,23 @@ namespace CoreEngine {
         return this->databasesDictionary->ToVector();
     }
 
-    int StatisticsScheduler::EstimateRowsPerPage(const Int totalRows, const Int allocatedPagesPerExtent) {
+    int StatisticsScheduler::EstimateRowsPerPage(const Int32_t totalRows, const Int32_t allocatedPagesPerExtent) {
         return (allocatedPagesPerExtent == 0)
             ? 0
             : static_cast<int>(std::ceil(static_cast<float>(totalRows) / static_cast<float>(allocatedPagesPerExtent)));
     }
 
-    int StatisticsScheduler::EstimateAllocatedPagesPerExtent(const Int allocatedPagesPerExtent, const Int numberOfExtents) {
+    int StatisticsScheduler::EstimateAllocatedPagesPerExtent(const Int32_t allocatedPagesPerExtent, const Int32_t numberOfExtents) {
         return (numberOfExtents == 0)
             ? 0
             : static_cast<int>(std::ceil(static_cast<float>(allocatedPagesPerExtent) / static_cast<float>(numberOfExtents)));
     }
 
     bool StatisticsScheduler::GenerateColumnHistograms(
-        const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
+        const SortedDictionary<Value, Int64_t, ValueComparator>& sortedValues,
         DataStructures::PolymorphicArray<Catalog::ColumnHistograms>& histograms,
         const Catalog::ColumnStatistics& columnStatistics,
-        const BigInt totalRows
+        const Int64_t totalRows
     ){
         if (totalRows < 10000)
             return false;
@@ -109,8 +109,8 @@ namespace CoreEngine {
 
         auto tableStatistics = Catalog::TableStatistics(table->GetTableId());
 
-        Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>> sortedValues;
-        Dictionary<Int, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> columnHistogramsDictionary;
+        Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>> sortedValues;
+        Dictionary<Int32_t, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> columnHistogramsDictionary;
 
         const auto _baseContext = ExecutionContext::BaseContext();
 
@@ -207,7 +207,7 @@ namespace CoreEngine {
         Catalog::IndexStatistics& indexStatistics,
         Catalog::TableStatistics& tableStatistics,
         DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
-        Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+        Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
     )  {
         indexStatistics.Reset();
 
@@ -234,7 +234,7 @@ namespace CoreEngine {
         const page_id_t allocationPageId,
         Catalog::TableStatistics &tableStatistics,
         DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
-        Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+        Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
     ) {
 
         const auto pageAccessor = table->GetPageAccessor();
@@ -322,7 +322,7 @@ namespace CoreEngine {
         const Catalog::TableStatistics &tableStatistics,
         const DataStructures::PolymorphicArray<Catalog::ColumnStatistics> &columnStatistics,
         const DataStructures::PolymorphicArray<Catalog::IndexStatistics>& indexStatistics,
-        const Dictionary<Int, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> &columnHistogramsDictionary
+        const Dictionary<Int32_t, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> &columnHistogramsDictionary
     )const {
 
         this->catalog->UpdateTableStatisticsById(
@@ -390,7 +390,7 @@ namespace CoreEngine {
     }
 
     StatisticsScheduler::StatisticsScheduler(
-        const Dictionary<Int, Database *> &databasesDictionary,
+        const Dictionary<Int32_t, Database *> &databasesDictionary,
         MultiThreading::Mutex &latch
     ){
         this->databasesDictionary = &databasesDictionary;
@@ -406,7 +406,7 @@ namespace CoreEngine {
 
     void StatisticsScheduler::Start(
         const std::atomic<bool> &isServerRunning,
-        const Dictionary<Int, Database*> &databasesDictionary,
+        const Dictionary<Int32_t, Database*> &databasesDictionary,
         MultiThreading::Mutex &latch
     ){
         using namespace std::chrono_literals;
@@ -432,7 +432,7 @@ namespace CoreEngine {
     void StatisticsScheduler::UpdateColumnStatistics(
         Catalog::ColumnStatistics &columnStatistics,
         const Value &value,
-        SortedDictionary<Value, BigInt, ValueComparator>& sortedValues
+        SortedDictionary<Value, Int64_t, ValueComparator>& sortedValues
     ) {
         if (value.IsNull()) {
             columnStatistics.nullCount++;
@@ -450,7 +450,7 @@ namespace CoreEngine {
         if (columnStatistics.max.IsNull() || value > columnStatistics.max)
             columnStatistics.max = value;
 
-        BigInt frequency = 0;
+        Int64_t frequency = 0;
         if (!sortedValues.TryGetValue(value, frequency))
             sortedValues.Add(value, 1);
         else

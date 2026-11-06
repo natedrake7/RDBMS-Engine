@@ -78,7 +78,7 @@ namespace CoreEngine {
 
     struct ExecutionSchema{
         const StorageTypes::Table* tables[Constants::MAX_QUERY_JOINS];
-        UnsignedInt tableCount;
+        UInt32_t tableCount;
 
         ExecutionSchema()
             : tables{nullptr}, tableCount(0){}
@@ -86,11 +86,11 @@ namespace CoreEngine {
 
     struct ScanHandle{
         const StorageTypes::RID* rids;
-        UnsignedInt size;
+        UInt32_t size;
 
         ScanHandle()
             : rids(nullptr), size(0){}
-        ScanHandle(const StorageTypes::RID* rids, const UnsignedInt size)
+        ScanHandle(const StorageTypes::RID* rids, const UInt32_t size)
             : rids(rids), size(size){}
     };
 
@@ -105,16 +105,16 @@ namespace CoreEngine {
 
         const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* _variables;
 
-        Int _batchSize;
+        Int32_t _batchSize;
 
-        inline static constexpr UnsignedInt DEFAULT_ALLOCATION_SIZE = 10 * Constants::MB;
+        inline static constexpr UInt32_t DEFAULT_ALLOCATION_SIZE = 10 * Constants::MB;
 
         public:
             ExecutionContext(
                 Snapshot& snapshot,
-                Int batchSize,
+                Int32_t batchSize,
                 const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables,
-                Int initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
+                Int32_t initialAllocatorSize = DEFAULT_ALLOCATION_SIZE
             );
             ExecutionContext();
             ExecutionContext(ExecutionContext&& other) noexcept;
@@ -122,36 +122,36 @@ namespace CoreEngine {
 
             ~ExecutionContext();
 
-            void SetBatchSize(Int size);
+            void SetBatchSize(Int32_t size);
 
             [[nodiscard]] const ::Memory::IAllocator* GetAllocator()const;
             const BoundVariable* GetVariable(const DataTypes::StringView& name) const;
 
-            [[nodiscard]] Int GetBatchSize()const;
+            [[nodiscard]] Int32_t GetBatchSize()const;
             [[nodiscard]] transaction_id_t GetCurrentTransactionId()const;
             [[nodiscard]] const Snapshot& GetSnapshot()const;
 
             void AttachCancellationToken(CancellationToken& cancellationToken);
 
-            void SetTable(const StorageTypes::Table* table, UnsignedSmallInt slotIndex);
-            const StorageTypes::Table* GetTable(UnsignedSmallInt index) const;
+            void SetTable(const StorageTypes::Table* table, UInt16_t slotIndex);
+            const StorageTypes::Table* GetTable(UInt16_t index) const;
 
-            [[nodiscard]] Accessors::PageAccessor GetPageAccessor(UnsignedSmallInt slotIndex)const;
+            [[nodiscard]] Accessors::PageAccessor GetPageAccessor(UInt16_t slotIndex)const;
 
-            void SetScanHandle(const StorageTypes::RID* rids, UnsignedInt size, UnsignedSmallInt slotIndex);
-            const ScanHandle& GetScanHandle(UnsignedInt index) const;
-            [[nodiscard]] UnsignedInt GetScanHandleSize(UnsignedInt index) const;
+            void SetScanHandle(const StorageTypes::RID* rids, UInt32_t size, UInt16_t slotIndex);
+            const ScanHandle& GetScanHandle(UInt32_t index) const;
+            [[nodiscard]] UInt32_t GetScanHandleSize(UInt32_t index) const;
 
-            [[nodiscard]] const StorageTypes::RID* GetRIDs(UnsignedInt slotIndex)const;
+            [[nodiscard]] const StorageTypes::RID* GetRIDs(UInt32_t slotIndex)const;
 
-            [[nodiscard]] const StorageTypes::RID* GetRIDPtr(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
-            [[nodiscard]] StorageTypes::RID GetRID(UnsignedInt slotIndex, UnsignedInt ridIndex) const;
+            [[nodiscard]] const StorageTypes::RID* GetRIDPtr(UInt32_t slotIndex, UInt32_t ridIndex) const;
+            [[nodiscard]] StorageTypes::RID GetRID(UInt32_t slotIndex, UInt32_t ridIndex) const;
 
             void ResetAllocator()const;
             void ReleaseAllocator()const;
             bool IsAllocatorEmpty()const;
 
-            void* Allocate(Int size) const;
+            void* Allocate(Int32_t size) const;
             template<typename T>
             T* Allocate() const{
                 return new (this->Allocate(sizeof(T))) T;

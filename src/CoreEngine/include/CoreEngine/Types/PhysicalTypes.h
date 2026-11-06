@@ -3,7 +3,7 @@
 #include "Systemic/DataTypes/Decimal.h"
 
 namespace CoreEngine::Types{
-    enum class PhysicalType : UnsignedTinyInt{
+    enum class PhysicalType : UInt8_t{
         Bool = 0,
         Int8 = 1, UInt8 = 2, Int16 = 3, UInt16 = 4, Int32 = 5, UInt32 = 6, Int64 = 7, UInt64 = 8, Int128 = 9, UInt128 = 10,
         Float = 11, Double = 12,
@@ -18,16 +18,16 @@ namespace CoreEngine::Types{
 
     using PhysicalStorage = DataTypes::TypeList<
         bool,
-        TinyInt,
-        UnsignedTinyInt,
-        SmallInt,
-        UnsignedSmallInt,
-        Int,
-        UnsignedInt,
-        BigInt,
-        UnsignedBigInt,
-        HugeInt,
-        UnsignedHugeInt,
+        Int8_t,
+        UInt8_t,
+        Int16_t,
+        UInt16_t,
+        Int32_t,
+        UInt32_t,
+        Int64_t,
+        UInt64_t,
+        Int128_t,
+        UInt128_t,
         Float,
         Double,
         DataTypes::Guid,
@@ -67,7 +67,7 @@ namespace CoreEngine::Types{
         std::unreachable();
     }
 
-    inline constexpr Int DECIMAL_64_MAX_PRECISION = 18;
+    inline constexpr Int32_t DECIMAL_64_MAX_PRECISION = 18;
 
     [[nodiscard]] inline constexpr PhysicalType PhysicalTypeOf(const DataType type, const DataTypes::DecimalType decimal = DataTypes::DecimalType()){
         switch (type){

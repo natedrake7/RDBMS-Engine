@@ -5,9 +5,9 @@
 #include <Systemic/DataTypes/StringView.h>
 
 namespace Constants{
-    inline constexpr UnsignedBigInt KB = 1024;
-    inline constexpr UnsignedBigInt MB = 1024 * KB;
-    inline constexpr UnsignedBigInt GB = 1024 * MB;
+    inline constexpr UInt64_t KB = 1024;
+    inline constexpr UInt64_t MB = 1024 * KB;
+    inline constexpr UInt64_t GB = 1024 * MB;
 
     inline constexpr auto WRITE_AHEAD_LOG_FILE = DataTypes::StringView("wal.log");
     inline constexpr auto UNDO_LOG_FILE = DataTypes::StringView("undo.log");
@@ -15,28 +15,28 @@ namespace Constants{
     inline constexpr auto SYS_EXTENSION = DataTypes::StringView("_sys");
     inline constexpr auto DEFAULT_SCHEMA_NAME = DataTypes::StringView("dbo");
 
-    inline constexpr Int DEFAULT_IDENTITY_SEED = 1;
-    inline constexpr Int DEFAULT_IDENTITY_INCREMENT = 1;
-    inline constexpr Int DEFAULT_IDENTITY_VALUE = 1;
-    inline constexpr Int DEFAULT_IDENTITY_CACHE_BLOCK = 10000;
+    inline constexpr Int32_t DEFAULT_IDENTITY_SEED = 1;
+    inline constexpr Int32_t DEFAULT_IDENTITY_INCREMENT = 1;
+    inline constexpr Int32_t DEFAULT_IDENTITY_VALUE = 1;
+    inline constexpr Int32_t DEFAULT_IDENTITY_CACHE_BLOCK = 10000;
 
     inline constexpr size_t LOG_BATCH_SIZE = MB; // 1 MB
 
     inline constexpr size_t DEFAULT_BATCH_SIZE = 2048;
 
-    enum class AlterTableType: UnsignedTinyInt {
+    enum class AlterTableType: UInt8_t {
         AddColumn = 0,
         AlterColumn = 1,
         DropColumn = 2,
         RenameColumn = 3,
     };
 
-    enum OrderType : UnsignedTinyInt {
+    enum OrderType : UInt8_t {
         ASCENDING = 0,
         DESCENDING = 1,
     };
 
-    enum AggregateFunction: UnsignedTinyInt {
+    enum AggregateFunction: UInt8_t {
         NONE = 0,
         SUM = 1,
         AVERAGE = 2,
@@ -45,17 +45,17 @@ namespace Constants{
         MAX = 5
     };
 
-    enum class TableType : UnsignedTinyInt{
+    enum class TableType : UInt8_t{
         HEAP = 0,
         CLUSTERED = 1,
     };
 
-    enum TreeType : UnsignedTinyInt {
+    enum TreeType : UInt8_t {
         Clustered = 0,
         NonClustered = 1
     };
 
-    inline constexpr Int VECTORIZATION_THRESHOLD = 128;
+    inline constexpr Int32_t VECTORIZATION_THRESHOLD = 128;
 
     inline constexpr size_t MAX_QUERY_JOINS = 10;
     inline constexpr size_t MAX_TABLE_COLUMNS = 128;
@@ -67,13 +67,13 @@ namespace Constants{
 
     // Page and file layout constants live in <CoreEngine/BufferPool/StorageLayout.h>
 
-    inline constexpr Int TEMPORARY_DATABASE_ID = 0;
-    inline constexpr Int VERSION_DATABASE_ID = 1;
-    inline constexpr Int SYSTEM_CATALOG_ID = 2;
+    inline constexpr Int32_t TEMPORARY_DATABASE_ID = 0;
+    inline constexpr Int32_t VERSION_DATABASE_ID = 1;
+    inline constexpr Int32_t SYSTEM_CATALOG_ID = 2;
 
-    inline constexpr Int SYSTEM_SCHEMA_ID = 1;
+    inline constexpr Int32_t SYSTEM_SCHEMA_ID = 1;
 
-    enum class FunctionType : UnsignedTinyInt {
+    enum class FunctionType : UInt8_t {
         // -----------------------
         // Date/Time Functions
         // -----------------------

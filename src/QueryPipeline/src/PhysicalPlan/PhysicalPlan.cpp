@@ -122,7 +122,7 @@ namespace QueryPipeline::PhysicalPlan {
         CoreEngine::StorageTypes::ScanPlan& scanPlan,
         PlanNode* child,
         const CoreEngine::OutputSchema* schema,
-        const UnsignedSmallInt slotIndex
+        const UInt16_t slotIndex
     ):  PlanNode(schema), _scanPlan(std::move(scanPlan)),
         child(child), _slotIndex(slotIndex){
         assert(this->_scanPlan._size == this->_schema->_columns.Size());
@@ -208,7 +208,7 @@ namespace QueryPipeline::PhysicalPlan {
             DataTypes::StringView::ViewOf(this->session->user->name)
         );
 
-        const auto databaseId = result.primaryKey.AsInt<Int>();
+        const auto databaseId = result.primaryKey.AsInt<Int32_t>();
 
         const auto dbHeader = CoreEngine::SystemCatalog::Get().SelectDatabaseById(allocator, databaseId);
 
@@ -218,7 +218,7 @@ namespace QueryPipeline::PhysicalPlan {
         return ExecutionResult(context);
     }
 
-  PhysicalUseDatabase::PhysicalUseDatabase(const session_id_t sessionId, const Int databaseId)
+  PhysicalUseDatabase::PhysicalUseDatabase(const session_id_t sessionId, const Int32_t databaseId)
       : sessionId(sessionId), databaseId(databaseId){}
 
   ExecutionResult PhysicalUseDatabase::Execute(CoreEngine::ExecutionContext& context) {
@@ -241,7 +241,7 @@ namespace QueryPipeline::PhysicalPlan {
       return result;
   }
 
-  PhysicalSchemaCreate::PhysicalSchemaCreate(const session_id_t sessionId, const Int databaseId, DataTypes::String& schemaName)
+  PhysicalSchemaCreate::PhysicalSchemaCreate(const session_id_t sessionId, const Int32_t databaseId, DataTypes::String& schemaName)
       : PlanNode(sessionId), schemaName(std::move(schemaName)) ,databaseId(databaseId) {}
 
   ExecutionResult PhysicalSchemaCreate::Execute(CoreEngine::ExecutionContext& context){
@@ -296,7 +296,7 @@ namespace QueryPipeline::PhysicalPlan {
             .databaseId = this->table->_databaseId,
             .schemaId = this->table->_schemaId,
             .name = this->table->name,
-            .ordinalPosition = static_cast<SmallInt>(tableOrdinal),
+            .ordinalPosition = static_cast<Int16_t>(tableOrdinal),
             .isSystem = false,
             .createdAt = now,
             .lastModified = now,
@@ -328,12 +328,12 @@ namespace QueryPipeline::PhysicalPlan {
             CoreEngine::Catalog::SysColumnRow columnRow{
                 .tableId = tableId,
                 .name = column->name.name,
-                .dataType = static_cast<TinyInt>(type),
-                .recordSize = fixedSize != 0 ? static_cast<Int>(fixedSize) : static_cast<Int>(column->type.size),
-                .precision = isDecimal ? std::optional<TinyInt>(column->type.decimal.precision) : std::nullopt,
-                .scale = isDecimal ? std::optional<TinyInt>(column->type.decimal.scale) : std::nullopt,
+                .dataType = static_cast<Int8_t>(type),
+                .recordSize = fixedSize != 0 ? static_cast<Int32_t>(fixedSize) : static_cast<Int32_t>(column->type.size),
+                .precision = isDecimal ? std::optional<Int8_t>(column->type.decimal.precision) : std::nullopt,
+                .scale = isDecimal ? std::optional<Int8_t>(column->type.decimal.scale) : std::nullopt,
                 .isNullable = column->isNullable,
-                .ordinalPosition = static_cast<SmallInt>(column->index),
+                .ordinalPosition = static_cast<Int16_t>(column->index),
                 .isSystem = false,
                 .createdAt = now,
                 .lastModified = now,
@@ -370,7 +370,7 @@ namespace QueryPipeline::PhysicalPlan {
                     .increment = column->identity->incrementFactor,
                     .lastValue = column->identity->seed,                 // the first value handed out
                     .isCached = true,
-                    .cacheBlock = static_cast<Int>(column->identity->cacheBlock),
+                    .cacheBlock = static_cast<Int32_t>(column->identity->cacheBlock),
                 });
                 if (failed())
                     return failure();
@@ -400,7 +400,7 @@ namespace QueryPipeline::PhysicalPlan {
             CoreEngine::Catalog::SysConstraintRow constraintRow{
                 .tableId = tableId,
                 .name = this->constraintName,
-                .constraintType = static_cast<TinyInt>(CoreEngine::Schemas::ConstraintType::PrimaryKey),
+                .constraintType = static_cast<Int8_t>(CoreEngine::Schemas::ConstraintType::PrimaryKey),
                 .isDisabled = false,
                 .constraintIndexId = indexId,
                 .createdAt = now,
@@ -413,7 +413,7 @@ namespace QueryPipeline::PhysicalPlan {
 
             const auto constraintId = constraintRow.constraintId;
 
-            for (SmallInt position = 0; position < static_cast<SmallInt>(this->primaryKey.columns.Size()); position++){
+            for (Int16_t position = 0; position < static_cast<Int16_t>(this->primaryKey.columns.Size()); position++){
                 const auto columnId = columnOrdinals[this->primaryKey.columns[position]];
 
                 status = catalog.Insert(context, CoreEngine::Catalog::SysIndexColumnRow{
@@ -481,7 +481,7 @@ namespace QueryPipeline::PhysicalPlan {
           DataTypes::StringView::ViewOf(this->session->user->name)
       );
 
-      const auto indexId = indexResult.primaryKey.AsInt<Int>(1);
+      const auto indexId = indexResult.primaryKey.AsInt<Int32_t>(1);
 
       const auto constraintResult =CoreEngine::SystemCatalog::Get().InsertConstraintToMasterDb(
           context,
@@ -493,7 +493,7 @@ namespace QueryPipeline::PhysicalPlan {
           DataTypes::StringView::ViewOf(this->session->user->name)
       );
 
-      const auto constraintId = constraintResult.primaryKey.AsInt<Int>(1);
+      const auto constraintId = constraintResult.primaryKey.AsInt<Int32_t>(1);
 
       for (const auto& columnPos : this->columns) {
           const auto& header = columnsHeaders[columnPos];
@@ -678,7 +678,7 @@ namespace QueryPipeline::PhysicalPlan {
         PlanNode *child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
         const CoreEngine::OutputSchema* schema,
-        const UnsignedSmallInt slotCount
+        const UInt16_t slotCount
     ):  PlanNode(schema), _projections(std::move(projections)),
         child(child), _slotCount(slotCount) {}
 
@@ -705,7 +705,7 @@ namespace QueryPipeline::PhysicalPlan {
             this->_projections.Size()
         );
 
-        for (Int index = 0;index < this->_projections.Size(); index++){
+        for (Int32_t index = 0;index < this->_projections.Size(); index++){
             newChunk.SetColumn(
                 Expressions::EvaluateExpression(
                     this->_projections[index],
@@ -723,16 +723,16 @@ namespace QueryPipeline::PhysicalPlan {
     PhysicalFilter::PhysicalFilter(
         PlanNode *child,
         Expressions::Expression* filter,
-        const UnsignedSmallInt slotCount
+        const UInt16_t slotCount
     ): PlanNode(child->GetSchema()), filter(filter) , child(child), _slotCount(slotCount) {}
 
     ExecutionResult PhysicalFilter::Execute(CoreEngine::ExecutionContext& context){
         auto result = this->child->Execute(context);
 
         auto* mask = Expressions::EvaluateExpression(this->filter, &context, &result.dataChunk);
-        Int rowCounter = 0;
+        Int32_t rowCounter = 0;
 
-        for (Int i = 0;i < result.dataChunk._numberOfRows; i++){
+        for (Int32_t i = 0;i < result.dataChunk._numberOfRows; i++){
             const auto index = mask->PhysicalIndex(i);
             if (!mask->GetNullValue(index) && *mask->SlotAt<bool>(index))
                 result.dataChunk._selection[rowCounter++] = result.dataChunk.RowPhysicalIndex(i);
@@ -742,7 +742,7 @@ namespace QueryPipeline::PhysicalPlan {
             return result;
 
         result.dataChunk._numberOfRows = rowCounter;
-        for (Int i = 0;i < result.dataChunk._numberOfColumns; i++){
+        for (Int32_t i = 0;i < result.dataChunk._numberOfColumns; i++){
             auto* vec = result.dataChunk._columns[i];
             if (vec->IsConstant())
                 continue;
@@ -752,7 +752,7 @@ namespace QueryPipeline::PhysicalPlan {
         return result;
     }
 
-    PhysicalTop::PhysicalTop(PlanNode* child, const BigInt top)
+    PhysicalTop::PhysicalTop(PlanNode* child, const Int64_t top)
         : PlanNode(child->GetSchema()), top(top), child(child){}
 
     ExecutionResult PhysicalTop::Execute(CoreEngine::ExecutionContext& context){
@@ -763,7 +763,7 @@ namespace QueryPipeline::PhysicalPlan {
             return result;
         }
 
-        result.dataChunk._numberOfRows = static_cast<Int>(this->top);
+        result.dataChunk._numberOfRows = static_cast<Int32_t>(this->top);
         this->top = 0;
         result.canFetchMore = false;
         return result;
@@ -903,7 +903,7 @@ namespace QueryPipeline::PhysicalPlan {
         const auto* db =  Network::Server::Get().UseDatabase(context, this->table->_databaseId);
         auto* tablePtr = db->OpenTableByOrdinal(this->table->_ordinalPosition);
 
-        Int rowCount = 0;
+        Int32_t rowCount = 0;
         const auto* allocator = context.GetAllocator();
         while (true){
             auto allocationStep = allocator->RecordAllocationStart();
@@ -957,10 +957,10 @@ namespace QueryPipeline::PhysicalPlan {
             &context
         );
 
-        for (Int i = 0;i < columnCount; i++){
+        for (Int32_t i = 0;i < columnCount; i++){
             auto* __restrict__ vector = CoreEngine::DataVector::FlatVector(allocator, this->_valueTypes[i], rowCount);
 
-            for (Int j = 0;j < rowCount; j++){
+            for (Int32_t j = 0;j < rowCount; j++){
                 const auto* __restrict__ expression = this->_values[j].values[i];
                 assert(
                     this->_valueTypes[i] == Expressions::GetExpressionReturnType(expression)

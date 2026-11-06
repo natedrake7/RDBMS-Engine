@@ -56,7 +56,7 @@ namespace CoreEngine::Pages{
         return this->GetAdditionalHeader()->IsRoot();
     }
 
-    UnsignedSmallInt IndexPageView::Keys() const{
+    UInt16_t IndexPageView::Keys() const{
         return this->IsLeaf()
                    ? this->_frame->Header()->_size
                    : this->_frame->Header()->_size - 1;
@@ -99,13 +99,13 @@ namespace CoreEngine::Pages{
 
         headerPtr->IncrementSizeNoLock();
         this->_frame->MarkDirty();
-        headerPtr->ConsumeBytesNoLock(static_cast<Int>(newSlot.Size()) + PageLayout::SLOT_DIRECTORY_SIZE);
+        headerPtr->ConsumeBytesNoLock(static_cast<Int32_t>(newSlot.Size()) + PageLayout::SLOT_DIRECTORY_SIZE);
     }
 
     void IndexPageView::InsertChild(
         const page_id_t child,
         const DataTypes::Indexing::Key* key,
-        const Int indexPosition
+        const Int32_t indexPosition
     ) const{
         if (this->IndexOutOfBounds(indexPosition)){
             this->InsertChild(child, key);
@@ -189,7 +189,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void IndexPageView::InsertTuple(const IndexInsertTuple& tuple, const Int indexPosition) const{
+    void IndexPageView::InsertTuple(const IndexInsertTuple& tuple, const Int32_t indexPosition) const{
         if (this->IndexOutOfBounds(indexPosition)){
             this->InsertTuple(tuple);
             return;
@@ -212,41 +212,41 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const Int indexPosition) const{
+    DataTypes::Indexing::Key IndexPageView::GetKeyByIndex(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return this->GetKeyByOffset(slot);
     }
 
     Comparators::Comparator IndexPageView::ComparePageKeyAgainst(
         const DataTypes::Indexing::Key& key,
-        const Int indexPosition
+        const Int32_t indexPosition
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto pageKey = DataTypes::Indexing::Key(this->_frame->_data + slot.AbsoluteKeyOffset());
         return DataTypes::Indexing::Key::Compare(pageKey, key);
     }
 
-    Comparators::Comparator IndexPageView::PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int indexPosition) const{
+    Comparators::Comparator IndexPageView::PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         const auto pageKey = DataTypes::Indexing::Key(this->_frame->_data + slot.AbsoluteKeyOffset());
         return DataTypes::Indexing::Key::PartialCompare(pageKey, key);
     }
 
-    CoreEngine::StorageTypes::RowHeader IndexPageView::PeekHeader(const Int indexPosition) const{
+    CoreEngine::StorageTypes::RowHeader IndexPageView::PeekHeader(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         CoreEngine::StorageTypes::RowHeader header;
         std::memcpy(&header, this->_frame->_data + slot.AbsoluteDataOffset(), sizeof(CoreEngine::StorageTypes::RowHeader));
         return header;
     }
 
-    page_id_t IndexPageView::GetChild(const Int indexPosition) const{
+    page_id_t IndexPageView::GetChild(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         page_id_t value;
         std::memcpy(&value, this->_frame->_data + slot.AbsoluteDataOffset(), sizeof(page_id_t));
         return value;
     }
 
-    InternalNodeTuple IndexPageView::GetInternalNodeTuple(const Int indexPosition) const{
+    InternalNodeTuple IndexPageView::GetInternalNodeTuple(const Int32_t indexPosition) const{
         InternalNodeTuple tuple;
         const auto slot = this->GetSlotDirectory(indexPosition);
 

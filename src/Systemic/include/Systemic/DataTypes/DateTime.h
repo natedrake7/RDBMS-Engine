@@ -7,23 +7,23 @@
 
 namespace DataTypes {
     struct ParsedFields;
-    static constexpr UnsignedInt SECONDS_PER_MINUTE = 60;
-	static constexpr UnsignedInt SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
-	static constexpr UnsignedInt SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
-	static constexpr UnsignedInt SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
-	static constexpr UnsignedInt SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
-    static constexpr Int DATETIME_TO_STRING_BUFFER_SIZE = 32;
-    static constexpr Int DATETIME_TO_STRING_MS_BUFFER_SIZE = 8;
+    static constexpr UInt32_t SECONDS_PER_MINUTE = 60;
+	static constexpr UInt32_t SECONDS_PER_HOUR = SECONDS_PER_MINUTE * 60;
+	static constexpr UInt32_t SECONDS_PER_DAY = SECONDS_PER_HOUR * 24;
+	static constexpr UInt32_t SECONDS_PER_WEEK = SECONDS_PER_DAY * 7;
+	static constexpr UInt32_t SECONDS_PER_YEAR = SECONDS_PER_DAY * 365;
+    static constexpr Int32_t DATETIME_TO_STRING_BUFFER_SIZE = 32;
+    static constexpr Int32_t DATETIME_TO_STRING_MS_BUFFER_SIZE = 8;
 
     static constexpr StringView DEFAULT_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S";
 
-    [[nodiscard]] inline bool ReadDigits(const char*& p, const char* end, Int width, Int& out);
+    [[nodiscard]] inline bool ReadDigits(const char*& p, const char* end, Int32_t width, Int32_t& out);
     [[nodiscard]] inline bool ReadFractionalMillis(const char*& p, const char* end, int& out);
     [[nodiscard]] inline bool ReadTzOffset(const char*& p, const char* end, int& out);
     [[nodiscard]] inline bool MatchFormat(const StringView& format, const StringView& input, ParsedFields& out);
 
 	class DateTime {
-		BigInt timeStamp;
+		Int64_t timeStamp;
 
 	    using StringBuffer = DataStructures::StaticArray<char, DATETIME_TO_STRING_BUFFER_SIZE + DATETIME_TO_STRING_MS_BUFFER_SIZE>;
 
@@ -55,32 +55,32 @@ namespace DataTypes {
 		};
 
 	protected:
-		static void ValidateDate(Int year, Int month, Int day, Int hour, Int minute, Int second);
+		static void ValidateDate(Int32_t year, Int32_t month, Int32_t day, Int32_t hour, Int32_t minute, Int32_t second);
 
 	public:
 		explicit DateTime();
-		explicit DateTime(BigInt timestamp);
+		explicit DateTime(Int64_t timestamp);
 
         DateTime(const DateTime&) = default;
         DateTime& operator=(const DateTime&) = default;
 	    DateTime(DateTime&&) = default;
 	    DateTime& operator=(DateTime&&) = default;
 
-		[[nodiscard]] Int GetYears() const;
-		[[nodiscard]] UnsignedInt GetMonths() const;
-		[[nodiscard]] UnsignedInt  GetDays() const;
-		[[nodiscard]] BigInt GetHours() const;
-		[[nodiscard]] BigInt GetMinutes() const;
-		[[nodiscard]] BigInt GetSeconds() const;
-		[[nodiscard]] BigInt GetMilliseconds() const;
+		[[nodiscard]] Int32_t GetYears() const;
+		[[nodiscard]] UInt32_t GetMonths() const;
+		[[nodiscard]] UInt32_t  GetDays() const;
+		[[nodiscard]] Int64_t GetHours() const;
+		[[nodiscard]] Int64_t GetMinutes() const;
+		[[nodiscard]] Int64_t GetSeconds() const;
+		[[nodiscard]] Int64_t GetMilliseconds() const;
 
-		void AddSeconds(Int seconds);
-		void AddMinutes(Int minutes);
-		void AddHours(Int hours);
-		void AddDays(Int days);
-		void AddWeeks(Int weeks);
-		void AddMonths(Int months);
-		void AddYears(Int years);
+		void AddSeconds(Int32_t seconds);
+		void AddMinutes(Int32_t minutes);
+		void AddHours(Int32_t hours);
+		void AddDays(Int32_t days);
+		void AddWeeks(Int32_t weeks);
+		void AddMonths(Int32_t months);
+		void AddYears(Int32_t years);
 
 		static DateTime Now();
 		static bool FromStringView(DateTime& outVal, const StringView& date, const StringView& format = "");
@@ -89,7 +89,7 @@ namespace DataTypes {
 	    [[nodiscard]] StringBuffer ToStringBuffer(const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 		[[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
 	    [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator, const StringView& format = DEFAULT_DATETIME_FORMAT) const;
-		[[nodiscard]] BigInt UnixTimeStamp()const;
+		[[nodiscard]] Int64_t UnixTimeStamp()const;
 
 
 		[[nodiscard]] bool ValidateDate() const;
@@ -106,9 +106,9 @@ namespace DataTypes {
 	};
 
     struct ParsedFields {
-        Int year = 1970, month = 1, day = 1;
-        Int hour = 0, minute = 0, second = 0, millis = 0;
-        Int tzOffsetMinutes = -1;
+        Int32_t year = 1970, month = 1, day = 1;
+        Int32_t hour = 0, minute = 0, second = 0, millis = 0;
+        Int32_t tzOffsetMinutes = -1;
 
         [[nodiscard]] bool HasTz() const { return tzOffsetMinutes != -1; }
         void Reset(){

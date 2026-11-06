@@ -22,8 +22,8 @@ namespace Memory{
         if (unit.empty())
             return;
 
-        const auto shift = 10 * static_cast<UnsignedInt>(level);
-        const auto print = [&](const char* label, const UnsignedBigInt bytes){
+        const auto shift = 10 * static_cast<UInt32_t>(level);
+        const auto print = [&](const char* label, const UInt64_t bytes){
             os << label << (bytes >> shift) << ' ' << unit << '\n';
         };
 

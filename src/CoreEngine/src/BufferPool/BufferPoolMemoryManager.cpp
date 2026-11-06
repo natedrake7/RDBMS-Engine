@@ -28,7 +28,7 @@ namespace CoreEngine{
         // libstdc++/winpthreads mutexes are invalid when zero-filled (PTHREAD_MUTEX_INITIALIZER is -1).
         std::uninitialized_default_construct_n(this->_framesData, this->_capacity);
 
-        for (UnsignedInt i = 0; i < this->_capacity; ++i)
+        for (UInt32_t i = 0; i < this->_capacity; ++i)
             this->_framesData[i]._data = this->_data + i * StorageLayout::PAGE_SIZE;
     }
 
@@ -38,7 +38,7 @@ namespace CoreEngine{
 #else
         this->_freeStack = static_cast<Storage::FrameId*>(std::aligned_alloc(alignof(Storage::FrameId), this->_capacity * sizeof(Storage::FrameId)));
 #endif
-        for (Int i = 0; i < this->_capacity; ++i)
+        for (Int32_t i = 0; i < this->_capacity; ++i)
             this->_freeStack[i] = i;
 
         this->_freeTopId = this->_capacity;
@@ -59,15 +59,15 @@ namespace CoreEngine{
 #endif
     }
 
-    void BufferPoolMemoryManager::Initialize(const UnsignedBigInt size){
-        this->_capacity = static_cast<Int>(size / (StorageLayout::PAGE_SIZE + sizeof(Pages::Frame)));
+    void BufferPoolMemoryManager::Initialize(const UInt64_t size){
+        this->_capacity = static_cast<Int32_t>(size / (StorageLayout::PAGE_SIZE + sizeof(Pages::Frame)));
 
         this->AllocatePagePool();
         this->AllocateFramePool();
         this->AllocateFreeStack();
     }
 
-    object_t* BufferPoolMemoryManager::CopyToMemory(const char* buffer, const UnsignedBigInt offset, const page_offset_t bufferOffset) const{
+    object_t* BufferPoolMemoryManager::CopyToMemory(const char* buffer, const UInt64_t offset, const page_offset_t bufferOffset) const{
         auto* destination = this->_data + offset;
         std::memcpy(destination, buffer + bufferOffset, StorageLayout::PAGE_SIZE);
         return destination;

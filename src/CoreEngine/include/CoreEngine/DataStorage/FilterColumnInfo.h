@@ -27,14 +27,14 @@ namespace CoreEngine::StorageTypes{
     struct FilterColumnInfo{
         PageMaterializationFunction  _function;
         column_index_t _ordinalPosition;
-        UnsignedSmallInt _schemaPosition;
+        UInt16_t _schemaPosition;
         DataType _type;
 
         FilterColumnInfo() = default;
         FilterColumnInfo(
             const PageMaterializationFunction function,
             const column_index_t ordinalPosition,
-            const UnsignedSmallInt schemaPosition,
+            const UInt16_t schemaPosition,
             const DataType type
         ):  _function(function), _ordinalPosition(ordinalPosition),
             _schemaPosition(schemaPosition), _type(type) {}

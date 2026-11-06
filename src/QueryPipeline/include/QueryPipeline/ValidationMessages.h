@@ -53,12 +53,12 @@ namespace QueryPipeline::Messages{
     inline constexpr DataTypes::StringView USE_DATABASE_SUCCESS = "Database changed successfully";
     inline constexpr DataTypes::StringView USE_DATABASE_FAIL = "Failed to use Database";
 
-    inline DataTypes::String INSERT_ROWS_FROM_CHILD_QUERY(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = IntegerConverter::IntToStr<Int>(count, allocator);
+    inline DataTypes::String INSERT_ROWS_FROM_CHILD_QUERY(const Int32_t count, const ::Memory::IAllocator* allocator){
+        const auto parsedInt = IntegerConverter::IntToStr<Int32_t>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from child query");
     }
-    inline DataTypes::String INSERT_ROWS_FROM_FIELDS(const Int count, const ::Memory::IAllocator* allocator){
-        const auto parsedInt = IntegerConverter::IntToStr<Int>(count, allocator);
+    inline DataTypes::String INSERT_ROWS_FROM_FIELDS(const Int32_t count, const ::Memory::IAllocator* allocator){
+        const auto parsedInt = IntegerConverter::IntToStr<Int32_t>(count, allocator);
         return DataTypes::String::Concat(allocator, "Inserted ", parsedInt, " rows from fields");
     }
 
@@ -78,9 +78,9 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid conversion from ",
-            SQL_TYPES_NAMES[static_cast<Int>(fromType)],
+            SQL_TYPES_NAMES[static_cast<Int32_t>(fromType)],
             " to ",
-            SQL_TYPES_NAMES[static_cast<Int>(toType)]
+            SQL_TYPES_NAMES[static_cast<Int32_t>(toType)]
         );
     }
 
@@ -157,9 +157,9 @@ namespace QueryPipeline::Messages{
         const ::Memory::IAllocator* allocator,
         const DataTypes::String& columnName,
         const DataTypes::StringView& columnType,
-        const Int valueSize
+        const Int32_t valueSize
     ){
-        const auto valueSizeStr = IntegerConverter::IntToStr<Int>(valueSize, allocator);
+        const auto valueSizeStr = IntegerConverter::IntToStr<Int32_t>(valueSize, allocator);
         return DataTypes::String::Concat(allocator, "Cannot alter column: ", columnName, "of type: ", columnType, " to new size: ", valueSizeStr);
     }
 
@@ -224,9 +224,9 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid operation on datatypes: ",
-            SQL_TYPES_NAMES[static_cast<Int>(leftType)],
+            SQL_TYPES_NAMES[static_cast<Int32_t>(leftType)],
             " and ",
-            SQL_TYPES_NAMES[static_cast<Int>(rightType)]
+            SQL_TYPES_NAMES[static_cast<Int32_t>(rightType)]
         );
     }
 
@@ -236,7 +236,7 @@ namespace QueryPipeline::Messages{
         return DataTypes::String::Concat(
             allocator,
             "Invalid expression type: ",
-            SQL_TYPES_NAMES[static_cast<Int>(type)],
+            SQL_TYPES_NAMES[static_cast<Int32_t>(type)],
             " specified for branch expression"
         );
     }
@@ -312,9 +312,9 @@ namespace QueryPipeline::Messages{
 
     inline constexpr DataTypes::String ORDER_BY_INTEGRAL_INVALID_VALUE(
         const ::Memory::IAllocator* allocator,
-        const Int index
+        const Int32_t index
     ){
-        const auto parsedInt = IntegerConverter::IntToStr<Int>(index, allocator);
+        const auto parsedInt = IntegerConverter::IntToStr<Int32_t>(index, allocator);
         return DataTypes::String::Concat(
             allocator, "Invalid value: ", parsedInt, " specified in order by clause. Must be greater than or equal to 1 and smaller than the projection count"
         );

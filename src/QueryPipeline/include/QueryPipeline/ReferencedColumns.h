@@ -5,12 +5,12 @@ namespace QueryPipeline{
     struct ReferencedColumns{
         static constexpr size_t WORDS = Constants::MAX_TABLE_COLUMNS / 64;
 
-        UnsignedBigInt _mask[Constants::MAX_QUERY_JOINS][WORDS];
+        UInt64_t _mask[Constants::MAX_QUERY_JOINS][WORDS];
         DataType _types[Constants::MAX_QUERY_JOINS][Constants::MAX_TABLE_COLUMNS];
-        UnsignedSmallInt _count[Constants::MAX_QUERY_JOINS];
+        UInt16_t _count[Constants::MAX_QUERY_JOINS];
 
         void Add(
-            const UnsignedSmallInt slotIndex,
+            const UInt16_t slotIndex,
             const column_index_t ordinalPosition,
             const DataType type
         ){
@@ -23,24 +23,24 @@ namespace QueryPipeline{
             this->_types[slotIndex][ordinalPosition] = type;
         }
 
-        [[nodiscard]] bool Contains(const UnsignedSmallInt slotIndex, const column_index_t ordinalPosition) const{
-            return PackedWord<UnsignedBigInt>::GetBitmapBit(this->_mask[slotIndex], ordinalPosition);
+        [[nodiscard]] bool Contains(const UInt16_t slotIndex, const column_index_t ordinalPosition) const{
+            return PackedWord<UInt64_t>::GetBitmapBit(this->_mask[slotIndex], ordinalPosition);
         }
 
-        [[nodiscard]] DataType GetType(const UnsignedSmallInt slotIndex, const column_index_t ordinalPosition) const{
+        [[nodiscard]] DataType GetType(const UInt16_t slotIndex, const column_index_t ordinalPosition) const{
             return this->_types[slotIndex][ordinalPosition];
         }
 
-        [[nodiscard]] UnsignedSmallInt GetSlotCount(const UnsignedSmallInt slotIndex) const{
+        [[nodiscard]] UInt16_t GetSlotCount(const UInt16_t slotIndex) const{
             return this->_count[slotIndex];
         }
 
-        [[nodiscard]] bool IsSlotEmpty(const UnsignedSmallInt slotIndex) const{
+        [[nodiscard]] bool IsSlotEmpty(const UInt16_t slotIndex) const{
             return this->_count[slotIndex] == 0;
         }
 
         template<typename TCallback>
-        void ForEachColumn(const UnsignedSmallInt slotIndex, TCallback callback) const{
+        void ForEachColumn(const UInt16_t slotIndex, TCallback callback) const{
             for (auto word = 0; word < WORDS; word++){
                 auto bits = this->_mask[slotIndex][word];
 

@@ -14,7 +14,7 @@ namespace DataTypes{
 class Value;
 
 namespace Comparators{
-    enum class Comparator : TinyInt{
+    enum class Comparator : Int8_t{
         Less = -1,
         Equal = 0,
         Greater = 1

@@ -23,7 +23,7 @@ namespace Network::Sessions {
         const Session* CreateSession(const Security::User* user);
         const Session* GetSession(session_id_t id)const;
         [[nodiscard]] bool CloseSession(session_id_t id);
-        [[nodiscard]] bool UpdateSession(session_id_t id, Int databaseId)const;
+        [[nodiscard]] bool UpdateSession(session_id_t id, Int32_t databaseId)const;
 
         [[nodiscard]] bool AddOrSetVariable(session_id_t id, const Variable& variable)const;
 

@@ -13,22 +13,22 @@
 
 namespace CoreEngine::StorageLayout{
         // Bump on any change to the page or file layout: a file written with another version is refused on open
-    inline constexpr UnsignedInt FILE_FORMAT_VERSION = 1;
+    inline constexpr UInt32_t FILE_FORMAT_VERSION = 1;
 
     /**
      * @name Page and extent geometry
      * @{
      */
     inline constexpr size_t PAGE_SIZE = 8 * 1024;
-    inline constexpr UnsignedSmallInt PAGE_HEADER_SIZE = sizeof(log_sequence_number_t)
-            + sizeof(UnsignedInt) + sizeof(page_id_t)
+    inline constexpr UInt16_t PAGE_HEADER_SIZE = sizeof(log_sequence_number_t)
+            + sizeof(UInt32_t) + sizeof(page_id_t)
             + 2 * sizeof(page_size_t) + sizeof(page_size_t) + sizeof(page_size_t);
     inline constexpr page_size_t PAGE_SIZE_WITHOUT_HEADER = PAGE_SIZE - PAGE_HEADER_SIZE;
 
     inline constexpr size_t EXTENT_SIZE = 8;
     inline constexpr size_t EXTENT_BYTE_SIZE = EXTENT_SIZE * PAGE_SIZE;
 
-    [[nodiscard]] inline constexpr UnsignedInt ExtentsToAllocate(const Int numberOfPages) {
+    [[nodiscard]] inline constexpr UInt32_t ExtentsToAllocate(const Int32_t numberOfPages) {
         return (numberOfPages + EXTENT_SIZE - 1) / EXTENT_SIZE;
     }
     /** @} End of: Page and extent geometry */
@@ -41,31 +41,31 @@ namespace CoreEngine::StorageLayout{
     typedef uint32_t frame_id_t;
 
     inline constexpr frame_id_t INVALID_FRAME_ID = std::numeric_limits<frame_id_t>::max();
-    inline constexpr UnsignedInt MAX_BUFFER_POOL_SLOTS = 256;
+    inline constexpr UInt32_t MAX_BUFFER_POOL_SLOTS = 256;
 
     namespace PageAddress{
-        inline constexpr UnsignedInt SEGMENT_BITS = 12;
-        inline constexpr UnsignedInt GROUP_BITS = 10;
-        inline constexpr UnsignedInt DIRECTORY_BITS = 10;
+        inline constexpr UInt32_t SEGMENT_BITS = 12;
+        inline constexpr UInt32_t GROUP_BITS = 10;
+        inline constexpr UInt32_t DIRECTORY_BITS = 10;
 
-        inline constexpr UnsignedInt SEGMENT_SIZE = 1 << SEGMENT_BITS;
-        inline constexpr UnsignedInt GROUP_SIZE = 1 << GROUP_BITS;
-        inline constexpr UnsignedInt DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
+        inline constexpr UInt32_t SEGMENT_SIZE = 1 << SEGMENT_BITS;
+        inline constexpr UInt32_t GROUP_SIZE = 1 << GROUP_BITS;
+        inline constexpr UInt32_t DIRECTORY_SIZE = 1 << DIRECTORY_BITS;
 
-        [[nodiscard]] inline constexpr UnsignedInt SegmentSlot(const page_id_t pageId){
+        [[nodiscard]] inline constexpr UInt32_t SegmentSlot(const page_id_t pageId){
             return pageId >> PageAddress::SEGMENT_BITS;
         }
 
-        [[nodiscard]] inline constexpr UnsignedInt PageSlot(const page_id_t pageId){
+        [[nodiscard]] inline constexpr UInt32_t PageSlot(const page_id_t pageId){
             return pageId & (PageAddress::SEGMENT_SIZE - 1);
         }
 
-        [[nodiscard]] inline constexpr UnsignedInt DirectorySlot(const page_id_t pageId){
+        [[nodiscard]] inline constexpr UInt32_t DirectorySlot(const page_id_t pageId){
             const auto segmentId = PageAddress::SegmentSlot(pageId);
             return (segmentId >> PageAddress::GROUP_BITS) & (PageAddress::DIRECTORY_SIZE - 1);
         }
 
-        [[nodiscard]] inline constexpr UnsignedInt GroupSlot(const page_id_t pageId){
+        [[nodiscard]] inline constexpr UInt32_t GroupSlot(const page_id_t pageId){
             const auto segmentId = PageAddress::SegmentSlot(pageId);
             return segmentId & (PageAddress::GROUP_SIZE - 1);
         }
@@ -87,32 +87,32 @@ namespace CoreEngine::StorageLayout{
      */
     inline constexpr size_t GAM_BIT_MAP_SIZE = 64000;
     inline constexpr size_t GAM_BITMAP_BYTES = GAM_BIT_MAP_SIZE / EXTENT_SIZE;
-    inline constexpr UnsignedInt GAM_NUMBER_OF_PAGES = GAM_BIT_MAP_SIZE * EXTENT_SIZE;
-    inline constexpr UnsignedSmallInt PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE;
+    inline constexpr UInt32_t GAM_NUMBER_OF_PAGES = GAM_BIT_MAP_SIZE * EXTENT_SIZE;
+    inline constexpr UInt16_t PAGE_FREE_SPACE_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE;
 
     static_assert(GAM_BIT_MAP_SIZE % EXTENT_SIZE == 0, "the GAM bitmap is a whole number of bytes");
     static_assert(PAGE_FREE_SPACE_SIZE % EXTENT_SIZE == 0, "an extent never straddles two PFS pages");
     /** @} End of: Allocation maps */
 
-    inline constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = 2 * sizeof(page_id_t) + sizeof(UnsignedTinyInt) + 3;
+    inline constexpr page_size_t INDEX_PAGE_ADDITIONAL_HEADER_SIZE = 2 * sizeof(page_id_t) + sizeof(UInt8_t) + 3;
     inline constexpr page_size_t INDEX_PAGE_DEFAULT_SIZE = PAGE_SIZE_WITHOUT_HEADER - INDEX_PAGE_ADDITIONAL_HEADER_SIZE;
 
 
     // The GAM header fills the space between the page header and the bitmap, which ends the page
     inline constexpr size_t GAM_HEADER_SIZE = PAGE_SIZE - PAGE_HEADER_SIZE - GAM_BIT_MAP_SIZE / 8;
     inline constexpr size_t GAM_HEADER_RESERVED_SPACE =
-        GAM_HEADER_SIZE - sizeof(gam_index_t) - sizeof(UnsignedInt) - 2 * sizeof(extent_id_t);
+        GAM_HEADER_SIZE - sizeof(gam_index_t) - sizeof(UInt32_t) - 2 * sizeof(extent_id_t);
 
     // Offset of the bitmap inside the page
     inline constexpr size_t GAM_METADATA_SIZE = PAGE_HEADER_SIZE + GAM_HEADER_SIZE;
 
     inline constexpr size_t LOB_ROOT_HEADER_SIZE =
-        sizeof(UnsignedBigInt) + sizeof(page_id_t)
-        + 2 * sizeof(UnsignedInt) + 2 * sizeof(UnsignedTinyInt)
-        + sizeof(UnsignedSmallInt);
+        sizeof(UInt64_t) + sizeof(page_id_t)
+        + 2 * sizeof(UInt32_t) + 2 * sizeof(UInt8_t)
+        + sizeof(UInt16_t);
 
-    inline constexpr size_t LOB_INDEX_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
-    inline constexpr size_t LOB_DATA_HEADER_SIZE = sizeof(page_id_t) + sizeof(UnsignedInt);
+    inline constexpr size_t LOB_INDEX_HEADER_SIZE = sizeof(page_id_t) + sizeof(UInt32_t);
+    inline constexpr size_t LOB_DATA_HEADER_SIZE = sizeof(page_id_t) + sizeof(UInt32_t);
 
     /**
      * @name System file layout
@@ -131,7 +131,7 @@ namespace CoreEngine::StorageLayout{
     inline constexpr gam_index_t MAX_GAM_INDEX = std::numeric_limits<page_id_t>::max() / GAM_NUMBER_OF_PAGES - 1;
 
     static_assert(
-        static_cast<UnsignedBigInt>(MAX_GAM_INDEX + 1) * GAM_NUMBER_OF_PAGES - 1 < std::numeric_limits<page_id_t>::max(),
+        static_cast<UInt64_t>(MAX_GAM_INDEX + 1) * GAM_NUMBER_OF_PAGES - 1 < std::numeric_limits<page_id_t>::max(),
         "the last GAM range must fit in page_id_t"
     );
 
@@ -160,7 +160,7 @@ namespace CoreEngine::StorageLayout{
             + pageSlotInInterval(dataPageId) / PAGE_FREE_SPACE_SIZE;
     }
 
-    [[nodiscard]] constexpr UnsignedInt PfsSlot(const page_id_t pageId){
+    [[nodiscard]] constexpr UInt32_t PfsSlot(const page_id_t pageId){
         return pageSlotInInterval(pageId) % PAGE_FREE_SPACE_SIZE;
     }
 

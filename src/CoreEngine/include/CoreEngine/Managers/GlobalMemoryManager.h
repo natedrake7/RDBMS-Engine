@@ -9,25 +9,25 @@ namespace Memory{
 
 namespace CoreEngine{
     class GlobalMemoryManager{
-        UnsignedBigInt _dbCapacity;
-        UnsignedBigInt _bufferPoolCapacity;
-        UnsignedBigInt _executionCapacity;
-        UnsignedBigInt _miscCapacity;
+        UInt64_t _dbCapacity;
+        UInt64_t _bufferPoolCapacity;
+        UInt64_t _executionCapacity;
+        UInt64_t _miscCapacity;
 
-        std::atomic<UnsignedBigInt> _executionUsed;
-        std::atomic<UnsignedBigInt> _miscUsed;
+        std::atomic<UInt64_t> _executionUsed;
+        std::atomic<UInt64_t> _miscUsed;
 
-        static constexpr Int DB_RATIO_NUMERATOR = 60;
-        static constexpr Int DB_RATIO_DENOMINATOR = 100;
+        static constexpr Int32_t DB_RATIO_NUMERATOR = 60;
+        static constexpr Int32_t DB_RATIO_DENOMINATOR = 100;
 
-        static constexpr Int BUFFER_POOL_RATIO_NUMERATOR = 50;
-        static constexpr Int BUFFER_POOL_RATIO_DENOMINATOR = 100;
+        static constexpr Int32_t BUFFER_POOL_RATIO_NUMERATOR = 50;
+        static constexpr Int32_t BUFFER_POOL_RATIO_DENOMINATOR = 100;
 
-        static constexpr Int EXECUTION_RATIO_NUMERATOR = 40;
-        static constexpr Int EXECUTION_RATIO_DENOMINATOR = 100;
+        static constexpr Int32_t EXECUTION_RATIO_NUMERATOR = 40;
+        static constexpr Int32_t EXECUTION_RATIO_DENOMINATOR = 100;
 
-        static constexpr Int MISC_RATIO_NUMERATOR = 10;
-        static constexpr Int MISC_RATIO_DENOMINATOR = 100;
+        static constexpr Int32_t MISC_RATIO_NUMERATOR = 10;
+        static constexpr Int32_t MISC_RATIO_DENOMINATOR = 100;
 
         GlobalMemoryManager();
         public:
@@ -39,18 +39,18 @@ namespace CoreEngine{
             void Initialize(const ::Memory::OSMemoryInfo& memoryInfo);
             static GlobalMemoryManager& Get();
 
-            [[nodiscard]] bool TryReserveForExecution(UnsignedBigInt size);
-            void ReleaseExecutionReservation(UnsignedBigInt size);
+            [[nodiscard]] bool TryReserveForExecution(UInt64_t size);
+            void ReleaseExecutionReservation(UInt64_t size);
 
-            [[nodiscard]] bool TryReserveForMisc(UnsignedBigInt size);
-            void ReleaseMiscReservation(UnsignedBigInt size);
+            [[nodiscard]] bool TryReserveForMisc(UInt64_t size);
+            void ReleaseMiscReservation(UInt64_t size);
 
-            [[nodiscard]] UnsignedBigInt GetDbCapacity()const;
-            [[nodiscard]] UnsignedBigInt GetBufferPoolCapacity()const;
-            [[nodiscard]] UnsignedBigInt GetMiscCapacity()const;
-            [[nodiscard]] UnsignedBigInt GetMiscReservation()const;
-            [[nodiscard]] UnsignedBigInt GetExecutionCapacity()const;
-            [[nodiscard]] UnsignedBigInt GetExecutionReservation()const;
+            [[nodiscard]] UInt64_t GetDbCapacity()const;
+            [[nodiscard]] UInt64_t GetBufferPoolCapacity()const;
+            [[nodiscard]] UInt64_t GetMiscCapacity()const;
+            [[nodiscard]] UInt64_t GetMiscReservation()const;
+            [[nodiscard]] UInt64_t GetExecutionCapacity()const;
+            [[nodiscard]] UInt64_t GetExecutionReservation()const;
 
             template<::Memory::MemoryLogLevel LEVEL>
             void Log(std::ostream& os)const;

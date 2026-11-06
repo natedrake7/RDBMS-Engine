@@ -17,7 +17,7 @@ class IntegerConverter {
         std::numeric_limits<T>::digits10 + 4;
 
     template<DataTypes::Primitive T>
-    static T StrToInt(const char* data, const Int size){
+    static T StrToInt(const char* data, const Int32_t size){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
         T value{};
@@ -31,7 +31,7 @@ class IntegerConverter {
     }
 
     template<DataTypes::Primitive T>
-    static bool TryStrToInt(const char* data, const Int size){
+    static bool TryStrToInt(const char* data, const Int32_t size){
         static_assert(std::is_integral_v<T>, "T must be integral type");
 
         T value{};
@@ -54,13 +54,13 @@ public:
             std::is_same_v<STR_TYPE, std::string>
             || std::is_same_v<STR_TYPE, std::string_view>
         ){
-            return StrToInt<INT_TYPE>(input.data(), static_cast<Int>(input.size()));
+            return StrToInt<INT_TYPE>(input.data(), static_cast<Int32_t>(input.size()));
         }
         else if constexpr (
             std::is_same_v<STR_TYPE, const char*>
             || std::is_same_v<STR_TYPE, char*>
         ){
-            return StrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
+            return StrToInt<INT_TYPE>(input, static_cast<Int32_t>(std::strlen(input)));
         }
         else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
 
@@ -79,13 +79,13 @@ public:
             std::is_same_v<STR_TYPE, std::string>
             || std::is_same_v<STR_TYPE, std::string_view>
         ){
-            return TryStrToInt<INT_TYPE>(input.data(), static_cast<Int>(input.size()));
+            return TryStrToInt<INT_TYPE>(input.data(), static_cast<Int32_t>(input.size()));
         }
         else if constexpr (
             std::is_same_v<STR_TYPE, const char*>
             || std::is_same_v<STR_TYPE, char*>
         ){
-            return TryStrToInt<INT_TYPE>(input, static_cast<Int>(std::strlen(input)));
+            return TryStrToInt<INT_TYPE>(input, static_cast<Int32_t>(std::strlen(input)));
         }
         else static_assert(DataTypes::AlwaysFalse<STR_TYPE>, "Invalid type for StrToInt");
 
@@ -110,7 +110,7 @@ public:
         return false;
     }
 
-    template<DataTypes::IsInteger TInput, DataTypes::IsInteger TOutput>
+    template<DataTypes::Primitive TInput, DataTypes::Primitive TOutput>
     inline static constexpr TOutput DownCast(const TInput input){
         assert(
             input < std::numeric_limits<TOutput>::min() && input > std::numeric_limits<TOutput>::max()

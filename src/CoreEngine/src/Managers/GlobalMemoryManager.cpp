@@ -25,7 +25,7 @@ namespace CoreEngine{
         return _instance;
     }
 
-    bool GlobalMemoryManager::TryReserveForExecution(const UnsignedBigInt size){
+    bool GlobalMemoryManager::TryReserveForExecution(const UInt64_t size){
         auto current = this->_executionUsed.load(std::memory_order_relaxed);
         do{
             if (current + size > this->_executionCapacity)
@@ -37,11 +37,11 @@ namespace CoreEngine{
         return true;
     }
 
-    void GlobalMemoryManager::ReleaseExecutionReservation(const UnsignedBigInt size){
+    void GlobalMemoryManager::ReleaseExecutionReservation(const UInt64_t size){
         this->_executionUsed.fetch_sub(size, std::memory_order_relaxed);
     }
 
-    bool GlobalMemoryManager::TryReserveForMisc(const UnsignedBigInt size){
+    bool GlobalMemoryManager::TryReserveForMisc(const UInt64_t size){
         auto current = this->_miscUsed.load(std::memory_order_relaxed);
         do{
             if (current + size > this->_miscCapacity)
@@ -53,20 +53,20 @@ namespace CoreEngine{
         return true;
     }
 
-    void GlobalMemoryManager::ReleaseMiscReservation(const UnsignedBigInt size){
+    void GlobalMemoryManager::ReleaseMiscReservation(const UInt64_t size){
         this->_miscUsed.fetch_sub(size, std::memory_order_relaxed);
     }
 
-    UnsignedBigInt GlobalMemoryManager::GetDbCapacity() const{ return this->_dbCapacity; }
-    UnsignedBigInt GlobalMemoryManager::GetBufferPoolCapacity() const{ return this->_bufferPoolCapacity; }
-    UnsignedBigInt GlobalMemoryManager::GetMiscCapacity() const{ return this->_miscCapacity; }
+    UInt64_t GlobalMemoryManager::GetDbCapacity() const{ return this->_dbCapacity; }
+    UInt64_t GlobalMemoryManager::GetBufferPoolCapacity() const{ return this->_bufferPoolCapacity; }
+    UInt64_t GlobalMemoryManager::GetMiscCapacity() const{ return this->_miscCapacity; }
 
-    UnsignedBigInt GlobalMemoryManager::GetMiscReservation() const{
+    UInt64_t GlobalMemoryManager::GetMiscReservation() const{
         return this->_miscUsed.load(std::memory_order_relaxed);
     }
 
-    UnsignedBigInt GlobalMemoryManager::GetExecutionCapacity() const{ return this->_executionCapacity; }
-    UnsignedBigInt GlobalMemoryManager::GetExecutionReservation() const{
+    UInt64_t GlobalMemoryManager::GetExecutionCapacity() const{ return this->_executionCapacity; }
+    UInt64_t GlobalMemoryManager::GetExecutionReservation() const{
         return this->_executionUsed.load(std::memory_order_relaxed);
     }
 

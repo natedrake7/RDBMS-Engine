@@ -14,13 +14,13 @@ namespace Serialization{
 
         const ::Memory::IAllocator* _allocator;
 
-        [[nodiscard]] static Int RelativeOffSet(const Int offset, const Int headerPosition){
+        [[nodiscard]] static Int32_t RelativeOffSet(const Int32_t offset, const Int32_t headerPosition){
             return offset - headerPosition;
         }
 
-        inline void Value(const void* data, Int size, JsonType type);
+        inline void Value(const void* data, Int32_t size, JsonType type);
 
-        inline void SetObjectSize(Int size);
+        inline void SetObjectSize(Int32_t size);
 
     public:
         explicit JsonBuilder(const ::Memory::IAllocator* allocator);

@@ -48,8 +48,8 @@ namespace DataTypes {
         Guid result;
         std::memcpy(result._data, words, GUID_SIZE);
 
-        result._data[6] = static_cast<UnsignedTinyInt>((result._data[6] & 0x0F) | 0x40);   // version 4 (random)
-        result._data[8] = static_cast<UnsignedTinyInt>((result._data[8] & 0x3F) | 0x80);   // RFC 4122 variant
+        result._data[6] = static_cast<UInt8_t>((result._data[6] & 0x0F) | 0x40);   // version 4 (random)
+        result._data[8] = static_cast<UInt8_t>((result._data[8] & 0x3F) | 0x80);   // RFC 4122 variant
 
         return result;
     }

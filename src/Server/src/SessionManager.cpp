@@ -56,7 +56,7 @@ namespace Network::Sessions {
         return false;
     }
 
-    bool SessionManager::UpdateSession(const session_id_t id, const Int databaseId)const{
+    bool SessionManager::UpdateSession(const session_id_t id, const Int32_t databaseId)const{
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto* session = this->TryGetSessionWithoutLock(id);

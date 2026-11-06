@@ -20,15 +20,15 @@ namespace CoreEngine{
         DataStructures::StaticArray<Accessors::PageAccessor, StorageTypes::RID::Count - 1> _pageAccessors;
         const ExecutionContext* _executionContext;
 
-        Int _schemaWidth;
+        Int32_t _schemaWidth;
 
         public:
         VectorizedPushedDownFilter(
             const Expressions::Expression* expression,
             const DataStructures::PolymorphicArray<StorageTypes::FilterColumnInfo>* filterColumns,
             const ExecutionContext* executionContext,
-            const UnsignedSmallInt slotIndex,
-            const Int schemaWidth
+            const UInt16_t slotIndex,
+            const Int32_t schemaWidth
         ):  _candidates(executionContext->GetAllocator()), _expression(expression),
             _filterColumns(filterColumns),
             _executionContext(executionContext), _schemaWidth(schemaWidth){
@@ -42,7 +42,7 @@ namespace CoreEngine{
             this->_candidates.Push(candidate);
         }
 
-        inline void Start(const Int candidatesSize){
+        inline void Start(const Int32_t candidatesSize){
             this->_candidates.Clear();
             this->_candidates.Reserve(candidatesSize);
         }
@@ -74,8 +74,8 @@ namespace CoreEngine{
             const auto* __restrict__ candidatesData = this->_candidates.Data();
             auto* __restrict__ out = result->Data() + result->Size();
 
-            Int selectedCount = 0;
-            UnsignedBigInt anyNull = 0;
+            Int32_t selectedCount = 0;
+            UInt64_t anyNull = 0;
             const auto wordsCount = mask->WordsCount();
             for (auto w = 0; w < wordsCount; w++)
                 anyNull |= maskValidity[w];

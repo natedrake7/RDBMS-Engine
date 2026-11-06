@@ -38,9 +38,9 @@ namespace Security {
     }
 
     bool UserManager::HashPassword(const DataTypes::StringView& password, DataTypes::String& outHash){
-        static constexpr UnsignedInt t_cost = 3;        // iterations
-        static constexpr UnsignedInt m_cost = 1 << 16;  // 64 MiB
-        static constexpr UnsignedInt parallelism = 1;
+        static constexpr UInt32_t t_cost = 3;        // iterations
+        static constexpr UInt32_t m_cost = 1 << 16;  // 64 MiB
+        static constexpr UInt32_t parallelism = 1;
 
         static constexpr auto HASH_SALT = DataTypes::StringView("kalispera");
 
@@ -64,7 +64,7 @@ namespace Security {
     }
 
     bool UserManager::AddUser(
-        const Int id,
+        const Int32_t id,
         const DataTypes::String& name,
         const DataTypes::String& passwordHash,
         const Role* role
@@ -115,7 +115,7 @@ namespace Security {
     bool UserManager::GrantRole(
         const DataTypes::StringView& name,
         const Role *role,
-        Int& outUserId
+        Int32_t& outUserId
     )const{
         MultiThreading::WriterGuard guard(&this->mutex);
 

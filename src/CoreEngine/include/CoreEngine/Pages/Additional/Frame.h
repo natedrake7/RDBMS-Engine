@@ -26,7 +26,7 @@ namespace CoreEngine::Pages{
         return static_cast<page_id_t>(identity & 0xFFFFFFFFull);
     }
 
-    enum class FrameState: UnsignedTinyInt{
+    enum class FrameState: UInt8_t{
         Free = 0,
         Loading = 1,
         Ready = 2,
@@ -42,14 +42,14 @@ namespace CoreEngine::Pages{
 
         log_sequence_number_t logSequenceNumber;
 
-        std::atomic<Int> _pinCount;
+        std::atomic<Int32_t> _pinCount;
 
         std::atomic<FrameState> _state;
         std::atomic<PageLayout::PagePriority> _priority;
         std::atomic<bool> _hasSecondChance;
         std::atomic<bool> _isDirty;
 
-        inline static constexpr Int EVICTING_PIN_COUNT = -1;
+        inline static constexpr Int32_t EVICTING_PIN_COUNT = -1;
 
         Frame()
             :   _data(nullptr), _identity(INVALID_FRAME_IDENTITY),
@@ -83,7 +83,7 @@ namespace CoreEngine::Pages{
             }
         }
 
-        void SetPinCount(const Int pinCount){
+        void SetPinCount(const Int32_t pinCount){
             this->_pinCount.store(pinCount, std::memory_order_release);
         }
 
@@ -116,7 +116,7 @@ namespace CoreEngine::Pages{
         }
 
         [[nodiscard]] bool TryClaimForEviction(){
-            Int expectedPinCount = 0;
+            Int32_t expectedPinCount = 0;
             return this->_pinCount.compare_exchange_strong(
                     expectedPinCount, EVICTING_PIN_COUNT,
                     std::memory_order_acquire, std::memory_order_relaxed
@@ -187,7 +187,7 @@ namespace CoreEngine::Pages{
     };
 
     [[nodiscard]] inline bool ClaimWaitingForTransientPins(Frame* frame){
-        for (UnsignedInt attempt = 0; attempt < 1000; attempt++){
+        for (UInt32_t attempt = 0; attempt < 1000; attempt++){
             if (frame->TryClaimForEviction())
                 return true;
 

@@ -5,7 +5,7 @@
 #include <Systemic/Guards/WriterGuard.h>
 
 namespace CoreEngine::StorageTypes {
-    void IdentityManager::ReserveBlock(const ::Memory::IAllocator* allocator, const BigInt value){
+    void IdentityManager::ReserveBlock(const ::Memory::IAllocator* allocator, const Int64_t value){
         MultiThreading::WriterGuard guard(&this->mutex);
 
         auto ceiling = this->_reservedUpTo.load(std::memory_order_relaxed);
@@ -33,8 +33,8 @@ namespace CoreEngine::StorageTypes {
 
     void IdentityManager::Bootstrap(
         const Schemas::IdentitySchema* schema,
-        const Int tableId,
-        const Int columnId
+        const Int32_t tableId,
+        const Int32_t columnId
     ){
         if (this->_isBootstrapped.load(std::memory_order_relaxed))
             return;
@@ -57,10 +57,10 @@ namespace CoreEngine::StorageTypes {
         return static_cast<T>(value);
     }
 
-    template TinyInt IdentityManager::Generate<TinyInt>(const ::Memory::IAllocator*);
-    template SmallInt IdentityManager::Generate<SmallInt>(const ::Memory::IAllocator*);
-    template Int IdentityManager::Generate<Int>(const ::Memory::IAllocator*);
-    template BigInt IdentityManager::Generate<BigInt>(const ::Memory::IAllocator*);
+    template Int8_t IdentityManager::Generate<Int8_t>(const ::Memory::IAllocator*);
+    template Int16_t IdentityManager::Generate<Int16_t>(const ::Memory::IAllocator*);
+    template Int32_t IdentityManager::Generate<Int32_t>(const ::Memory::IAllocator*);
+    template Int64_t IdentityManager::Generate<Int64_t>(const ::Memory::IAllocator*);
 
     template <DataTypes::IsInteger T>
     T IdentityManager::ReserveRange(const ::Memory::IAllocator* allocator, T range){
@@ -72,10 +72,10 @@ namespace CoreEngine::StorageTypes {
         return static_cast<T>(value);
     }
 
-    template TinyInt IdentityManager::ReserveRange<TinyInt>(const ::Memory::IAllocator*, TinyInt);
-    template SmallInt IdentityManager::ReserveRange<SmallInt>(const ::Memory::IAllocator*, SmallInt);
-    template Int IdentityManager::ReserveRange<Int>(const ::Memory::IAllocator*, Int);
-    template BigInt IdentityManager::ReserveRange<BigInt>(const ::Memory::IAllocator*, BigInt);
+    template Int8_t IdentityManager::ReserveRange<Int8_t>(const ::Memory::IAllocator*, Int8_t);
+    template Int16_t IdentityManager::ReserveRange<Int16_t>(const ::Memory::IAllocator*, Int16_t);
+    template Int32_t IdentityManager::ReserveRange<Int32_t>(const ::Memory::IAllocator*, Int32_t);
+    template Int64_t IdentityManager::ReserveRange<Int64_t>(const ::Memory::IAllocator*, Int64_t);
 
     template <DataTypes::IsInteger T>
     bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, T& value){
@@ -83,10 +83,10 @@ namespace CoreEngine::StorageTypes {
         return true;
     }
 
-    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, TinyInt& value);
-    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, SmallInt& value);
-    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int& value);
-    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, BigInt& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int8_t& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int16_t& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int32_t& value);
+    template bool IdentityManager::TryGenerate(const ::Memory::IAllocator* allocator, Int64_t& value);
 
     void IdentityManager::UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const{
         MultiThreading::WriterGuard guard(&this->mutex);
@@ -99,9 +99,9 @@ namespace CoreEngine::StorageTypes {
         );
     }
 
-    BigInt IdentityManager::GetIncrement() const{ return this->_schema->_increment; }
+    Int64_t IdentityManager::GetIncrement() const{ return this->_schema->_increment; }
 
-    void IdentityManager::Reseed(const BigInt value){
+    void IdentityManager::Reseed(const Int64_t value){
         MultiThreading::WriterGuard guard(&this->mutex);
         this->_reservedUpTo.store(value, std::memory_order_relaxed);
         this->_counter.store(value, std::memory_order_relaxed);

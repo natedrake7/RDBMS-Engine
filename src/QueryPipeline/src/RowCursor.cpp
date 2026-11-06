@@ -17,7 +17,7 @@ namespace QueryPipeline{
         }
     }
 
-    void RowCursor::PrintColumn(std::ostream& os, const Int rowIndex, const Int columnIndex) const{
+    void RowCursor::PrintColumn(std::ostream& os, const Int32_t rowIndex, const Int32_t columnIndex) const{
         const auto* columnData = this->_batch->_columns[columnIndex];
 
         if (columnData->GetNullValue(rowIndex)){
@@ -38,23 +38,23 @@ namespace QueryPipeline{
             os << (*reinterpret_cast<const bool*>(columnData->_data + rowIndex * sizeof(bool)) == 1 ? "TRUE" : "FALSE");
             break;
         case DataType::TinyInt:
-            os << static_cast<Int>((*reinterpret_cast<const TinyInt*>(columnData->_data + rowIndex * sizeof(TinyInt))));
+            os << static_cast<Int32_t>((*reinterpret_cast<const Int8_t*>(columnData->_data + rowIndex * sizeof(Int8_t))));
             break;
         case DataType::SmallInt:
-            os << (*reinterpret_cast<const SmallInt*>(columnData->_data + rowIndex * sizeof(SmallInt)));
+            os << (*reinterpret_cast<const Int16_t*>(columnData->_data + rowIndex * sizeof(Int16_t)));
             break;
         case DataType::Int:
-            os << (*reinterpret_cast<const Int*>(columnData->_data + rowIndex * sizeof(Int)));
+            os << (*reinterpret_cast<const Int32_t*>(columnData->_data + rowIndex * sizeof(Int32_t)));
             break;
         case DataType::BigInt:
-            os << (*reinterpret_cast<const BigInt*>(columnData->_data + rowIndex * sizeof(BigInt)));
+            os << (*reinterpret_cast<const Int64_t*>(columnData->_data + rowIndex * sizeof(Int64_t)));
             break;
         case DataType::Decimal:{
             os << (*reinterpret_cast<const DataTypes::Decimal*>(columnData->_data + rowIndex * sizeof(DataTypes::Decimal)));
             break;
         }
         case DataType::DateTime:{
-            const auto time = DataTypes::DateTime(*reinterpret_cast<const BigInt*>(columnData->_data + rowIndex * sizeof(BigInt)));
+            const auto time = DataTypes::DateTime(*reinterpret_cast<const Int64_t*>(columnData->_data + rowIndex * sizeof(Int64_t)));
             time.Print(os);
             break;
         }

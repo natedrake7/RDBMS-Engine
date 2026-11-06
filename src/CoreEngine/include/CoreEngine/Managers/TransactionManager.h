@@ -5,8 +5,8 @@
 
 namespace CoreEngine {
 struct ModificationInfo {
-    Int databaseId;
-    Int tableId;
+    Int32_t databaseId;
+    Int32_t tableId;
     std::vector<DataTypes::RowIdentifier> rows;
 };
 

@@ -25,7 +25,7 @@ namespace CoreEngine {
 
         static bool Exists(const DataTypes::StringView& filename);
 
-        [[nodiscard]] Int GetNextOrdinalPosition();
+        [[nodiscard]] Int32_t GetNextOrdinalPosition();
 
         public:
             TemporaryDatabase(TemporaryDatabase const&) = delete;
@@ -37,7 +37,7 @@ namespace CoreEngine {
             void Initialize(const ::Memory::IAllocator* allocator);
 
             [[nodiscard]] StorageTypes::Table* CreateTable();
-            [[nodiscard]] StorageTypes::Table* OpenTable(Int tableId) const;
+            [[nodiscard]] StorageTypes::Table* OpenTable(Int32_t tableId) const;
 
             void Shutdown();
 

@@ -40,7 +40,7 @@ class BoundVariable{
                 std::memcpy(this->_externalData.data(), value.Data(), value.Size());
             }
 
-            this->_typeInfo = value.GetType();
+            this->_typeInfo = value.TypeInfo();
         }
 
         [[nodiscard]] Value GetValue() const{

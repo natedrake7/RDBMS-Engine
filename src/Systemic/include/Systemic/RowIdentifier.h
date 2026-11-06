@@ -5,14 +5,14 @@
 namespace DataTypes{
     struct RowIdentifier {
         page_id_t pageId;
-        Int indexId;
+        Int32_t indexId;
 
         RowIdentifier() {
             this->pageId = INVALID_PAGE_ID;
             this->indexId = INVALID_PAGE_INDEX_ID;
         }
 
-        RowIdentifier(const Int pageId, const Int indexId) {
+        RowIdentifier(const Int32_t pageId, const Int32_t indexId) {
             this->pageId = pageId;
             this->indexId = indexId;
         }

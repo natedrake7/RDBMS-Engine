@@ -30,7 +30,7 @@ namespace CoreEngine::Pages{
         LobIndexView(LobIndexView&&) noexcept = default;
         LobIndexView& operator=(LobIndexView&&) noexcept = default;
 
-        [[nodiscard]] UnsignedInt ChildCount() const{
+        [[nodiscard]] UInt32_t ChildCount() const{
             return this->GetAdditionalHeader()->_childCount;
         }
 
@@ -42,10 +42,10 @@ namespace CoreEngine::Pages{
             return this->Payload();
         }
 
-        [[nodiscard]] page_id_t Child(UnsignedInt slot)const;
+        [[nodiscard]] page_id_t Child(UInt32_t slot)const;
         void AppendChild(page_id_t child) const;
 
-        void BulkAppendChildren(const page_id_t* children, UnsignedInt count) const;
+        void BulkAppendChildren(const page_id_t* children, UInt32_t count) const;
 
         [[nodiscard]] bool IsConsistent() const;
     };

@@ -17,7 +17,7 @@ namespace CoreEngine::Storage{
     void StorageManager::EvictPageNoLock() {
         const auto capacity = this->_memoryManager.Capacity();
 
-        for (Int i = 0; i < 2 * capacity; i++){
+        for (Int32_t i = 0; i < 2 * capacity; i++){
             const auto candidateId = this->_clockHand.load(std::memory_order_relaxed);
             this->_clockHand.store((candidateId + 1) % capacity, std::memory_order_relaxed);
 
@@ -112,7 +112,7 @@ namespace CoreEngine::Storage{
        auto* segment = this->EnsureSegmentExistsNoLock(slotIndex, pageId);
 
        bool readAhead = true;
-       for (UnsignedInt i = 0;i < StorageLayout::EXTENT_SIZE;i++){
+       for (UInt32_t i = 0;i < StorageLayout::EXTENT_SIZE;i++){
            const auto currentPageId = info._firstPageId + i;
            info._frames[i] = StorageLayout::INVALID_FRAME_ID;
 
@@ -150,7 +150,7 @@ namespace CoreEngine::Storage{
         Pages::Frame* requested = nullptr;
         std::exception_ptr error;
 
-        UnsignedInt i = 0;
+        UInt32_t i = 0;
         auto* __restrict__ frameIds = info._frames;
         while (i < StorageLayout::EXTENT_SIZE){
             if (frameIds[i] == StorageLayout::INVALID_FRAME_ID){
@@ -160,12 +160,12 @@ namespace CoreEngine::Storage{
 
             const auto runStart = i;
             object_t* buffers[StorageLayout::EXTENT_SIZE];
-            UnsignedInt counter = 0;
+            UInt32_t counter = 0;
 
             while (i < StorageLayout::EXTENT_SIZE && frameIds[i] != StorageLayout::INVALID_FRAME_ID)
                 buffers[counter++] = this->_memoryManager.GetFrame(frameIds[i++])->_data;
 
-            UnsignedInt loadedFrames = 0;
+            UInt32_t loadedFrames = 0;
             try{
                 loadedFrames = ::Storage::FileIO::ReadScatter(
                     file,
@@ -182,7 +182,7 @@ namespace CoreEngine::Storage{
                 ._slot = info._slot,
             };
 
-            for (UnsignedInt j = 0;j < counter;j++){
+            for (UInt32_t j = 0;j < counter;j++){
                 const auto currentPageId = info._firstPageId + runStart + j;
                 const auto frameId = frameIds[runStart + j];
 
@@ -225,7 +225,7 @@ namespace CoreEngine::Storage{
             const auto* __restrict__ pageIds = failedInfo._pages;
 
             auto* segment = this->GetSegmentNoLock(failedInfo._slot, pageIds[0]);
-            for (UnsignedInt i = 0; i < failedInfo._count; i++){
+            for (UInt32_t i = 0; i < failedInfo._count; i++){
                 auto expectedFrame = failedInfo._frames[i];
                 segment->_frames[StorageLayout::PageAddress::PageSlot(pageIds[i])].compare_exchange_strong(
                     expectedFrame,
@@ -235,7 +235,7 @@ namespace CoreEngine::Storage{
             }
         }
 
-        for (UnsignedInt i = 0; i < failedInfo._count; i++){
+        for (UInt32_t i = 0; i < failedInfo._count; i++){
             auto* frame = this->_memoryManager.GetFrame(frames[i]);
             frame->SetIdentity(Pages::INVALID_FRAME_IDENTITY);
             frame->SetState(Pages::FrameState::Failed);
@@ -404,7 +404,7 @@ namespace CoreEngine::Storage{
         MultiThreading::WriterGuard lock(&this->_tableMutex);
 
         std::vector<native_file_t> touchedFiles;
-        for (Int i = 0;i < this->_memoryManager.Capacity(); i++){
+        for (Int32_t i = 0;i < this->_memoryManager.Capacity(); i++){
             auto* frame = this->_memoryManager.GetFrame(i);
             if (!frame->StateEquals(Pages::FrameState::Ready) || !frame->IsDirty())
                 continue;
@@ -433,7 +433,7 @@ namespace CoreEngine::Storage{
 
         const auto lookAhead = Math::Min(Math::Max(2 * moved, WRITER_MIN_LOOKAHEAD), capacity / 4);
 
-        UnsignedInt framesWritten = 0;
+        UInt32_t framesWritten = 0;
 
         for (auto step = 0; step < lookAhead && framesWritten < WRITER_MAX_WRITES; step++){
             const auto frameId = (clockHand + step) % capacity;
@@ -468,10 +468,10 @@ namespace CoreEngine::Storage{
         return storageManager;
     }
 
-    void StorageManager::Initialize(const UnsignedBigInt size){
+    void StorageManager::Initialize(const UInt64_t size){
         this->_memoryManager.Initialize(size);
 
-        for (SmallInt i = 0; i < StorageLayout::MAX_BUFFER_POOL_SLOTS; ++i)
+        for (Int16_t i = 0; i < StorageLayout::MAX_BUFFER_POOL_SLOTS; ++i)
             this->_freeDbStack[i] = i;
 
         this->_freeTopDbStack = StorageLayout::MAX_BUFFER_POOL_SLOTS;

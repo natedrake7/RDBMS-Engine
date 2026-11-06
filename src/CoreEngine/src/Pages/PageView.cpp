@@ -19,7 +19,7 @@ namespace CoreEngine::Pages{
 
     void PageView::UpdateSlotDirectory(
         const SlotDirectory slotDirectory,
-        const Int indexPosition
+        const Int32_t indexPosition
     ) const{
         std::memcpy(
             this->_frame->_data + Pages::PageView::SlotDirectoryOffSet(indexPosition),
@@ -29,7 +29,7 @@ namespace CoreEngine::Pages{
     }
 
     void PageView::AdjustSlotDirectories(
-        const Int indexPosition,
+        const Int32_t indexPosition,
         const page_offset_t offset,
         const row_size_t rowSize,
         const key_size_t keySize
@@ -85,12 +85,12 @@ namespace CoreEngine::Pages{
         return this->_frame->Header();
     }
 
-    const StorageTypes::RowHeader* PageView::PeekRowHeader(const Int indexPosition) const{
+    const StorageTypes::RowHeader* PageView::PeekRowHeader(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return reinterpret_cast<const StorageTypes::RowHeader*>(this->_frame->_data + slot.AbsoluteDataOffset());
     }
 
-    SlotDirectory PageView::GetSlotDirectory(const Int indexPosition) const{
+    SlotDirectory PageView::GetSlotDirectory(const Int32_t indexPosition) const{
         SlotDirectory slot;
         std::memcpy(
             &slot,
@@ -114,7 +114,7 @@ namespace CoreEngine::Pages{
         const auto slotCount = header->_size;
 
         DataStructures::PolymorphicArray<SlotDirectoryDefragment> liveSlots(allocator, header->_size);
-        for (Int i = 0; i < header->_size; i++){
+        for (Int32_t i = 0; i < header->_size; i++){
             const auto slot = this->GetSlotDirectory(i);
 
             if (slot.Dead() || slot.Empty()){
@@ -146,7 +146,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void PageView::Truncate(const Int size) const{
+    void PageView::Truncate(const Int32_t size) const{
         auto* header = this->_frame->Header();
         for (int i = size; i < this->_frame->Header()->_size; i++){
             const auto slot = this->GetSlotDirectory(i);
@@ -161,8 +161,8 @@ namespace CoreEngine::Pages{
     void PageView::DistributeFromPage(
         const ::Memory::IAllocator* allocator,
         const PageView* donorPage,
-        const Int slotToMoveFrom,
-        const Int donorNewSize
+        const Int32_t slotToMoveFrom,
+        const Int32_t donorNewSize
     ) const{
         const auto* leftData = donorPage->GetData();
         const page_offset_t startOffset = this->NewInsertOffset();
@@ -170,7 +170,7 @@ namespace CoreEngine::Pages{
 
         const auto movedSlots = donorPage->PageSize() - slotToMoveFrom;
 
-        for (Int index = slotToMoveFrom; index < donorPage->PageSize(); index++){
+        for (Int32_t index = slotToMoveFrom; index < donorPage->PageSize(); index++){
             const auto leftSlot = donorPage->GetSlotDirectory(index);
             std::memcpy(this->_frame->_data + offset, leftData + leftSlot.Offset(), leftSlot.Size());
 
@@ -192,7 +192,7 @@ namespace CoreEngine::Pages{
         donorPage->Defragment(allocator);
     }
 
-    bool PageView::EnsureContiguousSpace(const ::Memory::IAllocator* allocator, const UnsignedInt bytes) const{
+    bool PageView::EnsureContiguousSpace(const ::Memory::IAllocator* allocator, const UInt32_t bytes) const{
         const auto* header = this->_frame->Header();
         if (bytes <= header->_bytesLeft)
             return true;
@@ -203,7 +203,7 @@ namespace CoreEngine::Pages{
         return bytes <= header->_bytesLeft;
     }
 
-    Int PageView::InsertRow(const StorageTypes::SerializedRow& payload) const{
+    Int32_t PageView::InsertRow(const StorageTypes::SerializedRow& payload) const{
         const auto rowSize = payload.Size();
         const auto offset = this->NewInsertOffset();
         auto* header = this->_frame->Header();
@@ -225,7 +225,7 @@ namespace CoreEngine::Pages{
 
     void PageView::InsertRow(
         const StorageTypes::SerializedRow& payload,
-        const Int indexPosition
+        const Int32_t indexPosition
     ) const{
         if (indexPosition >= this->_frame->Header()->_size){
             const auto _ = this->InsertRow(payload);
@@ -306,7 +306,7 @@ namespace CoreEngine::Pages{
     }
 
     void PageView::SetForwardPointer(
-        const Int indexPosition,
+        const Int32_t indexPosition,
         const StorageTypes::RID* rid
     ) const{
         auto slot = this->GetSlotDirectory(indexPosition);
@@ -329,7 +329,7 @@ namespace CoreEngine::Pages{
 
     bool PageView::ResolveRID(
         const Snapshot& snapshot,
-        const Int indexPosition,
+        const Int32_t indexPosition,
         StorageTypes::RID* outRID
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
@@ -342,7 +342,7 @@ namespace CoreEngine::Pages{
     MaterializedRow PageView::MaterializeRow(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::Table* tablePtr,
-        const Int indexPosition
+        const Int32_t indexPosition
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
 
@@ -389,7 +389,7 @@ namespace CoreEngine::Pages{
         return result;
     }
 
-    void PageView::MarkDead(const Int indexPosition) const{
+    void PageView::MarkDead(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         if (slot.Dead())
             return;
@@ -399,7 +399,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void PageView::RemoveSlot(const Int indexPosition) const{
+    void PageView::RemoveSlot(const Int32_t indexPosition) const{
         auto* header = this->_frame->Header();
         header->FragmentBytesNoLock(this->GetSlotDirectory(indexPosition).Size());
 
@@ -415,8 +415,8 @@ namespace CoreEngine::Pages{
     template <typename T>
     T PageView::GetColumnAt(
         const ::Memory::IAllocator* allocator,
-        const Int index,
-        const Int columnIndex,
+        const Int32_t index,
+        const Int32_t columnIndex,
         bool* outNull
     ) const{
         const auto slot = this->GetSlotDirectory(index);
@@ -452,18 +452,18 @@ namespace CoreEngine::Pages{
         return T();
     }
 
-    template bool PageView::GetColumnAt<bool>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template TinyInt PageView::GetColumnAt<TinyInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template SmallInt PageView::GetColumnAt<SmallInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template BigInt PageView::GetColumnAt<BigInt>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template Int PageView::GetColumnAt<Int>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template DataTypes::DateTime PageView::GetColumnAt<DataTypes::DateTime>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template DataTypes::Guid PageView::GetColumnAt<DataTypes::Guid>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template DataTypes::StringValue PageView::GetColumnAt<DataTypes::StringValue>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template DataTypes::Decimal PageView::GetColumnAt<DataTypes::Decimal>(const ::Memory::IAllocator*, Int, Int, bool*) const;
-    template DataTypes::JsonBinary PageView::GetColumnAt<DataTypes::JsonBinary>(const ::Memory::IAllocator*, Int, Int, bool*) const;
+    template bool PageView::GetColumnAt<bool>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template Int8_t PageView::GetColumnAt<Int8_t>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template Int16_t PageView::GetColumnAt<Int16_t>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template Int64_t PageView::GetColumnAt<Int64_t>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template Int32_t PageView::GetColumnAt<Int32_t>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template DataTypes::DateTime PageView::GetColumnAt<DataTypes::DateTime>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template DataTypes::Guid PageView::GetColumnAt<DataTypes::Guid>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template DataTypes::StringValue PageView::GetColumnAt<DataTypes::StringValue>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template DataTypes::Decimal PageView::GetColumnAt<DataTypes::Decimal>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
+    template DataTypes::JsonBinary PageView::GetColumnAt<DataTypes::JsonBinary>(const ::Memory::IAllocator*, Int32_t, Int32_t, bool*) const;
 
-    const object_t* PageView::GetColumnAt(const Int rowIndex, const Int columnIndex) const{
+    const object_t* PageView::GetColumnAt(const Int32_t rowIndex, const Int32_t columnIndex) const{
         const auto slot = this->GetSlotDirectory(rowIndex);
         const auto* frame = this->GetFrame();
         const auto* rowDataPtr = frame->_data + slot.AbsoluteDataOffset();
@@ -480,9 +480,9 @@ namespace CoreEngine::Pages{
 
     //TODO Obsolete, will be removed along with rowKernels
     const object_t* PageView::GetColumnAt(
-        const Int rowIndex,
-        const Int columnIndex,
-        UnsignedSmallInt& outSize,
+        const Int32_t rowIndex,
+        const Int32_t columnIndex,
+        UInt16_t& outSize,
         bool* outNull
     ) const{
         const auto slot = this->GetSlotDirectory(rowIndex);
@@ -504,12 +504,12 @@ namespace CoreEngine::Pages{
         return rowDataPtr + rowEntry._offset;
     }
 
-    RawRowReference PageView::RawRowData(const Int indexPosition) const{
+    RawRowReference PageView::RawRowData(const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         return RawRowReference(this->_frame->_data + slot.AbsoluteDataOffset(), slot.DataSize());
     }
 
-    bool PageView::IsRowVisible(const Snapshot& snapshot, const Int indexPosition) const{
+    bool PageView::IsRowVisible(const Snapshot& snapshot, const Int32_t indexPosition) const{
         const auto slot = this->GetSlotDirectory(indexPosition);
         if (!slot.Used())
             return false;
@@ -523,7 +523,7 @@ namespace CoreEngine::Pages{
 
     bool PageView::RetrieveVisibleRow(
         const Snapshot& snapshot,
-        const Int indexPosition,
+        const Int32_t indexPosition,
         StorageTypes::RID* outRID
     ) const{
         const auto slot = this->GetSlotDirectory(indexPosition);

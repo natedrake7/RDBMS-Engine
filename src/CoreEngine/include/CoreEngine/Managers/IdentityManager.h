@@ -13,23 +13,23 @@ namespace CoreEngine::StorageTypes{
         const Schemas::IdentitySchema* _schema;
 
 
-        std::atomic<BigInt> _reservedUpTo;
-        std::atomic<BigInt> _counter;
+        std::atomic<Int64_t> _reservedUpTo;
+        std::atomic<Int64_t> _counter;
 
-        Int _tableId;
-        Int _columnId;
+        Int32_t _tableId;
+        Int32_t _columnId;
 
         std::atomic<bool> _isBootstrapped;
 
-        void ReserveBlock(const ::Memory::IAllocator* allocator, BigInt value);
+        void ReserveBlock(const ::Memory::IAllocator* allocator, Int64_t value);
 
     public:
         IdentityManager();
 
         void Bootstrap(
             const Schemas::IdentitySchema* schema,
-            Int tableId,
-            Int columnId
+            Int32_t tableId,
+            Int32_t columnId
         );
 
         template<DataTypes::IsInteger T>
@@ -42,8 +42,8 @@ namespace CoreEngine::StorageTypes{
         [[nodiscard]] bool TryGenerate(const ::Memory::IAllocator* allocator, T& value);
         void UpdateMasterDbOnShutdown(const ::Memory::IAllocator* allocator) const;
 
-        [[nodiscard]] BigInt GetIncrement() const;
+        [[nodiscard]] Int64_t GetIncrement() const;
 
-        void Reseed(BigInt value);
+        void Reseed(Int64_t value);
     };
 }

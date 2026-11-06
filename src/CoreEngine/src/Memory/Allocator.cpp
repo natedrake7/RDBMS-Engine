@@ -5,7 +5,7 @@
 #include <iostream>
 
 namespace CoreEngine::Memory{
-    UnsignedInt Allocator::NewChunkCapacity(const UnsignedInt size) const{
+    UInt32_t Allocator::NewChunkCapacity(const UInt32_t size) const{
         if (size > Chunk::MAX_SIZE)
             return size;
 
@@ -15,7 +15,7 @@ namespace CoreEngine::Memory{
         return Math::Max(size, Math::Min(this->_tail->_size * 2, Chunk::MAX_SIZE));
     }
 
-    void Allocator::AllocateNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+    void Allocator::AllocateNewChunk(const UInt32_t size, const std::size_t alignment) const{
         const auto newChunkSize = this->NewChunkCapacity(size + Chunk::MaxPadding(alignment));
 
         if(GlobalMemoryManager::Get().TryReserveForExecution(newChunkSize) == false)
@@ -43,7 +43,7 @@ namespace CoreEngine::Memory{
         this->_tail = newChunk;
     }
 
-    void Allocator::TryFindNewChunk(const UnsignedInt size, const std::size_t alignment) const{
+    void Allocator::TryFindNewChunk(const UInt32_t size, const std::size_t alignment) const{
         auto* node = this->_tail->_next;
         while (node != nullptr && node->AlignedOffset(alignment) + size > node->_size)
             node = node->_next;
@@ -59,7 +59,7 @@ namespace CoreEngine::Memory{
     Allocator::Allocator()
         : _head(nullptr), _tail(nullptr){}
 
-    Allocator::Allocator(const UnsignedInt capacity)
+    Allocator::Allocator(const UInt32_t capacity)
         : _head(nullptr), _tail(nullptr){
         this->AllocateNewChunk(capacity, ::Memory::DEFAULT_ALIGNMENT);
     }
@@ -92,7 +92,7 @@ namespace CoreEngine::Memory{
         return *this;
     }
 
-    void* Allocator::AllocateAligned(const UnsignedInt size, const std::size_t alignment)const{
+    void* Allocator::AllocateAligned(const UInt32_t size, const std::size_t alignment)const{
         if (this->_head == nullptr)
             this->AllocateNewChunk(size, alignment);
 
@@ -110,7 +110,7 @@ namespace CoreEngine::Memory{
 
     void Allocator::Release() const{
         auto* node = this->_head;
-        UnsignedBigInt freedMemory = 0;
+        UInt64_t freedMemory = 0;
         while(node != nullptr){
             auto* next = node->_next;
             freedMemory += node->_size;

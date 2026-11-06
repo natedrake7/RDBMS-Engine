@@ -38,8 +38,8 @@ namespace QueryPipeline{
         Errors::ParserStatus status;
         const Network::Session* _session;
 
-        UnsignedSmallInt _nextStatement;
-        UnsignedSmallInt _virtualId;
+        UInt16_t _nextStatement;
+        UInt16_t _virtualId;
         bool hasMore;
 
         QueryContext();
@@ -54,7 +54,7 @@ namespace QueryPipeline{
         void CreateValidationScope(const Network::Session* session);
         const ::Memory::IAllocator* GetAllocator()const;
 
-        [[nodiscard]] UnsignedSmallInt NextVirtualId();
+        [[nodiscard]] UInt16_t NextVirtualId();
 
         void Release()const;
     };

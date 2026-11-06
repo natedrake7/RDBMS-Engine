@@ -14,7 +14,7 @@ namespace CoreEngine::Pages{
 
     class HeaderPageView final : public PageView{
         [[nodiscard]] object_t* DatabaseHeaderData() const;
-        [[nodiscard]] object_t* GetTableHeaderData(UnsignedInt ordinal) const;
+        [[nodiscard]] object_t* GetTableHeaderData(UInt32_t ordinal) const;
 
         public:
             static constexpr auto TYPE = PageLayout::PageType::HEADER;
@@ -29,9 +29,9 @@ namespace CoreEngine::Pages{
 
             [[nodiscard]] DatabaseHeader GetDatabaseHeader() const;
 
-            [[nodiscard]] const StorageTypes::TableHeader* GetTableHeaderPtr(Int ordinalPosition) const;
+            [[nodiscard]] const StorageTypes::TableHeader* GetTableHeaderPtr(Int32_t ordinalPosition) const;
 
             void SetDatabaseHeader(const DatabaseHeader& header) const;
-            void SetTableHeader(const StorageTypes::TableHeader& header, SmallInt ordinalPosition) const;
+            void SetTableHeader(const StorageTypes::TableHeader& header, Int16_t ordinalPosition) const;
     };
 }

@@ -7,7 +7,7 @@
 #include <Systemic/DataTypes/DataTypes.StaticData.h>
 
 namespace DataTypes{
-    enum class CoercionType : UnsignedTinyInt {
+    enum class CoercionType : UInt8_t {
         Implicit = 0,   // Allowed automatically (safe)
         Explicit = 1,  // Allowed but requires CAST
         None = 2      // Not allowed
@@ -16,7 +16,7 @@ namespace DataTypes{
     struct CoercionMatrix {
         CoercionType cells[DATATYPE_COUNT][DATATYPE_COUNT];
         [[nodiscard]] constexpr CoercionType At(DataType from, DataType to) const {
-            return cells[static_cast<Int>(from)][static_cast<Int>(to)];
+            return cells[static_cast<Int32_t>(from)][static_cast<Int32_t>(to)];
         }
     };
 
@@ -50,10 +50,10 @@ namespace DataTypes{
         constexpr static CoercionMatrix BuildCoercionMatrix();
 
         [[nodiscard]] static bool ToBool(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static TinyInt ToTinyInt(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static SmallInt ToSmallInt(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static Int ToInt(const Value& value, bool explicitCast = false);
-        [[nodiscard]] static BigInt ToBigInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Int8_t ToTinyInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Int16_t ToSmallInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Int32_t ToInt(const Value& value, bool explicitCast = false);
+        [[nodiscard]] static Int64_t ToBigInt(const Value& value, bool explicitCast = false);
         [[nodiscard]] static String ToString(const ::Memory::IAllocator* allocator, const Value& value, bool explicitCast = false);
         [[nodiscard]] static StringView ToStringView(const Value& value, bool explicitCast = false);
         [[nodiscard]] static Guid ToGuid(const Value& value, bool explicitCast = false);
@@ -75,72 +75,72 @@ namespace DataTypes{
         CoercionMatrix matrix = {};
 
         // 1. Default everything to NONE
-        for (Int i = 0; i < DATATYPE_COUNT; i++) {
-            for (Int j = 0; j < DATATYPE_COUNT; j++) {
+        for (Int32_t i = 0; i < DATATYPE_COUNT; i++) {
+            for (Int32_t j = 0; j < DATATYPE_COUNT; j++) {
                 matrix.cells[i][j] = CT::None;
             }
         }
 
         // 2. Identity conversions (T → T)
-        for (Int i = 0; i < DATATYPE_COUNT; i++)
+        for (Int32_t i = 0; i < DATATYPE_COUNT; i++)
             matrix.cells[i][i] = CT::Implicit;
 
         // ---- Numeric ladder ----
         // TinyInt → ...
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Int)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::TinyInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::TinyInt)][static_cast<Int32_t>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::TinyInt)][static_cast<Int32_t>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::TinyInt)][static_cast<Int32_t>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::TinyInt)][static_cast<Int32_t>(DT::Decimal)] = CT::Implicit;
 
         // SmallInt →
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Int)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::SmallInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::SmallInt)][static_cast<Int32_t>(DT::TinyInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::SmallInt)][static_cast<Int32_t>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::SmallInt)][static_cast<Int32_t>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::SmallInt)][static_cast<Int32_t>(DT::Decimal)] = CT::Implicit;
 
         // Int →
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Int)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Int)][static_cast<Int32_t>(DT::TinyInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::Int)][static_cast<Int32_t>(DT::SmallInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::Int)][static_cast<Int32_t>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Int)][static_cast<Int32_t>(DT::Decimal)] = CT::Implicit;
 
         // BigInt →
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::TinyInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::SmallInt)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Int)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::BigInt)][static_cast<Int>(DT::Decimal)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::BigInt)][static_cast<Int32_t>(DT::TinyInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::BigInt)][static_cast<Int32_t>(DT::SmallInt)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::BigInt)][static_cast<Int32_t>(DT::Int)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::BigInt)][static_cast<Int32_t>(DT::Decimal)] = CT::Implicit;
 
         // Decimal →
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::TinyInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::Int)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Decimal)][static_cast<Int>(DT::BigInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Decimal)][static_cast<Int32_t>(DT::TinyInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Decimal)][static_cast<Int32_t>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Decimal)][static_cast<Int32_t>(DT::Int)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Decimal)][static_cast<Int32_t>(DT::BigInt)] = CT::Implicit;
 
         // ---- String conversions ----
-        for (Int t = static_cast<Int>(DT::TinyInt); t <= static_cast<Int>(DT::Decimal); t++) {
-            matrix.cells[static_cast<Int>(DT::String)][t] = CT::Explicit; // parse
-            matrix.cells[t][static_cast<Int>(DT::String)] = CT::Implicit; // stringify
+        for (Int32_t t = static_cast<Int32_t>(DT::TinyInt); t <= static_cast<Int32_t>(DT::Decimal); t++) {
+            matrix.cells[static_cast<Int32_t>(DT::String)][t] = CT::Explicit; // parse
+            matrix.cells[t][static_cast<Int32_t>(DT::String)] = CT::Implicit; // stringify
         }
 
-        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Bool)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::String)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::DateTime)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::DateTime)][static_cast<Int>(DT::String)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::String)][static_cast<Int>(DT::Guid)] = CT::Explicit;
-        matrix.cells[static_cast<Int>(DT::Guid)][static_cast<Int>(DT::String)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::String)][static_cast<Int32_t>(DT::Bool)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::Bool)][static_cast<Int32_t>(DT::String)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::String)][static_cast<Int32_t>(DT::DateTime)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::DateTime)][static_cast<Int32_t>(DT::String)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::String)][static_cast<Int32_t>(DT::Guid)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::Guid)][static_cast<Int32_t>(DT::String)] = CT::Implicit;
 
         // ---- Bool conversions ----
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::TinyInt)]  = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::SmallInt)] = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::Int)]      = CT::Implicit;
-        matrix.cells[static_cast<Int>(DT::Bool)][static_cast<Int>(DT::BigInt)]   = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Bool)][static_cast<Int32_t>(DT::TinyInt)]  = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Bool)][static_cast<Int32_t>(DT::SmallInt)] = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Bool)][static_cast<Int32_t>(DT::Int)]      = CT::Implicit;
+        matrix.cells[static_cast<Int32_t>(DT::Bool)][static_cast<Int32_t>(DT::BigInt)]   = CT::Implicit;
 
         // ---- JSON rules ----
-        for (Int t = 0; t < DATATYPE_COUNT; t++) {
-            if (t == static_cast<Int>(DT::Json)) continue;
-            matrix.cells[t][static_cast<Int>(DT::Json)] = CT::None;
+        for (Int32_t t = 0; t < DATATYPE_COUNT; t++) {
+            if (t == static_cast<Int32_t>(DT::Json)) continue;
+            matrix.cells[t][static_cast<Int32_t>(DT::Json)] = CT::None;
         }
-        matrix.cells[static_cast<Int>(DT::Json)][static_cast<Int>(DT::String)] = CT::Explicit;
+        matrix.cells[static_cast<Int32_t>(DT::Json)][static_cast<Int32_t>(DT::String)] = CT::Explicit;
 
         return matrix;
     }

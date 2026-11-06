@@ -13,7 +13,7 @@ namespace CoreEngine {
         ScanState()
             : _extentId(INVALID_EXTENT_ID), _nextOffset(0), _canFetchMore(false){}
 
-        [[nodiscard]] Int GetNextKeyIndex()const{
+        [[nodiscard]] Int32_t GetNextKeyIndex()const{
             return this->_nextOffset;
         }
 
@@ -36,7 +36,7 @@ namespace CoreEngine {
 
     struct IndexState {
         page_id_t pageId;
-        Int lastFetchedKeyIndex;
+        Int32_t lastFetchedKeyIndex;
 
         bool canFetchMore;
 
@@ -46,7 +46,7 @@ namespace CoreEngine {
             this->canFetchMore = false;
         }
 
-        [[nodiscard]] Int GetNextKeyIndex()const {
+        [[nodiscard]] Int32_t GetNextKeyIndex()const {
             return this->lastFetchedKeyIndex == INVALID_PAGE_INDEX_ID
             ? 0
             : this->lastFetchedKeyIndex + 1;

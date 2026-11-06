@@ -7,10 +7,10 @@
 namespace QueryPipeline::PipelineConstants {
     typedef uint16_t cursor_id_t;
 
-    constexpr Int SMALL_TABLE = 1000;
-    constexpr Int MEDIUM_TABLE = 10000;
-    constexpr Int LARGE_TABLE = 100000;
-    constexpr Int HASH_JOIN_THRESHOLD = 10000;
+    constexpr Int32_t SMALL_TABLE = 1000;
+    constexpr Int32_t MEDIUM_TABLE = 10000;
+    constexpr Int32_t LARGE_TABLE = 100000;
+    constexpr Int32_t HASH_JOIN_THRESHOLD = 10000;
 
     static constexpr double RANDOM_PAGE_COST = 4.0;
     static constexpr double SEQUENTIAL_PAGE_COST = 1.0;
@@ -20,7 +20,7 @@ namespace QueryPipeline::PipelineConstants {
 
     static constexpr double CPU_COST_PER_COMPARISON = 0.0001;
 
-    enum class JoinAlgorithm : UnsignedTinyInt{
+    enum class JoinAlgorithm : UInt8_t{
         NestedLoopJoin = 0,
         HashJoin = 1,
         MergeJoin = 2,

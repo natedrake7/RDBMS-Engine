@@ -89,7 +89,7 @@ namespace Serialization {
 
     JsonValue::JsonValue(
         const ::Memory::IAllocator* allocator,
-        const object_t* data, const Int size,
+        const object_t* data, const Int32_t size,
         const JsonType type
     ){
         this->_type = type;
@@ -110,7 +110,7 @@ namespace Serialization {
         }
     }
 
-    Int JsonValue::Size() const{
+    Int32_t JsonValue::Size() const{
         switch (this->_type) {
         case JsonType::Bool:
             return 1;
@@ -212,7 +212,7 @@ namespace Serialization {
 
         while (this->_pos < size && base[this->_pos] != JSON_QUOTE) {
             if (base[this->_pos] != JSON_BACKSLASH) {
-                const Int start = this->_pos;
+                const Int32_t start = this->_pos;
                 while (this->_pos < size && base[this->_pos] != JSON_QUOTE && base[this->_pos] != JSON_BACKSLASH)
                     ++this->_pos;
                 result.Append(base + start, this->_pos - start);
@@ -349,13 +349,13 @@ namespace Serialization {
     }
 
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const char* src)
-        : _allocator(allocator), _src(src, static_cast<Int>(std::strlen(src))), _pos(0){}
+        : _allocator(allocator), _src(src, static_cast<Int32_t>(std::strlen(src))), _pos(0){}
 
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const DataTypes::String& src)
         : _allocator(allocator), _src(src.Data(), src.Size()), _pos(0){}
 
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, const std::string& src)
-        : _allocator(allocator), _src(src.c_str(), static_cast<Int>(src.size())), _pos(0){}
+        : _allocator(allocator), _src(src.c_str(), static_cast<Int32_t>(src.size())), _pos(0){}
 
     JsonParser::JsonParser(const ::Memory::IAllocator* allocator, DataTypes::StringView&&  src)
         : _allocator(allocator), _src(std::move(src)), _pos(0){}

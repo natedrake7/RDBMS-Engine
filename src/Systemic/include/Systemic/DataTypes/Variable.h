@@ -53,7 +53,7 @@ class Variable {
         [[nodiscard]] const DataTypes::String& GetName() const { return this->name; }
         [[nodiscard]] const DataTypes::String& GetNormalizedName() const { return this->normalizedName; }
 
-        [[nodiscard]] DataTypes::TypeInfo GetType() const { return this->value.GetType(); }
+        [[nodiscard]] DataTypes::TypeInfo GetType() const { return this->value.TypeInfo(); }
 
         void SetType(const DataTypes::TypeInfo type) { this->value.SetTypeInfo(type); }
 

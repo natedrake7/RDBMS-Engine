@@ -25,9 +25,9 @@ struct MergeSortParameters{
     const CoreEngine::ExecutionContext* properties;
     DataStructures::PolymorphicArray<MaterializedRow>* rows;
     const DataStructures::PolymorphicArray<QueryPipeline::Statements::OrderColumn*>* sortConditions;
-    Int left;
-    Int right;
-    Int mid;
+    Int32_t left;
+    Int32_t right;
+    Int32_t mid;
 };
 
 class MergeSort {

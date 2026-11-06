@@ -54,7 +54,7 @@ namespace Network{
             void SendStatementComplete(
                 request_id_t requestId,
                 statement_ordinal_t statementOrdinal,
-                UnsignedBigInt rowCount
+                UInt64_t rowCount
             );
 
             [[nodiscard]] Transport::IoStatus FillReadBuffer();

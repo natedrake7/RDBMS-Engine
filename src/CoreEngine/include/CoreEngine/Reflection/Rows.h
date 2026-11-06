@@ -43,14 +43,14 @@ namespace CoreEngine::Rows{
 
     struct TableInfo{
         FixedString name;
-        Int id;
-        UnsignedTinyInt ordinal;
+        Int32_t id;
+        UInt8_t ordinal;
     };
 
     struct PrimaryKey{};
 
     struct Identity{
-        BigInt _start = 1;
+        Int64_t _start = 1;
     };
 
     struct MaxSize{

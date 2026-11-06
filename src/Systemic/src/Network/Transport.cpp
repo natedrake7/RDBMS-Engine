@@ -15,7 +15,7 @@ namespace Network::Transport{
         if (this->_consumed < COMPACT_THRESHOLD && this->_consumed < this->_buffer.size())
             return;
 
-        this->_buffer.erase(this->_buffer.begin(), this->_buffer.begin() + static_cast<BigInt>(this->_consumed));
+        this->_buffer.erase(this->_buffer.begin(), this->_buffer.begin() + static_cast<Int64_t>(this->_consumed));
         this->_consumed = 0;
     }
 
@@ -103,7 +103,7 @@ namespace Network::Transport{
             const auto bytesSent = send(
                 socket,
                 this->_buffer.data() + this->_sent,
-                static_cast<Int>(this->_buffer.size() - this->_sent), 0
+                static_cast<Int32_t>(this->_buffer.size() - this->_sent), 0
             );
 
             if (bytesSent > 0){
@@ -116,7 +116,7 @@ namespace Network::Transport{
 
             if (WouldBlock()){
                 if (this->_sent >= COMPACT_THRESHOLD){
-                    this->_buffer.erase(this->_buffer.begin(), this->_buffer.begin() + static_cast<Int>(this->_sent));
+                    this->_buffer.erase(this->_buffer.begin(), this->_buffer.begin() + static_cast<Int32_t>(this->_sent));
                     this->_sent = 0;
                 }
 

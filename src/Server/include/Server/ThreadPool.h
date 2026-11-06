@@ -16,17 +16,17 @@ class ThreadPool {
 
     bool _isStopping;
 
-    [[nodiscard]] static Int DefaultWorkerCount();
+    [[nodiscard]] static Int32_t DefaultWorkerCount();
 
     void WorkerLoop();
 
 public:
-    inline static constexpr Int DEFAULT_WORKER_COUNT = -1;
+    inline static constexpr Int32_t DEFAULT_WORKER_COUNT = -1;
 
     ThreadPool();
     ~ThreadPool();
 
-    void Start(Int numberOfThreads = DEFAULT_WORKER_COUNT);
+    void Start(Int32_t numberOfThreads = DEFAULT_WORKER_COUNT);
     void Stop();
 
     template<class Function>

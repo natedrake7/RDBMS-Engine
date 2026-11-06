@@ -14,7 +14,7 @@ namespace ByteMaps{
 
         BitMap(object_t* data, bit_map_size_t size);
 
-        [[nodiscard]] Int HeapSize()const;
+        [[nodiscard]] Int32_t HeapSize()const;
     public:
         BitMap();
         BitMap(const BitMap &bitMap);
@@ -44,7 +44,7 @@ namespace ByteMaps{
 
         [[nodiscard]] bit_map_size_t GetSizeUnsafe() const;
 
-        static Int HeapSize(Int size);
+        static Int32_t HeapSize(Int32_t size);
 
     };
 }

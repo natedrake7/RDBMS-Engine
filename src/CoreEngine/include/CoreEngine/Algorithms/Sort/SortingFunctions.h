@@ -31,10 +31,10 @@ typedef struct AggregateResults {
 struct MergeElement{
     MaterializedRow value;
     DataTypes::RowIdentifier rowId;
-    Int batchId;
+    Int32_t batchId;
 
-    MergeElement(const MaterializedRow& value, Int batchId);
-    MergeElement(MaterializedRow& value, Int batchId, const DataTypes::RowIdentifier& rowId);
+    MergeElement(const MaterializedRow& value, Int32_t batchId);
+    MergeElement(MaterializedRow& value, Int32_t batchId, const DataTypes::RowIdentifier& rowId);
     MergeElement(const MergeElement& other);
     MergeElement(MergeElement&& other) noexcept;
     MergeElement& operator=(const MergeElement& other);

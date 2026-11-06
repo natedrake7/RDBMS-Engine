@@ -53,10 +53,10 @@ namespace CoreEngine::StorageTypes{
         this->_currentIndexView.AppendChild(pageId);
     }
 
-    void LobWriter::BulkAppendPagesToIndex(const page_id_t* pages, UnsignedInt count){
+    void LobWriter::BulkAppendPagesToIndex(const page_id_t* pages, UInt32_t count){
         while (count > 0){
             this->RollToNewIndexPage();
-            const auto toAppend = Math::Min<UnsignedInt>(
+            const auto toAppend = Math::Min<UInt32_t>(
                 count,
                 Pages::LobLayout::INDEX_FANOUT - this->_currentIndexView.ChildCount()
             );
@@ -79,12 +79,12 @@ namespace CoreEngine::StorageTypes{
         this->BulkAppendPagesToIndex(rootChildren, count);
     }
 
-    void LobWriter::WriteToPages(const object_t* data, UnsignedInt length){
+    void LobWriter::WriteToPages(const object_t* data, UInt32_t length){
         while (length > 0){
             if (!this->_currentDataView.IsValid())
                 this->OpenDataPage();
 
-            const auto bytesToWrite = static_cast<UnsignedInt>(Math::Min<UnsignedBigInt>(
+            const auto bytesToWrite = static_cast<UInt32_t>(Math::Min<UInt64_t>(
                     length,
                     Pages::LobLayout::DATA_CAPACITY - this->_currentBytesUsed
                 )
@@ -119,7 +119,7 @@ namespace CoreEngine::StorageTypes{
     LobWriter::LobWriter(
         const ::Memory::IAllocator* allocator,
         const Table* table,
-        const UnsignedBigInt lengthHint
+        const UInt64_t lengthHint
     ):  _rootPageId(INVALID_PAGE_ID), _stage(nullptr),
         _isStaging(true), _currentBytesUsed(0), _dataPageCount(0),
         _rootChildren(nullptr), _rootChildrenCount(0), _hasTwoLevels(false),
@@ -142,7 +142,7 @@ namespace CoreEngine::StorageTypes{
 
     void LobWriter::Append(
         const object_t* data,
-        const UnsignedInt length
+        const UInt32_t length
     ){
         assert(!this->_finished);
 
@@ -196,7 +196,7 @@ namespace CoreEngine::StorageTypes{
         const ::Memory::IAllocator* allocator,
         const Table* table,
         const object_t* data,
-        const UnsignedInt length
+        const UInt32_t length
     ){
         LobWriter writer(allocator, table, length);
         writer.Append(data, length);

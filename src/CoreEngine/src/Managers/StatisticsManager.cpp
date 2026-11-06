@@ -11,7 +11,7 @@ namespace CoreEngine {
     return instance;
   }
 
-  Catalog::TableStatistics StatisticsManager::GetTableStatistics(const Int tableId) {
+  Catalog::TableStatistics StatisticsManager::GetTableStatistics(const Int32_t tableId) {
     MultiThreading::ReaderGuard lock(&this->tableStatisticsLatch);
 
     Catalog::TableStatistics stats;
@@ -32,8 +32,8 @@ namespace CoreEngine {
   }
 
   Catalog::ColumnStatistics StatisticsManager::GetColumnStatistics(
-    const Int tableId,
-    const Int columnId
+    const Int32_t tableId,
+    const Int32_t columnId
   ) {
     MultiThreading::ReaderGuard lock(&this->columnStatisticsLatch);
 
@@ -56,7 +56,7 @@ namespace CoreEngine {
     return catalogStats;
   }
 
-  DataStructures::PolymorphicArray<Catalog::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int tableId) {
+  DataStructures::PolymorphicArray<Catalog::IndexStatistics> StatisticsManager::GetIndexStatistics(const Int32_t tableId) {
     MultiThreading::ReaderGuard lock(&this->indexStatisticsLatch);
 
     DataStructures::PolymorphicArray<Catalog::IndexStatistics> stats;

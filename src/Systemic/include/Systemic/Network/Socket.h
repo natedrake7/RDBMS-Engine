@@ -19,7 +19,7 @@
 #endif
 
 namespace Network{
-    typedef Int socket_t;
+    typedef Int32_t socket_t;
 
 #ifdef _WIN32
     using native_socket_t = SOCKET;

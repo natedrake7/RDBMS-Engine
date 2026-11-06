@@ -14,7 +14,7 @@ namespace CoreEngine{
 
 namespace CoreEngine::Directory{
     struct TableKey{
-        Int _schemaId;
+        Int32_t _schemaId;
         DataTypes::StringView _lowerName;
 
         std::strong_ordering operator<=>(const TableKey&) const = default;
@@ -23,7 +23,7 @@ namespace CoreEngine::Directory{
         explicit TableKey()
             : _schemaId(0){}
 
-        explicit TableKey(const Int schemaId, const DataTypes::StringView lowerName)
+        explicit TableKey(const Int32_t schemaId, const DataTypes::StringView lowerName)
             :_schemaId(schemaId), _lowerName(lowerName){}
 
         TableKey(const TableKey&) = default;
@@ -47,13 +47,13 @@ namespace CoreEngine::Directory{
 
     struct SchemaEntry{
         DataTypes::StringView _lowerName;
-        Int _schemaId;
+        Int32_t _schemaId;
 
         [[nodiscard]] DataTypes::StringView Key()const{
             return this->_lowerName;
         }
 
-        SchemaEntry(const DataTypes::StringView lowerName, const Int schemaId)
+        SchemaEntry(const DataTypes::StringView lowerName, const Int32_t schemaId)
             : _lowerName(lowerName), _schemaId(schemaId){}
     };
 

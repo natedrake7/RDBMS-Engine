@@ -58,7 +58,7 @@ namespace QueryPipeline {
         :   canIndexSeek(false), needsParameterBinding(false),
             columnId(INVALID_COLUMN_ID), expression(otherExpr){}
 
-    JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, const Int size)
+    JoinOrderAnalyzeResult::JoinOrderAnalyzeResult(const ::Memory::IAllocator* allocator, const Int32_t size)
         : order(allocator, size), orderedJoins(allocator, size), isReordered(false) {}
 
     JoinAlgorithmAnalysisResult Optimizer::ReturnNestedLoopJoinAlgorithm(
@@ -364,7 +364,7 @@ namespace QueryPipeline {
         auto* allocator = this->context->_compileContext.GetAllocator();
         Range range;
         auto canSeek = true;
-        Int counter = 0;
+        Int32_t counter = 0;
 
         DataStructures::PolymorphicArray<Value> startValues(
            allocator,
@@ -485,7 +485,7 @@ namespace QueryPipeline {
         conditionsInfo.Push(info);
     }
 
-    DataStructures::PolymorphicArray<Int> Optimizer::CheckPredicatesSorting(
+    DataStructures::PolymorphicArray<Int32_t> Optimizer::CheckPredicatesSorting(
         const CoreEngine::Catalog::TableStatistics& tableStats,
         const DataStructures::PolymorphicArray<JoinConditionInfo>& joinConditions
     ) const{
@@ -494,11 +494,11 @@ namespace QueryPipeline {
         if (indexes.Empty())
             return {};
 
-        DataStructures::PolymorphicArray<Int> bestMatch;
+        DataStructures::PolymorphicArray<Int32_t> bestMatch;
         for (const auto& index : indexes){
             const auto columns = CoreEngine::SystemCatalog::Get().SelectIndexColumnsByIndexId(this->context->_compileContext.GetAllocator(), index.indexId);
 
-            DataStructures::PolymorphicArray<Int> matches;
+            DataStructures::PolymorphicArray<Int32_t> matches;
             for (const auto& column : columns){
 
                 for (int i = 0;i < joinConditions.Size();i++){
@@ -526,10 +526,10 @@ namespace QueryPipeline {
 
     JoinAlgorithmAnalysisResult Optimizer::CreateMergeJoinKeys(
         const DataStructures::PolymorphicArray<JoinConditionInfo>& conditionsInfo,
-        const DataStructures::PolymorphicArray<Int>& leftKeyColumns,
-        const DataStructures::PolymorphicArray<Int>& rightKeyColumns,
-        const Int leftTableId,
-        const Int rightTableId
+        const DataStructures::PolymorphicArray<Int32_t>& leftKeyColumns,
+        const DataStructures::PolymorphicArray<Int32_t>& rightKeyColumns,
+        const Int32_t leftTableId,
+        const Int32_t rightTableId
     ) const{
         JoinAlgorithmAnalysisResult result(PipelineConstants::JoinAlgorithm::MergeJoin);
 
@@ -743,8 +743,8 @@ namespace QueryPipeline {
     }
 
     JoinAlgorithmAnalysisResult Optimizer::ChooseJoinAlgorithm(
-        const Int leftTableId,
-        const Int rightTableId,
+        const Int32_t leftTableId,
+        const Int32_t rightTableId,
         Expressions::Expression* joinCondition
     ) const{
         //if left or right table is a subquery or derived table, use nested loop join

@@ -26,7 +26,7 @@ struct ConstexprHash {
             return h;
         }
 
-        const auto bytes = std::bit_cast<std::array<UnsignedTinyInt, sizeof(T)>>(key);
+        const auto bytes = std::bit_cast<std::array<UInt8_t, sizeof(T)>>(key);
         for (size_t i = 0; i < sizeof(T); ++i) {
             h ^= bytes[i];
             h *= 1099511628211ULL;
@@ -67,7 +67,7 @@ struct ConstexprHash<DataType> {
 };
 
 template<>
-struct ConstexprHash<UnsignedTinyInt> {
+struct ConstexprHash<UInt8_t> {
     [[nodiscard]] static constexpr size_t Hash(const DataType& key) noexcept {
         return static_cast<size_t>(key);
     }

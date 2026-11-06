@@ -5,10 +5,10 @@
 #include <Systemic/DataTypes/DataTypes.h>
 
 namespace DataStructures{
-    template <typename T, Int N>
+    template <typename T, Int32_t N>
     class StaticArray final{
         T _data[N];
-        Int _size;
+        Int32_t _size;
         static_assert(N > 0);
 
         public:
@@ -17,17 +17,17 @@ namespace DataStructures{
             constexpr  ~StaticArray() = default;
 
             // Fill `size` elements with `value`
-            explicit constexpr StaticArray(const Int size, const T& value = T())
+            explicit constexpr StaticArray(const Int32_t size, const T& value = T())
                 : _data{}, _size(size)
             {
                 if (size > N)
                     throw std::runtime_error("StaticArray: size exceeds capacity");
-                for (Int i = 0; i < size; i++)
+                for (Int32_t i = 0; i < size; i++)
                     _data[i] = value;
             }
 
             // Construct from raw pointer
-            explicit constexpr StaticArray(const T* data, const Int size)
+            explicit constexpr StaticArray(const T* data, const Int32_t size)
                 : _data{}, _size(size){
                 assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
@@ -35,17 +35,17 @@ namespace DataStructures{
 
             // Construct from initializer list
             constexpr StaticArray(std::initializer_list<T> list)
-                : _data{}, _size(static_cast<Int>(list.size()))
+                : _data{}, _size(static_cast<Int32_t>(list.size()))
             {
-                assert(static_cast<Int>(list.size()) <= N && "StaticArray: initializer list exceeds capacity");
+                assert(static_cast<Int32_t>(list.size()) <= N && "StaticArray: initializer list exceeds capacity");
                 std::copy(list.begin(), list.end(), this->_data);
             }
 
-            constexpr T& operator[](const Int index){ return this->_data[index]; }
-            constexpr const T& operator[](const Int index) const { return this->_data[index]; }
+            constexpr T& operator[](const Int32_t index){ return this->_data[index]; }
+            constexpr const T& operator[](const Int32_t index) const { return this->_data[index]; }
 
-            [[nodiscard]] constexpr Int Size() const { return this->_size; }
-            [[nodiscard]] static constexpr Int Capacity() { return N; }
+            [[nodiscard]] constexpr Int32_t Size() const { return this->_size; }
+            [[nodiscard]] static constexpr Int32_t Capacity() { return N; }
 
             constexpr const T* Data() const { return this->_data; }
             constexpr T* Data() { return this->_data; }
@@ -56,41 +56,41 @@ namespace DataStructures{
                 this->_data[this->_size++] = value;
             }
 
-            constexpr void Insert(const Int index, const T& value){
+            constexpr void Insert(const Int32_t index, const T& value){
                 assert(index >= 0 && index <= this->_size && "StaticArray Insert: Index is out of range.");   // == _size appends
                 assert(this->_size < N && "StaticArray Insert: Array is full.");
 
-                for (Int i = this->_size - 1; i >= index; --i)
+                for (Int32_t i = this->_size - 1; i >= index; --i)
                     this->_data[i + 1] = this->_data[i];
                 this->_data[index] = value;
                 ++this->_size;
             }
 
-            constexpr void Insert(const Int index, const Int size, const T& data){
+            constexpr void Insert(const Int32_t index, const Int32_t size, const T& data){
                 assert(index >= 0 && index <= this->_size && "StaticArray Insert: Index is out of range.");
                 assert(size >= 0 && this->_size + size <= N && "StaticArray Insert: Not enough capacity.");
 
-                for (Int i = this->_size - 1; i >= index; --i)
+                for (Int32_t i = this->_size - 1; i >= index; --i)
                     this->_data[i + size] = this->_data[i];
 
-                for (Int i = index; i < index + size; ++i)
+                for (Int32_t i = index; i < index + size; ++i)
                     this->_data[i] = data;
 
                 this->_size += size;
             }
 
-            constexpr void Remove(const Int index){
+            constexpr void Remove(const Int32_t index){
                 assert(index >= 0 && index < this->_size && "StaticArray Remove: Index is out of range.");
-                for (Int i = index; i < this->_size - 1; ++i)
+                for (Int32_t i = index; i < this->_size - 1; ++i)
                     this->_data[i] = this->_data[i + 1];
                 --this->_size;
             }
 
             // removes [start, end)
-            constexpr void Remove(const Int start, const Int end){
+            constexpr void Remove(const Int32_t start, const Int32_t end){
                 assert(start >= 0 && start <= end && end <= this->_size && "StaticArray Remove: Range is out of bounds.");
-                const Int count = end - start;
-                for (Int i = start; i < this->_size - count; ++i)
+                const Int32_t count = end - start;
+                for (Int32_t i = start; i < this->_size - count; ++i)
                     this->_data[i] = this->_data[i + count];
                 this->_size -= count;
             }
@@ -100,13 +100,13 @@ namespace DataStructures{
                 --this->_size;
             }
 
-            constexpr void SetData(const T* data, const Int size){
+            constexpr void SetData(const T* data, const Int32_t size){
                 assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 std::copy(data, data + size, this->_data);
                 this->_size = size;
             }
 
-            constexpr void SetSize(const Int size){
+            constexpr void SetSize(const Int32_t size){
                 assert(size >= 0 && size <= N && "StaticArray: size exceeds capacity");
                 this->_size = size;
             }

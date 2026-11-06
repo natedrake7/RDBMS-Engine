@@ -13,7 +13,7 @@ namespace CoreEngine::StorageTypes{
         this->_length = this->_rootView.TotalLength();
         this->_level = this->_rootView.Level();
 
-        UnsignedInt expected = 0;
+        UInt32_t expected = 0;
         switch (this->_level){
         case 1:
             expected = Pages::LobLayout::DataPageCount(this->_length);
@@ -29,7 +29,7 @@ namespace CoreEngine::StorageTypes{
         return this->_rootView.ChildCount() == expected;
     }
 
-    bool LobReader::InitializeIndexView(const UnsignedInt rootSlot){
+    bool LobReader::InitializeIndexView(const UInt32_t rootSlot){
         if (this->_indexRootSlot == rootSlot)
             return true;
 
@@ -40,7 +40,7 @@ namespace CoreEngine::StorageTypes{
         this->_indexRootSlot = rootSlot;
 
         const auto dataPages = Pages::LobLayout::DataPageCount(this->_length);
-        const auto expectedDataPages = Math::Min<UnsignedInt>(Pages::LobLayout::INDEX_FANOUT, dataPages - rootSlot * Pages::LobLayout::INDEX_FANOUT);
+        const auto expectedDataPages = Math::Min<UInt32_t>(Pages::LobLayout::INDEX_FANOUT, dataPages - rootSlot * Pages::LobLayout::INDEX_FANOUT);
 
         return this->_indexView.IsValid()
             && this->_indexView.GetPageType() == PageLayout::PageType::LOB_INDEX
@@ -83,30 +83,30 @@ namespace CoreEngine::StorageTypes{
 
     LobReader::LobReader(const Accessors::PageAccessor pageAccessor, const DataTypes::LobReference& reference)
         :   _pageAccessor(pageAccessor), _reference(reference),
-            _indexRootSlot(std::numeric_limits<UnsignedInt>::max()), _length(0),
+            _indexRootSlot(std::numeric_limits<UInt32_t>::max()), _length(0),
             _position(0), _level(0), _status(LobReadStatus::Ok){
         if (!reference.IsValid() || !this->InitializeRootView())
             this->_status = LobReadStatus::Corrupt;
     }
 
-    UnsignedInt LobReader::ReadAt(const UnsignedBigInt offset, object_t* buffer, UnsignedInt size){
+    UInt32_t LobReader::ReadAt(const UInt64_t offset, object_t* buffer, UInt32_t size){
         if (!this->IsOk() || offset >= this->_length)
             return 0;
 
-        size = Math::Min<UnsignedBigInt>(size, this->_length - offset);
+        size = Math::Min<UInt64_t>(size, this->_length - offset);
 
         if (this->_level == 0){
             std::memcpy(buffer, this->_rootView.InlineData() + offset, size);
             return size;
         }
 
-        UnsignedInt copied = 0;
+        UInt32_t copied = 0;
         while (copied < size){
             const auto position = Pages::LobLayout::Locate(this->_level, offset + copied);
             const auto dataPage = this->FetchDataPage(position);
 
             const auto available = Pages::LobLayout::DataPageBytes(this->_length, position._dataPage) - position._inPageOffset;
-            const auto toCopy = Math::Min<UnsignedInt>(available, size - copied);
+            const auto toCopy = Math::Min<UInt32_t>(available, size - copied);
 
             std::memcpy(buffer + copied, dataPage.InlineData() + position._inPageOffset, toCopy);
             copied += toCopy;
@@ -115,7 +115,7 @@ namespace CoreEngine::StorageTypes{
         return copied;
     }
 
-    UnsignedInt LobReader::Read(object_t* buffer, const UnsignedInt size){
+    UInt32_t LobReader::Read(object_t* buffer, const UInt32_t size){
         const auto copied = this->ReadAt(this->_position, buffer, size);
         this->_position += copied;
         return copied;

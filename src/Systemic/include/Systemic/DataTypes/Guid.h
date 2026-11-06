@@ -15,47 +15,47 @@ namespace DataTypes {
 
     namespace GuidDetail{
         inline constexpr char HEX_DIGITS[] = "0123456789abcdef";
-        inline constexpr UnsignedTinyInt INVALID_HEX = 0xFF;
+        inline constexpr UInt8_t INVALID_HEX = 0xFF;
 
         inline constexpr auto HEX_VALUES = []{
-            std::array<UnsignedTinyInt, 256> table{};
+            std::array<UInt8_t, 256> table{};
             table.fill(INVALID_HEX);
-            for (Int i = 0; i < 10; i++)
-                table['0' + i] = static_cast<UnsignedTinyInt>(i);
-            for (Int i = 0; i < 6; i++){
-                table['a' + i] = static_cast<UnsignedTinyInt>(10 + i);
-                table['A' + i] = static_cast<UnsignedTinyInt>(10 + i);
+            for (Int32_t i = 0; i < 10; i++)
+                table['0' + i] = static_cast<UInt8_t>(i);
+            for (Int32_t i = 0; i < 6; i++){
+                table['a' + i] = static_cast<UInt8_t>(10 + i);
+                table['A' + i] = static_cast<UInt8_t>(10 + i);
             }
             return table;
         }();
 
-        inline constexpr auto HYPHENS_POSITIONS = std::array<UnsignedTinyInt, 4>{
+        inline constexpr auto HYPHENS_POSITIONS = std::array<UInt8_t, 4>{
             8,13,18,23
         };
 
         // Byte positions that have a hyphen before them in the text form
-        [[nodiscard]] constexpr bool HyphenBefore(const Int byteIndex){
+        [[nodiscard]] constexpr bool HyphenBefore(const Int32_t byteIndex){
             return byteIndex == 4 || byteIndex == 6 || byteIndex == 8 || byteIndex == 10;
         }
 
     }
 
     class Guid {
-        UnsignedTinyInt _data[GUID_SIZE];
+        UInt8_t _data[GUID_SIZE];
 
         using StringBuffer = DataStructures::StaticArray<char, GUID_STRING_SIZE>;
 
-        [[nodiscard]] inline constexpr UnsignedBigInt Word(const Int index)const noexcept{
-            const auto start = index * static_cast<Int>(sizeof(UnsignedBigInt));
+        [[nodiscard]] inline constexpr UInt64_t Word(const Int32_t index)const noexcept{
+            const auto start = index * static_cast<Int32_t>(sizeof(UInt64_t));
 
             if consteval{
-                UnsignedBigInt word = 0;
-                for (Int i = 0; i < static_cast<Int>(sizeof(word)); i++)
+                UInt64_t word = 0;
+                for (Int32_t i = 0; i < static_cast<Int32_t>(sizeof(word)); i++)
                     word = (word << 8) | this->_data[start + i];
                 return word;
             }
             else{
-                UnsignedBigInt word;
+                UInt64_t word;
                 std::memcpy(&word, this->_data + start, sizeof(word));
                 return std::byteswap(word);
             }
@@ -69,7 +69,7 @@ namespace DataTypes {
         explicit constexpr Guid(const object_t* data)
             : _data(){
             if consteval{
-                for (Int i = 0; i < GUID_SIZE; i++)
+                for (Int32_t i = 0; i < GUID_SIZE; i++)
                     this->_data[i] = data[i];
             }
             else{
@@ -77,11 +77,11 @@ namespace DataTypes {
             }
         }
 
-        [[nodiscard]] inline constexpr UnsignedTinyInt* Data(){
+        [[nodiscard]] inline constexpr UInt8_t* Data(){
             return this->_data;
         }
 
-        [[nodiscard]] inline constexpr const UnsignedTinyInt* Data() const{
+        [[nodiscard]] inline constexpr const UInt8_t* Data() const{
             return this->_data;
         }
 
@@ -89,7 +89,7 @@ namespace DataTypes {
             StringBuffer buffer(GUID_STRING_SIZE);
             auto* out = buffer.Data();
 
-            for (Int i = 0; i < GUID_SIZE; i++){
+            for (Int32_t i = 0; i < GUID_SIZE; i++){
                 if (GuidDetail::HyphenBefore(i))
                     *out++ = '-';
                 *out++ = GuidDetail::HEX_DIGITS[this->_data[i] >> 4];
@@ -122,11 +122,11 @@ namespace DataTypes {
             if (!hasAllHyphens)
                 return false;
 
-            UnsignedTinyInt bytes[GUID_SIZE]{};
-            UnsignedTinyInt seen = 0;
-            Int position = 0;
+            UInt8_t bytes[GUID_SIZE]{};
+            UInt8_t seen = 0;
+            Int32_t position = 0;
 
-            for (Int i = 0; i < GUID_SIZE; i++){
+            for (Int32_t i = 0; i < GUID_SIZE; i++){
                 position += GuidDetail::HyphenBefore(i);
 
                 const auto high = GuidDetail::HEX_VALUES[static_cast<unsigned char>(text[position])];
@@ -134,7 +134,7 @@ namespace DataTypes {
                 position += 2;
 
                 seen |= high | low;
-                bytes[i] = static_cast<UnsignedTinyInt>((high << 4) | low);
+                bytes[i] = static_cast<UInt8_t>((high << 4) | low);
             }
 
             if (seen > 0x0F)

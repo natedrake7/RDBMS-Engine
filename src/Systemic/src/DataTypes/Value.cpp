@@ -49,22 +49,22 @@ Value::Value(
         this->WriteInline(*reinterpret_cast<const bool*>(data));
         break;
     case DataType::TinyInt:
-        this->WriteInline(*reinterpret_cast<const TinyInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int8_t*>(data));
         break;
     case DataType::SmallInt:
-        this->WriteInline(*reinterpret_cast<const SmallInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int16_t*>(data));
         break;
     case DataType::Int:
-        this->WriteInline(*reinterpret_cast<const Int*>(data));
+        this->WriteInline(*reinterpret_cast<const Int32_t*>(data));
         break;
     case DataType::BigInt:
-        this->WriteInline(*reinterpret_cast<const BigInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int64_t*>(data));
         break;
     case DataType::Decimal:
         this->WriteInline(DataTypes::Decimal(data, size));
         break;
     case DataType::DateTime:
-        this->WriteInline(DataTypes::DateTime(*reinterpret_cast<const BigInt*>(data)));
+        this->WriteInline(DataTypes::DateTime(*reinterpret_cast<const Int64_t*>(data)));
         break;
     case DataType::Guid:
         this->WriteInline(DataTypes::Guid(data));
@@ -98,22 +98,22 @@ Value::Value(
         this->WriteInline(*reinterpret_cast<const bool*>(data));
         break;
     case DataType::TinyInt:
-        this->WriteInline(*reinterpret_cast<const TinyInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int8_t*>(data));
         break;
     case DataType::SmallInt:
-        this->WriteInline(*reinterpret_cast<const SmallInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int16_t*>(data));
         break;
     case DataType::Int:
-        this->WriteInline(*reinterpret_cast<const Int*>(data));
+        this->WriteInline(*reinterpret_cast<const Int32_t*>(data));
         break;
     case DataType::BigInt:
-        this->WriteInline(*reinterpret_cast<const BigInt*>(data));
+        this->WriteInline(*reinterpret_cast<const Int64_t*>(data));
         break;
     case DataType::Decimal:
         this->WriteInline(DataTypes::Decimal(data, size));
         break;
     case DataType::DateTime:
-        this->WriteInline(DataTypes::DateTime(*reinterpret_cast<const BigInt*>(data)));
+        this->WriteInline(DataTypes::DateTime(*reinterpret_cast<const Int64_t*>(data)));
         break;
     case DataType::Guid:
         this->WriteInline(DataTypes::Guid(data));
@@ -180,7 +180,7 @@ Value::Value(
     this->_data._external = buffer;
     this->_size = data.Size();
     this->_columnIndex = index;
-    this->_typeInfo._type = JSON_TYPES_NAMES[static_cast<Int>(data.Type())];
+    this->_typeInfo._type = JSON_TYPES_NAMES[static_cast<Int32_t>(data.Type())];
     this->_isNull = false;
 }
 
@@ -218,19 +218,19 @@ bool Value::AsBool() const {
     return DataTypes::Coercions::ToBool(*this);
 }
 
-TinyInt Value::AsTinyInt() const {
+Int8_t Value::AsTinyInt() const {
     return DataTypes::Coercions::ToTinyInt(*this);
 }
 
-SmallInt Value::AsSmallInt() const {
+Int16_t Value::AsSmallInt() const {
     return DataTypes::Coercions::ToSmallInt(*this);
 }
 
-Int Value::AsInt() const {
+Int32_t Value::AsInt() const {
     return DataTypes::Coercions::ToInt(*this);
 }
 
-BigInt Value::AsBigInt() const {
+Int64_t Value::AsBigInt() const {
     return DataTypes::Coercions::ToBigInt(*this);
 }
 

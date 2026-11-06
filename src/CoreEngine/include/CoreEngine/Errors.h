@@ -4,7 +4,7 @@
 #include <CoreEngine/DataStorage/Row/Row.h>
 
 namespace Errors {
-    enum class RuntimeError : uint8_t {
+    enum class RuntimeError: UInt8_t {
         Ok = 0,
         Error = 1,
         NotFound = 2,
@@ -69,7 +69,7 @@ namespace Errors {
             return *this;
         }
 
-        explicit RuntimeStatus(const page_id_t pageId, const Int index)
+        explicit RuntimeStatus(const page_id_t pageId, const Int32_t index)
         :   message(DataTypes::String::Null()),
             primaryKey(DataTypes::Indexing::Key()),
             rid(pageId, index),

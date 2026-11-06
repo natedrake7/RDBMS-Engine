@@ -11,7 +11,7 @@ namespace CoreEngine::StorageTypes{
     using ColumnDecodeFunction = void(*)(
         const ::Memory::IAllocator*,
         const object_t* const*,
-        Int, DataVector*, UnsignedInt,
+        Int32_t, DataVector*, UInt32_t,
         column_index_t
     );
 
@@ -30,17 +30,17 @@ namespace CoreEngine::StorageTypes{
 
     struct ScanPlan{
         ColumnDecodeInfo* _info;
-        UnsignedInt _size;
+        UInt32_t _size;
 
         explicit ScanPlan() = default;
-        explicit ScanPlan(ColumnDecodeInfo* info, const UnsignedInt size)
+        explicit ScanPlan(ColumnDecodeInfo* info, const UInt32_t size)
             : _info(info), _size(size) {}
         ScanPlan(const ScanPlan&) = delete;
         ScanPlan& operator=(const ScanPlan&) = delete;
         ScanPlan(ScanPlan&&) = default;
         ScanPlan& operator=(ScanPlan&&) = default;
 
-        static ScanPlan Create(const ::Memory::IAllocator* allocator, const UnsignedInt size){
+        static ScanPlan Create(const ::Memory::IAllocator* allocator, const UInt32_t size){
             return ScanPlan(
                 allocator->AllocateRaw<ColumnDecodeInfo>(size * sizeof(ColumnDecodeInfo)),
                 size

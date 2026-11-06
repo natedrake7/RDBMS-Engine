@@ -10,10 +10,10 @@ namespace CoreEngine {
 namespace CoreEngine::StorageTypes{
     struct RID{
         // bit 0-2 of _flags = Storage source
-        static constexpr UnsignedTinyInt  SOURCE_SHIFT = 0;
-        static constexpr UnsignedSmallInt SOURCE_MASK  = 0x0007;   // low-aligned, 3 bits
+        static constexpr UInt8_t  SOURCE_SHIFT = 0;
+        static constexpr UInt16_t SOURCE_MASK  = 0x0007;   // low-aligned, 3 bits
 
-        enum Source: UnsignedTinyInt{
+        enum Source: UInt8_t{
             Table = 0,
             Version = 1,
             TemporaryDb = 2,
@@ -21,12 +21,12 @@ namespace CoreEngine::StorageTypes{
         };
 
         page_id_t _pageId;
-        UnsignedSmallInt _index;
-        UnsignedSmallInt _flags;
+        UInt16_t _index;
+        UInt16_t _flags;
 
         RID();
-        explicit RID(page_id_t pageId, Int index);
-        explicit RID(page_id_t pageId, Int index, Source source);
+        explicit RID(page_id_t pageId, Int32_t index);
+        explicit RID(page_id_t pageId, Int32_t index, Source source);
 
         RID& operator=(const RID& other) = default;
         RID(const RID& other) = default;
@@ -48,15 +48,15 @@ namespace CoreEngine::StorageTypes{
     };
 
     struct RowEntry{
-        UnsignedSmallInt _offset;
-        UnsignedSmallInt _meta;
+        UInt16_t _offset;
+        UInt16_t _meta;
 
-        static constexpr UnsignedSmallInt TYPE_MASK = 0xC000; // upper 2 bits (positioned)
-        static constexpr UnsignedSmallInt SIZE_MASK = 0x3FFF; // lower 14 bits
-        static constexpr UnsignedTinyInt  TYPE_SHIFT = 14;
-        static constexpr UnsignedSmallInt TYPE_VALUE_MASK = TYPE_MASK >> TYPE_SHIFT; // 0x3, low-aligned
+        static constexpr UInt16_t TYPE_MASK = 0xC000; // upper 2 bits (positioned)
+        static constexpr UInt16_t SIZE_MASK = 0x3FFF; // lower 14 bits
+        static constexpr UInt8_t  TYPE_SHIFT = 14;
+        static constexpr UInt16_t TYPE_VALUE_MASK = TYPE_MASK >> TYPE_SHIFT; // 0x3, low-aligned
 
-        enum EntryType : UnsignedSmallInt {
+        enum EntryType : UInt16_t {
             INLINE = 0b00,
             NULLVAL = 0b01,
             OVERFLOWVAL = 0b10,
@@ -65,27 +65,27 @@ namespace CoreEngine::StorageTypes{
 
         RowEntry() : _offset(0), _meta(0) {}
         RowEntry(
-            const UnsignedSmallInt offset,
+            const UInt16_t offset,
             const EntryType type,
-            const UnsignedSmallInt size
+            const UInt16_t size
         ) : _offset(offset), _meta(EncodeMeta(type, size)){}
 
         [[nodiscard]] EntryType Type() const {
-            return PackedWord<UnsignedSmallInt>::ExtractBits<EntryType, TYPE_SHIFT, TYPE_VALUE_MASK>(this->_meta);
+            return PackedWord<UInt16_t>::ExtractBits<EntryType, TYPE_SHIFT, TYPE_VALUE_MASK>(this->_meta);
         }
 
-        [[nodiscard]] UnsignedSmallInt Size() const {
-            return PackedWord<UnsignedSmallInt>::ExtractBits<UnsignedSmallInt, 0, SIZE_MASK>(this->_meta);
+        [[nodiscard]] UInt16_t Size() const {
+            return PackedWord<UInt16_t>::ExtractBits<UInt16_t, 0, SIZE_MASK>(this->_meta);
         }
 
-        [[nodiscard]] UnsignedSmallInt Offset() const {
+        [[nodiscard]] UInt16_t Offset() const {
             return this->_offset;
         }
 
-        static inline constexpr UnsignedSmallInt EncodeMeta(const EntryType type, const UnsignedSmallInt size){
-            UnsignedSmallInt meta = 0;
-            PackedWord<UnsignedSmallInt>::SetBits<0, SIZE_MASK>(&meta, size);
-            PackedWord<UnsignedSmallInt>::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(&meta, type);
+        static inline constexpr UInt16_t EncodeMeta(const EntryType type, const UInt16_t size){
+            UInt16_t meta = 0;
+            PackedWord<UInt16_t>::SetBits<0, SIZE_MASK>(&meta, size);
+            PackedWord<UInt16_t>::SetBits<TYPE_SHIFT, TYPE_VALUE_MASK>(&meta, type);
             return meta;
         }
 

@@ -24,190 +24,190 @@ namespace CoreEngine::Catalog{
     using Rows::Default;
 
     struct [[=TableInfo{ .name = "sys_databases", .id = 1, .ordinal = CatalogTables::SysDatabases }]] SysDatabaseRow{
-        [[=PrimaryKey{}, =Identity{ Constants::SYSTEM_CATALOG_ID + 1 }]] Int databaseId;   // masterDb itself is SYSTEM_CATALOG_ID
+        [[=PrimaryKey{}, =Identity{ Constants::SYSTEM_CATALOG_ID + 1 }]] Int32_t databaseId;   // masterDb itself is SYSTEM_CATALOG_ID
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
         [[=MaxSize{ 100 }]]                                         DataTypes::String filepath;
                                                                     bool isSystem;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_schemas", 2, CatalogTables::SysSchemas }]] SysSchemaRow{
-        [[=PrimaryKey{}]]                                           Int databaseId;
-        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int schemaId;
+        [[=PrimaryKey{}]]                                           Int32_t databaseId;
+        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int32_t schemaId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_tables", 3, CatalogTables::SysTables }]] SysTableRow{
-        [[=PrimaryKey{}]]                                           Int databaseId;
-        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int tableId;
-                                                                    Int schemaId;
+        [[=PrimaryKey{}]]                                           Int32_t databaseId;
+        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int32_t tableId;
+                                                                    Int32_t schemaId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
-                                                                    SmallInt ordinalPosition;
+                                                                    Int16_t ordinalPosition;
                                                                     bool isSystem;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_columns", 4, CatalogTables::SysColumns }]] SysColumnRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int columnId;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int32_t columnId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
-                                                                    TinyInt dataType;
-                                                                    Int recordSize;
-                                                                    std::optional<TinyInt> precision;
-                                                                    std::optional<TinyInt> scale;
+                                                                    Int8_t dataType;
+                                                                    Int32_t recordSize;
+                                                                    std::optional<Int8_t> precision;
+                                                                    std::optional<Int8_t> scale;
                                                                     bool isNullable;
-                                                                    SmallInt ordinalPosition;
+                                                                    Int16_t ordinalPosition;
                                                                     bool isSystem;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_indexes", 5, CatalogTables::SysIndexes }]] SysIndexRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int indexId;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int32_t indexId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
                                                                     bool isClustered;
                                                                     bool isDisabled;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_identity_columns", 6, CatalogTables::SysIdentityColumns }]] SysIdentityColumnRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=PrimaryKey{}]]                                           Int columnId;
-                                                                    Int seedValue;
-                                                                    Int increment;
-                                                                    BigInt lastValue;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
+                                                                    Int32_t seedValue;
+                                                                    Int32_t increment;
+                                                                    Int64_t lastValue;
                                                                     bool isCached;
-                                                                    Int cacheBlock;
-        [[=Default{ "1" }]]                                         Int version = 1;
+                                                                    Int32_t cacheBlock;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_index_columns", 7, CatalogTables::SysIndexColumns }]] SysIndexColumnRow{
-        [[=PrimaryKey{}]]                                           Int indexId;
-        [[=PrimaryKey{}]]                                           Int columnId;
-                                                                    SmallInt ordinalPosition;
+        [[=PrimaryKey{}]]                                           Int32_t indexId;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
+                                                                    Int16_t ordinalPosition;
                                                                     bool isIncluded;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_constraints", 8, CatalogTables::SysConstraints }]] SysConstraintRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int constraintId;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=PrimaryKey{}, =Identity{ FIRST_USER_OBJECT_ID }]]        Int32_t constraintId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String name;
-                                                                    TinyInt constraintType;
+                                                                    Int8_t constraintType;
                                                                     bool isDisabled;
-                                                                    std::optional<Int> constraintIndexId;
+                                                                    std::optional<Int32_t> constraintIndexId;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_constraint_columns", 9, CatalogTables::SysConstraintColumns }]] SysConstraintColumnRow{
-        [[=PrimaryKey{}]]                                           Int constraintId;
-        [[=PrimaryKey{}]]                                           Int columnId;
-                                                                    SmallInt ordinalPosition;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=PrimaryKey{}]]                                           Int32_t constraintId;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
+                                                                    Int16_t ordinalPosition;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_default_values", 10, CatalogTables::SysDefaultValues }]] SysDefaultValueRow{
-        [[=PrimaryKey{}]]                                           Int columnId;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
         [[=MaxSize{ 255 }]]                                         DataTypes::String value;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_table_stats", 11, CatalogTables::SysTableStats }]] SysTableStatsRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=Default{ "0" }]]                                         BigInt rowCount = 0;
-        [[=Default{ "0" }]]                                         Int avgRecordSize = 0;
-        [[=Default{ "0" }]]                                         Int pageCount = 0;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=Default{ "0" }]]                                         Int64_t rowCount = 0;
+        [[=Default{ "0" }]]                                         Int32_t avgRecordSize = 0;
+        [[=Default{ "0" }]]                                         Int32_t pageCount = 0;
                                                                     DataTypes::DateTime lastModifiedAt;
     };
 
     struct [[=TableInfo{ "sys_column_stats", 12, CatalogTables::SysColumnStats }]] SysColumnStatsRow{
-        [[=PrimaryKey{}]]                                           Int columnId;
-        [[=Default{ "0" }]]                                         BigInt distinctCount = 0;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
+        [[=Default{ "0" }]]                                         Int64_t distinctCount = 0;
         [[=MaxSize{ 200 }]]                                         std::optional<DataTypes::String> minValue;
         [[=MaxSize{ 200 }]]                                         std::optional<DataTypes::String> maxValue;
-                                                                    std::optional<BigInt> nullCount;
+                                                                    std::optional<Int64_t> nullCount;
     };
 
     struct [[=TableInfo{ "sys_column_histograms", 13, CatalogTables::SysColumnHistograms }]] SysColumnHistogramRow{
-        [[=PrimaryKey{}]]                                           Int columnId;
-        [[=PrimaryKey{}, =Identity{}]]                              Int histogramId;
+        [[=PrimaryKey{}]]                                           Int32_t columnId;
+        [[=PrimaryKey{}, =Identity{}]]                              Int32_t histogramId;
         [[=MaxSize{ 200 }]]                                         std::optional<DataTypes::String> rangeStart;
         [[=MaxSize{ 200 }]]                                         std::optional<DataTypes::String> rangeEnd;
-        [[=Default{ "0" }]]                                         Int rowCount = 0;
-        [[=Default{ "0" }]]                                         BigInt distinctCount = 0;
+        [[=Default{ "0" }]]                                         Int32_t rowCount = 0;
+        [[=Default{ "0" }]]                                         Int64_t distinctCount = 0;
     };
 
     struct [[=TableInfo{ "sys_roles", 14, CatalogTables::SysRoles }]] SysRoleRow{
-        [[=PrimaryKey{}, =Identity{}]]                              Int roleId;
+        [[=PrimaryKey{}, =Identity{}]]                              Int32_t roleId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String roleName;
-                                                                    Int permissions;
+                                                                    Int32_t permissions;
                                                                     bool isSystemRole;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_users", 15, CatalogTables::SysUsers }]] SysUserRow{
-        [[=PrimaryKey{}, =Identity{}]]                              Int userId;
+        [[=PrimaryKey{}, =Identity{}]]                              Int32_t userId;
         [[=MaxSize{ 100 }]]                                         DataTypes::String username;
         [[=MaxSize{ 200 }]]                                         DataTypes::String passwordHash;
-                                                                    Int roleId;
+                                                                    Int32_t roleId;
                                                                     bool isActive;
                                                                     DataTypes::DateTime createdAt;
                                                                     DataTypes::DateTime lastModified;
         [[=MaxSize{ 100 }]]                                         DataTypes::String lastModifiedBy;
-        [[=Default{ "1" }]]                                         Int version = 1;
+        [[=Default{ "1" }]]                                         Int32_t version = 1;
         [[=Default{ "0" }]]                                         bool isDeleted = false;
                                                                     std::optional<DataTypes::DateTime> deletedAt;
     };
 
     struct [[=TableInfo{ "sys_index_stats", 16, CatalogTables::SysIndexStats }]] SysIndexStatsRow{
-        [[=PrimaryKey{}]]                                           Int tableId;
-        [[=PrimaryKey{}]]                                           Int indexId;
-        [[=Default{ "0" }]]                                         BigInt leafPages = 0;
-        [[=Default{ "0" }]]                                         TinyInt depth = 0;
+        [[=PrimaryKey{}]]                                           Int32_t tableId;
+        [[=PrimaryKey{}]]                                           Int32_t indexId;
+        [[=Default{ "0" }]]                                         Int64_t leafPages = 0;
+        [[=Default{ "0" }]]                                         Int8_t depth = 0;
         [[=MaxSize{ 4 }]]                                           DataTypes::Decimal avgFragmentation;
                                                                     DataTypes::DateTime lastModifiedAt;
     };

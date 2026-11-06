@@ -51,7 +51,7 @@ namespace DataTypes::Indexing{
 
     bool Key::PartialEqualityCompare(const Key& lhs, const Key& rhs){
         const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
-        for (Int i = 0; i < compareLength; i++){
+        for (Int32_t i = 0; i < compareLength; i++){
             const auto result = CompareEntryAt(lhs, rhs, i);
             if (result != Comparators::Comparator::Equal)
                 return false;
@@ -62,7 +62,7 @@ namespace DataTypes::Indexing{
 
     bool Key::PartialGreaterThan(const Key& lhs, const Key& rhs){
         const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
-        for (Int i = 0; i < compareLength; i++){
+        for (Int32_t i = 0; i < compareLength; i++){
             const auto result = CompareEntryAt(lhs, rhs, i);
             if (result == Comparators::Comparator::Greater)
                 return false;
@@ -80,7 +80,7 @@ namespace DataTypes::Indexing{
 
     Comparators::Comparator Key::PartialCompare(const Key& lhs, const Key& rhs){
         const auto compareLength = Math::Min(lhs.Count(), rhs.Count());
-        for (Int i = 0; i < compareLength; i++){
+        for (Int32_t i = 0; i < compareLength; i++){
             const auto result = CompareEntryAt(lhs, rhs, i);
             if (result != Comparators::Comparator::Equal)
                 return result;
@@ -127,7 +127,7 @@ namespace DataTypes::Indexing{
 
         auto* buffer = static_cast<object_t*>(allocator->AllocateRaw(size));
         auto dataOffset = Key::HEADER_SIZE + subKeys.Size() * sizeof(KeyEntry);
-        for (Int i = 0; i < subKeys.Size(); i++){
+        for (Int32_t i = 0; i < subKeys.Size(); i++){
             auto* entry = reinterpret_cast<KeyEntry*>(buffer + Key::HEADER_SIZE + i * sizeof(KeyEntry));
             entry->_offset = dataOffset;
             const auto sizeWritten = Key::EncodeValue(buffer + dataOffset, subKeys[i]);
@@ -143,16 +143,16 @@ namespace DataTypes::Indexing{
         if (value.IsNull())
             return 0;
 
-        switch (value.GetType()){
+        switch (value.TypeInfo()){
         case DataType::TinyInt:
-            return Encoding::EncodeInteger<TinyInt>(buffer, value.AsTinyInt());
+            return Encoding::EncodeInteger<Int8_t>(buffer, value.AsTinyInt());
         case DataType::SmallInt:
-            return Encoding::EncodeInteger<SmallInt>(buffer, value.AsSmallInt());
+            return Encoding::EncodeInteger<Int16_t>(buffer, value.AsSmallInt());
         case DataType::Int:
-            return Encoding::EncodeInteger<Int>(buffer, value.AsInt());
+            return Encoding::EncodeInteger<Int32_t>(buffer, value.AsInt());
         case DataType::BigInt:
         case DataType::DateTime:
-            return Encoding::EncodeInteger<BigInt>(buffer, value.AsBigInt());
+            return Encoding::EncodeInteger<Int64_t>(buffer, value.AsBigInt());
         case DataType::Bool:
         case DataType::String:
         case DataType::Decimal:
@@ -165,7 +165,7 @@ namespace DataTypes::Indexing{
         }
     }
 
-    Comparators::Comparator Key::CompareEntryAt(const Key& lhs, const Key& rhs, const Int index){
+    Comparators::Comparator Key::CompareEntryAt(const Key& lhs, const Key& rhs, const Int32_t index){
         const auto* lhsEntry = lhs.GetEntry(index);
         const auto* rhsEntry = rhs.GetEntry(index);
 

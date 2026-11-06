@@ -39,8 +39,8 @@ namespace Network {
             numberOfConnections(20), timeoutTime(10){}
 
     ConnectionParameters::ConnectionParameters(
-        std::string& hostname, const Int port,
-        const Int numberOfConnections, const Int timeoutTime
+        std::string& hostname, const Int32_t port,
+        const Int32_t numberOfConnections, const Int32_t timeoutTime
     ) : port(port), serverSocket(Constants::INVALID_FILE_DESCRIPTOR),
         epollFileDescriptor(Constants::INVALID_FILE_DESCRIPTOR), hostName(std::move(hostname)),
         numberOfConnections(numberOfConnections), timeoutTime(timeoutTime){}
@@ -91,7 +91,7 @@ namespace Network {
                 const auto readable = (event.revents & POLLIN)  != 0;
                 const auto writable = (event.revents & POLLOUT) != 0;
 #else
-            for (Int i = 0;i < ready; i++){
+            for (Int32_t i = 0;i < ready; i++){
                 const auto socket = event.data.fd;
                 const auto hangup   = (event.events & (EPOLLHUP | EPOLLERR | EPOLLRDHUP)) != 0;
                 const auto readable = (event.events & EPOLLIN)  != 0;
@@ -538,8 +538,8 @@ void ConnectionManager::CloseServerConnection() const
         const request_id_t requestId,
         const statement_ordinal_t statementOrdinal,
         const CoreEngine::DataChunk* chunk,
-        const Int offset,
-        const Int rowCount,
+        const Int32_t offset,
+        const Int32_t rowCount,
         const Memory::IAllocator* allocator
     ){
         ResultEncoder::EncodeDataBatch(buffer, requestId, statementOrdinal, chunk, offset, rowCount, allocator);

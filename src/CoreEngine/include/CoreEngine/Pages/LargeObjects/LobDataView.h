@@ -16,7 +16,7 @@ namespace CoreEngine::Pages{
             static constexpr auto TYPE = PageLayout::PageType::LOB_DATA;
             static constexpr bool IS_SYSTEM = false;
 
-            static void Initialize(const Frame* frame, const page_id_t rootPageId, const UnsignedInt pageIndex){
+            static void Initialize(const Frame* frame, const page_id_t rootPageId, const UInt32_t pageIndex){
                 frame->Header()->_bytesLeft = 0;
 
                 auto* additionalHeader = reinterpret_cast<LobDataHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
@@ -34,7 +34,7 @@ namespace CoreEngine::Pages{
                 return this->GetAdditionalHeader()->_rootPageId;
             }
 
-            [[nodiscard]] UnsignedInt PageIndex()const{
+            [[nodiscard]] UInt32_t PageIndex()const{
                 return this->GetAdditionalHeader()->_pageIndex;
             }
 
@@ -42,6 +42,6 @@ namespace CoreEngine::Pages{
                 return this->Payload();
             }
 
-            void WriteInline(UnsignedInt offset, const object_t* data, UnsignedInt size) const;
+            void WriteInline(UInt32_t offset, const object_t* data, UInt32_t size) const;
     };
 }

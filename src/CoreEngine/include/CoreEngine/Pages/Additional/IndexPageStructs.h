@@ -12,19 +12,19 @@ namespace CoreEngine::StorageTypes{
 
 namespace CoreEngine::Pages{
     struct IndexPageAdditionalHeader {
-		static constexpr UnsignedTinyInt TREE_TYPE_BIT_POS = 0;
-		static constexpr UnsignedTinyInt IS_LEAF_BIT_POS = 2;
-		static constexpr UnsignedTinyInt IS_ROOT_BIT_POS = 3;
-		static constexpr UnsignedTinyInt IS_EMPTY_BIT_POS = 4;
-		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_POS = 5;
+		static constexpr UInt8_t TREE_TYPE_BIT_POS = 0;
+		static constexpr UInt8_t IS_LEAF_BIT_POS = 2;
+		static constexpr UInt8_t IS_ROOT_BIT_POS = 3;
+		static constexpr UInt8_t IS_EMPTY_BIT_POS = 4;
+		static constexpr UInt8_t NUMBER_OF_SUB_KEYS_BIT_POS = 5;
 
-		static constexpr UnsignedTinyInt TREE_TYPE_BIT_MASK = 0x03;        // 0000 0011
-		static constexpr UnsignedTinyInt NUMBER_OF_SUB_KEYS_BIT_MASK = 0x07; //
+		static constexpr UInt8_t TREE_TYPE_BIT_MASK = 0x03;        // 0000 0011
+		static constexpr UInt8_t NUMBER_OF_SUB_KEYS_BIT_MASK = 0x07; //
 
 		page_id_t previousNode;
 		page_id_t nextNode;
 
-		UnsignedTinyInt _flags;
+		UInt8_t _flags;
         byte_t _reserved[3];
 
         [[nodiscard]] Constants::TreeType GetTreeType() const{

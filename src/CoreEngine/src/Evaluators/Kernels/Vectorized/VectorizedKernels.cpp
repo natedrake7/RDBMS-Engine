@@ -27,7 +27,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
         auto* outData = out->template DataAs<bool>();
 
-        for (Int i = 0; i < chunk->_numberOfRows; i++){
+        for (Int32_t i = 0; i < chunk->_numberOfRows; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 
@@ -65,7 +65,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
         auto* outData = out->template DataAs<bool>();
 
-        for (Int i = 0; i < chunk->_numberOfRows; i++){
+        for (Int32_t i = 0; i < chunk->_numberOfRows; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 
@@ -101,7 +101,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataType::Bool, chunk->_numberOfRows);
         auto* outData = out->template DataAs<bool>();
 
-        for (Int i = 0; i < chunk->_numberOfRows; i++){
+        for (Int32_t i = 0; i < chunk->_numberOfRows; i++){
             const auto index = left->PhysicalIndex(i);
             const auto isNull = left->GetNullValue(index);
             out->SetNullValue(i, isNull);

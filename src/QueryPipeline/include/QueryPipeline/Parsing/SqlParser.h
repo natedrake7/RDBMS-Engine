@@ -37,7 +37,7 @@ namespace QueryPipeline::Statements{
 }
 
 namespace QueryPipeline::Parsing{
-    static constexpr Int MAX_STRING_SIZE = -1;
+    static constexpr Int32_t MAX_STRING_SIZE = -1;
 
     /**
      * Recursive descent parser over a token buffer, building Expressions::* nodes
@@ -55,11 +55,11 @@ namespace QueryPipeline::Parsing{
         const ::Memory::IAllocator* _allocator;
         Diagnostic* _diagnostic;
 
-        Int _count;
-        Int _position;
+        Int32_t _count;
+        Int32_t _position;
 
         //Cursor
-        [[nodiscard]] const Token& Peek(Int offset = 0) const;
+        [[nodiscard]] const Token& Peek(Int32_t offset = 0) const;
         [[nodiscard]] bool Check(TokenType type) const;
         const Token& Advance();
         bool Match(TokenType type);
@@ -135,7 +135,7 @@ namespace QueryPipeline::Parsing{
 
         [[nodiscard]] bool ParseSelectItem(Expressions::Expression*& expression);
         [[nodiscard]] bool ParseWhereClause(Statements::WhereClause& where);
-        [[nodiscard]] bool ParseTop(BigInt& top);
+        [[nodiscard]] bool ParseTop(Int64_t& top);
         [[nodiscard]] bool ParseColumnName(Statements::ColumnName& column);
         [[nodiscard]] bool ParseIdentifier(DataTypes::String& identifier);
         [[nodiscard]] bool ParseOptionalAlias(DataTypes::String& alias);
@@ -146,7 +146,7 @@ namespace QueryPipeline::Parsing{
         public:
             SqlParser(
                 const Token* tokens,
-                Int count,
+                Int32_t count,
                 const ::Memory::IAllocator* allocator,
                 Diagnostic& diagnostic
             );
@@ -172,13 +172,13 @@ namespace QueryPipeline::Parsing{
              */
             [[nodiscard]] bool ParseStatements(
                 DataStructures::PolymorphicArray<Statements::Statement*>* statements,
-                Int databaseId
+                Int32_t databaseId
             );
 
             /**
              * Parses a single statement, without its terminating ';'.
              */
-            [[nodiscard]] Statements::Statement* ParseStatement(Int databaseId);
+            [[nodiscard]] Statements::Statement* ParseStatement(Int32_t databaseId);
 
             /**
              * Parses a type reference: BOOL, INT, STRING(n), STRING(MAX), DECIMAL(p,s),

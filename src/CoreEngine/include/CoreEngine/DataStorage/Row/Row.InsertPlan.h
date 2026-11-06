@@ -10,7 +10,7 @@ namespace CoreEngine::StorageTypes{
     struct ColumnPlacement;
 
     struct InsertSlot{
-        enum class SlotKind: UnsignedTinyInt{
+        enum class SlotKind: UInt8_t{
             Value = 0,
             Default = 1,
             Null = 2
@@ -37,7 +37,7 @@ namespace CoreEngine::StorageTypes{
         }
     };
 
-    enum class InsertColumnSource: UnsignedTinyInt{
+    enum class InsertColumnSource: UInt8_t{
         Vector = 0,
         Default = 1,
         Null = 2,
@@ -78,28 +78,28 @@ namespace CoreEngine::StorageTypes{
     struct ChunkInsertState{
         const DataChunk* _chunk;
 
-        UnsignedInt _rowCount;
-        UnsignedInt _columnCount;
+        UInt32_t _rowCount;
+        UInt32_t _columnCount;
 
         const DataVector** _vectors;
 
-        UnsignedInt* _rowSizes;
-        UnsignedInt* _rowStart;
-        UnsignedSmallInt* _cursor;
-        UnsignedBigInt* _slowRows;
-        Int _slowCount;
+        UInt32_t* _rowSizes;
+        UInt32_t* _rowStart;
+        UInt16_t* _cursor;
+        UInt64_t* _slowRows;
+        Int32_t _slowCount;
 
         object_t* _buffer;
         SerializedRow* _rows;
 
         ColumnPlacement* _slowPlacements;
-        UnsignedInt* _slowIndex;
+        UInt32_t* _slowIndex;
 
-        [[nodiscard]] bool IsSlowRow(const UnsignedInt index)const{
+        [[nodiscard]] bool IsSlowRow(const UInt32_t index)const{
             return EngineBitmap::GetBitmapBit(this->_slowRows, index);
         }
 
-        void MarkSlowRow(const UnsignedInt index){
+        void MarkSlowRow(const UInt32_t index){
             if (this->IsSlowRow(index))
                 return;
 

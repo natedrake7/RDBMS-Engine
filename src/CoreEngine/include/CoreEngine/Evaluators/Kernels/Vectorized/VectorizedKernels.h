@@ -126,19 +126,19 @@ namespace CoreEngine::VectorizedKernels{
             if (childVector->IsFlat()){
                 outVector->CopyValidity(childVector);
 
-                for (Int i = 0;i < chunk->_numberOfRows; i++)
+                for (Int32_t i = 0;i < chunk->_numberOfRows; i++)
                     outData[i] = static_cast<TTo>(childData[i]);
 
                 return outVector;
             }
 
             // dictionary path, arithmetic
-            for (Int i = 0; i < chunk->_numberOfRows; i++){
+            for (Int32_t i = 0; i < chunk->_numberOfRows; i++){
                 const auto childIndex = childVector->PhysicalIndex(i);
                 outVector->SetNullValue(i, childVector->GetNullValue(childIndex));
             }
 
-            for (Int i = 0; i < chunk->_numberOfRows; i++){
+            for (Int32_t i = 0; i < chunk->_numberOfRows; i++){
                 const auto childIndex = childVector->PhysicalIndex(i);
                 outData[i] = static_cast<TTo>(childData[childIndex]);
             }
@@ -150,7 +150,7 @@ namespace CoreEngine::VectorizedKernels{
             if (childVector->IsFlat()){
                 outVector->CopyValidity(childVector);
 
-                for (Int i = 0;i < chunk->_numberOfRows; i++){
+                for (Int32_t i = 0;i < chunk->_numberOfRows; i++){
                     if (outVector->GetNullValue(i))
                         continue;
 
@@ -161,7 +161,7 @@ namespace CoreEngine::VectorizedKernels{
             }
 
             //dictionary scalar fallback
-            for (Int i = 0;i < chunk->_numberOfRows; i++){
+            for (Int32_t i = 0;i < chunk->_numberOfRows; i++){
                 const auto childIndex = childVector->PhysicalIndex(i);
                 const auto isNull = childVector->GetNullValue(childIndex);
                 outVector->SetNullValue(i, isNull);

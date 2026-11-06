@@ -6,21 +6,21 @@ namespace CoreEngine::StorageTypes {
         :   _pageId(INVALID_PAGE_ID), _index(INVALID_INDEX_ID),
             _flags(0){}
 
-    RID::RID(const page_id_t pageId, const Int index)
+    RID::RID(const page_id_t pageId, const Int32_t index)
         :   _pageId(pageId), _index(index),
             _flags(0){}
 
-    RID::RID(const page_id_t pageId, const Int index, const Source source)
+    RID::RID(const page_id_t pageId, const Int32_t index, const Source source)
         : _pageId(pageId), _index(index), _flags(0){
         this->SetSource(source);
     }
 
     void RID::SetSource(const Source source){
-        PackedWord<UnsignedSmallInt>::SetBits<SOURCE_SHIFT, SOURCE_MASK>(&this->_flags, source);
+        PackedWord<UInt16_t>::SetBits<SOURCE_SHIFT, SOURCE_MASK>(&this->_flags, source);
     }
 
     RID::Source RID::GetSource() const{
-        return PackedWord<UnsignedSmallInt>::ExtractBits<Source, SOURCE_SHIFT, SOURCE_MASK>(this->_flags);
+        return PackedWord<UInt16_t>::ExtractBits<Source, SOURCE_SHIFT, SOURCE_MASK>(this->_flags);
     }
 
     RowHeader::RowHeader()

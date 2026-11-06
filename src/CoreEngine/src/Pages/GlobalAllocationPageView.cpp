@@ -5,7 +5,7 @@
 #include <CoreEngine/BufferPool/StorageLayout.h>
 
 namespace CoreEngine::Pages{
-    void GlobalAllocationPageView::SetBits(const UnsignedInt startIndex, const UnsignedInt numberOfBits) const{
+    void GlobalAllocationPageView::SetBits(const UInt32_t startIndex, const UInt32_t numberOfBits) const{
         for (auto i = startIndex; i < startIndex + numberOfBits; i++)
             this->SetBit(i);
     }
@@ -15,7 +15,7 @@ namespace CoreEngine::Pages{
         const extent_id_t from,
         const extent_id_t to
     ) const{
-        Int length = 0;
+        Int32_t length = 0;
         extent_id_t start = from;
         const auto append = [&]{
             if (length > 0)
@@ -30,8 +30,8 @@ namespace CoreEngine::Pages{
 
         extent_id_t bit = from;
         while (bit <= to){
-            if (PackedWord<UnsignedBigInt>::BitIndex(bit) == 0 && bit + 63 <= to){
-                UnsignedBigInt word;
+            if (PackedWord<UInt64_t>::BitIndex(bit) == 0 && bit + 63 <= to){
+                UInt64_t word;
                 std::memcpy(&word, this->_frame->_data + this->initialOffset + PackedByte::WordIndex(bit), sizeof(word));
                 if (word == 0){
                     if (length == 0)
@@ -64,9 +64,9 @@ namespace CoreEngine::Pages{
         this->initialOffset = StorageLayout::GAM_METADATA_SIZE;
     }
 
-    UnsignedInt GlobalAllocationPageView::ReserveExtentsNoLock(
+    UInt32_t GlobalAllocationPageView::ReserveExtentsNoLock(
         DataStructures::PolymorphicArray<StorageTypes::ExtentSegment>& segmentsRuns,
-        const UnsignedInt neededExtents
+        const UInt32_t neededExtents
     ) const{
         auto* additionalHeader = this->GetAdditionalHeader();
         if (additionalHeader->_freeExtentCount == 0 || neededExtents <= 0)
@@ -74,8 +74,8 @@ namespace CoreEngine::Pages{
 
         //fast path:
         const auto base = StorageLayout::GamBaseExtent(this->GetAdditionalHeader()->_gamIndex);
-        UnsignedInt remaining = neededExtents;
-        const auto tailAvailable = static_cast<UnsignedInt>(StorageLayout::GAM_BIT_MAP_SIZE - additionalHeader->_appendBitId);
+        UInt32_t remaining = neededExtents;
+        const auto tailAvailable = static_cast<UInt32_t>(StorageLayout::GAM_BIT_MAP_SIZE - additionalHeader->_appendBitId);
         if (tailAvailable > 0){
             const auto bitsToTake = Math::Min(remaining, tailAvailable);
             this->SetBits(additionalHeader->_appendBitId, bitsToTake);
@@ -140,18 +140,18 @@ namespace CoreEngine::Pages{
     }
 
     void GlobalAllocationPageView::RecountFreeExtentsNoLock() const{
-        constexpr auto BITMAP_WORDS = StorageLayout::GAM_BITMAP_BYTES / sizeof(UnsignedBigInt);
-        static_assert(BITMAP_WORDS % alignof(UnsignedBigInt) == 0, "GAM Bitmap must be word aligned");
+        constexpr auto BITMAP_WORDS = StorageLayout::GAM_BITMAP_BYTES / sizeof(UInt64_t);
+        static_assert(BITMAP_WORDS % alignof(UInt64_t) == 0, "GAM Bitmap must be word aligned");
 
         const auto* wordMap = this->_frame->_data + this->initialOffset;
-        UnsignedInt usedExtents = 0;
-        for (Int i = 0;i < BITMAP_WORDS;i++){
-            UnsignedBigInt word = 0;
-            std::memcpy(&word, wordMap + i * sizeof(UnsignedBigInt), sizeof(UnsignedBigInt));
-            usedExtents += static_cast<UnsignedInt>(std::popcount(word));
+        UInt32_t usedExtents = 0;
+        for (Int32_t i = 0;i < BITMAP_WORDS;i++){
+            UInt64_t word = 0;
+            std::memcpy(&word, wordMap + i * sizeof(UInt64_t), sizeof(UInt64_t));
+            usedExtents += static_cast<UInt32_t>(std::popcount(word));
         }
 
-        this->GetAdditionalHeader()->_freeExtentCount = static_cast<UnsignedInt>(StorageLayout::GAM_BIT_MAP_SIZE - usedExtents);
+        this->GetAdditionalHeader()->_freeExtentCount = static_cast<UInt32_t>(StorageLayout::GAM_BIT_MAP_SIZE - usedExtents);
         this->_frame->MarkDirty();
     }
 }

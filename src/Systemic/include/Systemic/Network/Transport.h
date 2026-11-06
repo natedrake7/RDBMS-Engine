@@ -10,7 +10,7 @@ namespace Network{
 }
 
 namespace Network::Transport{
-    enum class IoStatus : UnsignedTinyInt{
+    enum class IoStatus : UInt8_t{
         Ok = 0,
         WouldBlock = 1,
         Closed = 2,

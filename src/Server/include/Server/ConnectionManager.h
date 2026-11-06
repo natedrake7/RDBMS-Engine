@@ -40,16 +40,16 @@ namespace Network {
     class ClientConnection;
 
     struct ConnectionParameters {
-        Int port;
-        Int serverSocket;
-        Int epollFileDescriptor;
+        Int32_t port;
+        Int32_t serverSocket;
+        Int32_t epollFileDescriptor;
         std::string hostName;
 
-        Int numberOfConnections;
-        Int timeoutTime;
+        Int32_t numberOfConnections;
+        Int32_t timeoutTime;
 
         ConnectionParameters();
-        ConnectionParameters(std::string& hostname, Int port, Int numberOfConnections, Int timeoutTime);
+        ConnectionParameters(std::string& hostname, Int32_t port, Int32_t numberOfConnections, Int32_t timeoutTime);
     };
 
     void InitializeConnectionManagerThread(const ConnectionParameters& parameters, const std::atomic<bool>& isServerRunning);
@@ -88,7 +88,7 @@ namespace Network {
 
         static void ExecuteQuery(
             const std::shared_ptr<ClientConnection>& connection,
-            UnsignedInt requestId,
+            UInt32_t requestId,
             std::string query
         );
 
@@ -98,8 +98,8 @@ namespace Network {
             request_id_t requestId,
             statement_ordinal_t statementOrdinal,
             const CoreEngine::DataChunk* chunk,
-            Int offset,
-            Int rowCount,
+            Int32_t offset,
+            Int32_t rowCount,
             const ::Memory::IAllocator* allocator
         );
 

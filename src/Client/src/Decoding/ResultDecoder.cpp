@@ -11,14 +11,14 @@ namespace Client{
     bool ResultDecoder::DecodeVariableLengthColumn(
         Network::PayloadReader& reader,
         ColumnView& columnView,
-        const UnsignedInt encodedRows
+        const UInt32_t encodedRows
     ){
-        const auto offSetBytes = (static_cast<UnsignedBigInt>(encodedRows + 1)) * sizeof(UnsignedInt);
+        const auto offSetBytes = (static_cast<UInt64_t>(encodedRows + 1)) * sizeof(UInt32_t);
 
         if (offSetBytes > MAX_SPAN || !reader.ReadSpan(columnView._offsets, offSetBytes))
             return false;
 
-        std::memcpy(&columnView._blobSize, columnView._offsets + encodedRows * sizeof(UnsignedInt), sizeof(UnsignedInt));
+        std::memcpy(&columnView._blobSize, columnView._offsets + encodedRows * sizeof(UInt32_t), sizeof(UInt32_t));
 
         if (!reader.ReadSpan(columnView._data, columnView._blobSize))
             return false;
@@ -29,19 +29,19 @@ namespace Client{
     bool ResultDecoder::DecodeFixedLengthColumn(
         Network::PayloadReader& reader,
         ColumnView& columnView,
-        const UnsignedInt encodedRows
+        const UInt32_t encodedRows
     ){
-        if (!reader.Read<UnsignedSmallInt>(columnView._width))
+        if (!reader.Read<UInt16_t>(columnView._width))
             return false;
 
-        const auto valueBytes = static_cast<UnsignedBigInt>(columnView._width) * encodedRows;
+        const auto valueBytes = static_cast<UInt64_t>(columnView._width) * encodedRows;
         if (valueBytes > MAX_SPAN || !reader.ReadSpan(columnView._data, valueBytes))
             return false;
 
         return true;
     }
 
-    void ResultDecoder::PrintValue(std::ostream& os, const ColumnView& columnView, const UnsignedInt row){
+    void ResultDecoder::PrintValue(std::ostream& os, const ColumnView& columnView, const UInt32_t row){
         switch (columnView._type){
         case Network::WireType::Bool:{
             auto value = false;
@@ -52,35 +52,35 @@ namespace Client{
             break;
         }
         case Network::WireType::TinyInt:{
-            TinyInt value = 0;
+            Int8_t value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
-                os << static_cast<Int>(value); return;
+                os << static_cast<Int32_t>(value); return;
             }
             break;
         }
         case Network::WireType::SmallInt:{
-            SmallInt value = 0;
+            Int16_t value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
         case Network::WireType::Int:{
-            Int value = 0;
+            Int32_t value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
         case Network::WireType::BigInt:{
-            BigInt value = 0;
+            Int64_t value = 0;
             if (Load(columnView._data, columnView._width, row, value)){
                 os << value; return;
             }
             break;
         }
         case Network::WireType::DateTime:{
-            BigInt timestamp = 0;       // milliseconds since the Unix epoch, UTC
+            Int64_t timestamp = 0;       // milliseconds since the Unix epoch, UTC
             if (Load(columnView._data, columnView._width, row, timestamp)){
                 DataTypes::DateTime(timestamp).Print(os);
                 return;
@@ -97,10 +97,10 @@ namespace Client{
         case Network::WireType::String:
         case Network::WireType::Json:
         case Network::WireType::Decimal:{
-            UnsignedInt begin = 0;
-            UnsignedInt end = 0;
-            std::memcpy(&begin, columnView._offsets + row * sizeof(UnsignedInt), sizeof(UnsignedInt));
-            std::memcpy(&end,   columnView._offsets + (row + 1) * sizeof(UnsignedInt), sizeof(UnsignedInt));
+            UInt32_t begin = 0;
+            UInt32_t end = 0;
+            std::memcpy(&begin, columnView._offsets + row * sizeof(UInt32_t), sizeof(UInt32_t));
+            std::memcpy(&end,   columnView._offsets + (row + 1) * sizeof(UInt32_t), sizeof(UInt32_t));
 
             if (begin > end || end > columnView._blobSize)
                 break;
@@ -118,8 +118,8 @@ namespace Client{
     bool ResultDecoder::DecodeRowDescription(const std::vector<char>* payload){
         Network::PayloadReader reader(payload->data(), payload->size());
 
-        Int columnCount = 0;
-        if (!reader.Read<Int>(columnCount))
+        Int32_t columnCount = 0;
+        if (!reader.Read<Int32_t>(columnCount))
             return false;
 
         this->_columns.resize(columnCount);
@@ -134,17 +134,17 @@ namespace Client{
     bool ResultDecoder::DecodeDataBatch(const std::vector<char>* payload){
         Network::PayloadReader reader(payload->data(), payload->size());
 
-        if (!reader.Read<UnsignedInt>(this->_rowCount) || !reader.Read<UnsignedInt>(this->_columnCount))
+        if (!reader.Read<UInt32_t>(this->_rowCount) || !reader.Read<UInt32_t>(this->_columnCount))
             return false;
 
         this->_columnViews.assign(this->_columnCount, ColumnView());
         for (auto& columnView : this->_columnViews){
-            UnsignedTinyInt flags = 0;
-            UnsignedInt encodedRows = 0;
+            UInt8_t flags = 0;
+            UInt32_t encodedRows = 0;
 
             if (!reader.Read<Network::WireType>(columnView._type)
-                || !reader.Read<UnsignedTinyInt>(flags)
-                || !reader.Read<UnsignedInt>(encodedRows)
+                || !reader.Read<UInt8_t>(flags)
+                || !reader.Read<UInt32_t>(encodedRows)
             ) return false;
 
 
@@ -174,7 +174,7 @@ namespace Client{
     void ResultDecoder::PrintBatch(std::ostream& os) const{
         for (auto index = 0; index < this->_rowCount; ++index){
             for (const auto& column : this->_columnViews){
-                if (PackedByte::GetBitmapBit(reinterpret_cast<const UnsignedTinyInt*>(column._validity), index))
+                if (PackedByte::GetBitmapBit(reinterpret_cast<const UInt8_t*>(column._validity), index))
                     os << "NULL";
                 else
                     ResultDecoder::PrintValue(os, column, index);

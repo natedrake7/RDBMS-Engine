@@ -44,9 +44,9 @@ void MaterializedRow::Print() const {
             continue;
         }
 
-        switch (column.GetType()) {
+        switch (column.TypeInfo()) {
             case DataType::TinyInt:
-                std::cout << static_cast<SmallInt>(column.AsTinyInt());
+                std::cout << static_cast<Int16_t>(column.AsTinyInt());
                 break;
             case DataType::SmallInt:
                 std::cout << column.AsSmallInt();
@@ -86,18 +86,18 @@ DataStructures::PolymorphicArray<Value>& MaterializedRow::Data() {
     return this->data;
 }
 
-Value MaterializedRow::GetColumnAt(const Int columnPos) const {
+Value MaterializedRow::GetColumnAt(const Int32_t columnPos) const {
     return this->data[columnPos];
 }
 
-const Value& MaterializedRow::GetColumnReferenceAt(const Int columnPos) const {
+const Value& MaterializedRow::GetColumnReferenceAt(const Int32_t columnPos) const {
     return this->data[columnPos];
 }
 
 int MaterializedRow::GetSize() const { return this->data.Size(); }
 
-Int MaterializedRow::GetByteSize() const {
-    Int totalSize = 0;
+Int32_t MaterializedRow::GetByteSize() const {
+    Int32_t totalSize = 0;
     for (const auto& value : this->data) {
         totalSize += sizeof(block_size_t); // size of block
         totalSize += sizeof(DataType);     // type of block
@@ -106,8 +106,8 @@ Int MaterializedRow::GetByteSize() const {
     return totalSize;
 }
 
-Int MaterializedRow::GetPageByteSize() const {
-    Int totalSize = 0;
+Int32_t MaterializedRow::GetPageByteSize() const {
+    Int32_t totalSize = 0;
     for (const auto& value : this->data) {
         totalSize += sizeof(block_size_t); // size of block
         totalSize += value.Size();         // data size
@@ -115,7 +115,7 @@ Int MaterializedRow::GetPageByteSize() const {
     return totalSize;
 }
 
-void MaterializedRow::SetColumnIndex(const Int columnPos, const column_index_t columnIndex) {
+void MaterializedRow::SetColumnIndex(const Int32_t columnPos, const column_index_t columnIndex) {
     if (columnPos >= this->data.Size())
         return;
 
@@ -189,7 +189,7 @@ std::ostream& operator<<(std::ostream& os, const MaterializedRow& result) {
             continue;
         }
 
-        switch (column.GetType()) {
+        switch (column.TypeInfo()) {
             case DataType::TinyInt:
                 os << static_cast<int16_t>(column.AsTinyInt());
                 break;

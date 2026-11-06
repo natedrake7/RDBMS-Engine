@@ -98,7 +98,7 @@ namespace Network{
     void ClientConnection::SendStatementComplete(
         const request_id_t requestId,
         const statement_ordinal_t statementOrdinal,
-        const UnsignedBigInt rowCount
+        const UInt64_t rowCount
     ){
         Header header;
         header._messageType = MessageType::StatementComplete;
@@ -164,8 +164,8 @@ namespace Network{
 
     void ClientConnection::SendTextFrame(
         const MessageType type,
-        const UnsignedInt requestId,
-        const UnsignedInt statementOrdinal,
+        const UInt32_t requestId,
+        const UInt32_t statementOrdinal,
         const DataTypes::StringView& text
     ){
         Header header;
@@ -178,8 +178,8 @@ namespace Network{
 
     void ClientConnection::SendControlFrame(
         const MessageType type,
-        const UnsignedInt requestId,
-        const UnsignedInt statementOrdinal
+        const UInt32_t requestId,
+        const UInt32_t statementOrdinal
     ){
         Header header;
         header._messageType = type;

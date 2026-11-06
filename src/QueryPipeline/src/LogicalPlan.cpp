@@ -51,7 +51,7 @@ namespace QueryPipeline {
         return outputSchema;
     }
 
-    LogicalPlan::LogicalPlan(const session_id_t sessionId, const Int databaseId)
+    LogicalPlan::LogicalPlan(const session_id_t sessionId, const Int32_t databaseId)
         : sessionId(sessionId), databaseId(databaseId) {}
 
     LogicalPlan::LogicalPlan(const session_id_t sessionId)
@@ -62,7 +62,7 @@ namespace QueryPipeline {
 
     LogicalMaterialize::LogicalMaterialize(
         LogicalPlan* child,
-        const UnsignedSmallInt slotIndex
+        const UInt16_t slotIndex
     ):  child(child), _slotIndex(slotIndex){}
 
     PhysicalPlan::PlanNode* LogicalMaterialize::ToPhysical(QueryContext& context){
@@ -73,7 +73,7 @@ namespace QueryPipeline {
 
         auto* childPhysical = this->child->ToPhysical(context);
 
-        UnsignedInt counter = 0;
+        UInt32_t counter = 0;
         context._referencedColumns.ForEachColumn(this->_slotIndex, [&](
             const column_index_t ordinalPosition,
             const DataType dataType
@@ -120,7 +120,7 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalCreateDatabase>(this->sessionId, this->dbName);
     }
 
-    LogicalUseDatabase::LogicalUseDatabase(const session_id_t sessionId, const Int databaseId)
+    LogicalUseDatabase::LogicalUseDatabase(const session_id_t sessionId, const Int32_t databaseId)
         : databaseId(databaseId), sessionId(sessionId) {}
 
     PhysicalPlan::PlanNode* LogicalUseDatabase::ToPhysical(QueryContext& context){
@@ -130,7 +130,7 @@ namespace QueryPipeline {
     LogicalProject::LogicalProject(
         LogicalPlan *child,
         DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
-        const UnsignedSmallInt slotCount
+        const UInt16_t slotCount
     ):   child(child), _projections(std::move(projections)),
         _slotCount(slotCount) {}
 
@@ -167,7 +167,7 @@ namespace QueryPipeline {
         if (!this->HasPredicate())
             return filterColumnsInfo;
 
-        UnsignedBigInt seenColumns[ReferencedColumns::WORDS] = {};
+        UInt64_t seenColumns[ReferencedColumns::WORDS] = {};
         const auto slotIndex = this->table->_slotIndex;
         Expressions::ForEachColumnReference(this->expression, [&](const Expressions::ColumnExpression* columnExpression)
         {
@@ -418,8 +418,8 @@ namespace QueryPipeline {
         LogicalPlan *right,
         Expressions::Expression *condition,
         const JoinType type,
-        const Int leftTableId,
-        const Int rightTableId
+        const Int32_t leftTableId,
+        const Int32_t rightTableId
     ) : leftTableId(leftTableId), rightTableId(rightTableId),
         left(left), right(right),
         condition(condition), type(type) {}
@@ -468,7 +468,7 @@ namespace QueryPipeline {
     LogicalFilter::LogicalFilter(
         LogicalPlan* child,
         Expressions::Expression* filter,
-        const UnsignedSmallInt slotCount
+        const UInt16_t slotCount
     ): child(child), filter(filter), _slotCount(slotCount) {}
 
     PhysicalPlan::PhysicalFilter* LogicalFilter::ToPhysical(QueryContext& context){
@@ -487,7 +487,7 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalOrderBy>(this->child->ToPhysical(context), this->expressions);
     }
 
-    LogicalTop::LogicalTop(LogicalPlan *child, const BigInt top)
+    LogicalTop::LogicalTop(LogicalPlan *child, const Int64_t top)
         : child(child), top(top) {}
 
     PhysicalPlan::PhysicalTop* LogicalTop::ToPhysical(QueryContext& context){
@@ -533,7 +533,7 @@ namespace QueryPipeline {
         return context._compileContext.Allocate<PhysicalPlan::PhysicalValues>(this->_values, this->_valueTypes);
     }
 
-    LogicalSchemaCreate::LogicalSchemaCreate(const session_id_t sessionId, const Int databaseId, DataTypes::String& schemaName)
+    LogicalSchemaCreate::LogicalSchemaCreate(const session_id_t sessionId, const Int32_t databaseId, DataTypes::String& schemaName)
         : LogicalPlan(sessionId), schemaName(std::move(schemaName)), databaseId(databaseId) {}
 
     PhysicalPlan::PhysicalSchemaCreate* LogicalSchemaCreate::ToPhysical(QueryContext& context){

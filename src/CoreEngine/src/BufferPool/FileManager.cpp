@@ -46,7 +46,7 @@ namespace CoreEngine::Storage{
     }
 
     void FileManager::CloseAllFiles(){
-        for (Int i = 0;i < CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS;i++)
+        for (Int32_t i = 0;i < CoreEngine::StorageLayout::MAX_BUFFER_POOL_SLOTS;i++)
             this->CloseFile(i);
     }
 };

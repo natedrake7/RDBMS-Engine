@@ -49,12 +49,12 @@ MergeElement& MergeElement::operator=(MergeElement&& other) noexcept {
     return *this;
 }
 
-MergeElement::MergeElement(const MaterializedRow& value, const Int batchId){
+MergeElement::MergeElement(const MaterializedRow& value, const Int32_t batchId){
     this->value = value;
     this->batchId = batchId;
 }
 
-MergeElement::MergeElement(MaterializedRow& value, const Int batchId, const DataTypes::RowIdentifier& rowId)
+MergeElement::MergeElement(MaterializedRow& value, const Int32_t batchId, const DataTypes::RowIdentifier& rowId)
     : value(std::move(value)), rowId(rowId), batchId(batchId) {}
 
 MergeElement::MergeElement(const MergeElement& other){

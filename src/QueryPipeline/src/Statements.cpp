@@ -217,7 +217,7 @@ namespace QueryPipeline::Statements {
         return Errors::CompilationStatus(context.GetAllocator());
     }
 
-    Errors::CompilationStatus JoinStatement::Compile(const QueryContext& context, const Int databaseId, UnsignedSmallInt& slotCount){
+    Errors::CompilationStatus JoinStatement::Compile(const QueryContext& context, const Int32_t databaseId, UInt16_t& slotCount){
         this->databaseId = databaseId;
         if (this->table == nullptr)
             return Errors::CompilationStatus::Error(
@@ -254,13 +254,13 @@ namespace QueryPipeline::Statements {
 
     CompilationScope::CompilationScope(
     const Memory::IAllocator* allocator,
-    const UnsignedSmallInt numberOfTables
+    const UInt16_t numberOfTables
     ):  _tableColumnsArray(allocator, numberOfTables), _indexPos(nullptr), _statement(nullptr){
         _tableColumnsArray.AlignSize();
     }
 
     CompilationScope::CompilationScope(
-        Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
+        Dictionary<DataTypes::String, UInt16_t>& tableAliasesDictionary,
         DataStructures::PolymorphicArray<Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>>& tableColumnsArray,
         Statement *statement,
         int *indexPos
@@ -269,7 +269,7 @@ namespace QueryPipeline::Statements {
         _indexPos(indexPos), _statement(statement) {}
 
     CompilationScope::CompilationScope(
-        Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
+        Dictionary<DataTypes::String, UInt16_t>& tableAliasesDictionary,
         Statement* statement,
         int* indexPos
     ):   _tableAliasesDict(std::move(tableAliasesDictionary)),
@@ -280,7 +280,7 @@ namespace QueryPipeline::Statements {
         this->scale = INVALID_DECIMAL_SCALE;
     }
 
-    DecimalType::DecimalType(const TinyInt precision, const TinyInt scale){
+    DecimalType::DecimalType(const Int8_t precision, const Int8_t scale){
         this->precision = precision;
         this->scale = scale;
     }
@@ -378,8 +378,8 @@ namespace QueryPipeline::Statements {
 
     Errors::CompilationStatus DataSource::Compile(
         const QueryContext& context,
-        const Int databaseId,
-        UnsignedSmallInt& outSlotCount
+        const Int32_t databaseId,
+        UInt16_t& outSlotCount
     ) {
         const auto tableHeader = (!this->database.Empty())
             ? CoreEngine::SystemCatalog::Get().SelectTable(
@@ -408,7 +408,7 @@ namespace QueryPipeline::Statements {
         return Errors::CompilationStatus::Ok();
     }
 
-    Errors::CompilationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int selectedDatabaseId){
+    Errors::CompilationStatus DataSource::ValidateTableCreate(const QueryContext& context, const Int32_t selectedDatabaseId){
         const auto tableHeader = (!this->database.Empty())
             ? CoreEngine::SystemCatalog::Get().SelectTable(
                 context.GetAllocator(),
@@ -457,7 +457,7 @@ namespace QueryPipeline::Statements {
         bool& primaryKeyFound,
         column_index_t& index
     ){
-        UnsignedSmallInt columnSize;
+        UInt16_t columnSize;
         std::ostringstream os;
 
         column->type._name.ToLowerInPlace();
@@ -670,7 +670,7 @@ namespace QueryPipeline::Statements {
                     return wildcardStatus;
 
                 // the wildcard was replaced by (newSize - oldSize + 1) bound columns, continue after them
-                i += static_cast<Int>(this->_projections.Size() - sizeBefore);
+                i += static_cast<Int32_t>(this->_projections.Size() - sizeBefore);
                 continue;
             }
 
@@ -695,7 +695,7 @@ namespace QueryPipeline::Statements {
         if (this->orderBy == nullptr)
             return Errors::CompilationStatus::Ok();
 
-        Dictionary<DataTypes::String, Int> aliasesDictionary;
+        Dictionary<DataTypes::String, Int32_t> aliasesDictionary;
         for (auto i = 0;i < this->_visibleProjectionCount; i++){
             const auto& projectionExprName = this->_projections[i]->name;
 
@@ -853,7 +853,7 @@ namespace QueryPipeline::Statements {
                 return joinResult;
         }
 
-        Dictionary<DataTypes::String, UnsignedSmallInt> aliasesDict;
+        Dictionary<DataTypes::String, UInt16_t> aliasesDict;
         return this->Compile(context, aliasesDict);
     }
 
@@ -969,7 +969,7 @@ namespace QueryPipeline::Statements {
         return context._compileContext.Allocate<LogicalUseDatabase>(context._session->sessionId, this->databaseId);
     }
 
-    Int InsertStatement::InsertDefaultValue(
+    Int32_t InsertStatement::InsertDefaultValue(
         const ::Memory::IAllocator* allocator,
         DataStructures::PolymorphicArray<Expressions::Expression*>& defaultExpressions,
         const CoreEngine::Catalog::ColumnHeader &header,
@@ -1049,8 +1049,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 columnName,
-                SQL_TYPES_NAMES[static_cast<Int>(columnType)],
-                SQL_TYPES_NAMES[static_cast<Int>(valueType)]
+                SQL_TYPES_NAMES[static_cast<Int32_t>(columnType)],
+                SQL_TYPES_NAMES[static_cast<Int32_t>(valueType)]
             )
         );
     }
@@ -1071,7 +1071,7 @@ namespace QueryPipeline::Statements {
                 context.GetAllocator()
             );
 
-        for (Int i = 0;i < this->selectStatement->_projections.Size();i++) {
+        for (Int32_t i = 0;i < this->selectStatement->_projections.Size();i++) {
             auto returnTypeStatus = this->ValidateReturnType(
                 context,
                 compilationScope,
@@ -1092,7 +1092,7 @@ namespace QueryPipeline::Statements {
         compilationScope._tableAliasesDict.Add(this->table->GetAlias(context), this->table->_tableId);
 
         for (auto& [insertColumns] : this->values) {
-            for (Int i = 0;i < insertColumns.Size(); i++) {
+            for (Int32_t i = 0;i < insertColumns.Size(); i++) {
                 auto& value = insertColumns[i];
 
                 auto expressionStatus = CompileNode(context, value, compilationScope);
@@ -1127,7 +1127,7 @@ namespace QueryPipeline::Statements {
       );
 
       const auto* allocator = context.GetAllocator();
-      const auto columnCount = static_cast<Int>(columnsDict.size());
+      const auto columnCount = static_cast<Int32_t>(columnsDict.size());
       DataStructures::PolymorphicArray<CoreEngine::StorageTypes::InsertSlot> insertSlots(
           allocator,
           columnCount
@@ -1153,8 +1153,8 @@ namespace QueryPipeline::Statements {
           );
 
       //validate insert columns existence
-      HashSet<Int> statementColumns;
-      for (Int i = 0;i < this->columns.Size(); i++){
+      HashSet<Int32_t> statementColumns;
+      for (Int32_t i = 0;i < this->columns.Size(); i++){
           const auto& column = this->columns[i];
           CoreEngine::Catalog::ColumnHeader header;
 
@@ -1315,8 +1315,8 @@ namespace QueryPipeline::Statements {
             Messages::CANNOT_UPDATE_COLUMN_WITH_DATATYPE(
                 context.GetAllocator(),
                 update->name.name,
-                SQL_TYPES_NAMES[static_cast<Int>(update->name.returnType)],
-                SQL_TYPES_NAMES[static_cast<Int>(valueType)]
+                SQL_TYPES_NAMES[static_cast<Int32_t>(update->name.returnType)],
+                SQL_TYPES_NAMES[static_cast<Int32_t>(valueType)]
             )
         );
     }
@@ -1816,7 +1816,7 @@ namespace QueryPipeline::Statements {
         CompilationScope& statementValidationScope
     ){
         if (!column.alias.Empty()) {
-            UnsignedSmallInt slotIndex;
+            UInt16_t slotIndex;
             if (!statementValidationScope._tableAliasesDict.TryGetValue(column.alias, slotIndex)) {
                 return Errors::CompilationStatus::Error(
                     Messages::INVALID_TABLE_ALIAS(
@@ -1831,7 +1831,7 @@ namespace QueryPipeline::Statements {
 
         bool columnExistsOnTable = false;
         CoreEngine::Catalog::ColumnHeader columnHeader;
-        for (Int slotIndex = 0;slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
+        for (Int32_t slotIndex = 0;slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
             const auto& columns = statementValidationScope._tableColumnsArray[slotIndex];
             const auto columnNameToLower = column.name.ToLower();
             if (!columns.TryGetValue(columnNameToLower, columnHeader))
@@ -1950,7 +1950,7 @@ namespace QueryPipeline::Statements {
         CoreEngine::Catalog::ColumnHeader columnHeader;
         bool columnExistsOnStatement = false;
 
-        for (Int slotIndex = 0; slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
+        for (Int32_t slotIndex = 0; slotIndex < statementValidationScope._tableColumnsArray.Size();slotIndex++){
             const auto& columns = statementValidationScope._tableColumnsArray[slotIndex];
             const auto columnAliasToLower = column->alias.ToLower();
             if (!columns.TryGetValue(columnAliasToLower, columnHeader))
@@ -2066,7 +2066,7 @@ namespace QueryPipeline::Statements {
         if (column->tableAlias.Empty()) {
             statement->_projections.erase(statement->_projections.begin() + *compilationScope._indexPos);
 
-            for (Int slotIndex = 0; slotIndex < compilationScope._tableColumnsArray.Size(); slotIndex++){
+            for (Int32_t slotIndex = 0; slotIndex < compilationScope._tableColumnsArray.Size(); slotIndex++){
                 const auto& columns = compilationScope._tableColumnsArray[slotIndex];
                 AssignColumnsFromWildCardExpression(
                     context,
@@ -2076,14 +2076,14 @@ namespace QueryPipeline::Statements {
                     statement->_projections,
                     slotIndex
                 );
-                *compilationScope._indexPos += static_cast<Int>(columns.size());
+                *compilationScope._indexPos += static_cast<Int32_t>(columns.size());
             }
 
             return Errors::CompilationStatus::Ok();
         }
 
         //else get only from the specified
-        UnsignedSmallInt slotIndex = 0;
+        UInt16_t slotIndex = 0;
         if (!column->tableAlias.Empty()
             && !compilationScope._tableAliasesDict.TryGetValue(column->tableAlias, slotIndex)
         ){
@@ -2115,9 +2115,9 @@ namespace QueryPipeline::Statements {
         const DataTypes::String& tableAlias,
         const CompilationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,
-        const UnsignedSmallInt slotIndex
+        const UInt16_t slotIndex
     ) {
-        results.Insert(nullptr, *statementValidationScope._indexPos, static_cast<Int>(columnsDict.size()));
+        results.Insert(nullptr, *statementValidationScope._indexPos, static_cast<Int32_t>(columnsDict.size()));
         for (const auto &header: columnsDict | std::views::values) {
             auto* columnExpression = context._compileContext.Allocate<Expressions::ColumnExpression>(
                 header.name,
@@ -2334,7 +2334,7 @@ namespace QueryPipeline::Statements {
         const Expressions::BranchExpression* node,
         Expressions::Expression *&slot
     ){
-        for (Int i = 0;i < node->branches.Size(); i++){
+        for (Int32_t i = 0;i < node->branches.Size(); i++){
             const auto* branch = node->branches[i];
             if (!branch->Is<Expressions::ConstantExpression>())
                 return Errors::CompilationStatus::Ok();
@@ -2400,7 +2400,7 @@ namespace QueryPipeline::Statements {
     }
 
     void AssignColumnIndicesToExpression(
-        const Dictionary<Int, column_index_t>& columnIndicesDictionary,
+        const Dictionary<Int32_t, column_index_t>& columnIndicesDictionary,
         Expressions::Expression *expression
     ){
         Expressions::ForEachColumnReference(expression, [&](Expressions::ColumnExpression* column){
@@ -2411,8 +2411,8 @@ namespace QueryPipeline::Statements {
     Errors::CompilationStatus ResolveOrderByExpression(
         const QueryContext& context,
         OrderColumn* column,
-        const Dictionary<DataTypes::String, Int>& aliasesDictionary,
-        const Int visibleProjectionCount
+        const Dictionary<DataTypes::String, Int32_t>& aliasesDictionary,
+        const Int32_t visibleProjectionCount
     ){
         auto* expression = column->expression;
         if (expression->Is<Expressions::ColumnExpression>()){
@@ -2489,7 +2489,7 @@ namespace QueryPipeline::Statements {
       return Errors::CompilationStatus::Error(
         Messages::CLAUSE_CANNOT_BE_EVALUATED_TO_BOOLEAN(
             context._compileContext.GetAllocator(),
-            SQL_TYPES_NAMES[static_cast<Int>(type)]
+            SQL_TYPES_NAMES[static_cast<Int32_t>(type)]
         )
       );
     }

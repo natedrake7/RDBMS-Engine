@@ -17,7 +17,7 @@ namespace CoreEngine::Pages{
             static constexpr auto TYPE = PageLayout::PageType::LOB_ROOT;
             static constexpr bool IS_SYSTEM = false;
 
-            static void Initialize(const Frame* frame, const UnsignedBigInt totalLength){
+            static void Initialize(const Frame* frame, const UInt64_t totalLength){
                 frame->Header()->_bytesLeft = 0;
                 auto* additionalHeader = reinterpret_cast<LobRootHeader*>(frame->_data + StorageLayout::PAGE_HEADER_SIZE);
 
@@ -34,23 +34,23 @@ namespace CoreEngine::Pages{
             LobRootView(LobRootView&&) noexcept = default;
             LobRootView& operator=(LobRootView&&) noexcept = default;
 
-            [[nodiscard]] UnsignedBigInt TotalLength() const{
+            [[nodiscard]] UInt64_t TotalLength() const{
                 return this->GetAdditionalHeader()->_totalLength;
             }
 
             // The root is created before the length is known, so the level must follow the final length
-            void SetTotalLength(const UnsignedBigInt totalLength) const{
+            void SetTotalLength(const UInt64_t totalLength) const{
                 auto* additionalHeader = this->GetAdditionalHeader();
                 additionalHeader->_totalLength = totalLength;
                 additionalHeader->_level = LobLayout::LevelFor(totalLength);
                 this->_frame->MarkDirty();
             }
 
-            [[nodiscard]] UnsignedInt ChildCount() const{
+            [[nodiscard]] UInt32_t ChildCount() const{
                 return this->GetAdditionalHeader()->_childCount;
             }
 
-            [[nodiscard]] UnsignedTinyInt Level()const{
+            [[nodiscard]] UInt8_t Level()const{
                 return this->GetAdditionalHeader()->_level;
             }
 
@@ -62,12 +62,12 @@ namespace CoreEngine::Pages{
                 return this->Payload();
             }
 
-            void WriteInline(UnsignedInt offset, const object_t* data, UnsignedInt size) const;
+            void WriteInline(UInt32_t offset, const object_t* data, UInt32_t size) const;
 
-            [[nodiscard]] page_id_t Child(UnsignedInt slot)const;
+            [[nodiscard]] page_id_t Child(UInt32_t slot)const;
             void AppendChild(page_id_t child) const;
 
-            void BulkAppendChildren(const page_id_t* children, UnsignedInt count) const;
+            void BulkAppendChildren(const page_id_t* children, UInt32_t count) const;
 
             [[nodiscard]] bool IsConsistent() const;
     };

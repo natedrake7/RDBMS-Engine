@@ -4,7 +4,7 @@
 
 namespace Expressions{
     struct BoundReference {
-        UnsignedSmallInt _childIndex;
+        UInt16_t _childIndex;
         column_index_t _position;
 
         BoundReference()

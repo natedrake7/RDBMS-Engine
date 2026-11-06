@@ -10,8 +10,8 @@ namespace CoreEngine::StorageTypes {
 }
 
 class QuickSort {
-        static int Partition(std::vector<MaterializedRow> &rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
+        static int Partition(std::vector<MaterializedRow> &rows, Int32_t low, Int32_t high, const std::vector<SortCondition>& sortConditions);
     public:
-        static void Sort(std::vector<MaterializedRow>& rows, Int low, Int high, const std::vector<SortCondition>& sortConditions);
+        static void Sort(std::vector<MaterializedRow>& rows, Int32_t low, Int32_t high, const std::vector<SortCondition>& sortConditions);
     
 };

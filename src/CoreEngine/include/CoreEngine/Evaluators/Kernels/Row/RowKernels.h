@@ -15,7 +15,7 @@ namespace CoreEngine::RowKernels{
     ){
         const auto* columnExpr = self->As<Expressions::ColumnExpression>();
         if constexpr (DataTypes::NonPrimitiveType<T>){
-            UnsignedSmallInt size = 0;
+            UInt16_t size = 0;
             auto* data = context._pages[columnExpr->_slotIndex].GetColumnAt(
                 context._rids[columnExpr->_slotIndex]._index,
                 columnExpr->ordinalPosition, size, outNull

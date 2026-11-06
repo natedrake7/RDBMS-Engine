@@ -5,7 +5,7 @@
 #include <Systemic/DataTypes/String.h>
 
 namespace Security {
-  enum class Permission : UnsignedInt {
+  enum class Permission : UInt32_t {
     NONE                  = 0,
     SELECT                = 1 << 0,
     INSERT                = 1 << 1,
@@ -23,28 +23,28 @@ namespace Security {
   // Bitwise AND
     inline constexpr Permission operator&(const Permission lhs, const Permission rhs) {
         return static_cast<Permission>(
-            static_cast<UnsignedInt>(lhs) & static_cast<UnsignedInt>(rhs)
+            static_cast<UInt32_t>(lhs) & static_cast<UInt32_t>(rhs)
         );
     }
 
     // Bitwise OR
     inline constexpr Permission operator|(const Permission lhs, const Permission rhs) {
         return static_cast<Permission>(
-            static_cast<UnsignedInt>(lhs) | static_cast<UnsignedInt>(rhs)
+            static_cast<UInt32_t>(lhs) | static_cast<UInt32_t>(rhs)
         );
     }
 
     // Bitwise XOR
     inline constexpr Permission operator^(const Permission lhs, const Permission rhs) {
         return static_cast<Permission>(
-            static_cast<UnsignedInt>(lhs) ^ static_cast<UnsignedInt>(rhs)
+            static_cast<UInt32_t>(lhs) ^ static_cast<UInt32_t>(rhs)
         );
     }
 
     // Bitwise NOT
     inline constexpr Permission operator~(const Permission lhs) {
         return static_cast<Permission>(
-            ~static_cast<UnsignedInt>(lhs)
+            ~static_cast<UInt32_t>(lhs)
         );
     }
 
@@ -67,7 +67,7 @@ namespace Security {
     }
 
     struct Role {
-        Int id;
+        Int32_t id;
 
         DataTypes::String name;
         Permission permission;
@@ -75,14 +75,14 @@ namespace Security {
         bool isSystem;
 
         Role(
-            const Int id,
+            const Int32_t id,
             const DataTypes::String& name,
             const Permission permission,
             const bool isSystem
         ): id(id), name(name), permission(permission), isSystem(isSystem) {}
 
         Role(
-            const Int id,
+            const Int32_t id,
             DataTypes::String& name,
             const Permission permission,
             const bool isSystem
@@ -103,8 +103,8 @@ namespace Security {
         DataTypes::String passwordHash;
         const Role* role;
 
-        Int id;
-        Int roleId;
+        Int32_t id;
+        Int32_t roleId;
 
         bool isActive;
 
@@ -116,10 +116,10 @@ namespace Security {
         }
 
         User(
-            const Int id,
+            const Int32_t id,
             const DataTypes::String& name,
             const DataTypes::String& passwordHash,
-            const Int roleId,
+            const Int32_t roleId,
             const Role* role,
             const bool isActive
         ):  name(name), passwordHash(passwordHash),
@@ -127,10 +127,10 @@ namespace Security {
             roleId(roleId), isActive(isActive) {}
 
         User(
-            const Int id,
+            const Int32_t id,
             DataTypes::String& name,
             DataTypes::String& passwordHash,
-            const Int roleId,
+            const Int32_t roleId,
             const Role* role,
             const bool isActive
         ) : name(std::move(name)), passwordHash(std::move(passwordHash)),

@@ -23,16 +23,16 @@ namespace Expressions {
         Cast = 9
     };
 
-    static inline constexpr Int EXPRESSION_TYPE_COUNT = Reflection::EnumCount<ExpressionType>;
+    static inline constexpr Int32_t EXPRESSION_TYPE_COUNT = Reflection::EnumCount<ExpressionType>;
 
     enum class LogicalType {
         And = 0,
         Or = 1,
         Not = 2
     };
-    static inline constexpr Int LOGICAL_TYPE_COUNT = Reflection::EnumCount<LogicalType>;
+    static inline constexpr Int32_t LOGICAL_TYPE_COUNT = Reflection::EnumCount<LogicalType>;
 
-    enum class BinaryOperator : UnsignedTinyInt{
+    enum class BinaryOperator : UInt8_t{
         Equal                  [[= DataTypes::Traits::Comparison{}]] = 0,
         NotEqual               [[= DataTypes::Traits::Comparison{}]] = 1,
         Greater                [[= DataTypes::Traits::Comparison{}]] = 2,
@@ -47,7 +47,7 @@ namespace Expressions {
         EqualIgnoreOrdinalCase [[= DataTypes::Traits::CaseInsensitiveComparison{}]] = 11
     };
 
-    static inline constexpr Int BINARY_OPERATORS_COUNT = Reflection::EnumCount<BinaryOperator>;
+    static inline constexpr Int32_t BINARY_OPERATORS_COUNT = Reflection::EnumCount<BinaryOperator>;
 
     struct DivideTag{};
     struct ModuloTag{};
@@ -119,8 +119,8 @@ namespace Expressions {
 
     struct FunctionInfo {
         DataTypes::StringView name;
-        Int minArgs;
-        Int maxArgs;
+        Int32_t minArgs;
+        Int32_t maxArgs;
         ExpectedTypesArray expectedTypes;
         DataType returnType;
         bool allowImplicitCast;
@@ -128,8 +128,8 @@ namespace Expressions {
 
         constexpr FunctionInfo(
             DataTypes::StringView&&  name,
-            const Int minArgs,
-            const Int maxArgs,
+            const Int32_t minArgs,
+            const Int32_t maxArgs,
             const ExpectedTypesArray& expectedTypes,
             const DataType returnType,
             const bool allowImplicitCast,

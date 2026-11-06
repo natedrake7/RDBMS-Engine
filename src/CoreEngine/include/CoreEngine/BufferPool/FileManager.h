@@ -15,7 +15,7 @@ namespace CoreEngine::Storage{
     class FileManager final {
         ::Storage::File _table[StorageLayout::MAX_BUFFER_POOL_SLOTS];
 
-        inline static constexpr Int DIRECTORY_SIZE = 512;
+        inline static constexpr Int32_t DIRECTORY_SIZE = 512;
 
         public:
             FileManager() = default;

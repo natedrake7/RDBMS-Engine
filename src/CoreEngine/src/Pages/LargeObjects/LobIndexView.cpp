@@ -8,7 +8,7 @@ namespace CoreEngine::Pages{
     LobIndexView::LobIndexView(Frame* framePtr)
         : PageView(framePtr){}
 
-    page_id_t LobIndexView::Child(const UnsignedInt slot) const{
+    page_id_t LobIndexView::Child(const UInt32_t slot) const{
         const auto* header = this->GetAdditionalHeader();
         assert(slot < header->_childCount);
         page_id_t value;
@@ -25,7 +25,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void LobIndexView::BulkAppendChildren(const page_id_t* children, const UnsignedInt count) const{
+    void LobIndexView::BulkAppendChildren(const page_id_t* children, const UInt32_t count) const{
         auto* header = this->GetAdditionalHeader();
 
         assert(header->_childCount + count <= LobLayout::INDEX_FANOUT);

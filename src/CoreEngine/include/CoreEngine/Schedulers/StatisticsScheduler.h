@@ -33,21 +33,21 @@ namespace CoreEngine {
         static inline std::mutex _mutex;
         static inline std::condition_variable _cv;
 
-        const Dictionary<Int, Database*>* databasesDictionary;
+        const Dictionary<Int32_t, Database*>* databasesDictionary;
         MultiThreading::Mutex* latch;
         SystemCatalog* catalog;
         StatisticsManager* statsManager;
 
         [[nodiscard]] std::vector<Database*> GetDatabases()const;
 
-        static Int EstimateRowsPerPage(Int totalRows, Int allocatedPagesPerExtent);
-        static Int EstimateAllocatedPagesPerExtent(Int allocatedPagesPerExtent, Int numberOfExtents);
+        static Int32_t EstimateRowsPerPage(Int32_t totalRows, Int32_t allocatedPagesPerExtent);
+        static Int32_t EstimateAllocatedPagesPerExtent(Int32_t allocatedPagesPerExtent, Int32_t numberOfExtents);
 
         static bool GenerateColumnHistograms(
-            const SortedDictionary<Value, BigInt, ValueComparator>& sortedValues,
+            const SortedDictionary<Value, Int64_t, ValueComparator>& sortedValues,
             DataStructures::PolymorphicArray<Catalog::ColumnHistograms>& histograms,
             const Catalog::ColumnStatistics& columnStatistics,
-            BigInt totalRows
+            Int64_t totalRows
         );
 
         void UpdateDatabaseStatistics(const Database* database)const;
@@ -58,7 +58,7 @@ namespace CoreEngine {
             Catalog::IndexStatistics& indexStatistics,
             Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
-            Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+            Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
         );
 
         static void UpdateHeapStatistics(
@@ -66,7 +66,7 @@ namespace CoreEngine {
             page_id_t allocationPageId,
             Catalog::TableStatistics& tableStatistics,
             DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
-            Dictionary<Int, SortedDictionary<Value, BigInt, ValueComparator>>& sortedValues
+            Dictionary<Int32_t, SortedDictionary<Value, Int64_t, ValueComparator>>& sortedValues
         );
 
         void UpdateCatalogStatistics(
@@ -74,7 +74,7 @@ namespace CoreEngine {
             const Catalog::TableStatistics& tableStatistics,
             const DataStructures::PolymorphicArray<Catalog::ColumnStatistics>& columnStatistics,
             const DataStructures::PolymorphicArray<Catalog::IndexStatistics>& indexStatistics,
-            const Dictionary<Int, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> &columnHistogramsDictionary
+            const Dictionary<Int32_t, DataStructures::PolymorphicArray<Catalog::ColumnHistograms>> &columnHistogramsDictionary
         )const;
 
         void UpdateCache(
@@ -84,18 +84,18 @@ namespace CoreEngine {
         )const;
 
         public:
-            StatisticsScheduler(const Dictionary<Int, Database*>& databasesDictionary, MultiThreading::Mutex& latch);
+            StatisticsScheduler(const Dictionary<Int32_t, Database*>& databasesDictionary, MultiThreading::Mutex& latch);
             void UpdateStatistics()const;
             static void Start(
                 const std::atomic<bool> &isServerRunning,
-                const Dictionary<Int, Database*> &databasesDictionary,
+                const Dictionary<Int32_t, Database*> &databasesDictionary,
                 MultiThreading::Mutex &latch
             );
             static void Stop();
             static void UpdateColumnStatistics(
                 Catalog::ColumnStatistics& columnStatistics,
                 const Value& value,
-                SortedDictionary<Value, BigInt, ValueComparator>& sortedValues
+                SortedDictionary<Value, Int64_t, ValueComparator>& sortedValues
             );
             static std::mutex& Mutex();
             static std::condition_variable& ConditionVariable();

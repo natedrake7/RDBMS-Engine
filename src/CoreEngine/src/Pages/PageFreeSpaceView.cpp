@@ -65,11 +65,11 @@ namespace CoreEngine::Pages{
         return this->IsPageAllocated(pageId) && this->GetPageType(pageId) == type;
     }
 
-    UnsignedInt PageFreeSpaceView::ExtentPagesOfType(const page_id_t firstPageId, const PageLayout::PageType type) const{
+    UInt32_t PageFreeSpaceView::ExtentPagesOfType(const page_id_t firstPageId, const PageLayout::PageType type) const{
         static_assert(StorageLayout::EXTENT_SIZE == 8);
         const auto bytes = _mm_loadl_epi64(reinterpret_cast<const __m128i*>(this->GetByte(firstPageId)));
         const auto masked = _mm_and_si128(bytes, _mm_set1_epi8(static_cast<char>(ALLOCATION_MASK | TYPE_MASK)));
         const auto wanted = _mm_set1_epi8(static_cast<char>(ALLOCATION_MASK | (std::to_underlying(type) << TYPE_SHIFT)));
-        return static_cast<UnsignedInt>(_mm_movemask_epi8(_mm_cmpeq_epi8(masked, wanted))) & 0xFFu;
+        return static_cast<UInt32_t>(_mm_movemask_epi8(_mm_cmpeq_epi8(masked, wanted))) & 0xFFu;
     }
 }

@@ -41,48 +41,48 @@ namespace QueryPipeline::Statements {
         DataTypes::String name;
         DataTypes::String alias;
 
-        Int tableId;
-        Int columnId;
-        UnsignedSmallInt _slotIndex;
+        Int32_t tableId;
+        Int32_t columnId;
+        UInt16_t _slotIndex;
         column_index_t ordinalPosition;
         DataType returnType;
     };
 
     struct CompilationScope {
-        Dictionary<DataTypes::String, UnsignedSmallInt> _tableAliasesDict;
+        Dictionary<DataTypes::String, UInt16_t> _tableAliasesDict;
         DataStructures::PolymorphicArray<Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>> _tableColumnsArray;
         int* _indexPos;
         Statement* _statement;
 
         explicit CompilationScope()
             : _indexPos(nullptr), _statement(nullptr){}
-        explicit CompilationScope(const ::Memory::IAllocator* allocator, UnsignedSmallInt numberOfTables);
+        explicit CompilationScope(const ::Memory::IAllocator* allocator, UInt16_t numberOfTables);
         explicit CompilationScope(
-            Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
+            Dictionary<DataTypes::String, UInt16_t>& tableAliasesDictionary,
             DataStructures::PolymorphicArray<Dictionary<DataTypes::String, CoreEngine::Catalog::ColumnHeader>>& tableColumnsArray,
             Statement* statement,
             int* indexPos = nullptr
         );
         explicit CompilationScope(
-            Dictionary<DataTypes::String, UnsignedSmallInt>& tableAliasesDictionary,
+            Dictionary<DataTypes::String, UInt16_t>& tableAliasesDictionary,
             Statement* statement,
             int* indexPos = nullptr
         );
     };
 
     struct DecimalType {
-        TinyInt precision;
-        TinyInt scale;
+        Int8_t precision;
+        Int8_t scale;
 
         DecimalType();
-        DecimalType(TinyInt precision, TinyInt scale);
+        DecimalType(Int8_t precision, Int8_t scale);
         [[nodiscard]] bool Validate() const;
     };
 
     struct Identity {
-        SmallInt seed;
-        SmallInt incrementFactor;
-        BigInt cacheBlock;
+        Int16_t seed;
+        Int16_t incrementFactor;
+        Int64_t cacheBlock;
 
         [[nodiscard]] Errors::CompilationStatus Validate(const QueryContext& context) const;
     };
@@ -103,7 +103,7 @@ namespace QueryPipeline::Statements {
 
     struct OrderColumn {
         Expressions::Expression* expression;
-        Int outputIndex;
+        Int32_t outputIndex;
         Constants::OrderType type;
 
         OrderColumn();
@@ -113,7 +113,7 @@ namespace QueryPipeline::Statements {
         ColumnName name;
         DataTypes::TypeInfo _typeInfo;
 
-        Int columnId;
+        Int32_t columnId;
         column_index_t index;
 
         AlterColumn();
@@ -122,7 +122,7 @@ namespace QueryPipeline::Statements {
     struct DropColumn {
         ColumnName name;
 
-        Int columnId;
+        Int32_t columnId;
         column_index_t index;
     };
 
@@ -131,7 +131,7 @@ namespace QueryPipeline::Statements {
         ColumnName newName;
 
         column_index_t ordinalPosition;
-        Int columnId;
+        Int32_t columnId;
     };
 
     struct PrimaryKeyConstraint {
@@ -162,21 +162,21 @@ namespace QueryPipeline::Statements {
         DataTypes::String name;
         DataTypes::String alias;
 
-        Int _databaseId;
-        Int _tableId;
-        Int _schemaId;
-        UnsignedSmallInt _ordinalPosition;
-        UnsignedSmallInt _slotIndex;
+        Int32_t _databaseId;
+        Int32_t _tableId;
+        Int32_t _schemaId;
+        UInt16_t _ordinalPosition;
+        UInt16_t _slotIndex;
 
         explicit DataSource(const ::Memory::IAllocator* allocator);
         [[nodiscard]] DataTypes::String GetAlias(const QueryContext& context) const;
         [[nodiscard]] DataTypes::String GetFullName(const QueryContext& context) const;
         [[nodiscard]] Errors::CompilationStatus Compile(
             const QueryContext& context,
-            Int databaseId,
-            UnsignedSmallInt& outSlotCount
+            Int32_t databaseId,
+            UInt16_t& outSlotCount
         );
-        [[nodiscard]] Errors::CompilationStatus ValidateTableCreate(const QueryContext& context, Int selectedDatabaseId);
+        [[nodiscard]] Errors::CompilationStatus ValidateTableCreate(const QueryContext& context, Int32_t selectedDatabaseId);
     };
 
     struct Inserts {
@@ -185,8 +185,8 @@ namespace QueryPipeline::Statements {
 
     struct Statement {
         DataSource* table;
-        Int databaseId;
-        UnsignedSmallInt _slotCount;
+        Int32_t databaseId;
+        UInt16_t _slotCount;
 
         Statement();
         virtual ~Statement() = default;
@@ -256,7 +256,7 @@ namespace QueryPipeline::Statements {
 
         JoinStatement();
         [[nodiscard]] Errors::CompilationStatus CompileDerived(QueryContext& context) override;
-        [[nodiscard]] Errors::CompilationStatus Compile(const QueryContext& context, Int databaseId, UnsignedSmallInt& slotCount);
+        [[nodiscard]] Errors::CompilationStatus Compile(const QueryContext& context, Int32_t databaseId, UInt16_t& slotCount);
 
         [[nodiscard]] bool IsRightJoin() const;
         [[nodiscard]] bool IsInnerJoin() const;
@@ -292,8 +292,8 @@ namespace QueryPipeline::Statements {
         DataStructures::PolymorphicArray<JoinStatement*> _joins;
         OrderByStatement* orderBy;
         WhereClause where;
-        BigInt top;
-        UnsignedSmallInt _visibleProjectionCount;
+        Int64_t top;
+        UInt16_t _visibleProjectionCount;
         bool distinct;
 
         explicit SelectStatement(const ::Memory::IAllocator* allocator);
@@ -359,7 +359,7 @@ namespace QueryPipeline::Statements {
 
         SelectStatement* selectStatement;
 
-        [[nodiscard]] static Int InsertDefaultValue(
+        [[nodiscard]] static Int32_t InsertDefaultValue(
             const ::Memory::IAllocator* allocator,
             DataStructures::PolymorphicArray<Expressions::Expression*>& defaultExpressions,
             const CoreEngine::Catalog::ColumnHeader& header,
@@ -549,7 +549,7 @@ namespace QueryPipeline::Statements {
         const DataTypes::String& tableAlias,
         const CompilationScope& statementValidationScope,
         DataStructures::PolymorphicArray<Expressions::Expression*>& results,
-        UnsignedSmallInt slotIndex
+        UInt16_t slotIndex
     );
 
     /** @} End of Expression Compilation Functions */
@@ -679,7 +679,7 @@ namespace QueryPipeline::Statements {
      */
 
     static void AssignColumnIndicesToExpression(
-        const Dictionary<Int, column_index_t>& columnIndicesDictionary,
+        const Dictionary<Int32_t, column_index_t>& columnIndicesDictionary,
         Expressions::Expression* expression
     );
 
@@ -694,8 +694,8 @@ namespace QueryPipeline::Statements {
     static Errors::CompilationStatus ResolveOrderByExpression(
         const QueryContext& context,
         OrderColumn* column,
-        const Dictionary<DataTypes::String, Int>& aliasesDictionary,
-        Int visibleProjectionCount
+        const Dictionary<DataTypes::String, Int32_t>& aliasesDictionary,
+        Int32_t visibleProjectionCount
     );
 
     /** @} End of Post Projection Alias Resolvement Functions */

@@ -7,9 +7,9 @@ namespace CoreEngine::Pages{
         static constexpr byte_t TYPE_MASK = 0x78;  // bits 3-6     (0111 1000)
         static constexpr byte_t SIZE_MASK = 0x07;  // bits 0-2     (0000 0111)
 
-        static constexpr Int ALLOCATION_SHIFT = 7;
-        static constexpr Int TYPE_SHIFT = 3;
-        static constexpr Int SIZE_SHIFT = 0;
+        static constexpr Int32_t ALLOCATION_SHIFT = 7;
+        static constexpr Int32_t TYPE_SHIFT = 3;
+        static constexpr Int32_t SIZE_SHIFT = 0;
 
         static constexpr byte_t TYPE_VALUE_MASK = TYPE_MASK >> TYPE_SHIFT;  // 0x0F, low-aligned
 
@@ -22,10 +22,10 @@ namespace CoreEngine::Pages{
             static constexpr auto TYPE = PageLayout::PageType::FREE_SPACE;
             static constexpr bool IS_SYSTEM = true;
 
-            [[nodiscard]] static constexpr byte_t FreeSpaceCategory(const UnsignedInt freeBytes){
+            [[nodiscard]] static constexpr byte_t FreeSpaceCategory(const UInt32_t freeBytes){
                 return static_cast<byte_t>(freeBytes * 7 / StorageLayout::PAGE_SIZE);
             }
-            [[nodiscard]] static constexpr byte_t RequiredCategory(const UnsignedInt bytes){
+            [[nodiscard]] static constexpr byte_t RequiredCategory(const UInt32_t bytes){
                 return static_cast<byte_t>((bytes * 7 + StorageLayout::PAGE_SIZE - 1) / StorageLayout::PAGE_SIZE);
             }
 
@@ -48,7 +48,7 @@ namespace CoreEngine::Pages{
 
             [[nodiscard]] bool IsAllocatedAs(page_id_t pageId, PageLayout::PageType type) const;
 
-            [[nodiscard]] UnsignedInt ExtentPagesOfType(page_id_t firstPageId, PageLayout::PageType type) const;
+            [[nodiscard]] UInt32_t ExtentPagesOfType(page_id_t firstPageId, PageLayout::PageType type) const;
 
             [[nodiscard]] static byte_t inline constexpr ObjectSizeToCategory(const row_size_t size){
                 // Direct mapping to 7levels (0-7)

@@ -34,7 +34,7 @@ namespace Serialization{
     static constexpr char JSON_NULL_START    = 'n';
     static constexpr char JSON_NULL_CHAR     = '\0';
 
-    enum class JsonType : UnsignedTinyInt{
+    enum class JsonType : UInt8_t{
         Null = 0,
         Bool = 1,
         Number = 2,
@@ -79,7 +79,7 @@ namespace Serialization{
         explicit JsonValue(JsonString&& value);
         explicit JsonValue(
             const ::Memory::IAllocator* allocator,
-            const object_t* data, Int size,
+            const object_t* data, Int32_t size,
             JsonType type
         );
 
@@ -96,14 +96,14 @@ namespace Serialization{
         [[nodiscard]] bool IsArray()  const { return this->_type == JsonType::Array; }
         [[nodiscard]] bool IsObject() const { return this->_type == JsonType::Object; }
 
-        [[nodiscard]] Int Size() const;
+        [[nodiscard]] Int32_t Size() const;
         [[nodiscard]] const void* Data() const;
     };
 
     class JsonParser{
         const ::Memory::IAllocator* _allocator;
         DataTypes::StringView _src;
-        Int _pos;
+        Int32_t _pos;
 
         void SkipWhitespace();
         void SkipComment();

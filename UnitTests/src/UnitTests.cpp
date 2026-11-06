@@ -49,7 +49,7 @@ namespace Tests{
 
         constexpr auto strSum2 = sum2.ToBufferString();
 
-        constexpr Int roundSum2 = sum2.ToInt<Int>();
+        constexpr Int32_t roundSum2 = sum2.ToInt<Int32_t>();
 
         std::cout << sum2 << std::endl;
 

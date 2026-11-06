@@ -8,7 +8,7 @@ namespace Serialization{
 }
 
 namespace DataTypes{
-    enum class JsonAccessorType: UnsignedTinyInt{
+    enum class JsonAccessorType: UInt8_t{
         Json = 0,
         Scalar = 1
     };

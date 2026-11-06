@@ -47,7 +47,7 @@ namespace CoreEngine::StorageTypes{
         const ExecutionContext& context,
         const SelectionVector* sv,
         DataVector* __restrict__ _vector,
-        const UnsignedSmallInt slotIndex,
+        const UInt16_t slotIndex,
         const column_index_t ordinalPosition
     ){
         const auto isIdentity = sv->isIdentity;
@@ -78,7 +78,7 @@ namespace CoreEngine::StorageTypes{
 
         bool outNull = false;
         if (isIdentity){
-            for (Int index = 0;index < sv->selectedRidsCount; index++){
+            for (Int32_t index = 0;index < sv->selectedRidsCount; index++){
                 const auto rid = rids[index];
                 const auto source = rid.GetSource();
 
@@ -104,15 +104,15 @@ namespace CoreEngine::StorageTypes{
     void Table::DecodeVariableColumn(
         const ::Memory::IAllocator* allocator,
         const object_t* const* __restrict__ rows,
-        const Int count,
+        const Int32_t count,
         DataVector* __restrict__ out,
-        const UnsignedInt start,
+        const UInt32_t start,
         const column_index_t ordinal
     ) const{
         const auto entryOffset = sizeof(RowHeader) + ordinal * sizeof(RowEntry);
 
         auto* __restrict__ values = out->DataAs<T>() + start;
-        for (Int i = 0;i < count; i++){
+        for (Int32_t i = 0;i < count; i++){
             const auto* row = rows[i];
 
             RowEntry entry;

@@ -9,8 +9,8 @@ namespace CoreEngine::Pages{
             + StorageLayout::PAGE_HEADER_SIZE;
     }
 
-    object_t* HeaderPageView::GetTableHeaderData(const UnsignedInt ordinal) const{
-        static constexpr UnsignedInt MAX_TABLES =
+    object_t* HeaderPageView::GetTableHeaderData(const UInt32_t ordinal) const{
+        static constexpr UInt32_t MAX_TABLES =
             (StorageLayout::PAGE_SIZE - StorageLayout::PAGE_HEADER_SIZE - sizeof(DatabaseHeader)) / sizeof(StorageTypes::TableHeader);
 
         if (ordinal >= MAX_TABLES)
@@ -31,7 +31,7 @@ namespace CoreEngine::Pages{
         return header;
     }
 
-    const StorageTypes::TableHeader* HeaderPageView::GetTableHeaderPtr(const Int ordinalPosition) const{
+    const StorageTypes::TableHeader* HeaderPageView::GetTableHeaderPtr(const Int32_t ordinalPosition) const{
         return reinterpret_cast<const StorageTypes::TableHeader*>(
             this->GetTableHeaderData(ordinalPosition)
         );
@@ -42,7 +42,7 @@ namespace CoreEngine::Pages{
         this->_frame->MarkDirty();
     }
 
-    void HeaderPageView::SetTableHeader(const StorageTypes::TableHeader& header, const SmallInt ordinalPosition) const{
+    void HeaderPageView::SetTableHeader(const StorageTypes::TableHeader& header, const Int16_t ordinalPosition) const{
         auto* dataOffset = this->GetTableHeaderData(ordinalPosition);
         std::memcpy(dataOffset, &header, sizeof(StorageTypes::TableHeader));
         this->_frame->MarkDirty();

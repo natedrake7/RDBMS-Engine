@@ -14,7 +14,7 @@ namespace CoreEngine::StorageTypes{
     template<typename T>
     concept VariableSlot = requires(const T& value){
             { value.Data() } -> std::convertible_to<const object_t*>;
-            { value.Size() } -> std::convertible_to<Int>;
+            { value.Size() } -> std::convertible_to<Int32_t>;
     };
 
     template<typename T>
@@ -36,22 +36,22 @@ namespace CoreEngine::StorageTypes{
     }
 
     template<typename Body>
-    static void ForEachRow(const DataVector* __restrict__ vector, const UnsignedInt rowCount, Body&& body){
+    static void ForEachRow(const DataVector* __restrict__ vector, const UInt32_t rowCount, Body&& body){
         switch (vector->_kind) {
         case DataVectorKind::Flat:{
-            for (UnsignedInt i = 0; i < rowCount; i++)
+            for (UInt32_t i = 0; i < rowCount; i++)
                 body(vector, i);
             return;
         }
         case DataVectorKind::Constant:{
             return;
-            for (UnsignedInt i = 0; i < rowCount; i++)
+            for (UInt32_t i = 0; i < rowCount; i++)
                 body(vector, 0u);
             return;
         }
         case DataVectorKind::Dictionary:
             const auto* __restrict__ selection = vector->_selection;
-            for (UnsignedInt i = 0; i < rowCount; i++)
+            for (UInt32_t i = 0; i < rowCount; i++)
                 body(vector, *(selection + i));
             return;
         }

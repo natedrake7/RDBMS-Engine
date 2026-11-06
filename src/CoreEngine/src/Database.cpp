@@ -137,7 +137,7 @@ namespace CoreEngine{
     Database::Database(
         const ::Memory::IAllocator* allocator,
         const Accessors::PageAccessor pageAccessor,
-        const Int databaseId,
+        const Int32_t databaseId,
         const DataTypes::StringView& dbName
     ): _id(databaseId), _nextOrdinal(0), _pageAccessor(pageAccessor){
         DataTypes::String file,sysFile;
@@ -229,7 +229,7 @@ namespace CoreEngine{
     }
 
     StorageTypes::Table * Database::OpenTableByOrdinal(const table_id_t tableId) const{
-        for (Int i  = 0;i < this->_tables.Size(); i++){
+        for (Int32_t i  = 0;i < this->_tables.Size(); i++){
             const auto& entry = this->_tables[i];
             if (entry._table->GetOrdinalPosition() == tableId)
                 return entry._table;
@@ -349,7 +349,7 @@ namespace CoreEngine{
     StorageTypes::ExtentReservation Database::ReserveExtents(
         const ::Memory::IAllocator* allocator,
         const StorageTypes::Table* table,
-        const Int requiredPages
+        const Int32_t requiredPages
     ){
         const auto extentsToAllocate =  StorageLayout::ExtentsToAllocate(requiredPages);
 
@@ -366,7 +366,7 @@ namespace CoreEngine{
 
             // Handle GAM page overflow - allocate extents across multiple GAM pages if needed
             bool newAllocationPageRequired = currentAllocationPageId == INVALID_PAGE_ID;
-            UnsignedInt remainingExtents = extentsToAllocate + newAllocationPageRequired;
+            UInt32_t remainingExtents = extentsToAllocate + newAllocationPageRequired;
 
             auto recounted = false;
             while (remainingExtents > 0) {
@@ -455,7 +455,7 @@ namespace CoreEngine{
             table->UpdateSystemCatalog(allocator);
     }
 
-    UnsignedSmallInt Database::ReserveOrdinalNoLock(){
+    UInt16_t Database::ReserveOrdinalNoLock(){
         return this->_nextOrdinal++;
     }
 

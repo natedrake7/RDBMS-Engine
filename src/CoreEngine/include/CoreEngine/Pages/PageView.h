@@ -28,7 +28,7 @@ namespace CoreEngine::Pages{
 
     struct PageHeader{
         log_sequence_number_t _lsn;
-        UnsignedInt _checkSum;
+        UInt32_t _checkSum;
 
         page_id_t _pageId;
         page_size_t _size: 12;
@@ -58,16 +58,16 @@ namespace CoreEngine::Pages{
 
         // Every change to bytesLeft goes through these two: page_size_t is unsigned, so an overdraw would
         // silently wrap around and make a full page look empty
-        void ConsumeBytesNoLock(const UnsignedInt bytes){
+        void ConsumeBytesNoLock(const UInt32_t bytes){
             assert(bytes <= this->_bytesLeft && "PageHeader::ConsumeBytes: not enough free space in the page");
             this->_bytesLeft = static_cast<page_size_t>(this->_bytesLeft - bytes);
         }
 
-        void FragmentBytesNoLock(const UnsignedInt bytes){
+        void FragmentBytesNoLock(const UInt32_t bytes){
             this->_fragmentedBytes = static_cast<page_size_t>(this->_fragmentedBytes + bytes);
         }
 
-        [[nodiscard]] UnsignedInt TotalFreeBytesNoLock() const{
+        [[nodiscard]] UInt32_t TotalFreeBytesNoLock() const{
             return this->_bytesLeft + this->_fragmentedBytes;
         }
 
@@ -80,7 +80,7 @@ namespace CoreEngine::Pages{
     class PageView{
     protected:
         Frame* _frame;
-        UnsignedSmallInt initialOffset;
+        UInt16_t initialOffset;
 
         void SetPageId(const page_id_t pageId) const{
             this->_frame->Header()->_pageId = pageId;
@@ -93,22 +93,22 @@ namespace CoreEngine::Pages{
                 - headerPtr->_size * PageLayout::SLOT_DIRECTORY_SIZE;
         }
 
-        [[nodiscard]] inline static constexpr Int SlotDirectoryOffSet(const Int indexPosition){
-            return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + 1) * PageLayout::SLOT_DIRECTORY_SIZE;
+        [[nodiscard]] inline static constexpr Int32_t SlotDirectoryOffSet(const Int32_t indexPosition){
+            return static_cast<Int32_t>(StorageLayout::PAGE_SIZE) - (indexPosition + 1) * PageLayout::SLOT_DIRECTORY_SIZE;
         }
 
-        [[nodiscard]] inline static constexpr Int SlotDirectoriesToMoveOffSet(const Int indexPosition, const Int slotToMove){
-            return static_cast<Int>(StorageLayout::PAGE_SIZE) - (indexPosition + slotToMove) * PageLayout::SLOT_DIRECTORY_SIZE;
+        [[nodiscard]] inline static constexpr Int32_t SlotDirectoriesToMoveOffSet(const Int32_t indexPosition, const Int32_t slotToMove){
+            return static_cast<Int32_t>(StorageLayout::PAGE_SIZE) - (indexPosition + slotToMove) * PageLayout::SLOT_DIRECTORY_SIZE;
         }
 
-        [[nodiscard]] inline bool IndexOutOfBounds(const Int indexPosition) const{
+        [[nodiscard]] inline bool IndexOutOfBounds(const Int32_t indexPosition) const{
             return indexPosition >= this->_frame->Header()->_size;
         }
 
-        void UpdateSlotDirectory(SlotDirectory slotDirectory, Int indexPosition)const;
+        void UpdateSlotDirectory(SlotDirectory slotDirectory, Int32_t indexPosition)const;
 
         void AdjustSlotDirectories(
-            Int indexPosition,
+            Int32_t indexPosition,
             page_offset_t offset,
             row_size_t rowSize,
             key_size_t keySize
@@ -118,7 +118,7 @@ namespace CoreEngine::Pages{
             return this->_frame->Header()->Type() == PageLayout::PageType::INDEXED;
         }
 
-        [[nodiscard]] inline Int RawDataSize()const{
+        [[nodiscard]] inline Int32_t RawDataSize()const{
             return this->IsIndexPage()
                        ? StorageLayout::INDEX_PAGE_DEFAULT_SIZE
                        : StorageLayout::PAGE_SIZE_WITHOUT_HEADER;
@@ -153,7 +153,7 @@ namespace CoreEngine::Pages{
             throw std::runtime_error("PageView::Insert: Row does not fit in page");
         }
 
-        inline static void CheckRowFits(const PageHeader* header, const UnsignedSmallInt size){
+        inline static void CheckRowFits(const PageHeader* header, const UInt16_t size){
             if (size + PageLayout::SLOT_DIRECTORY_SIZE > header->_bytesLeft) [[unlikely]]
                 ThrowRowDoesNotFit();
         }
@@ -179,25 +179,25 @@ namespace CoreEngine::Pages{
 
         [[nodiscard]] PageHeader* GetHeader()const;
 
-        [[nodiscard]] const StorageTypes::RowHeader* PeekRowHeader(Int indexPosition)const;
+        [[nodiscard]] const StorageTypes::RowHeader* PeekRowHeader(Int32_t indexPosition)const;
 
-        [[nodiscard]] SlotDirectory GetSlotDirectory(Int indexPosition) const;
+        [[nodiscard]] SlotDirectory GetSlotDirectory(Int32_t indexPosition) const;
         void InsertNewSlot(SlotDirectory slotDirectory) const;
 
         void Defragment(const ::Memory::IAllocator* allocator) const;
-        void Truncate(Int size) const;
+        void Truncate(Int32_t size) const;
 
         void DistributeFromPage(
             const ::Memory::IAllocator* allocator,
             const PageView* donorPage,
-            Int slotToMoveFrom,
-            Int donorNewSize
+            Int32_t slotToMoveFrom,
+            Int32_t donorNewSize
         ) const;
 
-        [[nodiscard]] bool EnsureContiguousSpace(const ::Memory::IAllocator* allocator, UnsignedInt bytes)const;
+        [[nodiscard]] bool EnsureContiguousSpace(const ::Memory::IAllocator* allocator, UInt32_t bytes)const;
 
-        [[nodiscard]] Int InsertRow(const StorageTypes::SerializedRow& payload) const;
-        void InsertRow(const StorageTypes::SerializedRow& payload, Int indexPosition) const;
+        [[nodiscard]] Int32_t InsertRow(const StorageTypes::SerializedRow& payload) const;
+        void InsertRow(const StorageTypes::SerializedRow& payload, Int32_t indexPosition) const;
 
         [[nodiscard]]
         bool UpdateRow(
@@ -206,25 +206,25 @@ namespace CoreEngine::Pages{
             page_offset_t indexPosition
         ) const;
         void SetForwardPointer(
-            Int indexPosition,
+            Int32_t indexPosition,
             const StorageTypes::RID* rid
         ) const;
 
         [[nodiscard]]
         bool ResolveRID(
             const Snapshot& snapshot,
-            Int indexPosition,
+            Int32_t indexPosition,
             StorageTypes::RID* outRID
         ) const;
 
         MaterializedRow MaterializeRow(
             const ::Memory::IAllocator* allocator,
             const StorageTypes::Table* tablePtr,
-            Int indexPosition
+            Int32_t indexPosition
         ) const;
 
-        void MarkDead(Int indexPosition)const;
-        void RemoveSlot(Int indexPosition) const;
+        void MarkDead(Int32_t indexPosition)const;
+        void RemoveSlot(Int32_t indexPosition) const;
 
         [[nodiscard]] page_id_t PageId()const{
             return this->_frame->Header()->_pageId;
@@ -257,31 +257,31 @@ namespace CoreEngine::Pages{
         template<typename T>
         [[nodiscard]] T GetColumnAt(
             const ::Memory::IAllocator* allocator,
-            Int index,
-            Int columnIndex,
+            Int32_t index,
+            Int32_t columnIndex,
             bool* outNull
         )const;
 
-        [[nodiscard]] const object_t* GetColumnAt(Int rowIndex, Int columnIndex) const;
+        [[nodiscard]] const object_t* GetColumnAt(Int32_t rowIndex, Int32_t columnIndex) const;
 
         // Same as the above, but also reports the stored byte length (rowEntry.Size()).
         // Required for variable-length columns (Decimal/String/Json). Returns nullptr
         // and outSize == 0 when the column value is NULL.
         const object_t* GetColumnAt(
-            Int rowIndex,
-            Int columnIndex,
-            UnsignedSmallInt& outSize,
+            Int32_t rowIndex,
+            Int32_t columnIndex,
+            UInt16_t& outSize,
             bool* outNull
         ) const;
 
-        [[nodiscard]] RawRowReference RawRowData(Int indexPosition) const;
+        [[nodiscard]] RawRowReference RawRowData(Int32_t indexPosition) const;
 
-        [[nodiscard]] bool IsRowVisible(const Snapshot& snapshot, Int indexPosition) const;
+        [[nodiscard]] bool IsRowVisible(const Snapshot& snapshot, Int32_t indexPosition) const;
 
         [[nodiscard]]
         bool RetrieveVisibleRow(
             const Snapshot& snapshot,
-            Int indexPosition,
+            Int32_t indexPosition,
             StorageTypes::RID* outRID
         )const;
 

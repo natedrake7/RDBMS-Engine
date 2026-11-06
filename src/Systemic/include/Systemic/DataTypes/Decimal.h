@@ -9,31 +9,31 @@
 namespace DataTypes {
     class StringView;
 
-    enum class DecimalRoundingMode : UnsignedTinyInt{
+    enum class DecimalRoundingMode : UInt8_t{
         Truncate = 0,
         HalfUp = 1,
         HalfEven = 2
     };
 
-    enum class DecimalStatus : UnsignedTinyInt{
+    enum class DecimalStatus : UInt8_t{
         Ok = 0,
         Overflow = 1,
         DivideByZero = 2,
         InvalidFormat = 3
     };
 
-    inline constexpr Int DECIMAL_MINIMUM_DIVISION_SCALE = 6;
-    inline constexpr Int DECIMAL_STRING_SIZE = MAX_DECIMAL_PRECISION + 3;   // sign + leading zero + '.' + digits
-    inline constexpr Int DECIMAL_KEY_SIZE = 16;
+    inline constexpr Int32_t DECIMAL_MINIMUM_DIVISION_SCALE = 6;
+    inline constexpr Int32_t DECIMAL_STRING_SIZE = MAX_DECIMAL_PRECISION + 3;   // sign + leading zero + '.' + digits
+    inline constexpr Int32_t DECIMAL_KEY_SIZE = 16;
 
     struct DecimalType{
-        UnsignedTinyInt _precision;
-        UnsignedTinyInt _scale;
+        UInt8_t _precision;
+        UInt8_t _scale;
 
         constexpr DecimalType()
             : _precision(0), _scale(0){}
-        constexpr explicit DecimalType(const Int precision, const Int scale)
-            : _precision(static_cast<UnsignedTinyInt>(precision)), _scale(static_cast<UnsignedTinyInt>(scale)){}
+        constexpr explicit DecimalType(const Int32_t precision, const Int32_t scale)
+            : _precision(static_cast<UInt8_t>(precision)), _scale(static_cast<UInt8_t>(scale)){}
 
         [[nodiscard]] friend constexpr bool operator==(const DecimalType&, const DecimalType&) = default;
 
@@ -43,15 +43,15 @@ namespace DataTypes {
             && this->_scale <= this->_precision;
         }
 
-        [[nodiscard]] static constexpr Int IntegerDigits(const Int precision, const Int scale){
+        [[nodiscard]] static constexpr Int32_t IntegerDigits(const Int32_t precision, const Int32_t scale){
             return precision - scale;
         }
 
-        [[nodiscard]] constexpr Int IntegerDigits()const{
+        [[nodiscard]] constexpr Int32_t IntegerDigits()const{
             return this->_precision - this->_scale;
         }
 
-        [[nodiscard]] static constexpr DecimalType Capped(const Int precision, const Int scale){
+        [[nodiscard]] static constexpr DecimalType Capped(const Int32_t precision, const Int32_t scale){
             if (precision < MAX_DECIMAL_PRECISION)
                 return DecimalType(precision, scale);
 
@@ -74,7 +74,7 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr DecimalType ForDivide(const DecimalType lhs, const DecimalType rhs){
-            const Int scale = Math::Max(DECIMAL_MINIMUM_DIVISION_SCALE, lhs._scale + rhs._precision + 1);
+            const Int32_t scale = Math::Max(DECIMAL_MINIMUM_DIVISION_SCALE, lhs._scale + rhs._precision + 1);
             return Capped(lhs.IntegerDigits() + rhs._scale + scale, scale);
         }
 
@@ -102,24 +102,24 @@ namespace DataTypes {
     namespace DecimalDetail
     {
         inline constexpr auto POW10 = []{
-            std::array<UnsignedHugeInt, MAX_DECIMAL_PRECISION + 1> table{};
+            std::array<UInt128_t, MAX_DECIMAL_PRECISION + 1> table{};
             table[0] = 1;
-            for (Int i = 1; i <= MAX_DECIMAL_PRECISION; i++)
+            for (Int32_t i = 1; i <= MAX_DECIMAL_PRECISION; i++)
                 table[i] = table[i - 1] * 10;
             return table;
         }();
 
-        inline constexpr Int WIDE_STEP_DIGITS = 19;
+        inline constexpr Int32_t WIDE_STEP_DIGITS = 19;
 
-        inline constexpr UnsignedHugeInt MAX_MAGNITUDE = POW10[MAX_DECIMAL_PRECISION] - 1;
+        inline constexpr UInt128_t MAX_MAGNITUDE = POW10[MAX_DECIMAL_PRECISION] - 1;
 
         struct Wide{
-            UnsignedBigInt _limbs[4]{};
+            UInt64_t _limbs[4]{};
 
-            [[nodiscard]] static constexpr Wide From(const UnsignedHugeInt value){
+            [[nodiscard]] static constexpr Wide From(const UInt128_t value){
                 Wide wide;
-                wide._limbs[0] = static_cast<UnsignedBigInt>(value);
-                wide._limbs[1] = static_cast<UnsignedBigInt>(value >> 64);
+                wide._limbs[0] = static_cast<UInt64_t>(value);
+                wide._limbs[1] = static_cast<UInt64_t>(value >> 64);
                 return wide;
             }
 
@@ -131,66 +131,66 @@ namespace DataTypes {
                 return (this->_limbs[0] & 1) != 0;
             }
 
-            [[nodiscard]] constexpr UnsignedHugeInt LowHugeInt() const{
-                return (static_cast<UnsignedHugeInt>(this->_limbs[1]) << 64) | this->_limbs[0];
+            [[nodiscard]] constexpr UInt128_t LowHugeInt() const{
+                return (static_cast<UInt128_t>(this->_limbs[1]) << 64) | this->_limbs[0];
             }
 
-            [[nodiscard]] static constexpr Wide Multiply(const UnsignedHugeInt left, const UnsignedHugeInt right){
-                const UnsignedBigInt leftLimbs[2] = {
-                    static_cast<UnsignedBigInt>(left),
-                    static_cast<UnsignedBigInt>(left >> 64)
+            [[nodiscard]] static constexpr Wide Multiply(const UInt128_t left, const UInt128_t right){
+                const UInt64_t leftLimbs[2] = {
+                    static_cast<UInt64_t>(left),
+                    static_cast<UInt64_t>(left >> 64)
                 };
 
-                const UnsignedBigInt rightLimbs[2] = {
-                    static_cast<UnsignedBigInt>(right),
-                    static_cast<UnsignedBigInt>(right >> 64)
+                const UInt64_t rightLimbs[2] = {
+                    static_cast<UInt64_t>(right),
+                    static_cast<UInt64_t>(right >> 64)
                 };
 
                 Wide result;
-                for (Int i = 0; i < 2; i++){
-                    UnsignedHugeInt carry = 0;
-                    for (Int j = 0; j < 2; j++){
-                        carry += static_cast<UnsignedHugeInt>(leftLimbs[i]) * rightLimbs[j] + result._limbs[i + j];
-                        result._limbs[i + j] = static_cast<UnsignedBigInt>(carry);
+                for (Int32_t i = 0; i < 2; i++){
+                    UInt128_t carry = 0;
+                    for (Int32_t j = 0; j < 2; j++){
+                        carry += static_cast<UInt128_t>(leftLimbs[i]) * rightLimbs[j] + result._limbs[i + j];
+                        result._limbs[i + j] = static_cast<UInt64_t>(carry);
                         carry >>= 64;
                     }
-                    result._limbs[i + 2] = static_cast<UnsignedBigInt>(carry);
+                    result._limbs[i + 2] = static_cast<UInt64_t>(carry);
                 }
                 return result;
             }
 
-            [[nodiscard]] constexpr bool MultiplySmall(const UnsignedBigInt factor){
-                UnsignedHugeInt carry = 0;
+            [[nodiscard]] constexpr bool MultiplySmall(const UInt64_t factor){
+                UInt128_t carry = 0;
                 for (auto& limb : this->_limbs){
-                    carry += static_cast<UnsignedHugeInt>(limb) * factor;
-                    limb = static_cast<UnsignedBigInt>(carry);
+                    carry += static_cast<UInt128_t>(limb) * factor;
+                    limb = static_cast<UInt64_t>(carry);
                     carry >>= 64;
                 }
                 return carry == 0;
             }
 
-            [[nodiscard]] constexpr bool MultiplyPow10(Int digits){
+            [[nodiscard]] constexpr bool MultiplyPow10(Int32_t digits){
                 while (digits > 0){
                     const auto step = Math::Min(digits, WIDE_STEP_DIGITS);
-                    if (!this->MultiplySmall(static_cast<UnsignedBigInt>(POW10[step])))
+                    if (!this->MultiplySmall(static_cast<UInt64_t>(POW10[step])))
                         return false;
                     digits -= step;
                 }
                 return true;
             }
 
-            constexpr UnsignedBigInt DivideSmall(const UnsignedBigInt divisor){
-                UnsignedHugeInt remainder = 0;
-                for (Int i = 3; i >= 0; i--){
+            constexpr UInt64_t DivideSmall(const UInt64_t divisor){
+                UInt128_t remainder = 0;
+                for (Int32_t i = 3; i >= 0; i--){
                     const auto current = (remainder << 64) | this->_limbs[i];
-                    this->_limbs[i] = static_cast<UnsignedBigInt>(current / divisor);
+                    this->_limbs[i] = static_cast<UInt64_t>(current / divisor);
                     remainder = current % divisor;
                 }
-                return static_cast<UnsignedBigInt>(remainder);
+                return static_cast<UInt64_t>(remainder);
             }
 
             [[nodiscard]] friend constexpr std::strong_ordering operator<=>(const Wide& lhs, const Wide& rhs){
-                for (Int i = 3; i >= 0; i--){
+                for (Int32_t i = 3; i >= 0; i--){
                     if (lhs._limbs[i] != rhs._limbs[i])
                         return lhs._limbs[i] <=> rhs._limbs[i];
                 }
@@ -198,14 +198,14 @@ namespace DataTypes {
             }
 
             constexpr void ShiftLeftOne(){
-                for (Int i = 3; i > 0; i--)
+                for (Int32_t i = 3; i > 0; i--)
                     this->_limbs[i] = (this->_limbs[i] << 1) | (this->_limbs[i - 1] >> 63);
                 this->_limbs[0] <<= 1;
             }
 
             constexpr void Subtract(const Wide& other){
-                UnsignedBigInt borrow = 0;
-                for (Int i = 0; i < 4; i++){
+                UInt64_t borrow = 0;
+                for (Int32_t i = 0; i < 4; i++){
                     const auto value = this->_limbs[i];
                     const auto subtrahend = other._limbs[i];
                     const auto difference = value - subtrahend - borrow;
@@ -217,12 +217,12 @@ namespace DataTypes {
             [[nodiscard]] static constexpr Wide Divide(const Wide& dividend, const Wide& divisor, Wide& remainder){
                 Wide quotient;
                 remainder = Wide();
-                for (Int bit = 255; bit >= 0; bit--){
+                for (Int32_t bit = 255; bit >= 0; bit--){
                     remainder.ShiftLeftOne();
                     remainder._limbs[0] |= (dividend._limbs[bit / 64] >> (bit % 64)) & 1;
                     if (remainder >= divisor){
                         remainder.Subtract(divisor);
-                        quotient._limbs[bit / 64] |= UnsignedBigInt{1} << (bit % 64);
+                        quotient._limbs[bit / 64] |= UInt64_t{1} << (bit % 64);
                     }
                 }
                 return quotient;
@@ -231,7 +231,7 @@ namespace DataTypes {
 
         [[nodiscard]] constexpr bool ShouldRoundUp(
             const DecimalRoundingMode mode,
-            const Int firstDroppedDigit,
+            const Int32_t firstDroppedDigit,
             const bool restIsNonZero,
             const bool isOdd
         ){
@@ -247,7 +247,7 @@ namespace DataTypes {
         }
 
         // value / 10^digits, rounded by magnitude. Used only when the value may not fit in 128 bits.
-        [[nodiscard]] constexpr Wide DividePow10Rounded(Wide value, Int digits, const DecimalRoundingMode mode, bool& carriedOut){
+        [[nodiscard]] constexpr Wide DividePow10Rounded(Wide value, Int32_t digits, const DecimalRoundingMode mode, bool& carriedOut){
             carriedOut = false;
             if (digits <= 0)
                 return value;
@@ -255,11 +255,11 @@ namespace DataTypes {
             bool restIsNonZero = false;
             while (digits > 1){
                 const auto step = std::min(digits - 1, WIDE_STEP_DIGITS);
-                restIsNonZero |= value.DivideSmall(static_cast<UnsignedBigInt>(POW10[step])) != 0;
+                restIsNonZero |= value.DivideSmall(static_cast<UInt64_t>(POW10[step])) != 0;
                 digits -= step;
             }
 
-            const auto dropped = static_cast<Int>(value.DivideSmall(10));
+            const auto dropped = static_cast<Int32_t>(value.DivideSmall(10));
             if (ShouldRoundUp(mode, dropped, restIsNonZero, value.IsOdd())){
                 carriedOut = true;
                 for (auto& limb : value._limbs){
@@ -277,18 +277,18 @@ namespace DataTypes {
     }
 
     class [[gnu::packed]] Decimal final {
-        HugeInt _mantissa;
+        Int128_t _mantissa;
 
         using StringBuffer = DataStructures::StaticArray<char, DECIMAL_STRING_SIZE>;
 
-        [[nodiscard]] constexpr UnsignedHugeInt Magnitude() const{
+        [[nodiscard]] constexpr UInt128_t Magnitude() const{
             return this->_mantissa < 0
-                ? UnsignedHugeInt{0} - static_cast<UnsignedHugeInt>(this->_mantissa)
-                : static_cast<UnsignedHugeInt>(this->_mantissa);
+                ? UInt128_t{0} - static_cast<UInt128_t>(this->_mantissa)
+                : static_cast<UInt128_t>(this->_mantissa);
         }
 
-        [[nodiscard]] static constexpr Decimal FromMagnitude(const UnsignedHugeInt magnitude, const bool isNegative){
-            const auto mantissa = static_cast<HugeInt>(magnitude);
+        [[nodiscard]] static constexpr Decimal FromMagnitude(const UInt128_t magnitude, const bool isNegative){
+            const auto mantissa = static_cast<Int128_t>(magnitude);
             return Decimal::FromMantissa(isNegative ? -mantissa : mantissa);
         }
 
@@ -308,7 +308,7 @@ namespace DataTypes {
                 Decimal::Throw(status);
         }
 
-        constexpr explicit Decimal(const HugeInt mantissa)
+        constexpr explicit Decimal(const Int128_t mantissa)
             : _mantissa(mantissa){}
 
     public:
@@ -319,20 +319,20 @@ namespace DataTypes {
             Decimal::Check(status);
         }
 
-        [[nodiscard]] static constexpr Decimal FromMantissa(const HugeInt mantissa){
+        [[nodiscard]] static constexpr Decimal FromMantissa(const Int128_t mantissa){
             return Decimal(mantissa);
         }
 
-        [[nodiscard]] constexpr HugeInt Mantissa() const{ return this->_mantissa; }
+        [[nodiscard]] constexpr Int128_t Mantissa() const{ return this->_mantissa; }
         [[nodiscard]] constexpr bool IsNegative() const{ return this->_mantissa < 0; }
         [[nodiscard]] constexpr bool IsZero() const{ return this->_mantissa == 0; }
 
-        [[nodiscard]] constexpr bool FitsPrecision(const Int precision) const{
+        [[nodiscard]] constexpr bool FitsPrecision(const Int32_t precision) const{
             return this->Magnitude() < DecimalDetail::POW10[precision];
         }
 
         [[nodiscard]] static constexpr DecimalStatus TryAdd(const Decimal& left, const Decimal& right, Decimal* out){
-            HugeInt sum = 0;
+            Int128_t sum = 0;
             if (__builtin_add_overflow(left.Mantissa(), right.Mantissa(), &sum))
                 return DecimalStatus::Overflow;
             *out = Decimal::FromMantissa(sum);
@@ -340,7 +340,7 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr DecimalStatus TrySubtract(const Decimal& left, const Decimal& right, Decimal* out){
-            HugeInt difference = 0;
+            Int128_t difference = 0;
             if (__builtin_sub_overflow(left.Mantissa(), right.Mantissa(), &difference))
                 return DecimalStatus::Overflow;
             *out = Decimal::FromMantissa(difference);
@@ -393,14 +393,14 @@ namespace DataTypes {
         [[nodiscard]] static constexpr DecimalStatus TryMultiply(
             const Decimal& left,
             const Decimal& right,
-            const Int droppedDigits,
+            const Int32_t droppedDigits,
             const DecimalRoundingMode mode,
             Decimal* out
         ){
             assert(droppedDigits >= 0 && "Decimal::TryMultiply: the result scale cannot exceed the sum of the input scales");
 
             // The common case: the exact product fits 128 bits
-            HugeInt product = 0;
+            Int128_t product = 0;
             if (droppedDigits <= MAX_DECIMAL_PRECISION && !__builtin_mul_overflow(left.Mantissa(), right.Mantissa(), &product)){
                 if (droppedDigits == 0)
                     *out = Decimal::FromMantissa(product);
@@ -428,7 +428,7 @@ namespace DataTypes {
             [[nodiscard]] static constexpr DecimalStatus TryDivide(
             const Decimal& left,
             const Decimal& right,
-            const Int scaleShift,
+            const Int32_t scaleShift,
             const DecimalRoundingMode mode,
             Decimal* out
         ){
@@ -453,7 +453,7 @@ namespace DataTypes {
             else if (!divisor.MultiplyPow10(-scaleShift))
                 return DecimalStatus::Overflow;
 
-            UnsignedHugeInt quotient = 0;
+            UInt128_t quotient = 0;
             bool roundUp = false;
 
             if (dividend.FitsInHugeInt() && divisor.FitsInHugeInt()){
@@ -496,8 +496,8 @@ namespace DataTypes {
         // Checks against 38 digits only. Going into a column or a cast target, use TryCast.
         [[nodiscard]] static constexpr DecimalStatus TryRescale(
             const Decimal& value,
-            const Int fromScale,
-            const Int toScale,
+            const Int32_t fromScale,
+            const Int32_t toScale,
             const DecimalRoundingMode mode,
             Decimal* out
         ){
@@ -510,8 +510,8 @@ namespace DataTypes {
                     return DecimalStatus::Ok;
                 }
 
-                HugeInt scaled = 0;
-                if (__builtin_mul_overflow(value.Mantissa(), static_cast<HugeInt>(DecimalDetail::POW10[digits]), &scaled))
+                Int128_t scaled = 0;
+                if (__builtin_mul_overflow(value.Mantissa(), static_cast<Int128_t>(DecimalDetail::POW10[digits]), &scaled))
                     return DecimalStatus::Overflow;
 
                 *out = Decimal::FromMantissa(scaled);
@@ -542,7 +542,7 @@ namespace DataTypes {
 
         [[nodiscard]] static constexpr DecimalStatus TryCast(
             const Decimal& value,
-            const Int fromScale,
+            const Int32_t fromScale,
             const DecimalType to,
             const DecimalRoundingMode mode,
             Decimal* out
@@ -553,15 +553,15 @@ namespace DataTypes {
             return out->FitsPrecision(to._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
         }
 
-        [[nodiscard]] static constexpr Decimal ScaleUpUnchecked(const Decimal& value, const Int digits){
-            return Decimal::FromMantissa(value.Mantissa() * static_cast<HugeInt>(DecimalDetail::POW10[digits]));
+        [[nodiscard]] static constexpr Decimal ScaleUpUnchecked(const Decimal& value, const Int32_t digits){
+            return Decimal::FromMantissa(value.Mantissa() * static_cast<Int128_t>(DecimalDetail::POW10[digits]));
         }
 
         [[nodiscard]] static constexpr std::strong_ordering Compare(
             const Decimal& left,
-            const Int leftScale,
+            const Int32_t leftScale,
             const Decimal& right,
-            const Int rightScale
+            const Int32_t rightScale
         ){
             if (leftScale == rightScale)
                 return left <=> right;
@@ -582,11 +582,11 @@ namespace DataTypes {
         }
 
         template<IsInteger T>
-        [[nodiscard]] static constexpr DecimalStatus TryFromInteger(const T value, const Int scale, Decimal* out){
-            if (std::in_range<HugeInt>(value) == false)
+        [[nodiscard]] static constexpr DecimalStatus TryFromInteger(const T value, const Int32_t scale, Decimal* out){
+            if (std::in_range<Int128_t>(value) == false)
                 return DecimalStatus::Overflow;
 
-            const auto mantissa = Decimal::FromMantissa(static_cast<HugeInt>(value));
+            const auto mantissa = Decimal::FromMantissa(static_cast<Int128_t>(value));
             if (mantissa.Magnitude() > DecimalDetail::MAX_MAGNITUDE)
                 return DecimalStatus::Overflow;
             return Decimal::TryRescale(mantissa, 0, scale, DecimalRoundingMode::Truncate, out);
@@ -594,14 +594,14 @@ namespace DataTypes {
 
         template<IsInteger T>
         [[nodiscard]] static constexpr DecimalStatus TryFromInteger(const T value, const DecimalType type, Decimal* out){
-            const auto status = Decimal::TryFromInteger(value, static_cast<Int>(type._scale), out);
+            const auto status = Decimal::TryFromInteger(value, static_cast<Int32_t>(type._scale), out);
             if (status != DecimalStatus::Ok)
                 return status;
             return out->FitsPrecision(type._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
         }
 
         template<IsInteger T>
-        [[nodiscard]] constexpr DecimalStatus TryToInteger(const Int scale, const DecimalRoundingMode mode, T* out) const{
+        [[nodiscard]] constexpr DecimalStatus TryToInteger(const Int32_t scale, const DecimalRoundingMode mode, T* out) const{
             Decimal whole;
             const auto status = Decimal::TryRescale(*this, scale, 0, mode, &whole);
             if (status != DecimalStatus::Ok)
@@ -615,23 +615,23 @@ namespace DataTypes {
         // Accepts [+-]digits[.digits]. The result has the given scale: extra fraction digits are rounded.
         [[nodiscard]] static constexpr DecimalStatus TryParse(
             const StringView& text,
-            const Int scale,
+            const Int32_t scale,
             const DecimalRoundingMode mode,
             Decimal* out
         ){
             const auto* data = text.Data();
-            const auto size = static_cast<Int>(text.Size());
-            Int position = 0;
+            const auto size = static_cast<Int32_t>(text.Size());
+            Int32_t position = 0;
 
             bool isNegative = false;
             if (position < size && (data[position] == '-' || data[position] == '+'))
                 isNegative = data[position++] == '-';
 
-            UnsignedHugeInt magnitude = 0;
-            Int digitsSeen = 0;
-            Int fractionDigits = 0;
+            UInt128_t magnitude = 0;
+            Int32_t digitsSeen = 0;
+            Int32_t fractionDigits = 0;
             bool inFraction = false;
-            Int firstDropped = -1;
+            Int32_t firstDropped = -1;
             bool restIsNonZero = false;
 
             for (; position < size; position++){
@@ -646,7 +646,7 @@ namespace DataTypes {
                     return DecimalStatus::InvalidFormat;
 
                 digitsSeen++;
-                const auto digit = static_cast<Int>(c - '0');
+                const auto digit = static_cast<Int32_t>(c - '0');
 
                 if (inFraction && fractionDigits == scale){
                     if (firstDropped < 0)
@@ -686,7 +686,7 @@ namespace DataTypes {
             const DecimalRoundingMode mode,
             Decimal* out
         ){
-            const auto status = Decimal::TryParse(text, static_cast<Int>(type._scale), mode, out);
+            const auto status = Decimal::TryParse(text, static_cast<Int32_t>(type._scale), mode, out);
             if (status != DecimalStatus::Ok)
                 return status;
             return out->FitsPrecision(type._precision) ? DecimalStatus::Ok : DecimalStatus::Overflow;
@@ -695,13 +695,13 @@ namespace DataTypes {
         // A SQL literal: the precision and scale come from how it is written, so "1.50" is DECIMAL(3,2)
         [[nodiscard]] static constexpr DecimalStatus TryParseLiteral(const StringView& text, DecimalType* type, Decimal* out){
             const auto* data = text.Data();
-            const auto size = static_cast<Int>(text.Size());
-            Int position = 0;
+            const auto size = static_cast<Int32_t>(text.Size());
+            Int32_t position = 0;
             if (position < size && (data[position] == '-' || data[position] == '+'))
                 position++;
 
-            Int scale = 0;
-            Int significant = 0;
+            Int32_t scale = 0;
+            Int32_t significant = 0;
             bool inFraction = false;
             bool any = false;
             for (; position < size; position++){
@@ -730,17 +730,17 @@ namespace DataTypes {
             return status;
         }
 
-        [[nodiscard]] constexpr StringBuffer ToStringBuffer(const Int scale) const{
+        [[nodiscard]] constexpr StringBuffer ToStringBuffer(const Int32_t scale) const{
             char reversed[DECIMAL_STRING_SIZE]{};
-            Int length = 0;
+            Int32_t length = 0;
             auto magnitude = this->Magnitude();
-            Int written = 0;
+            Int32_t written = 0;
 
             while (magnitude != 0 || written <= scale){
                 if (written == scale && scale > 0)
                     reversed[length++] = '.';
 
-                reversed[length++] = static_cast<char>('0' + static_cast<Int>(magnitude % 10));
+                reversed[length++] = static_cast<char>('0' + static_cast<Int32_t>(magnitude % 10));
                 magnitude /= 10;
                 written++;
             }
@@ -749,14 +749,14 @@ namespace DataTypes {
                 reversed[length++] = '-';
 
             char forward[DECIMAL_STRING_SIZE]{};
-            for (Int i = 0; i < length; i++)
+            for (Int32_t i = 0; i < length; i++)
                 forward[i] = reversed[length - 1 - i];
 
             return StringBuffer(forward, length);
         }
 
         [[nodiscard]] static constexpr Decimal Multiply(
-            const Decimal& left, const Decimal& right, const Int droppedDigits, const DecimalRoundingMode mode
+            const Decimal& left, const Decimal& right, const Int32_t droppedDigits, const DecimalRoundingMode mode
         ){
             Decimal result;
             Decimal::Check(Decimal::TryMultiply(left, right, droppedDigits, mode, &result));
@@ -764,7 +764,7 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr Decimal Divide(
-            const Decimal& left, const Decimal& right, const Int scaleShift, const DecimalRoundingMode mode
+            const Decimal& left, const Decimal& right, const Int32_t scaleShift, const DecimalRoundingMode mode
         ){
             Decimal result;
             Decimal::Check(Decimal::TryDivide(left, right, scaleShift, mode, &result));
@@ -772,7 +772,7 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr Decimal Rescale(
-            const Decimal& value, const Int fromScale, const Int toScale, const DecimalRoundingMode mode
+            const Decimal& value, const Int32_t fromScale, const Int32_t toScale, const DecimalRoundingMode mode
         ){
             Decimal result;
             Decimal::Check(Decimal::TryRescale(value, fromScale, toScale, mode, &result));
@@ -780,14 +780,14 @@ namespace DataTypes {
         }
 
         [[nodiscard]] static constexpr Decimal Cast(
-            const Decimal& value, const Int fromScale, const DecimalType to, const DecimalRoundingMode mode
+            const Decimal& value, const Int32_t fromScale, const DecimalType to, const DecimalRoundingMode mode
         ){
             Decimal result;
             Decimal::Check(Decimal::TryCast(value, fromScale, to, mode, &result));
             return result;
         }
 
-        [[nodiscard]] static constexpr Decimal Parse(const StringView& text, const Int scale, const DecimalRoundingMode mode){
+        [[nodiscard]] static constexpr Decimal Parse(const StringView& text, const Int32_t scale, const DecimalRoundingMode mode){
             Decimal result;
             Decimal::Check(Decimal::TryParse(text, scale, mode, &result));
             return result;
@@ -799,44 +799,44 @@ namespace DataTypes {
             return result;
         }
 
-        [[nodiscard]] constexpr double ToDouble(const Int scale) const{
+        [[nodiscard]] constexpr double ToDouble(const Int32_t scale) const{
             return static_cast<double>(static_cast<long double>(this->Mantissa()) / static_cast<long double>(DecimalDetail::POW10[scale]));
         }
 
-        [[nodiscard]] constexpr long double Interpolate(const Int scale) const{
+        [[nodiscard]] constexpr long double Interpolate(const Int32_t scale) const{
             return static_cast<long double>(this->Mantissa()) / static_cast<long double>(DecimalDetail::POW10[scale]);
         }
 
         // Big-endian with the sign bit flipped: memcmp order == numeric order, for values of one scale
         constexpr void EncodeKey(object_t* out) const{
-            auto bits = static_cast<UnsignedHugeInt>(this->Mantissa()) ^ (UnsignedHugeInt{1} << 127);
-            for (Int i = DECIMAL_KEY_SIZE - 1; i >= 0; i--){
+            auto bits = static_cast<UInt128_t>(this->Mantissa()) ^ (UInt128_t{1} << 127);
+            for (Int32_t i = DECIMAL_KEY_SIZE - 1; i >= 0; i--){
                 out[i] = static_cast<object_t>(bits);
                 bits >>= 8;
             }
         }
 
         [[nodiscard]] static constexpr Decimal DecodeKey(const object_t* data){
-            UnsignedHugeInt bits = 0;
-            for (Int i = 0; i < DECIMAL_KEY_SIZE; i++)
+            UInt128_t bits = 0;
+            for (Int32_t i = 0; i < DECIMAL_KEY_SIZE; i++)
                 bits = (bits << 8) | data[i];
-            return Decimal::FromMantissa(static_cast<HugeInt>(bits ^ (UnsignedHugeInt{1} << 127)));
+            return Decimal::FromMantissa(static_cast<Int128_t>(bits ^ (UInt128_t{1} << 127)));
         }
 
         [[nodiscard]] constexpr std::size_t Hash() const{
             // Multiples of 10^scale have zero low bits. The multiply moves every bit upward and the shift
             // brings them back down, so round numbers still reach all the buckets of a power-of-two table.
-            const auto bits = static_cast<UnsignedHugeInt>(this->Mantissa());
-            const auto mixed = (static_cast<UnsignedBigInt>(bits) * 0x9E3779B97F4A7C15ULL)
-                ^ (static_cast<UnsignedBigInt>(bits >> 64) * 0xC2B2AE3D27D4EB4FULL);
+            const auto bits = static_cast<UInt128_t>(this->Mantissa());
+            const auto mixed = (static_cast<UInt64_t>(bits) * 0x9E3779B97F4A7C15ULL)
+                ^ (static_cast<UInt64_t>(bits >> 64) * 0xC2B2AE3D27D4EB4FULL);
             return static_cast<std::size_t>(mixed ^ (mixed >> 32));
         }
 
-        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, Int scale) const;
-        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator, Int scale) const;
+        [[nodiscard]] String ToString(const ::Memory::IAllocator* allocator, Int32_t scale) const;
+        [[nodiscard]] StringValue ToStringValue(const ::Memory::IAllocator* allocator, Int32_t scale) const;
     };
 
-    static_assert(sizeof(Decimal) == sizeof(HugeInt) && alignof(Decimal) == 1);
+    static_assert(sizeof(Decimal) == sizeof(Int128_t) && alignof(Decimal) == 1);
     static_assert(std::is_trivially_copyable_v<Decimal> && std::is_trivially_destructible_v<Decimal>);
 }
 
@@ -852,12 +852,12 @@ struct std::numeric_limits<DataTypes::Decimal> {
     static constexpr bool is_specialized = true;
 
     static constexpr DataTypes::Decimal min() noexcept {
-        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(-static_cast<HugeInt>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(-static_cast<Int128_t>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
         return VALUE;
     }
 
     static constexpr DataTypes::Decimal max() noexcept {
-        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(static_cast<HugeInt>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
+        static constexpr auto VALUE = DataTypes::Decimal::FromMantissa(static_cast<Int128_t>(DataTypes::DecimalDetail::MAX_MAGNITUDE));
         return VALUE;
     }
 

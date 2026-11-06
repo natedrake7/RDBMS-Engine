@@ -15,8 +15,8 @@ namespace CoreEngine::StorageTypes{
 
     SerializedRow::SerializedRow(
         object_t* buffer,
-        const UnsignedSmallInt capacity,
-        const UnsignedSmallInt startingOffset
+        const UInt16_t capacity,
+        const UInt16_t startingOffset
     ){
         this->_data = buffer;
         this->capacity = capacity;
@@ -58,14 +58,14 @@ namespace CoreEngine::StorageTypes{
         return payload;
     }
 
-    UnsignedSmallInt SerializedRow::SetData(const void* otherData, const UnsignedSmallInt dataSize){
+    UInt16_t SerializedRow::SetData(const void* otherData, const UInt16_t dataSize){
         std::memcpy(this->_data + this->offset, otherData, dataSize);
         const auto dataOffset = this->offset;
         this->offset += dataSize;
         return dataOffset;
     }
 
-    void SerializedRow::SetData(const void* otherData, const UnsignedSmallInt dataSize, const Int offSet) const{
+    void SerializedRow::SetData(const void* otherData, const UInt16_t dataSize, const Int32_t offSet) const{
         std::memcpy(this->_data + offSet, otherData, dataSize);
     }
 
@@ -96,14 +96,14 @@ namespace CoreEngine::StorageTypes{
         );
     }
 
-    object_t* SerializedRow::ColumnAt(const column_index_t index, Int& outSize) const{
+    object_t* SerializedRow::ColumnAt(const column_index_t index, Int32_t& outSize) const{
         const auto offSet = sizeof(RowHeader) + index * sizeof(RowEntry);
         const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
         outSize = columnDataEntry->Size();
         return this->_data + columnDataEntry->Offset();
     }
 
-    Int SerializedRow::ColumnSize(const column_index_t index) const{
+    Int32_t SerializedRow::ColumnSize(const column_index_t index) const{
         const auto offSet = sizeof(RowHeader) + index * sizeof(RowEntry);
         const auto* columnDataEntry = reinterpret_cast<const RowEntry*>(this->_data + offSet);
         return columnDataEntry->Size();
@@ -113,11 +113,11 @@ namespace CoreEngine::StorageTypes{
         return this->_data;
     }
 
-    UnsignedSmallInt SerializedRow::Size() const{
+    UInt16_t SerializedRow::Size() const{
         return this->capacity;
     }
 
-    UnsignedSmallInt SerializedRow::Offset() const{
+    UInt16_t SerializedRow::Offset() const{
         return this->offset;
     }
 }

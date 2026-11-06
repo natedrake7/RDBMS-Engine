@@ -143,7 +143,7 @@ namespace CoreEngine {
         [[nodiscard]] Security::User InsertSystemUsers(
             const ExecutionContext& baseContext,
             const DataTypes::String& hashedPassword,
-            Int defaultRoleId
+            Int32_t defaultRoleId
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertDbToMasterDb(
@@ -152,140 +152,140 @@ namespace CoreEngine {
             const DataTypes::StringView& dbPath,
             bool isSystem = false,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertSchemaToMasterDb(
             const ExecutionContext& executionContext,
-            Int databaseId,
+            Int32_t databaseId,
             const DataTypes::StringView& schemaName,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertTableToMasterDb(
             const ExecutionContext& executionContext,
-            Int databaseId,
-            Int schemaId,
+            Int32_t databaseId,
+            Int32_t schemaId,
             const DataTypes::StringView& tableName,
-            SmallInt ordinalPosition,
+            Int16_t ordinalPosition,
             bool isSystem = false,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertColumnToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
+            Int32_t tableId,
             const DataTypes::StringView& columnName,
             DataType columnType,
-            Int columnSize,
-            TinyInt precision,
-            TinyInt scale,
+            Int32_t columnSize,
+            Int8_t precision,
+            Int8_t scale,
             bool isNullable,
-            SmallInt ordinalPosition,
+            Int16_t ordinalPosition,
             bool isSystem = false,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertIndexToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
+            Int32_t tableId,
             const DataTypes::StringView& indexName,
             bool isClustered,
             bool isDisabled = false,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertIndexColumnToMasterDb(
             const ExecutionContext& executionContext,
-            Int indexId,
-            Int columnId,
+            Int32_t indexId,
+            Int32_t columnId,
             const int16_t& ordinalPosition,
             bool isIncluded,
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertConstraintToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
+            Int32_t tableId,
             const DataTypes::StringView& constraintName,
             const Schemas::ConstraintType& constraintType,
             bool isDisabled,
-            const Int* constraintIndexId,
+            const Int32_t* constraintIndexId,
             const DataTypes::StringView& user = "system",
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertConstraintColumnToMasterDb(
             const ExecutionContext& executionContext,
-            Int constraintId,
-            Int columnId,
-            SmallInt ordinalPosition,
-            Int version = 0,
+            Int32_t constraintId,
+            Int32_t columnId,
+            Int16_t ordinalPosition,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertIdentityColumnToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
-            Int columnId,
-            Int seedValue,
-            Int increment,
-            BigInt lastValue,
+            Int32_t tableId,
+            Int32_t columnId,
+            Int32_t seedValue,
+            Int32_t increment,
+            Int64_t lastValue,
             bool isCached,
-            Int cacheBlock,
-            Int version = 0,
+            Int32_t cacheBlock,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertDefaultValuesToMasterDb(
             const ExecutionContext& executionContext,
-            Int columnId,
+            Int32_t columnId,
             const Value& value,
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertTableStatisticsToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
-            BigInt rowCount = 0,
-            Int rowSize = 0,
-            Int pageCount = 0
+            Int32_t tableId,
+            Int64_t rowCount = 0,
+            Int32_t rowSize = 0,
+            Int32_t pageCount = 0
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertColumnStatisticsToMasterDb(
             const ExecutionContext& executionContext,
-            Int columnId,
-            BigInt distinctCount = 0,
-            BigInt nullCount = 0
+            Int32_t columnId,
+            Int64_t distinctCount = 0,
+            Int64_t nullCount = 0
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertColumnHistogramsToMasterDb(
             const ExecutionContext& executionContext,
-            Int columnId,
+            Int32_t columnId,
             const Value& min,
             const Value& max,
-            Int rowCount,
-            BigInt distinctCount
+            Int32_t rowCount,
+            Int64_t distinctCount
         ) const;
 
         [[nodiscard]] Errors::RuntimeStatus InsertIndexStatisticsToMasterDb(
             const ExecutionContext& executionContext,
-            Int tableId,
-            Int indexId,
-            BigInt leafPages = 0,
-            TinyInt depth = 0,
+            Int32_t tableId,
+            Int32_t indexId,
+            Int64_t leafPages = 0,
+            Int8_t depth = 0,
             const DataTypes::Decimal& averageFragmentation = DataTypes::Decimal(0)
         ) const;
 
@@ -294,7 +294,7 @@ namespace CoreEngine {
             const DataTypes::StringView& roleName,
             const Security::Permission& permissions,
             bool isSystem = true,
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
@@ -302,9 +302,9 @@ namespace CoreEngine {
             const ExecutionContext& executionContext,
             const DataTypes::StringView& username,
             const DataTypes::StringView& passwordHash,
-            Int roleId,
+            Int32_t roleId,
             bool isActive = false,
-            Int version = 0,
+            Int32_t version = 0,
             bool isDeleted = false
         ) const;
 
@@ -312,21 +312,21 @@ namespace CoreEngine {
         [[nodiscard]] DataStructures::PolymorphicArray<Security::User> SelectUsers(const ::Memory::IAllocator* allocator)const;
         [[nodiscard]] bool DatabaseExists(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
         [[nodiscard]] Catalog::DatabaseHeader SelectDatabase(const ::Memory::IAllocator* allocator, const DataTypes::StringView& name) const;
-        [[nodiscard]] Catalog::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int databaseId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int databaseId) const;
-        [[nodiscard]] Dictionary<DataTypes::String, Catalog::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int databaseId) const;
+        [[nodiscard]] Catalog::DatabaseHeader SelectDatabaseById(const ::Memory::IAllocator* allocator, Int32_t databaseId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::SchemaHeader>  SelectSchemas(const ::Memory::IAllocator* allocator, Int32_t databaseId) const;
+        [[nodiscard]] Dictionary<DataTypes::String, Catalog::SchemaHeader>  SelectSchemasToDictionary(const ::Memory::IAllocator* allocator, Int32_t databaseId) const;
         [[nodiscard]] bool SchemaExists(
             const ::Memory::IAllocator* allocator,
-            Int databaseId,
+            Int32_t databaseId,
             const DataTypes::StringView& schema,
-            Int* schemaId = nullptr
+            Int32_t* schemaId = nullptr
         ) const;
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::TableHeader> SelectTables(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName) const;
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::TableHeader> SelectTables(
             const ::Memory::IAllocator* allocator,
-            Int databaseId
+            Int32_t databaseId
         ) const;
-        [[nodiscard]] Catalog::TableHeader SelectTable(const ::Memory::IAllocator* allocator, Int databaseId, Int tableId) const;
+        [[nodiscard]] Catalog::TableHeader SelectTable(const ::Memory::IAllocator* allocator, Int32_t databaseId, Int32_t tableId) const;
         [[nodiscard]] Catalog::TableHeader SelectTable(
             const ::Memory::IAllocator* allocator,
             const DataTypes::StringView& dbName,
@@ -334,7 +334,7 @@ namespace CoreEngine {
         ) const;
         [[nodiscard]] Catalog::TableHeader SelectTable(
             const ::Memory::IAllocator* allocator,
-            Int databaseId,
+            Int32_t databaseId,
             const DataTypes::StringView& tableName,
             const DataTypes::StringView& schema
         ) const;
@@ -344,81 +344,81 @@ namespace CoreEngine {
             const Catalog::TableHeader& tableHeader
         ) const;
 
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] Catalog::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int tableId, Int columnId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] Dictionary<DataTypes::String, Catalog::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] Catalog::IndexHeader SelectIndexById(const ::Memory::IAllocator* allocator, Int indexId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int indexId) const;
-        [[nodiscard]] Dictionary<Int, Catalog::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const ::Memory::IAllocator* allocator, Int indexId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]] Dictionary<Int , Catalog::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const ::Memory::IAllocator* allocator, Int tableId) const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const ::Memory::IAllocator* allocator, Int constraintId) const;
-        [[nodiscard]] Dictionary<Int, Catalog::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const ::Memory::IAllocator* allocator, Int constraintId) const;
-        [[nodiscard]] Catalog::DefaultValuesHeader SelectDefaultValueByColumnId(const ::Memory::IAllocator* allocator, Int columnId) const;
-        [[nodiscard]] Catalog::TableStatistics SelectTableStatisticsById(const ::Memory::IAllocator* allocator, Int tableId)const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ConstraintsHeader> SelectConstraints(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]] Catalog::ColumnHeader SelectColumnById(const ::Memory::IAllocator* allocator, Int32_t tableId, Int32_t columnId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ColumnHeader> SelectColumns(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]] Dictionary<DataTypes::String, Catalog::ColumnHeader> SelectColumnsToDictionary(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexHeader> SelectIndexes(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]] Catalog::IndexHeader SelectIndexById(const ::Memory::IAllocator* allocator, Int32_t indexId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexColumnsHeader> SelectIndexColumnsByIndexId(const ::Memory::IAllocator* allocator, Int32_t indexId) const;
+        [[nodiscard]] Dictionary<Int32_t, Catalog::IndexColumnsHeader> SelectIndexColumnsByIndexIdToDictionary(const ::Memory::IAllocator* allocator, Int32_t indexId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IdentityColumnsHeader> SelectIdentityColumnsByTableId(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]] Dictionary<Int32_t , Catalog::IdentityColumnsHeader> SelectIdentityColumnsByTableIdToDictionary(const ::Memory::IAllocator* allocator, Int32_t tableId) const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintId(const ::Memory::IAllocator* allocator, Int32_t constraintId) const;
+        [[nodiscard]] Dictionary<Int32_t, Catalog::ConstraintsColumnsHeader> SelectConstraintColumnsByConstraintIdToDictionary(const ::Memory::IAllocator* allocator, Int32_t constraintId) const;
+        [[nodiscard]] Catalog::DefaultValuesHeader SelectDefaultValueByColumnId(const ::Memory::IAllocator* allocator, Int32_t columnId) const;
+        [[nodiscard]] Catalog::TableStatistics SelectTableStatisticsById(const ::Memory::IAllocator* allocator, Int32_t tableId)const;
         [[nodiscard]] Catalog::ColumnStatistics SelectColumnStatisticsById(
             const ::Memory::IAllocator* allocator,
-            Int columnId,
+            Int32_t columnId,
             DataType columnType
         )const;
         [[nodiscard]]DataStructures::PolymorphicArray<Catalog::ColumnHistograms> SelectColumnHistogramsByColumnId(
             const ::Memory::IAllocator* allocator,
-            Int tableId,
-            Int columnId
+            Int32_t tableId,
+            Int32_t columnId
         )const;
-        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexStatistics> SelectIndexStatisticsByTableId(const ::Memory::IAllocator* allocator, Int tableId)const;
+        [[nodiscard]]DataStructures::PolymorphicArray<Catalog::IndexStatistics> SelectIndexStatisticsByTableId(const ::Memory::IAllocator* allocator, Int32_t tableId)const;
 
         void UpdateIdentityByColumnId(
             const ::Memory::IAllocator* allocator,
-            Int tableId,
-            Int columnId,
-            BigInt lastValue
+            Int32_t tableId,
+            Int32_t columnId,
+            Int64_t lastValue
         )const;
         void UpdateTableStatisticsById(
             const ::Memory::IAllocator* allocator,
-            Int tableId,
-            BigInt rowCount,
-            Int rowSize,
-            Int pageCount
+            Int32_t tableId,
+            Int64_t rowCount,
+            Int32_t rowSize,
+            Int32_t pageCount
         )const;
         void UpdateColumnStatisticsById(
             const ::Memory::IAllocator* allocator,
-            Int columnId,
-            BigInt distinctCount,
-            BigInt nullCount,
+            Int32_t columnId,
+            Int64_t distinctCount,
+            Int64_t nullCount,
             const Value& min,
             const Value& max
         )const;
         void UpdateIndexStatisticsById(
             const ::Memory::IAllocator* allocator,
-            Int tableId,
-            Int indexId,
-            BigInt leafPages,
-            TinyInt depth,
+            Int32_t tableId,
+            Int32_t indexId,
+            Int64_t leafPages,
+            Int8_t depth,
             const DataTypes::Decimal& averageFragmentation
         )const;
         [[nodiscard]] Errors::RuntimeStatus UpdateHistogramBucket(
             const ::Memory::IAllocator* allocator,
-            Int columnId,
-            Int histogramId,
+            Int32_t columnId,
+            Int32_t histogramId,
             const Value& min,
             const Value& max,
-            Int rowCount,
-            const BigInt& distinctCount
+            Int32_t rowCount,
+            const Int64_t& distinctCount
         ) const;
         [[nodiscard]] Errors::RuntimeStatus UpdateColumnById(
             const ::Memory::IAllocator* allocator,
-            Int columnId,
+            Int32_t columnId,
             const DataStructures::PolymorphicArray<Value>& updates
         )const;
 
         [[nodiscard]] Errors::RuntimeStatus UpdateUserById(
             const ExecutionContext& context,
             const DataTypes::StringView& username,
-            Int userId,
-            Int roleId
+            Int32_t userId,
+            Int32_t roleId
         )const;
   };
 }

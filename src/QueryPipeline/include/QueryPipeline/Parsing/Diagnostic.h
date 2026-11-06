@@ -20,8 +20,8 @@ namespace QueryPipeline::Parsing{
         //"expected ')'" without formatting anything on the error path.
         DataTypes::StringView expected;
 
-        UnsignedInt line;
-        UnsignedInt column;
+        UInt32_t line;
+        UInt32_t column;
 
         bool hasError;
 
@@ -30,8 +30,8 @@ namespace QueryPipeline::Parsing{
 
         void Raise(
             const DataTypes::StringView& errorMessage,
-            const UnsignedInt errorLine,
-            const UnsignedInt errorColumn,
+            const UInt32_t errorLine,
+            const UInt32_t errorColumn,
             const DataTypes::StringView& offendingText = DataTypes::StringView(),
             const DataTypes::StringView& expectedToken = DataTypes::StringView()
         ){

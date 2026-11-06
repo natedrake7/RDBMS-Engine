@@ -56,7 +56,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(allocator, DataTypes::DataTypeOf<T>(), chunkSize);
         auto* outData = out->template DataAs<T>();
 
-        const auto ArithmeticOp = [out, outData, allocator](const T& leftValue, const T& rightValue, const Int index) -> void{
+        const auto ArithmeticOp = [out, outData, allocator](const T& leftValue, const T& rightValue, const Int32_t index) -> void{
             if constexpr (DataTypes::Primitive<T>)
                 DataVector::FlatAccess(outData, index) = Op{}(leftValue, rightValue);
             else if constexpr (DataTypes::IsStringValue<T>){
@@ -86,7 +86,7 @@ namespace CoreEngine::VectorizedKernels{
                 return out;
             }
             out->CopyValidity(left);
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 ArithmeticOp(DataVector::FlatAccess(leftData, i), DataVector::ConstantAccess(rightData), i);
 
             return out;
@@ -99,7 +99,7 @@ namespace CoreEngine::VectorizedKernels{
             }
             out->CopyValidity(right);
 
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 ArithmeticOp(DataVector::ConstantAccess(leftData), DataVector::FlatAccess(rightData, i), i);
 
             return out;
@@ -108,12 +108,12 @@ namespace CoreEngine::VectorizedKernels{
         if (lFlat && rFlat){
             out->OrValidity(left, right);
 
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 ArithmeticOp(DataVector::FlatAccess(leftData, i), DataVector::FlatAccess(rightData, i), i);
             return out;
         }
 
-        for (Int i = 0;i < chunkSize; i++){
+        for (Int32_t i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 
@@ -147,7 +147,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataTypes::DataTypeOf<T>(), chunkSize);
         auto* outData = out->template DataAs<T>();
 
-        for (Int i = 0;i < chunkSize; i++){
+        for (Int32_t i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 
@@ -186,7 +186,7 @@ namespace CoreEngine::VectorizedKernels{
         auto* out = DataVector::FlatVector(context->GetAllocator(), DataTypes::DataTypeOf<T>(), chunkSize);
         auto* outData = out->template DataAs<T>();
 
-        for (Int i = 0;i < chunkSize; i++){
+        for (Int32_t i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 
@@ -253,7 +253,7 @@ namespace CoreEngine::VectorizedKernels{
             }
             out->CopyValidity(left);
 
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::FlatAccess(leftData, i), DataVector::ConstantAccess(rightData));
 
             return out;
@@ -265,7 +265,7 @@ namespace CoreEngine::VectorizedKernels{
                 return out;
             }
             out->CopyValidity(right);
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::ConstantAccess(leftData), DataVector::FlatAccess(rightData, i));
 
             return out;
@@ -273,12 +273,12 @@ namespace CoreEngine::VectorizedKernels{
 
         if (lFlat && rFlat){
             out->OrValidity(left, right);
-            for (Int i = 0;i < chunkSize; i++)
+            for (Int32_t i = 0;i < chunkSize; i++)
                 DataVector::FlatAccess(outData, i) = Comparison{}(DataVector::FlatAccess(leftData, i), DataVector::FlatAccess(rightData, i));
             return out;
         }
 
-        for (Int i = 0;i < chunkSize; i++){
+        for (Int32_t i = 0;i < chunkSize; i++){
             const auto leftIndex = left->PhysicalIndex(i);
             const auto rightIndex = right->PhysicalIndex(i);
 

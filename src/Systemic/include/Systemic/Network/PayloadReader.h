@@ -7,16 +7,16 @@
 namespace Network{
     class PayloadReader{
         const char* _data;
-        UnsignedInt _size;
-        UnsignedInt _offset;
+        UInt32_t _size;
+        UInt32_t _offset;
 
-        [[nodiscard]] bool BoundsCheck(const UnsignedInt dataSize) const{
+        [[nodiscard]] bool BoundsCheck(const UInt32_t dataSize) const{
             // Subtraction, not addition: _offset + dataSize wraps for a hostile length.
             return dataSize <= this->_size - this->_offset;
         }
 
         public:
-            PayloadReader(const char* data, const UnsignedInt size)
+            PayloadReader(const char* data, const UInt32_t size)
                 : _data(data), _size(size), _offset(0){}
 
             template<typename T> requires std::is_trivially_copyable_v<T>
@@ -29,7 +29,7 @@ namespace Network{
                 return true;
             }
 
-            [[nodiscard]] bool ReadSpan(const char*& data, const UnsignedBigInt size){
+            [[nodiscard]] bool ReadSpan(const char*& data, const UInt64_t size){
                 if (!this->BoundsCheck(size))
                     return false;
 
@@ -38,17 +38,17 @@ namespace Network{
                 return true;
             }
 
-            [[nodiscard]] bool ReadUnsignedInt(UnsignedInt& value){
-                if (!this->BoundsCheck(sizeof(UnsignedInt)))
+            [[nodiscard]] bool ReadUnsignedInt(UInt32_t& value){
+                if (!this->BoundsCheck(sizeof(UInt32_t)))
                     return false;
 
-                std::memcpy(&value, this->_data + this->_offset, sizeof(UnsignedInt));
-                this->_offset += sizeof(UnsignedInt);
+                std::memcpy(&value, this->_data + this->_offset, sizeof(UInt32_t));
+                this->_offset += sizeof(UInt32_t);
                 return true;
             }
 
             [[nodiscard]] bool ReadString(std::string& value){
-                UnsignedInt length = 0;
+                UInt32_t length = 0;
                 if (!this->ReadUnsignedInt(length))
                     return false;
 
@@ -61,7 +61,7 @@ namespace Network{
             }
 
             [[nodiscard]] bool ReadStringView(DataTypes::StringView& value){
-                UnsignedInt length = 0;
+                UInt32_t length = 0;
                 if (!this->ReadUnsignedInt(length))
                     return false;
 

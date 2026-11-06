@@ -4,9 +4,9 @@
 namespace CoreEngine::Pages{
     struct RawRowReference{
         object_t* _data;
-        Int size;
+        Int32_t size;
 
-        RawRowReference(object_t* data, const Int size){
+        RawRowReference(object_t* data, const Int32_t size){
             this->_data = data;
             this->size = size;
         }

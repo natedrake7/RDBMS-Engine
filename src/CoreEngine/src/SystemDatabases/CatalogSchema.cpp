@@ -24,7 +24,7 @@ namespace CoreEngine{
 
         Catalog::TableDefinition definition;
         definition._table = header;
-        definition._columns = DataStructures::PolymorphicArray<Catalog::ColumnHeader>(allocator, static_cast<Int>(columnCount));
+        definition._columns = DataStructures::PolymorphicArray<Catalog::ColumnHeader>(allocator, static_cast<Int32_t>(columnCount));
         definition._defaults.SetAllocator(allocator);
         definition._identities.SetAllocator(allocator);
         definition._indexes = DataStructures::PolymorphicArray<Catalog::IndexHeader>(allocator, 1);
@@ -39,7 +39,7 @@ namespace CoreEngine{
             column.tableId = table.id;
             column.id = columnId;
             column.name = stringCopy(source.name);
-            column.dataType = static_cast<UnsignedTinyInt>(source.type);
+            column.dataType = static_cast<UInt8_t>(source.type);
             column.recordSize = fixedSize != 0 ? fixedSize : source.size;
             column.isNullable = source.nullable;
             column.ordinalPosition = ordinal;
@@ -67,7 +67,7 @@ namespace CoreEngine{
         index.name = DataTypes::String::Concat(allocator, "PK_", header->name);
         index.isClustered = true;
         index.isDisabled = false;
-        index.columns = DataStructures::PolymorphicArray<Catalog::IndexColumnsHeader>(allocator, static_cast<Int>(table.primaryKey.size()));
+        index.columns = DataStructures::PolymorphicArray<Catalog::IndexColumnsHeader>(allocator, static_cast<Int32_t>(table.primaryKey.size()));
 
         Catalog::ConstraintsHeader constraint;
         constraint.tableId = table.id;
@@ -76,9 +76,9 @@ namespace CoreEngine{
         constraint.type = Schemas::ConstraintType::PrimaryKey;
         constraint.isDisabled = false;
         constraint.indexId = index.id;
-        constraint.columns = DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader>(allocator, static_cast<Int>(table.primaryKey.size()));
+        constraint.columns = DataStructures::PolymorphicArray<Catalog::ConstraintsColumnsHeader>(allocator, static_cast<Int32_t>(table.primaryKey.size()));
 
-        for (SmallInt position = 0; position < static_cast<SmallInt>(table.primaryKey.size()); position++){
+        for (Int16_t position = 0; position < static_cast<Int16_t>(table.primaryKey.size()); position++){
             const auto columnId = SystemColumnId(table.id, table.primaryKey[position]);
 
             Catalog::IndexColumnsHeader indexColumn;

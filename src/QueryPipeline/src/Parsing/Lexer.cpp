@@ -3,7 +3,7 @@
 
 namespace QueryPipeline::Parsing{
 
-    Lexer::Lexer(const char* data, const Int size, Diagnostic& diagnostic)
+    Lexer::Lexer(const char* data, const Int32_t size, Diagnostic& diagnostic)
         :   _current(data), _end(data + size), _lineStart(data),
             _line(1), _tokenLine(1), _tokenColumn(1),
             _diagnostic(&diagnostic){}
@@ -15,7 +15,7 @@ namespace QueryPipeline::Parsing{
         return this->_current >= this->_end;
     }
 
-    char Lexer::Peek(const Int offset) const{
+    char Lexer::Peek(const Int32_t offset) const{
         return (this->_end - this->_current > offset)
                    ? this->_current[offset]
                    : '\0';
@@ -46,7 +46,7 @@ namespace QueryPipeline::Parsing{
         }
     }
 
-    Token Lexer::Emit(const TokenType type, const char* textBegin, const Int textLength) const{
+    Token Lexer::Emit(const TokenType type, const char* textBegin, const Int32_t textLength) const{
         Token token{};
 
         token.type = type;
@@ -61,7 +61,7 @@ namespace QueryPipeline::Parsing{
     Token Lexer::Fail(
         const DataTypes::StringView& message,
         const char* textBegin,
-        const Int textLength
+        const Int32_t textLength
     ){
         this->_diagnostic->Raise(
             message, this->_tokenLine, this->_tokenColumn,
@@ -75,7 +75,7 @@ namespace QueryPipeline::Parsing{
         this->SkipWhitespace();
 
         this->_tokenLine = this->_line;
-        this->_tokenColumn = static_cast<UnsignedInt>(this->_current - this->_lineStart) + 1;
+        this->_tokenColumn = static_cast<UInt32_t>(this->_current - this->_lineStart) + 1;
 
         if (this->AtEnd())
             return this->Emit(TokenType::EndOfFile, this->_current, 0);
@@ -111,7 +111,7 @@ namespace QueryPipeline::Parsing{
         while (!this->AtEnd() && Lexer::IsIdentifierPart(*this->_current))
             ++this->_current;
 
-        const auto length = static_cast<Int>(this->_current - tokenStart);
+        const auto length = static_cast<Int32_t>(this->_current - tokenStart);
 
         return this->Emit(
             LookupKeyword(DataTypes::StringView(tokenStart, length)),
@@ -131,7 +131,7 @@ namespace QueryPipeline::Parsing{
             ++this->_current;
         }
 
-        const auto length = static_cast<Int>(this->_current - textBegin);
+        const auto length = static_cast<Int32_t>(this->_current - textBegin);
 
         if (this->AtEnd())
             return this->Fail("unterminated quoted identifier, expected a closing ']'", textBegin, length);
@@ -156,7 +156,7 @@ namespace QueryPipeline::Parsing{
 
         //The '@' stays part of the text: variables are named with it everywhere else
         //in the pipeline.
-        return this->Emit(TokenType::Variable, tokenStart, static_cast<Int>(this->_current - tokenStart));
+        return this->Emit(TokenType::Variable, tokenStart, static_cast<Int32_t>(this->_current - tokenStart));
     }
 
     Token Lexer::ScanNumber(const char* tokenStart){
@@ -188,7 +188,7 @@ namespace QueryPipeline::Parsing{
             }
         }
 
-        const auto length = static_cast<Int>(this->_current - tokenStart);
+        const auto length = static_cast<Int32_t>(this->_current - tokenStart);
 
         //"12abc" is a typo, not the number 12 with the alias abc.
         if (Lexer::IsIdentifierStart(this->Peek())){
@@ -229,10 +229,10 @@ namespace QueryPipeline::Parsing{
         if (this->AtEnd())
             return this->Fail(
                 "unterminated string literal, expected a closing quote",
-                quoteStart, static_cast<Int>(this->_current - quoteStart)
+                quoteStart, static_cast<Int32_t>(this->_current - quoteStart)
             );
 
-        const auto length = static_cast<Int>(this->_current - textBegin);
+        const auto length = static_cast<Int32_t>(this->_current - textBegin);
         ++this->_current; //consume the closing quote
 
         //Quotes are stripped here; escape sequences are left for the parser to resolve.

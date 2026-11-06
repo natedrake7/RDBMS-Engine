@@ -21,7 +21,7 @@ namespace CoreEngine::Catalog{
 }
 
 namespace CoreEngine::Schemas{
-    enum class Volatility: UnsignedTinyInt{
+    enum class Volatility: UInt8_t{
         Immutable = 0,
         Stable = 1,
         Volatile = 2,
@@ -29,7 +29,7 @@ namespace CoreEngine::Schemas{
 
     inline static constexpr auto VOLATILITY_COUNT = Reflection::EnumCount<Volatility>;
 
-    enum class DefinitionKind: UnsignedTinyInt{
+    enum class DefinitionKind: UInt8_t{
         Default = 0,
         Check = 1,
         Computed = 2
@@ -50,7 +50,7 @@ namespace CoreEngine::Schemas{
         DefinitionKind _definitionKind;
     };
 
-    enum class ComputedKind: UnsignedTinyInt{
+    enum class ComputedKind: UInt8_t{
         None = 0,
         Virtual = 1,
         Stored = 2
@@ -58,7 +58,7 @@ namespace CoreEngine::Schemas{
 
     inline static constexpr auto COMPUTED_COUNT = Reflection::EnumCount<ComputedKind>;
 
-    enum class ConstraintType: UnsignedTinyInt {
+    enum class ConstraintType: UInt8_t {
         PrimaryKey = 0,
         ForeignKey = 1,
         Unique = 2,
@@ -70,12 +70,12 @@ namespace CoreEngine::Schemas{
     inline static constexpr auto CONSTRAINT_TYPE_COUNT = Reflection::EnumCount<ConstraintType>;
 
     struct IdentitySchema{
-        BigInt _seedValue;
-        BigInt _increment;
-        BigInt _lastValue;
-        Int _cacheBlock;
+        Int64_t _seedValue;
+        Int64_t _increment;
+        Int64_t _lastValue;
+        Int32_t _cacheBlock;
 
-        UnsignedTinyInt _slot;
+        UInt8_t _slot;
     };
     static_assert(std::is_trivially_destructible_v<IdentitySchema>);
 
@@ -86,11 +86,11 @@ namespace CoreEngine::Schemas{
         const ExpressionSchema* _computed;
         const IdentitySchema* _identity;
 
-        Int _id;
+        Int32_t _id;
         row_size_t _recordSize;
         column_index_t _ordinalPosition;
         DataType _type;
-        TinyInt _precision, _scale;
+        Int8_t _precision, _scale;
         bool _isNullable, _isSystem;
 
         ComputedKind _computedKind;
@@ -104,10 +104,10 @@ namespace CoreEngine::Schemas{
     static_assert(std::is_trivially_destructible_v<LowerNameEntry>);
 
     struct ColumnMask{
-        static constexpr UnsignedInt BITS_COUNT = std::numeric_limits<column_index_t>::max() + 1;
-        static constexpr UnsignedInt WORDS_COUNT = EngineBitmap::WordsFor(BITS_COUNT);
+        static constexpr UInt32_t BITS_COUNT = std::numeric_limits<column_index_t>::max() + 1;
+        static constexpr UInt32_t WORDS_COUNT = EngineBitmap::WordsFor(BITS_COUNT);
 
-        UnsignedBigInt _words[WORDS_COUNT]{};
+        UInt64_t _words[WORDS_COUNT]{};
 
         constexpr void Set(const column_index_t ordinalPosition){
             EngineBitmap::OrBitmapBit(this->_words, ordinalPosition, true);
@@ -122,14 +122,14 @@ namespace CoreEngine::Schemas{
         }
 
         [[nodiscard]] constexpr bool Intersects(const ColumnMask& other) const{
-            UnsignedBigInt any = 0;
-            for (UnsignedInt i = 0; i < WORDS_COUNT; i++)
+            UInt64_t any = 0;
+            for (UInt32_t i = 0; i < WORDS_COUNT; i++)
                 any |= this->_words[i] & other._words[i];
             return any != 0;
         }
 
         [[nodiscard]] constexpr bool Empty() const{
-            UnsignedBigInt any = 0;
+            UInt64_t any = 0;
             for (const auto word : this->_words)
                 any |= word;
             return any == 0;
@@ -155,10 +155,10 @@ namespace CoreEngine::Schemas{
         const ExpressionSchema* _filter;
         ColumnMask _coveredColumnsMask;
 
-        Int _id;
-        UnsignedTinyInt _keyCount;
-        UnsignedTinyInt _includedCount;
-        UnsignedTinyInt _treeOrdinalPosition;
+        Int32_t _id;
+        UInt8_t _keyCount;
+        UInt8_t _includedCount;
+        UInt8_t _treeOrdinalPosition;
 
         bool _isClustered;
         bool _isUnique;
@@ -167,15 +167,15 @@ namespace CoreEngine::Schemas{
     static_assert(std::is_trivially_destructible_v<IndexSchema>);
 
     struct ConstraintSchema{
-        static constexpr UnsignedTinyInt NO_INDEX = std::numeric_limits<UnsignedTinyInt>::max();
+        static constexpr UInt8_t NO_INDEX = std::numeric_limits<UInt8_t>::max();
 
         DataTypes::StringView _name;
-        Int _id;
+        Int32_t _id;
         ConstraintType _type;
-        UnsignedTinyInt _indexOrdinalPosition;
+        UInt8_t _indexOrdinalPosition;
 
         const column_index_t* _keyColumns;
-        UnsignedTinyInt _keyCount;
+        UInt8_t _keyCount;
 
         const Expressions::Expression* _checkPredicate;
 
@@ -190,7 +190,7 @@ namespace CoreEngine::Schemas{
         Memory::PersistentAllocator _allocator;
 
     public:
-        static constexpr UnsignedTinyInt NONE = std::numeric_limits<UnsignedTinyInt>::max();
+        static constexpr UInt8_t NONE = std::numeric_limits<UInt8_t>::max();
 
         const ColumnSchema* _columns;
         const LowerNameEntry* _columnsByLowerName;
@@ -201,23 +201,23 @@ namespace CoreEngine::Schemas{
         const ConstraintSchema* _constraints;
         const column_index_t* _storedComputedOrder;
 
-        const UnsignedTinyInt* _checkConstraints;
+        const UInt8_t* _checkConstraints;
         DataTypes::StringView _lowerName;
 
-        Int _id;
-        Int _schemaId;
-        UnsignedSmallInt _ordinalPosition;
+        Int32_t _id;
+        Int32_t _schemaId;
+        UInt16_t _ordinalPosition;
         schema_version_t _version;
         column_number_t _columnCount;
 
-        UnsignedTinyInt _indexesCount;
-        UnsignedTinyInt _constraintsCount;
-        UnsignedTinyInt _storedComputedOrderCount;
-        UnsignedTinyInt _checkConstraintsCount;
-        UnsignedTinyInt _identitiesCount;
+        UInt8_t _indexesCount;
+        UInt8_t _constraintsCount;
+        UInt8_t _storedComputedOrderCount;
+        UInt8_t _checkConstraintsCount;
+        UInt8_t _identitiesCount;
 
-        UnsignedTinyInt _clusteredIndexOrdinalPosition;
-        UnsignedTinyInt _primaryKeyOrdinalPosition;
+        UInt8_t _clusteredIndexOrdinalPosition;
+        UInt8_t _primaryKeyOrdinalPosition;
 
         TableSchema()
             : _columns(nullptr), _columnsByLowerName(nullptr), _identities(nullptr),
@@ -230,7 +230,7 @@ namespace CoreEngine::Schemas{
               _clusteredIndexOrdinalPosition(NONE), _primaryKeyOrdinalPosition(NONE)
         {}
 
-        explicit TableSchema(const UnsignedInt size)
+        explicit TableSchema(const UInt32_t size)
             : _allocator(size), _columns(nullptr), _columnsByLowerName(nullptr), _identities(nullptr),
               _indexes(nullptr), _constraints(nullptr),
               _storedComputedOrder(nullptr), _checkConstraints(nullptr), _id(0), _schemaId(INVALID_SCHEMA_ID),
@@ -259,7 +259,7 @@ namespace CoreEngine::Schemas{
                 : nullptr;
         }
 
-        [[nodiscard]] UnsignedTinyInt NonClusteredIndexesStart() const{ return this->IsClustered(); }
+        [[nodiscard]] UInt8_t NonClusteredIndexesStart() const{ return this->IsClustered(); }
         [[nodiscard]] bool HasPrimaryKey() const{ return this->_primaryKeyOrdinalPosition != NONE; }
         [[nodiscard]] const ConstraintSchema* PrimaryKey() const{
             return this->HasPrimaryKey()

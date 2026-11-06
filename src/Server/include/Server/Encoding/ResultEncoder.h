@@ -33,31 +33,31 @@ namespace Network{
         static void PutValidity(
             std::vector<char>* buffer,
             const CoreEngine::DataVector* column,
-            Int rowOffset,
-            Int rowCount
+            Int32_t rowOffset,
+            Int32_t rowCount
         );
 
         static void PutFixedSizeData(
             std::vector<char>* buffer,
             const CoreEngine::DataVector* column,
-            Int rowOffset,
-            Int rowCount
+            Int32_t rowOffset,
+            Int32_t rowCount
         );
 
         template<typename T>
         static void PutVariableSizeData(
             std::vector<char>* buffer,
             const CoreEngine::DataVector* column,
-            Int rowOffset,
-            Int rowCount,
+            Int32_t rowOffset,
+            Int32_t rowCount,
             const ::Memory::IAllocator* allocator
         );
 
         static void PutColumnData(
             std::vector<char>* buffer,
             const CoreEngine::DataVector* column,
-            Int rowOffset,
-            Int rowCount,
+            Int32_t rowOffset,
+            Int32_t rowCount,
             const ::Memory::IAllocator* allocator
         );
 
@@ -83,8 +83,8 @@ namespace Network{
                 request_id_t requestId,
                 statement_ordinal_t statementOrdinal,
                 const CoreEngine::DataChunk* chunk,
-                Int rowOffset,
-                Int rowCount,
+                Int32_t rowOffset,
+                Int32_t rowCount,
                 const ::Memory::IAllocator* allocator
             );
     };
@@ -93,21 +93,21 @@ namespace Network{
     void ResultEncoder::PutVariableSizeData(
         std::vector<char>* buffer,
         const CoreEngine::DataVector* column,
-        const Int rowOffset,
-        const Int rowCount,
+        const Int32_t rowOffset,
+        const Int32_t rowCount,
         const Memory::IAllocator* allocator
     ){
         const auto base = buffer->size();
-        buffer->resize(base + (rowCount + 1) * sizeof(UnsignedInt));
+        buffer->resize(base + (rowCount + 1) * sizeof(UInt32_t));
 
-        UnsignedInt offset = 0;
-        const auto append = [&](const char* data, const Int size){
+        UInt32_t offset = 0;
+        const auto append = [&](const char* data, const Int32_t size){
             buffer->insert(buffer->end(), data, data + size);
             offset += size;
         };
 
-        for (Int i = 0; i < rowCount; i++){
-            std::memcpy(buffer->data() + base + (i * sizeof(UnsignedInt)), &offset, sizeof(UnsignedInt));
+        for (Int32_t i = 0; i < rowCount; i++){
+            std::memcpy(buffer->data() + base + (i * sizeof(UInt32_t)), &offset, sizeof(UInt32_t));
 
             const auto index = column->PhysicalIndex(rowOffset + i);
 
@@ -130,6 +130,6 @@ namespace Network{
                 static_assert(DataTypes::AlwaysFalse<T>, "Unsupported type for variable size data in: ResultEncoder::PutVariableSizeData");
         }
 
-        std::memcpy(buffer->data() + base + rowCount * sizeof(UnsignedInt), &offset, sizeof(UnsignedInt));
+        std::memcpy(buffer->data() + base + rowCount * sizeof(UInt32_t), &offset, sizeof(UInt32_t));
     }
 }

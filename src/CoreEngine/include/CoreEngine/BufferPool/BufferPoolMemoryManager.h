@@ -7,9 +7,9 @@ namespace CoreEngine{
         object_t* _data;
         Pages::Frame* _framesData;
         StorageLayout::frame_id_t* _freeStack;
-        UnsignedInt _freeTopId;
+        UInt32_t _freeTopId;
 
-        UnsignedInt _capacity;
+        UInt32_t _capacity;
 
 
         void AllocatePagePool();
@@ -25,9 +25,9 @@ namespace CoreEngine{
             BufferPoolMemoryManager(BufferPoolMemoryManager&& other) = delete;
             BufferPoolMemoryManager& operator=(BufferPoolMemoryManager&& other) = delete;
 
-            void Initialize(UnsignedBigInt size);
+            void Initialize(UInt64_t size);
 
-            [[nodiscard]] UnsignedInt Capacity() const{
+            [[nodiscard]] UInt32_t Capacity() const{
                 return this->_capacity;
             }
 
@@ -35,21 +35,21 @@ namespace CoreEngine{
                 return this->_data;
             }
 
-            [[nodiscard]] inline object_t* Data(const UnsignedBigInt offset) const{
+            [[nodiscard]] inline object_t* Data(const UInt64_t offset) const{
                 return this->_data + offset;
             }
 
-            object_t* CopyToMemory(const char* buffer, UnsignedBigInt offset, page_offset_t bufferOffset) const;
+            object_t* CopyToMemory(const char* buffer, UInt64_t offset, page_offset_t bufferOffset) const;
 
-            [[nodiscard]] Pages::Frame* GetFrame(const UnsignedInt index) const{
+            [[nodiscard]] Pages::Frame* GetFrame(const UInt32_t index) const{
                 return &this->_framesData[index];
             }
 
-            [[nodiscard]] object_t* FrameData(const UnsignedInt index){
+            [[nodiscard]] object_t* FrameData(const UInt32_t index){
                 return this->_data + index * StorageLayout::PAGE_SIZE;
             }
 
-            [[nodiscard]] const object_t* FrameData(const UnsignedInt index) const{
+            [[nodiscard]] const object_t* FrameData(const UInt32_t index) const{
                 return this->_data + index * StorageLayout::PAGE_SIZE;
             }
 

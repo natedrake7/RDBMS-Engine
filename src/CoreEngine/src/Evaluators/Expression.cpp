@@ -140,16 +140,16 @@ namespace Expressions{
             columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<bool>;
             break;
         case DataType::TinyInt:
-            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<TinyInt>;
+            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int8_t>;
             break;
         case DataType::SmallInt:
-            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<SmallInt>;
+            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int16_t>;
             break;
         case DataType::Int:
-            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int>;
+            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int32_t>;
             break;
         case DataType::BigInt:
-            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<BigInt>;
+            columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<Int64_t>;
             break;
         case DataType::Decimal:
             columnExpression->rowKernel = &CoreEngine::RowKernels::ColumnScanKernel<DataTypes::Decimal>;
@@ -179,26 +179,26 @@ namespace Expressions{
 
     void ConstantExpression::BindVectorizedKernel(Expression* self, const CoreEngine::OutputSchema* schema){
         auto* constantExpression = self->As<ConstantExpression>();
-        constantExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetConstantKernel(constantExpression->value.GetType());
+        constantExpression->vectorizedKernel = CoreEngine::VectorizedKernels::JumpTables::GetConstantKernel(constantExpression->value.TypeInfo());
     }
 
     void ConstantExpression::BindRowKernel(Expression* self){
         auto* constantExpression = self->As<ConstantExpression>();
-        switch (constantExpression->value.GetType()){
+        switch (constantExpression->value.TypeInfo()){
         case DataType::Bool:
             constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<bool>;
             break;
         case DataType::TinyInt:
-            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<TinyInt>;
+            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int8_t>;
             break;
         case DataType::SmallInt:
-            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<SmallInt>;
+            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int16_t>;
             break;
         case DataType::Int:
-            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int>;
+            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int32_t>;
             break;
         case DataType::BigInt:
-            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<BigInt>;
+            constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<Int64_t>;
             break;
         case DataType::DateTime:
             constantExpression->rowKernel = &CoreEngine::RowKernels::ConstantScanKernel<DataTypes::DateTime>;
@@ -223,7 +223,7 @@ namespace Expressions{
         }
     }
 
-    DataType ConstantExpression::GetReturnType() const{ return this->value.GetType(); }
+    DataType ConstantExpression::GetReturnType() const{ return this->value.TypeInfo(); }
 
     LogicalExpression::LogicalExpression(
         Expression *leftExpression,
@@ -405,7 +405,7 @@ namespace Expressions{
         case BinaryOperator::LessEqual:
             return true;
         default:
-            throw std::runtime_error("BinaryExpression::ValidateOperation: Unknown operator" + std::to_string(static_cast<Int>(this->operation)));
+            throw std::runtime_error("BinaryExpression::ValidateOperation: Unknown operator" + std::to_string(static_cast<Int32_t>(this->operation)));
         }
     }
 
@@ -487,7 +487,7 @@ namespace Expressions{
         DataTypes::String& errorMessage,
         const DataType expectedType,
         const DataType returnType,
-        const Int index
+        const Int32_t index
     ) {
         if (returnType == DataType::Null) {
             errorMessage = errorMessage.ConcatInPlace(
@@ -820,22 +820,22 @@ namespace Expressions{
             variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<bool>;
             break;
         case DataType::TinyInt:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<TinyInt>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int8_t>;
             break;
         case DataType::SmallInt:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<SmallInt>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int16_t>;
             break;
         case DataType::Int:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int32_t>;
             break;
         case DataType::BigInt:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<BigInt>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int64_t>;
             break;
         case DataType::Decimal:
             variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::Decimal>;
             break;
         case DataType::DateTime:
-            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<BigInt>;
+            variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<Int64_t>;
             break;
         case DataType::Guid:
             variableExpression->rowKernel = &CoreEngine::RowKernels::VariableScanKernel<DataTypes::Guid>;
@@ -943,17 +943,17 @@ namespace Expressions{
         case DataType::Bool:
             return CoreEngine::RowKernels::KernelToValue<bool>(expression, context);
         case DataType::TinyInt:
-            return CoreEngine::RowKernels::KernelToValue<TinyInt>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<Int8_t>(expression, context);
         case DataType::SmallInt:
-            return CoreEngine::RowKernels::KernelToValue<SmallInt>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<Int16_t>(expression, context);
         case DataType::Int:
-            return CoreEngine::RowKernels::KernelToValue<Int>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<Int32_t>(expression, context);
         case DataType::BigInt:
-            return CoreEngine::RowKernels::KernelToValue<BigInt>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<Int64_t>(expression, context);
         case DataType::Decimal:
             return CoreEngine::RowKernels::KernelToValue<DataTypes::Decimal>(expression, context);
         case DataType::DateTime:
-            return CoreEngine::RowKernels::KernelToValue<BigInt>(expression, context);
+            return CoreEngine::RowKernels::KernelToValue<Int64_t>(expression, context);
         case DataType::Guid:
             return CoreEngine::RowKernels::KernelToValue<DataTypes::Guid>(expression, context);
         case DataType::Json:

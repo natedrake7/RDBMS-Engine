@@ -22,7 +22,7 @@ namespace Network{
     // Every client-visible type maps to a real wire type, and every fixed-width type
     // has the same size in engine vectors as on the wire, so the encoder can memcpy it.
     inline constexpr bool IsMappingValid = []{
-        for (Int i = 0; i < DATATYPE_COUNT; ++i){
+        for (Int32_t i = 0; i < DATATYPE_COUNT; ++i){
             const auto wire = WIRE_TYPES[i];
             if (wire == WireType::Invalid)
                 return false;

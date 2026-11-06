@@ -1,7 +1,7 @@
 ﻿#include <QueryPipeline/CompileContext.h>
 
 namespace QueryPipeline{
-    CompileContext::CompileContext(const Int size)
+    CompileContext::CompileContext(const Int32_t size)
         : allocator(size){
         this->statements.SetAllocator(&this->allocator);
     }
@@ -24,7 +24,7 @@ namespace QueryPipeline{
         this->statements = std::move(otherStatements);
     }
 
-    void CompileContext::Reserve(const Int size){
+    void CompileContext::Reserve(const Int32_t size){
         this->statements.Reserve(size);
     }
 
@@ -40,7 +40,7 @@ namespace QueryPipeline{
         return &this->allocator;
     }
 
-    void* CompileContext::Allocate(const Int size) const{
+    void* CompileContext::Allocate(const Int32_t size) const{
         return this->allocator.AllocateRaw(size);
     }
 }

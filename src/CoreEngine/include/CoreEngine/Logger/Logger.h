@@ -11,7 +11,7 @@
 
 
 namespace CoreEngine::Logging {
-    enum OperationType : UnsignedTinyInt{
+    enum OperationType : UInt8_t{
         InvalidOperation = 0,
         InsertRow = 1,
         UpdateRow = 2,

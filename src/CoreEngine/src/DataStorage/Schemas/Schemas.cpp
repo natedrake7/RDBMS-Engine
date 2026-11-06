@@ -43,7 +43,7 @@ namespace CoreEngine::Schemas{
 
         class ColumnOrdinals{
             struct Entry{
-                Int _id;
+                Int32_t _id;
                 column_index_t _ordinalPosition;
             };
 
@@ -70,8 +70,8 @@ namespace CoreEngine::Schemas{
                     std::ranges::sort(this->_entries.begin(), this->_entries.end(), sortFunction);
             }
 
-            [[nodiscard]] column_index_t GetOrdinal(const Int columnId){
-                const auto it = std::lower_bound(this->_entries.begin(), this->_entries.end(), columnId, [](const Entry& lhs, const Int id){
+            [[nodiscard]] column_index_t GetOrdinal(const Int32_t columnId){
+                const auto it = std::lower_bound(this->_entries.begin(), this->_entries.end(), columnId, [](const Entry& lhs, const Int32_t id){
                     return lhs._id < id;
                 });
 
@@ -104,7 +104,7 @@ namespace CoreEngine::Schemas{
 
         ColumnOrdinals columnOrdinals(tableDefinition._columns);
 
-        const UnsignedInt indexesByteCount = [&]{
+        const UInt32_t indexesByteCount = [&]{
             //later add coveredColumns and filter size as well if they exist
             return
                 RegionBytes<IndexSchema>(tableDefinition._indexes.Size())
@@ -112,14 +112,14 @@ namespace CoreEngine::Schemas{
                 + RegionBytes<DataType>(tableDefinition._indexesColumnsCount);
         }();
 
-        const UnsignedInt constraintsByteCount = [&]{
+        const UInt32_t constraintsByteCount = [&]{
             //add later check predicate size(sizeof expression)
             return RegionBytes<ConstraintSchema>(tableDefinition._constraints.Size())
             + RegionBytes<column_index_t>(tableDefinition._constraintsColumnsCount);
         }();
 
         //count first objects data sizes
-        UnsignedInt arenaSize =
+        UInt32_t arenaSize =
             RegionBytes<ColumnSchema>(tableDefinition._columns.Size())
             + RegionBytes<IdentitySchema>(tableDefinition._identities.Size())
             + RegionBytes<ExpressionSchema>(tableDefinition._defaults.Size())
@@ -142,7 +142,7 @@ namespace CoreEngine::Schemas{
         const auto* __restrict__ allocator = &schema->_allocator;
 
         auto* identities = AllocateArray<IdentitySchema>(allocator, tableDefinition._identities.Size());
-        for (UnsignedTinyInt i = 0; i < static_cast<UnsignedTinyInt>(tableDefinition._identities.Size()); i++){
+        for (UInt8_t i = 0; i < static_cast<UInt8_t>(tableDefinition._identities.Size()); i++){
             const auto& header = tableDefinition._identities[i];
             std::construct_at(&identities[i], IdentitySchema{
                ._seedValue = header.seedValue,
@@ -218,8 +218,8 @@ namespace CoreEngine::Schemas{
 
         std::size_t nextIndexColumn = 0;
         std::size_t nextDataTypeIndex = 0;
-        Int clusteredIndexOrdinal = NONE;
-        for (Int i = 0;i < tableDefinition._indexes.Size(); i++){
+        Int32_t clusteredIndexOrdinal = NONE;
+        for (Int32_t i = 0;i < tableDefinition._indexes.Size(); i++){
             const auto& header = tableDefinition._indexes[i];
 
             auto* index = std::construct_at(&indexes[i]);
@@ -235,7 +235,7 @@ namespace CoreEngine::Schemas{
             if (index->_isClustered)
                 clusteredIndexOrdinal = i;
 
-            for (Int j = 0; j < header.columns.Size(); j++){
+            for (Int32_t j = 0; j < header.columns.Size(); j++){
                 const auto& column = header.columns[j];
                 const auto ordinalPosition = columnOrdinals.GetOrdinal(column.columnId);
 
@@ -264,11 +264,11 @@ namespace CoreEngine::Schemas{
             }
         }
 
-        const auto findIndexById = [&](const Int indexId){
+        const auto findIndexById = [&](const Int32_t indexId){
             if (indexId == INVALID_INDEX_ID)
                 return INVALID_INDEX_ID;
 
-            for (Int i = 0;i < tableDefinition._indexes.Size(); i++){
+            for (Int32_t i = 0;i < tableDefinition._indexes.Size(); i++){
                 if (indexes[i]._id == indexId)
                     return i;
             }
@@ -277,8 +277,8 @@ namespace CoreEngine::Schemas{
         };
 
         std::size_t nextConstraintColumn = 0;
-        Int primaryKeyOrdinal = NONE;
-        for (Int i = 0;i < tableDefinition._constraints.Size(); i++){
+        Int32_t primaryKeyOrdinal = NONE;
+        for (Int32_t i = 0;i < tableDefinition._constraints.Size(); i++){
             const auto& header = tableDefinition._constraints[i];
             auto* constraint = std::construct_at(&constraints[i]);
             constraint->_id = header.constraintId;
@@ -286,12 +286,12 @@ namespace CoreEngine::Schemas{
             constraint->_type = header.type;
             constraint->_indexOrdinalPosition = findIndexById(header.indexId);
             constraint->_checkPredicate = nullptr;
-            constraint->_keyCount = static_cast<UnsignedTinyInt>(header.columns.Size());
+            constraint->_keyCount = static_cast<UInt8_t>(header.columns.Size());
 
             if (constraint->_type == ConstraintType::PrimaryKey)
                 primaryKeyOrdinal = i;
 
-            for (Int j = 0;j < header.columns.Size(); j++){
+            for (Int32_t j = 0;j < header.columns.Size(); j++){
                 const auto& column = header.columns[j];
                 auto* constraintColumn = &constraintsColumns[nextConstraintColumn++];
                  *constraintColumn = columnOrdinals.GetOrdinal(column.columnId);
@@ -303,7 +303,7 @@ namespace CoreEngine::Schemas{
 
         schema->_id = tableHeader->id;
         schema->_schemaId = tableHeader->schemaId;
-        schema->_ordinalPosition = static_cast<UnsignedSmallInt>(tableHeader->ordinalPosition);
+        schema->_ordinalPosition = static_cast<UInt16_t>(tableHeader->ordinalPosition);
         schema->_version = version;
         schema->_lowerName = CopyString<true>(allocator, tableHeader->name);
 
@@ -314,8 +314,8 @@ namespace CoreEngine::Schemas{
         schema->_identities = identities;
         schema->_storedComputedOrder = nullptr;
 
-        schema->_primaryKeyOrdinalPosition = static_cast<UnsignedTinyInt>(primaryKeyOrdinal);
-        schema->_clusteredIndexOrdinalPosition = static_cast<UnsignedTinyInt>(clusteredIndexOrdinal);
+        schema->_primaryKeyOrdinalPosition = static_cast<UInt8_t>(primaryKeyOrdinal);
+        schema->_clusteredIndexOrdinalPosition = static_cast<UInt8_t>(clusteredIndexOrdinal);
         schema->_checkConstraintsCount = tableDefinition._constraints.Size();
         schema->_columnCount = tableDefinition._columns.Size();
         schema->_indexesCount = tableDefinition._indexes.Size();

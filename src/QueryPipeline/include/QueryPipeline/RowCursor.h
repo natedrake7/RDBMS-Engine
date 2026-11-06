@@ -17,6 +17,6 @@ namespace QueryPipeline{
         friend std::ostream& operator<<(std::ostream& os, const RowCursor& cursor);
 
         void PrintRows(std::ostream& os)const;
-        void PrintColumn(std::ostream& os, Int rowIndex, Int columnIndex)const;
+        void PrintColumn(std::ostream& os, Int32_t rowIndex, Int32_t columnIndex)const;
     };
 }

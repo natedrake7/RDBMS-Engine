@@ -22,13 +22,13 @@ public:
     void Print()const;
     [[nodiscard]] const DataStructures::PolymorphicArray<Value>& Data()const;
     [[nodiscard]] DataStructures::PolymorphicArray<Value>& Data();
-    [[nodiscard]] Value GetColumnAt(Int columnPos)const;
-    [[nodiscard]] const Value& GetColumnReferenceAt(Int columnPos)const;
-    [[nodiscard]] Int GetSize()const;
-    [[nodiscard]] Int GetByteSize()const;
-    [[nodiscard]] Int GetPageByteSize()const;
-    void SetColumnIndex(Int columnPos, column_index_t columnIndex);
-    [[nodiscard]] BigInt ComputeHash()const;
+    [[nodiscard]] Value GetColumnAt(Int32_t columnPos)const;
+    [[nodiscard]] const Value& GetColumnReferenceAt(Int32_t columnPos)const;
+    [[nodiscard]] Int32_t GetSize()const;
+    [[nodiscard]] Int32_t GetByteSize()const;
+    [[nodiscard]] Int32_t GetPageByteSize()const;
+    void SetColumnIndex(Int32_t columnPos, column_index_t columnIndex);
+    [[nodiscard]] Int64_t ComputeHash()const;
 
     void Update(DataStructures::PolymorphicArray<Value>& updates);
     void Update(const DataStructures::PolymorphicArray<Value>& updates);

@@ -10,15 +10,15 @@ namespace CoreEngine::StorageTypes{
     class Table;
 
     class LobWriter{
-        static constexpr UnsignedInt STAGING_SIZE = Pages::LobLayout::INLINE_CAPACITY;
-        static constexpr UnsignedInt ROOT_CHILDREN_SIZE = sizeof(page_id_t) * Pages::LobLayout::ROOT_FANOUT;
-        static constexpr UnsignedInt INDEX_CHILDREN_SIZE = sizeof(page_id_t) * Pages::LobLayout::INDEX_FANOUT;
+        static constexpr UInt32_t STAGING_SIZE = Pages::LobLayout::INLINE_CAPACITY;
+        static constexpr UInt32_t ROOT_CHILDREN_SIZE = sizeof(page_id_t) * Pages::LobLayout::ROOT_FANOUT;
+        static constexpr UInt32_t INDEX_CHILDREN_SIZE = sizeof(page_id_t) * Pages::LobLayout::INDEX_FANOUT;
 
-        [[nodiscard]] static constexpr Int PagesFor(const UnsignedBigInt length){
+        [[nodiscard]] static constexpr Int32_t PagesFor(const UInt64_t length){
             if (Pages::LobLayout::LevelFor(length) == 0)
                 return 1;
 
-            return static_cast<Int>(1 + Pages::LobLayout::IndexPageCount(length) + Pages::LobLayout::DataPageCount(length));
+            return static_cast<Int32_t>(1 + Pages::LobLayout::IndexPageCount(length) + Pages::LobLayout::DataPageCount(length));
         }
 
         ExtentReservation _reservation;
@@ -31,16 +31,16 @@ namespace CoreEngine::StorageTypes{
         bool _isStaging;
 
         Pages::LobDataView _currentDataView;
-        UnsignedInt _currentBytesUsed;
-        UnsignedInt _dataPageCount;
+        UInt32_t _currentBytesUsed;
+        UInt32_t _dataPageCount;
 
         page_id_t* _rootChildren;
-        UnsignedInt _rootChildrenCount;
+        UInt32_t _rootChildrenCount;
 
         Pages::LobIndexView _currentIndexView;
         bool _hasTwoLevels;
 
-        UnsignedBigInt _length;
+        UInt64_t _length;
         bool _finished;
 
         const ::Memory::IAllocator* _allocator;
@@ -54,11 +54,11 @@ namespace CoreEngine::StorageTypes{
 
         void AddDataPageId(page_id_t pageId);
         void AddPageToIndex(page_id_t pageId);
-        void BulkAppendPagesToIndex(const page_id_t* pages, UnsignedInt count);
+        void BulkAppendPagesToIndex(const page_id_t* pages, UInt32_t count);
 
         void PromoteToTwoLevels();
 
-        void WriteToPages(const object_t* data, UnsignedInt length);
+        void WriteToPages(const object_t* data, UInt32_t length);
 
 
         void SpillStage();
@@ -66,17 +66,17 @@ namespace CoreEngine::StorageTypes{
         void ReleaseMemory();
 
         public:
-            LobWriter(const ::Memory::IAllocator* allocator, const Table* table, UnsignedBigInt lengthHint);
+            LobWriter(const ::Memory::IAllocator* allocator, const Table* table, UInt64_t lengthHint);
             ~LobWriter();
 
             void Append(
                 const object_t* data,
-                UnsignedInt length
+                UInt32_t length
             );
 
             [[nodiscard]] DataTypes::LobReference Finish();
 
-            [[nodiscard]] UnsignedBigInt Length()const{
+            [[nodiscard]] UInt64_t Length()const{
                 return this->_length;
             }
 
@@ -84,7 +84,7 @@ namespace CoreEngine::StorageTypes{
                 const ::Memory::IAllocator* allocator,
                 const Table* table,
                 const object_t* data,
-                UnsignedInt length
+                UInt32_t length
             );
     };
 }

@@ -43,7 +43,7 @@ namespace Expressions{
     class CastExpression;
 
     struct EvaluationContext {
-        enum class EvaluationContextType : UnsignedTinyInt {
+        enum class EvaluationContextType : UInt8_t {
             Constant = 0,
             SingleRow = 1,
             MaterializedRow = 2,
@@ -174,10 +174,10 @@ namespace Expressions{
 
         BoundReference _boundReference;
 
-        Int tableId;
-        Int columnId;
+        Int32_t tableId;
+        Int32_t columnId;
 
-        UnsignedSmallInt _slotIndex;
+        UInt16_t _slotIndex;
 
         DataType returnType;
         block_size_t size;
@@ -284,7 +284,7 @@ namespace Expressions{
             DataTypes::String& errorMessage,
             DataType expectedType,
             DataType returnType,
-            Int index
+            Int32_t index
         );
         static void ConstructInvalidCastMessage(DataTypes::String& errorMessage, DataType fromType, DataType toType);
         bool PerformAdditionalValidations(DataTypes::String& errorMessage)const;

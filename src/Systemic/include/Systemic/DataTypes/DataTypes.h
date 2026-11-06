@@ -23,17 +23,17 @@ typedef uint64_t session_id_t;
 
 static inline constexpr session_id_t INVALID_SESSION_ID = 0;
 
-typedef uint8_t     UnsignedTinyInt;
-typedef uint16_t    UnsignedSmallInt;
-typedef uint32_t    UnsignedInt;
-typedef uint64_t    UnsignedBigInt;
-typedef __uint128_t UnsignedHugeInt;
+typedef uint8_t     UInt8_t;
+typedef uint16_t    UInt16_t;
+typedef uint32_t    UInt32_t;
+typedef uint64_t    UInt64_t;
+typedef __uint128_t UInt128_t;
 
-typedef int8_t      TinyInt;
-typedef int16_t     SmallInt;
-typedef int32_t     Int;
-typedef int64_t     BigInt;
-typedef __int128_t  HugeInt;
+typedef int8_t      Int8_t;
+typedef int16_t     Int16_t;
+typedef int32_t     Int32_t;
+typedef int64_t     Int64_t;
+typedef __int128_t  Int128_t;
 
 typedef float       Float;
 typedef double      Double;
@@ -92,7 +92,7 @@ typedef uint64_t log_sequence_number_t;
 typedef uint64_t transaction_id_t;
 
 
-enum class DataType : UnsignedTinyInt{
+enum class DataType : UInt8_t{
     String   [[
         = DataTypes::Traits::Comparison{},
         = DataTypes::Traits::Concatenation{},
@@ -202,7 +202,7 @@ static_assert(PromoteType(DataType::Int, DataType::UnsignedInt) == DataType::Big
 static_assert(PromoteType(DataType::UnsignedBigInt, DataType::BigInt) == DataType::HugeInt);
 static_assert(PromoteType(DataType::Null, DataType::Int) == DataType::Int);
 
-enum class StringComparisonType: UnsignedTinyInt{
+enum class StringComparisonType: UInt8_t{
     Equals = 0,
     EqualsIgnoreCase = 1,
     StartsWith = 2,
@@ -296,16 +296,16 @@ namespace DataTypes{
     using DataTypeStorage = TypeList<
         StringValue,
         bool,
-        TinyInt,
-        SmallInt,
-        Int,
-        BigInt,
-        HugeInt,
-        UnsignedTinyInt,
-        UnsignedSmallInt,
-        UnsignedInt,
-        UnsignedBigInt,
-        UnsignedHugeInt,
+        Int8_t,
+        Int16_t,
+        Int32_t,
+        Int64_t,
+        Int128_t,
+        UInt8_t,
+        UInt16_t,
+        UInt32_t,
+        UInt64_t,
+        UInt128_t,
         Float,
         Double,
         Decimal,

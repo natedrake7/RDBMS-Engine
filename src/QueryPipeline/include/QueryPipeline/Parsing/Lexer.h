@@ -20,22 +20,22 @@ namespace QueryPipeline::Parsing{
         const char* _end;
         const char* _lineStart;
 
-        UnsignedInt _line;
+        UInt32_t _line;
 
         //Where the lexeme being scanned started. Captured before it is consumed so a
         //literal spanning newlines still reports the position it opened at.
-        UnsignedInt _tokenLine;
-        UnsignedInt _tokenColumn;
+        UInt32_t _tokenLine;
+        UInt32_t _tokenColumn;
 
         Diagnostic* _diagnostic;
 
         [[nodiscard]] bool AtEnd() const;
-        [[nodiscard]] char Peek(Int offset = 0) const;
+        [[nodiscard]] char Peek(Int32_t offset = 0) const;
 
         void SkipWhitespace();
         void ConsumeNewLine();
 
-        [[nodiscard]] Token Emit(TokenType type, const char* textBegin, Int textLength) const;
+        [[nodiscard]] Token Emit(TokenType type, const char* textBegin, Int32_t textLength) const;
 
         [[nodiscard]] Token ScanIdentifier(const char* tokenStart);
         [[nodiscard]] Token ScanQuotedIdentifier();
@@ -47,11 +47,11 @@ namespace QueryPipeline::Parsing{
         [[nodiscard]] Token Fail(
             const DataTypes::StringView& message,
             const char* textBegin,
-            Int textLength
+            Int32_t textLength
         );
 
         public:
-            Lexer(const char* data, Int size, Diagnostic& diagnostic);
+            Lexer(const char* data, Int32_t size, Diagnostic& diagnostic);
             Lexer(const DataTypes::StringView& source, Diagnostic& diagnostic);
 
             /**

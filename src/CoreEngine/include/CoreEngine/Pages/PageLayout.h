@@ -11,7 +11,7 @@ namespace CoreEngine::Pages{
 }
 
 namespace CoreEngine::PageLayout{
-    enum class PageType : UnsignedSmallInt{
+    enum class PageType : UInt16_t{
         DATA = 0,
         ALLOCATION = 1,
         LOB_ROOT = 2,
@@ -36,15 +36,15 @@ namespace CoreEngine::PageLayout{
     template<PageViewType TView>
     consteval bool IsSystemPage(){ return TView::IS_SYSTEM; }
 
-    enum class PagePriority : UnsignedTinyInt{
+    enum class PagePriority : UInt8_t{
         LOW = 0,
         MEDIUM = 1,
         HIGH = 2,
         SYSTEM = 3,
     };
 
-    inline constexpr UnsignedTinyInt SLOT_DIRECTORY_SIZE = 4 * sizeof(UnsignedSmallInt);
+    inline constexpr UInt8_t SLOT_DIRECTORY_SIZE = 4 * sizeof(UInt16_t);
 
-    inline constexpr Int MAX_PAGE_SLOTS = StorageLayout::PAGE_SIZE_WITHOUT_HEADER / SLOT_DIRECTORY_SIZE;
+    inline constexpr Int32_t MAX_PAGE_SLOTS = StorageLayout::PAGE_SIZE_WITHOUT_HEADER / SLOT_DIRECTORY_SIZE;
 
 }

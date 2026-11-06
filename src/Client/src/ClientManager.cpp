@@ -46,7 +46,7 @@ namespace Client {
         sockaddr_in serverAddress = {};
 
         serverAddress.sin_family = AF_INET;
-        serverAddress.sin_port = htons(static_cast<UnsignedSmallInt>(this->_parameters._port));
+        serverAddress.sin_port = htons(static_cast<UInt16_t>(this->_parameters._port));
 
         if (inet_pton(AF_INET, this->_parameters._hostname.c_str(), &serverAddress.sin_addr) != 1){
             std::cerr << "Invalid host address: " << this->_parameters._hostname << std::endl;
@@ -131,7 +131,7 @@ namespace Client {
             }
 
             if (parameter == "-P") {
-                this->_parameters._port = IntegerConverter::StrToInt<Int>(connectionString[++i]);
+                this->_parameters._port = IntegerConverter::StrToInt<Int32_t>(connectionString[++i]);
                 continue;
             }
             if (parameter == "-h") {
@@ -156,9 +156,9 @@ namespace Client {
 
     bool ConnectionManager::SendFrame(
         const Network::MessageType type,
-        const UnsignedInt requestId,
+        const UInt32_t requestId,
         const char* payload,
-        const UnsignedInt payloadLength
+        const UInt32_t payloadLength
     ) const{
         Network::Header header;
         header._messageType = type;
@@ -186,10 +186,10 @@ namespace Client {
         return Network::Transport::ReceiveExact(this->_parameters._socket, payload->data(), header->_payloadLength) == Network::Transport::IoStatus::Ok;
     }
 
-    bool ConnectionManager::ReadQueryResponse(const UnsignedInt requestId) const{
+    bool ConnectionManager::ReadQueryResponse(const UInt32_t requestId) const{
         std::vector<char> buffer;
         Network::Header header;
-        UnsignedInt statementsCompleted = 0;
+        UInt32_t statementsCompleted = 0;
 
         ResultDecoder decoder;
         while (true){
@@ -234,7 +234,7 @@ namespace Client {
                 return true;
             default:
                 std::cerr   << "Protocol error: unexpected message type "
-                            << static_cast<UnsignedSmallInt>(header._messageType) << std::endl;
+                            << static_cast<UInt16_t>(header._messageType) << std::endl;
                 return false;
             }
         }

@@ -10,9 +10,9 @@ namespace DataStructures{
     class SortedDirectory{
         PolymorphicArray<TEntry> _entries;
 
-        [[nodiscard]] Int LowerBound(const TKey& key) const noexcept{
-            Int low = 0;
-            Int high = this->_entries.Size();
+        [[nodiscard]] Int32_t LowerBound(const TKey& key) const noexcept{
+            Int32_t low = 0;
+            Int32_t high = this->_entries.Size();
 
             while (low < high){
                 const auto mid = low + (high - low) / 2;
@@ -25,21 +25,21 @@ namespace DataStructures{
             return high;
         }
 
-        [[nodiscard]] bool IsMatch(const Int index, const TKey& key) const noexcept{
+        [[nodiscard]] bool IsMatch(const Int32_t index, const TKey& key) const noexcept{
             return index < this->_entries.Size() && this->_entries[index].Key() == key;
         }
 
     public:
         explicit SortedDirectory()= default;
 
-        explicit SortedDirectory(const ::Memory::IAllocator* allocator, const Int capacity = 20) noexcept
+        explicit SortedDirectory(const ::Memory::IAllocator* allocator, const Int32_t capacity = 20) noexcept
             : _entries(allocator, capacity){}
 
         void SetAllocator(const ::Memory::IAllocator* allocator){
             this->_entries.SetAllocator(allocator);
         }
 
-        void Reserve(const Int capacity){
+        void Reserve(const Int32_t capacity){
             this->_entries.Reserve(capacity);
         }
 
@@ -55,20 +55,20 @@ namespace DataStructures{
         }
 
         bool Insert(const TEntry& entry){
-            const Int index = this->LowerBound(entry.Key());
+            const Int32_t index = this->LowerBound(entry.Key());
             if (this->IsMatch(index, entry.Key())) return false;
             this->_entries.Insert(entry, index);
             return true;
         }
 
         void ReKey(const TKey& oldKey, const TKey& newKey){
-            const Int index = this->LowerBound(oldKey);
+            const Int32_t index = this->LowerBound(oldKey);
             assert(this->IsMatch(index, oldKey) && oldKey == newKey);
             this->_entries[index]._key = newKey;
         }
 
         bool Remove(const TKey& key){
-            const Int index = this->LowerBound(key);
+            const Int32_t index = this->LowerBound(key);
             if (!this->IsMatch(index, key)) return false;
             this->_entries.Remove(index);
             return true;
@@ -78,17 +78,17 @@ namespace DataStructures{
             std::ranges::sort(this->_entries.begin(), this->_entries.end(),
                 [](const TEntry& left, const TEntry& right){ return left.Key() < right.Key(); });
 
-            for (Int i = 1; i < this->_entries.Size(); ++i)
+            for (Int32_t i = 1; i < this->_entries.Size(); ++i)
                 if (this->_entries[i - 1].Key() == this->_entries[i].Key())
                     return false;
             return true;
         }
 
-        [[nodiscard]] const TEntry& operator[](const Int index) const noexcept{
+        [[nodiscard]] const TEntry& operator[](const Int32_t index) const noexcept{
             return this->_entries[index];
         }
 
-        [[nodiscard]] Int Size() const{
+        [[nodiscard]] Int32_t Size() const{
             return this->_entries.Size();
         }
 

@@ -20,7 +20,7 @@ namespace CoreEngine::Catalog{
 // row structs in CatalogRows.h: they are never rebuilt from catalog rows, the rows describing them only serve
 // introspection. Any change to a row struct (a column, a type, a key, the table order) must bump CATALOG_VERSION.
 namespace CoreEngine {
-    inline constexpr UnsignedInt CATALOG_VERSION = 1;
+    inline constexpr UInt32_t CATALOG_VERSION = 1;
 
     /**
      * @name Reserved ids
@@ -30,25 +30,25 @@ namespace CoreEngine {
      * @{
      */
 
-    inline constexpr Int SYSTEM_SCHEMA_ID = 1;
+    inline constexpr Int32_t SYSTEM_SCHEMA_ID = 1;
     inline constexpr auto SYSTEM_SCHEMA_NAME = DataTypes::StringView("dbo");
-    inline constexpr Int FIRST_USER_OBJECT_ID = 10'000;
+    inline constexpr Int32_t FIRST_USER_OBJECT_ID = 10'000;
 
     // System tables have fewer than SYSTEM_COLUMN_ID_STRIDE columns (checked in SystemTablesAreValid)
-    inline constexpr Int SYSTEM_COLUMN_ID_STRIDE = 100;
+    inline constexpr Int32_t SYSTEM_COLUMN_ID_STRIDE = 100;
 
-    [[nodiscard]] constexpr Int SystemColumnId(const table_id_t tableId, const column_index_t ordinal){
-        return static_cast<Int>(tableId) * SYSTEM_COLUMN_ID_STRIDE + ordinal;
+    [[nodiscard]] constexpr Int32_t SystemColumnId(const table_id_t tableId, const column_index_t ordinal){
+        return static_cast<Int32_t>(tableId) * SYSTEM_COLUMN_ID_STRIDE + ordinal;
     }
 
     // A system table has exactly one index and one constraint, its primary key, numbered after the table.
     // sys_index_columns / sys_constraint_columns are keyed by that id alone, so it must differ per table.
-    [[nodiscard]] constexpr Int SystemPrimaryKeyIndexId(const table_id_t tableId){
-        return static_cast<Int>(tableId);
+    [[nodiscard]] constexpr Int32_t SystemPrimaryKeyIndexId(const table_id_t tableId){
+        return static_cast<Int32_t>(tableId);
     }
 
-    [[nodiscard]] constexpr Int SystemPrimaryKeyConstraintId(const table_id_t tableId){
-        return static_cast<Int>(tableId);
+    [[nodiscard]] constexpr Int32_t SystemPrimaryKeyConstraintId(const table_id_t tableId){
+        return static_cast<Int32_t>(tableId);
     }
 
     /** @} End of: Reserved ids */
@@ -59,7 +59,7 @@ namespace CoreEngine {
      * @{
      */
 
-    enum CatalogTables: UnsignedTinyInt {
+    enum CatalogTables: UInt8_t {
         SysDatabases = 0,
         SysSchemas = 1,
         SysTables = 2,
@@ -78,7 +78,7 @@ namespace CoreEngine {
         SysIndexStats = 15,
     };
 
-    enum class SysDatabases : UnsignedTinyInt {
+    enum class SysDatabases : UInt8_t {
         DatabaseId = 0,
         Name = 1,
         FilePath = 2,
@@ -91,7 +91,7 @@ namespace CoreEngine {
         DeletedAt = 9,
     };
 
-    enum class SysSchemas : UnsignedTinyInt {
+    enum class SysSchemas : UInt8_t {
         DatabaseId = 0,
         SchemaId = 1,
         Name = 2,
@@ -103,7 +103,7 @@ namespace CoreEngine {
         DeletedAt = 8,
     };
 
-    enum class SysTables : UnsignedTinyInt {
+    enum class SysTables : UInt8_t {
         DatabaseId = 0,
         TableId = 1,
         SchemaId = 2,
@@ -118,7 +118,7 @@ namespace CoreEngine {
         DeletedAt = 11,
     };
 
-    enum class SysColumns : UnsignedTinyInt {
+    enum class SysColumns : UInt8_t {
         TableId = 0,
         ColumnId = 1,
         Name = 2,
@@ -137,7 +137,7 @@ namespace CoreEngine {
         DeletedAt = 15,
     };
 
-    enum class SysIndexes : UnsignedTinyInt {
+    enum class SysIndexes : UInt8_t {
         TableId = 0,
         IndexId = 1,
         Name = 2,
@@ -151,7 +151,7 @@ namespace CoreEngine {
         DeletedAt = 10,
     };
 
-    enum class SysIndexColumns : UnsignedTinyInt {
+    enum class SysIndexColumns : UInt8_t {
         IndexId = 0,
         ColumnId = 1,
         OrdinalPosition = 2,
@@ -161,7 +161,7 @@ namespace CoreEngine {
         DeletedAt = 6,
     };
 
-    enum class SysConstraints : UnsignedTinyInt {
+    enum class SysConstraints : UInt8_t {
         TableId = 0,
         ConstraintId = 1,
         Name = 2,
@@ -176,7 +176,7 @@ namespace CoreEngine {
         DeletedAt = 11,
     };
 
-    enum class SysConstraintColumns : UnsignedTinyInt {
+    enum class SysConstraintColumns : UInt8_t {
         ConstraintId = 0,
         ColumnId = 1,
         OrdinalPosition = 2,
@@ -185,7 +185,7 @@ namespace CoreEngine {
         DeletedAt = 5,
     };
 
-    enum class SysIdentityColumns : UnsignedTinyInt {
+    enum class SysIdentityColumns : UInt8_t {
         TableId = 0,
         ColumnId = 1,
         SeedValue = 2,
@@ -198,7 +198,7 @@ namespace CoreEngine {
         DeletedAt = 9,
     };
 
-    enum class SysDefaultValues : UnsignedTinyInt {
+    enum class SysDefaultValues : UInt8_t {
         ColumnId = 0,
         Value = 1,
         Version = 2,
@@ -206,7 +206,7 @@ namespace CoreEngine {
         DeletedAt = 4,
     };
 
-    enum class SysTableStats : UnsignedTinyInt {
+    enum class SysTableStats : UInt8_t {
         TableId = 0,
         RowCount = 1,
         AvgRowSize = 2,
@@ -214,7 +214,7 @@ namespace CoreEngine {
         LastUpdatedAt = 4
     };
 
-    enum class SysColumnStats : UnsignedTinyInt {
+    enum class SysColumnStats : UInt8_t {
         ColumnId = 0,
         DistinctCount = 1,
         MinimumValue = 2,
@@ -222,7 +222,7 @@ namespace CoreEngine {
         NullCount = 4
     };
 
-    enum class SysColumnHistograms : UnsignedTinyInt {
+    enum class SysColumnHistograms : UInt8_t {
         ColumnId = 0,
         HistogramId = 1,
         RangeStart = 2,
@@ -231,7 +231,7 @@ namespace CoreEngine {
         DistinctCount = 5,
     };
 
-    enum class SysRoles : UnsignedTinyInt {
+    enum class SysRoles : UInt8_t {
         RoleId = 0,
         RoleName = 1,
         Permissions = 2,
@@ -244,7 +244,7 @@ namespace CoreEngine {
         DeletedAt = 9,
     };
 
-    enum class SysUsers : UnsignedTinyInt {
+    enum class SysUsers : UInt8_t {
         UserId = 0,
         UserName = 1,
         PasswordHash = 2,
@@ -258,7 +258,7 @@ namespace CoreEngine {
         DeletedAt = 10,
     };
 
-    enum class SysIndexStats : UnsignedTinyInt {
+    enum class SysIndexStats : UInt8_t {
         TableId = 0,
         IndexId = 1,
         LeafPages = 2,
@@ -280,7 +280,7 @@ namespace CoreEngine {
         block_size_t size = 0;                                   // used only when the type has no fixed size (FixedColumnSize == 0)
         bool nullable = false;
         bool identity = false;
-        BigInt identityStart = Constants::DEFAULT_IDENTITY_VALUE; // first value the identity hands out in a freshly created catalog
+        Int64_t identityStart = Constants::DEFAULT_IDENTITY_VALUE; // first value the identity hands out in a freshly created catalog
         DataTypes::StringView defaultValue{};                         // SQL text, empty = no default
     };
 

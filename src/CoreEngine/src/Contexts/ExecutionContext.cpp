@@ -7,9 +7,9 @@
 namespace CoreEngine{
     ExecutionContext::ExecutionContext(
         Snapshot& snapshot,
-        const Int batchSize,
+        const Int32_t batchSize,
         const Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>>* variables,
-        const Int initialAllocatorSize
+        const Int32_t initialAllocatorSize
     )   :   _snapshot(std::move(snapshot)),
             _allocator(initialAllocatorSize),
             _variables(variables),
@@ -43,7 +43,7 @@ namespace CoreEngine{
 
     ExecutionContext::~ExecutionContext() = default;
 
-    void ExecutionContext::SetBatchSize(const Int size){
+    void ExecutionContext::SetBatchSize(const Int32_t size){
         this->_batchSize = size;
     }
 
@@ -58,7 +58,7 @@ namespace CoreEngine{
         return this->_variables->Get(name).get();
     }
 
-    Int ExecutionContext::GetBatchSize() const{
+    Int32_t ExecutionContext::GetBatchSize() const{
         return this->_batchSize;
     }
 
@@ -76,40 +76,40 @@ namespace CoreEngine{
 
     void ExecutionContext::SetTable(
         const StorageTypes::Table* table,
-        const UnsignedSmallInt slotIndex
+        const UInt16_t slotIndex
     ){
         this->_schema.tables[slotIndex] = table;
     }
 
-    const StorageTypes::Table* ExecutionContext::GetTable(const UnsignedSmallInt index) const{
+    const StorageTypes::Table* ExecutionContext::GetTable(const UInt16_t index) const{
         return this->_schema.tables[index];
     }
 
-    Accessors::PageAccessor ExecutionContext::GetPageAccessor(UnsignedSmallInt slotIndex) const{
+    Accessors::PageAccessor ExecutionContext::GetPageAccessor(UInt16_t slotIndex) const{
         return this->_schema.tables[slotIndex]->GetPageAccessor();
     }
 
-    void ExecutionContext::SetScanHandle(const StorageTypes::RID* rids, const UnsignedInt size, const UnsignedSmallInt slotIndex){
+    void ExecutionContext::SetScanHandle(const StorageTypes::RID* rids, const UInt32_t size, const UInt16_t slotIndex){
         this->_scanHandles[slotIndex] = ScanHandle(rids, size);
     }
 
-    const ScanHandle& ExecutionContext::GetScanHandle(const UnsignedInt index) const{
+    const ScanHandle& ExecutionContext::GetScanHandle(const UInt32_t index) const{
         return this->_scanHandles[index];
     }
 
-    UnsignedInt ExecutionContext::GetScanHandleSize(const UnsignedInt index) const{
+    UInt32_t ExecutionContext::GetScanHandleSize(const UInt32_t index) const{
         return this->_scanHandles[index].size;
     }
 
-    const StorageTypes::RID* ExecutionContext::GetRIDs(const UnsignedInt slotIndex) const{
+    const StorageTypes::RID* ExecutionContext::GetRIDs(const UInt32_t slotIndex) const{
         return this->_scanHandles[slotIndex].rids;
     }
 
-    const StorageTypes::RID* ExecutionContext::GetRIDPtr(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
+    const StorageTypes::RID* ExecutionContext::GetRIDPtr(const UInt32_t slotIndex, const UInt32_t ridIndex) const{
         return &this->_scanHandles[slotIndex].rids[ridIndex];
     }
 
-    StorageTypes::RID ExecutionContext::GetRID(const UnsignedInt slotIndex, const UnsignedInt ridIndex) const{
+    StorageTypes::RID ExecutionContext::GetRID(const UInt32_t slotIndex, const UInt32_t ridIndex) const{
         return this->_scanHandles[slotIndex].rids[ridIndex];
     }
 
@@ -125,7 +125,7 @@ namespace CoreEngine{
         return this->_allocator.IsEmpty();
     }
 
-    void* ExecutionContext::Allocate(const Int size) const{
+    void* ExecutionContext::Allocate(const Int32_t size) const{
         return this->_allocator.AllocateRaw(size);
     }
 

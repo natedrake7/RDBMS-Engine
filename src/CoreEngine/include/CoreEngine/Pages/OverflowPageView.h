@@ -27,7 +27,7 @@ namespace CoreEngine::Pages{
         OverflowPageView(OverflowPageView&& other) noexcept = default;
         OverflowPageView& operator=(OverflowPageView&& other) noexcept = default;
 
-        [[nodiscard]] OverflowPtr Insert(const object_t* data, Int size) const;
-        [[nodiscard]] const object_t* Get(Int index, Int& outSize) const;
+        [[nodiscard]] OverflowPtr Insert(const object_t* data, Int32_t size) const;
+        [[nodiscard]] const object_t* Get(Int32_t index, Int32_t& outSize) const;
     };
 }

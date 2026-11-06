@@ -88,7 +88,7 @@ namespace DataTypes{
         data_size_t right = header->_size - 1;
 
         while (left <= right) {
-            const Int mid = left + (right - left) / 2;
+            const Int32_t mid = left + (right - left) / 2;
             const auto& entry = entries[mid];
 
             if (entry._keyHash < hash){
@@ -131,7 +131,7 @@ namespace DataTypes{
 
         if (header->IsObject()) {
             str.Append('{');
-            for (UnsignedInt i = 0; i < header->_size; i++) {
+            for (UInt32_t i = 0; i < header->_size; i++) {
                 const auto& entry = entries[i];
                 if (i > 0) str.Append(',');
 
@@ -153,7 +153,7 @@ namespace DataTypes{
 
         if (header->IsArray()) {
             str.Append('[');
-            for (UnsignedInt i = 0; i < header->_size; i++) {
+            for (UInt32_t i = 0; i < header->_size; i++) {
                 if (i > 0) str.Append(',');
                 this->SerializeValue(str, headerOffset, entries[i]);
             }

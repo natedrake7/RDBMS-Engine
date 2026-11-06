@@ -28,11 +28,11 @@ namespace CoreEngine{
         }
 
         template <typename TRow>
-        consteval Int IdentityKeyPosition(){
+        consteval Int32_t IdentityKeyPosition(){
             constexpr auto keys = KeyMembers<TRow>();
             for (std::size_t i = 0; i < keys.size(); i++)
                 if (::Reflection::HasAnnotation<Rows::Identity>(keys[i]))
-                    return static_cast<Int>(i);
+                    return static_cast<Int32_t>(i);
             return -1;
         }
 
@@ -130,7 +130,7 @@ namespace CoreEngine{
         if constexpr (sizeof...(Fields) == 0)
             updates = CatalogDetail::NonKeyValues(row, allocator);
         else{
-            updates = DataStructures::PolymorphicArray<Value>(allocator, static_cast<Int>(sizeof...(Fields)));
+            updates = DataStructures::PolymorphicArray<Value>(allocator, static_cast<Int32_t>(sizeof...(Fields)));
             (updates.Push(Rows::MakeValue(row.[:Fields:], allocator, Rows::OrdinalOf(Fields))), ...);
         }
 

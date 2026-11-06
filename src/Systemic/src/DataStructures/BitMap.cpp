@@ -10,7 +10,7 @@ namespace ByteMaps{
     BitMap::BitMap(object_t* data, const bit_map_size_t size)
         : _data(data), _size(size){}
 
-    Int BitMap::HeapSize() const{
+    Int32_t BitMap::HeapSize() const{
         return (this->_size + 7) / 8;
     }
 
@@ -129,7 +129,7 @@ namespace ByteMaps{
 
     bit_map_size_t BitMap::GetSizeUnsafe() const { return this->_size; }
 
-    Int BitMap::HeapSize(const Int size){
+    Int32_t BitMap::HeapSize(const Int32_t size){
         return (size + 7) / 8;
     }
 }

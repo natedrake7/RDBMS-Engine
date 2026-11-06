@@ -21,10 +21,15 @@ namespace Memory{
 class Value{
     union Storage{
         bool _bool;
-        TinyInt _tinyInt;
-        SmallInt _smallInt;
-        Int _int;
-        BigInt _bigInt;
+
+        Int8_t _tinyInt;
+        Int16_t _smallInt;
+        Int32_t _int;
+        Int64_t _bigInt;
+
+        UInt8_t
+
+
         DataTypes::DateTime _dateTime;
         DataTypes::Guid _guid;
         DataTypes::Decimal _decimal;
@@ -215,7 +220,7 @@ class Value{
             return this->_columnIndex;
         }
 
-        [[nodiscard]] DataTypes::TypeInfo GetType() const{
+        [[nodiscard]] DataTypes::TypeInfo TypeInfo() const{
             return this->_typeInfo;
         }
 
@@ -224,10 +229,10 @@ class Value{
         }
 
         [[nodiscard]] bool AsBool()const;
-        [[nodiscard]] TinyInt AsTinyInt()const;
-        [[nodiscard]] SmallInt AsSmallInt()const;
-        [[nodiscard]] Int AsInt()const;
-        [[nodiscard]] BigInt AsBigInt()const;
+        [[nodiscard]] Int8_t AsTinyInt()const;
+        [[nodiscard]] Int16_t AsSmallInt()const;
+        [[nodiscard]] Int32_t AsInt()const;
+        [[nodiscard]] Int64_t AsBigInt()const;
         [[nodiscard]] DataTypes::String AsString(const ::Memory::IAllocator* allocator)const;
         [[nodiscard]] std::string AsStdString()const;
         [[nodiscard]] DataTypes::StringView AsStringView()const;
@@ -265,13 +270,13 @@ template <typename T>
 T Value::Get(const ::Memory::IAllocator* allocator) const{
     if constexpr (std::is_same_v<T, bool>)
         return this->AsBool();
-    else if constexpr (std::is_same_v<T, TinyInt>)
+    else if constexpr (std::is_same_v<T, Int8_t>)
         return this->AsTinyInt();
-    else if constexpr (std::is_same_v<T, SmallInt>)
+    else if constexpr (std::is_same_v<T, Int16_t>)
         return this->AsSmallInt();
-    else if constexpr (std::is_same_v<T, Int>)
+    else if constexpr (std::is_same_v<T, Int32_t>)
         return this->AsInt();
-    else if constexpr (std::is_same_v<T, BigInt>)
+    else if constexpr (std::is_same_v<T, Int64_t>)
         return this->AsBigInt();
     else if constexpr (std::is_same_v<T, DataTypes::DateTime>)
         return this->AsDateTime();

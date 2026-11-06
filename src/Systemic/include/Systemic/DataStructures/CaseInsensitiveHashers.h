@@ -27,7 +27,7 @@ struct CaseInsensitiveHash {
         }
 
         // Fallback for non-string types — same as ConstexprHash
-        const auto bytes = std::bit_cast<std::array<UnsignedTinyInt, sizeof(T)>>(key);
+        const auto bytes = std::bit_cast<std::array<UInt8_t, sizeof(T)>>(key);
         for (size_t i = 0; i < sizeof(T); ++i) {
             h ^= bytes[i];
             h *= 1099511628211ULL;

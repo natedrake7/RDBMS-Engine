@@ -28,7 +28,7 @@ namespace QueryPipeline{
         struct HistogramSelectivityEstimate{
             int previousRows;
             int bucketSize;
-            BigInt totalTableRows;
+            Int64_t totalTableRows;
             int bucketIndex;
             const Value* value;
 
@@ -36,15 +36,15 @@ namespace QueryPipeline{
             void CalculatePreviousRows();
         };
 
-        static constexpr Int DEFAULT_EXPRESSION_COMPLEXITY = 0;
-        static constexpr Int CONSTANT_EXPRESSION_COMPLEXITY = 0;
-        static constexpr Int ADDITION_EXPRESSION_COMPLEXITY = 3;
-        static constexpr Int MULTIPLICATION_EXPRESSION_COMPLEXITY = 2;
-        static constexpr Int DIVISION_EXPRESSION_COMPLEXITY = 5;
-        static constexpr Int EQUALITY_EXPRESSION_COMPLEXITY = 2;
-        static constexpr Int FUNCTION_EXPRESSION_COMPLEXITY = 10;
-        static constexpr Int LOGICAL_AND_EXPRESSION_COMPLEXITY = 2;
-        static constexpr Int BRANCH_EXPRESSION_COMPLEXITY = 8;
+        static constexpr Int32_t DEFAULT_EXPRESSION_COMPLEXITY = 0;
+        static constexpr Int32_t CONSTANT_EXPRESSION_COMPLEXITY = 0;
+        static constexpr Int32_t ADDITION_EXPRESSION_COMPLEXITY = 3;
+        static constexpr Int32_t MULTIPLICATION_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int32_t DIVISION_EXPRESSION_COMPLEXITY = 5;
+        static constexpr Int32_t EQUALITY_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int32_t FUNCTION_EXPRESSION_COMPLEXITY = 10;
+        static constexpr Int32_t LOGICAL_AND_EXPRESSION_COMPLEXITY = 2;
+        static constexpr Int32_t BRANCH_EXPRESSION_COMPLEXITY = 8;
 
 
         static constexpr double INTEGER_COMPARISON_COST = 1.0;
@@ -53,12 +53,12 @@ namespace QueryPipeline{
         static constexpr double DEFAULT_COMPARISON_COST = 0.0;
 
 
-        [[nodiscard]] static Int EstimateExpressionComplexity(const Expressions::Expression* expression);
-        [[nodiscard]] static Int EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr);
-        [[nodiscard]] static Int EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr);
-        [[nodiscard]] static Int EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr);
-        [[nodiscard]] static Int EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr);
-        [[nodiscard]] static Int EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr);
+        [[nodiscard]] static Int32_t EstimateExpressionComplexity(const Expressions::Expression* expression);
+        [[nodiscard]] static Int32_t EstimateBinaryExpressionComplexity(const Expressions::BinaryExpression* binaryExpr);
+        [[nodiscard]] static Int32_t EstimateOperationComplexity(const Expressions::BinaryOperator& binaryExpr);
+        [[nodiscard]] static Int32_t EstimateLogicalExpressionComplexity(const Expressions::LogicalExpression* logicalExpr);
+        [[nodiscard]] static Int32_t EstimateFunctionExpressionComplexity(const Expressions::FunctionExpression* functionExpr);
+        [[nodiscard]] static Int32_t EstimateBranchExpressionComplexity(const Expressions::BranchExpression* branchExpr);
         [[nodiscard]] static double EstimateExpressionComparisonCost(const Expressions::Expression* expression);
 
         [[nodiscard]] static double InterpolateBucket(
@@ -121,17 +121,17 @@ namespace QueryPipeline{
 
         [[nodiscard]] static double EstimateFilterCost(
             const Expressions::Expression* filterExpression,
-            BigInt inputRows,
+            Int64_t inputRows,
             double selectivity
         );
 
         [[nodiscard]] static double EstimateProjectionCost(
             const std::vector<Expressions::Expression*>& projections,
-            BigInt inputRows
+            Int64_t inputRows
         );
 
         [[nodiscard]] static double EstimateSortCost(
-            BigInt inputRows,
+            Int64_t inputRows,
             const std::vector<Expressions::Expression*>& sortExpressions
         );
     };

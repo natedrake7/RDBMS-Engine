@@ -14,8 +14,8 @@ namespace CoreEngine::Messages{
 
     static constexpr DataTypes::StringView TABLE_LAYOUT_TOO_LARGE =  "Row cannot fit in a page: reduce key or fixed-size columns";
 
-    static DataTypes::String NUMBER_OF_ROWS_AFFECTED(const ::Memory::IAllocator* allocator, const Int numberOfRows){
-        const auto numberOfRowsStr = IntegerConverter::IntToStr<Int>(numberOfRows, allocator);
+    static DataTypes::String NUMBER_OF_ROWS_AFFECTED(const ::Memory::IAllocator* allocator, const Int32_t numberOfRows){
+        const auto numberOfRowsStr = IntegerConverter::IntToStr<Int32_t>(numberOfRows, allocator);
         return DataTypes::String::Concat(allocator, "Number of rows affected: ", numberOfRowsStr);
     }
 }

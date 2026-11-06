@@ -12,13 +12,13 @@ namespace CoreEngine::Memory{
         mutable Chunk* _head;
         mutable Chunk* _tail;
 
-        [[nodiscard]] UnsignedInt NewChunkCapacity(UnsignedInt size)const;
-        void AllocateNewChunk(UnsignedInt size, std::size_t alignment)const;
-        void TryFindNewChunk(UnsignedInt size, std::size_t alignment)const;
+        [[nodiscard]] UInt32_t NewChunkCapacity(UInt32_t size)const;
+        void AllocateNewChunk(UInt32_t size, std::size_t alignment)const;
+        void TryFindNewChunk(UInt32_t size, std::size_t alignment)const;
 
     public:
         explicit PersistentAllocator();
-        explicit PersistentAllocator(UnsignedInt size);
+        explicit PersistentAllocator(UInt32_t size);
         PersistentAllocator(PersistentAllocator&& other) noexcept;
         PersistentAllocator& operator=(PersistentAllocator&& other) noexcept;
 
@@ -31,6 +31,6 @@ namespace CoreEngine::Memory{
         void ReleaseFromAllocationStep(::Memory::AllocationStep& step) const override;
 
     protected:
-        [[nodiscard]] void* AllocateAligned(UnsignedInt size, std::size_t alignment) const override;
+        [[nodiscard]] void* AllocateAligned(UInt32_t size, std::size_t alignment) const override;
     };
 }

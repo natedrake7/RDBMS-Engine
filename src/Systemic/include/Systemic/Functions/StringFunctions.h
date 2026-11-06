@@ -19,7 +19,7 @@ namespace Functions::String {
     return str.substr(2, str.size() - 3);
   }
 
-  inline std::string Space(const Int size) {
+  inline std::string Space(const Int32_t size) {
       return std::string(size, ' ');
   }
   //
@@ -51,9 +51,9 @@ namespace Functions::String {
         return str.front();
     }
 
-    inline std::string Char(const Int asciiCode) { return {0, static_cast<char>(asciiCode)}; }
+    inline std::string Char(const Int32_t asciiCode) { return {0, static_cast<char>(asciiCode)}; }
 
-    inline int CharIndex(const std::string &subStr, const std::string &str, const Int startIndex)
+    inline int CharIndex(const std::string &subStr, const std::string &str, const Int32_t startIndex)
     {
         if(subStr.empty()
             || str.empty()
@@ -67,7 +67,7 @@ namespace Functions::String {
 
     inline int DataLength(const std::string &str) { return static_cast<int>(str.size()); }
 
-    inline std::string Left(const std::string &str, const Int numberOfCharacters)
+    inline std::string Left(const std::string &str, const Int32_t numberOfCharacters)
     {
         if(str.empty() || numberOfCharacters <= 0)
             return str;
@@ -75,7 +75,7 @@ namespace Functions::String {
         return str.substr(0, numberOfCharacters);
     }
 
-    inline std::string Right(const std::string &str, const Int numberOfCharacters)
+    inline std::string Right(const std::string &str, const Int32_t numberOfCharacters)
     {
         if(str.empty() || numberOfCharacters <= 0)
             return str;
@@ -195,7 +195,7 @@ namespace Functions::String {
         return result;
     }
 
-    inline std::string SubString(const std::string &str, const Int startIndex, const Int endIndex)
+    inline std::string SubString(const std::string &str, const Int32_t startIndex, const Int32_t endIndex)
     {
         if(startIndex > str.size() -1 || endIndex > str.size() - 1)
             return str;

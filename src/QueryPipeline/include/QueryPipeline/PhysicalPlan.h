@@ -90,7 +90,7 @@ namespace QueryPipeline::PhysicalPlan {
         const CoreEngine::OutputSchema* _schema;
         const Network::Session* session;
 
-        Int temporaryTableId;
+        Int32_t temporaryTableId;
 
     public:
         PlanNode();
@@ -123,14 +123,14 @@ namespace QueryPipeline::PhysicalPlan {
     class PhysicalMaterialize: public PlanNode{
         CoreEngine::StorageTypes::ScanPlan _scanPlan;
         PlanNode* child;
-        UnsignedSmallInt _slotIndex;
+        UInt16_t _slotIndex;
 
         public:
             explicit PhysicalMaterialize(
                 CoreEngine::StorageTypes::ScanPlan& scanPlan,
                 PlanNode* child,
                 const CoreEngine::OutputSchema* schema,
-                UnsignedSmallInt slotIndex
+                UInt16_t slotIndex
             );
             ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
@@ -169,17 +169,17 @@ namespace QueryPipeline::PhysicalPlan {
 
     class PhysicalUseDatabase final : public PlanNode {
         session_id_t sessionId;
-        Int databaseId;
+        Int32_t databaseId;
     public:
-        explicit PhysicalUseDatabase(session_id_t sessionId, Int databaseId);
+        explicit PhysicalUseDatabase(session_id_t sessionId, Int32_t databaseId);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
     class PhysicalSchemaCreate final : public PlanNode {
         DataTypes::String schemaName;
-        Int databaseId;
+        Int32_t databaseId;
     public:
-        explicit PhysicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
+        explicit PhysicalSchemaCreate(session_id_t sessionId, Int32_t databaseId, DataTypes::String& schemaName);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
@@ -342,14 +342,14 @@ namespace QueryPipeline::PhysicalPlan {
     class PhysicalProject final : public PlanNode {
         DataStructures::PolymorphicArray<Expressions::Expression*> _projections;
         PlanNode* child;
-        UnsignedSmallInt _slotCount;
+        UInt16_t _slotCount;
 
     public:
         PhysicalProject(
             PlanNode* child,
             DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
             const CoreEngine::OutputSchema* schema,
-            UnsignedSmallInt slotCount
+            UInt16_t slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
@@ -357,22 +357,22 @@ namespace QueryPipeline::PhysicalPlan {
     class PhysicalFilter final : public PlanNode {
         Expressions::Expression* filter;
         PlanNode* child;
-        UnsignedSmallInt _slotCount;
+        UInt16_t _slotCount;
 
     public:
         PhysicalFilter(
             PlanNode* child,
             Expressions::Expression* filter,
-            UnsignedSmallInt slotCount
+            UInt16_t slotCount
         );
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 
     class PhysicalTop final : public PlanNode {
-        BigInt top;
+        Int64_t top;
         PlanNode* child;
     public:
-        PhysicalTop(PlanNode* child, BigInt top);
+        PhysicalTop(PlanNode* child, Int64_t top);
         ExecutionResult Execute(CoreEngine::ExecutionContext& context) override;
     };
 

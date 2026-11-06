@@ -14,13 +14,13 @@ enum class DataType : uint8_t;
 
 namespace Client{
     class ResultDecoder{
-        static constexpr auto MAX_SPAN = std::numeric_limits<UnsignedInt>::max();
+        static constexpr auto MAX_SPAN = std::numeric_limits<UInt32_t>::max();
 
         template<typename T>
         [[nodiscard]] static bool Load(
             const char* values,
-            const UnsignedSmallInt width,
-            const UnsignedInt row,
+            const UInt16_t width,
+            const UInt32_t row,
             T& output
         ){
             if (width != sizeof(T))
@@ -40,8 +40,8 @@ namespace Client{
             const char* _data;
             const char* _offsets;
 
-            UnsignedInt _blobSize;
-            UnsignedSmallInt _width;
+            UInt32_t _blobSize;
+            UInt16_t _width;
 
             Network::WireType _type;
             bool _isConstant;
@@ -60,14 +60,14 @@ namespace Client{
 
         std::vector<ColumnDescription> _columns;
         std::vector<ColumnView> _columnViews;
-        UnsignedInt _rowCount;
-        UnsignedInt _columnCount;
+        UInt32_t _rowCount;
+        UInt32_t _columnCount;
 
 
-        [[nodiscard]] static bool DecodeVariableLengthColumn(Network::PayloadReader& reader, ColumnView& columnView, UnsignedInt encodedRows);
-        [[nodiscard]] static bool DecodeFixedLengthColumn(Network::PayloadReader& reader, ColumnView& columnView, UnsignedInt encodedRows);
+        [[nodiscard]] static bool DecodeVariableLengthColumn(Network::PayloadReader& reader, ColumnView& columnView, UInt32_t encodedRows);
+        [[nodiscard]] static bool DecodeFixedLengthColumn(Network::PayloadReader& reader, ColumnView& columnView, UInt32_t encodedRows);
 
-        static void PrintValue(std::ostream& os, const ColumnView& columnView, UnsignedInt row);
+        static void PrintValue(std::ostream& os, const ColumnView& columnView, UInt32_t row);
 
         public:
             ResultDecoder() = default;

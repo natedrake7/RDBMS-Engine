@@ -19,12 +19,12 @@ namespace Network {
         DataTypes::DateTime createdAt;
         DataTypes::DateTime lastActive;
 
-        Int databaseId;
+        Int32_t databaseId;
 
-        SortedDictionary<UnsignedSmallInt, QueryPipeline::Cursor*> cursors;
+        SortedDictionary<UInt16_t, QueryPipeline::Cursor*> cursors;
         Dictionary<DataTypes::StringView, std::unique_ptr<BoundVariable>> variables;
 
-        UnsignedSmallInt nextCursorId;
+        UInt16_t nextCursorId;
 
         transaction_id_t transactionId;
 

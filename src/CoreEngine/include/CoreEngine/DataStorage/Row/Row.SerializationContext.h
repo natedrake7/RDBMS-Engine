@@ -6,7 +6,7 @@
 
 namespace CoreEngine::StorageTypes{
     struct ColumnPlacement{
-        enum class Kind: UnsignedTinyInt{
+        enum class Kind: UInt8_t{
             Null = 0,
             Inline = 1,
             OffRow = 2,
@@ -14,11 +14,11 @@ namespace CoreEngine::StorageTypes{
         };
 
         Kind _kind;
-        UnsignedInt _size;
+        UInt32_t _size;
 
         ColumnPlacement() :
             _kind(Kind::Null), _size(0) {}
-        ColumnPlacement(const Kind kind, const UnsignedInt size)
+        ColumnPlacement(const Kind kind, const UInt32_t size)
             : _kind(kind), _size(size) {}
     };
 
@@ -31,7 +31,7 @@ namespace CoreEngine::StorageTypes{
 
         RowSerializationContext(
             const ::Memory::IAllocator* allocator,
-            const Int columnCount
+            const Int32_t columnCount
         ):  _allocator(allocator),
             _values(static_cast<Value*>(allocator->AllocateRaw(sizeof(Value) * columnCount))),
             _placements(static_cast<ColumnPlacement*>(allocator->AllocateRaw(sizeof(ColumnPlacement) * columnCount)))

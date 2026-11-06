@@ -7,44 +7,44 @@ class PackedWord {
 public:
     TInput _data;
 
-    static constexpr UnsignedInt BITS = sizeof(TInput) * 8;
-    static constexpr UnsignedInt SHIFT = std::countr_zero(BITS);
-    static constexpr UnsignedInt MASK = BITS - 1;
+    static constexpr UInt32_t BITS = sizeof(TInput) * 8;
+    static constexpr UInt32_t SHIFT = std::countr_zero(BITS);
+    static constexpr UInt32_t MASK = BITS - 1;
 
     PackedWord() = default;
     explicit PackedWord(const TInput data) : _data(data) {}
 
-    [[nodiscard]] static inline constexpr TInput WordIndex(const UnsignedInt index){ return index >> SHIFT; }
-    [[nodiscard]] static inline constexpr TInput BitIndex(const UnsignedInt index) { return index & MASK; }
+    [[nodiscard]] static inline constexpr TInput WordIndex(const UInt32_t index){ return index >> SHIFT; }
+    [[nodiscard]] static inline constexpr TInput BitIndex(const UInt32_t index) { return index & MASK; }
 
     // Number of words needed for `count` bits.
-    [[nodiscard]] static inline constexpr UnsignedInt WordsFor(const UnsignedInt count){ return (count + MASK) >> SHIFT; }
+    [[nodiscard]] static inline constexpr UInt32_t WordsFor(const UInt32_t count){ return (count + MASK) >> SHIFT; }
 
     // Read bit `index` from a bitmap made of TInput words.
-    [[nodiscard]] static inline constexpr bool GetBitmapBit(const TInput* words, const UnsignedInt index){
+    [[nodiscard]] static inline constexpr bool GetBitmapBit(const TInput* words, const UInt32_t index){
         return GetBit(words[WordIndex(index)], BitIndex(index));
     }
 
-    static inline  constexpr void SetBitmapBit(TInput* words, const UnsignedInt index, const bool value){
+    static inline  constexpr void SetBitmapBit(TInput* words, const UInt32_t index, const bool value){
         auto& word = words[WordIndex(index)];
         const auto mask = static_cast<TInput>(TInput{1} << BitIndex(index));
         word = static_cast<TInput>((word & ~mask) | (static_cast<TInput>(value) << BitIndex(index)));
     }
 
-    static inline constexpr void OrBitmapBit(TInput* words, const UnsignedInt index, const bool value){
+    static inline constexpr void OrBitmapBit(TInput* words, const UInt32_t index, const bool value){
         words[WordIndex(index)] |= static_cast<TInput>(static_cast<TInput>(value) << BitIndex(index));
     }
 
     template <typename TOut>
     static inline TOut ExtractBits(
         const TInput data,
-        const UnsignedTinyInt shift,
+        const UInt8_t shift,
         const TInput mask
     ){
         return static_cast<TOut>((data >> shift) & mask);
     }
 
-    template<typename TOut, UnsignedTinyInt Shift, TInput Mask>
+    template<typename TOut, UInt8_t Shift, TInput Mask>
     static inline constexpr TOut ExtractBits(const TInput data){
         return static_cast<TOut>((data >> Shift) & Mask);
     }
@@ -52,13 +52,13 @@ public:
     static inline void SetBits(
         TInput* data,
         const TInput value,
-        const UnsignedTinyInt shift,
+        const UInt8_t shift,
         const TInput mask
     ) {
         *data = static_cast<TInput>((*data & ~(mask << shift)) | ((value & mask) << shift));
     }
 
-    template<UnsignedTinyInt Shift, TInput Mask>
+    template<UInt8_t Shift, TInput Mask>
     static inline constexpr void SetBits(
         TInput* data,
         const TInput value
@@ -68,7 +68,7 @@ public:
 
     static inline void SetBit(
         TInput* data,
-        const UnsignedTinyInt bitPosition,
+        const UInt8_t bitPosition,
         const bool value
     ) {
         if (value)
@@ -77,7 +77,7 @@ public:
             *data &= static_cast<TInput>(~(TInput{1} << bitPosition));
     }
 
-    template<UnsignedTinyInt BitPosition>
+    template<UInt8_t BitPosition>
     static inline constexpr void SetBit(
         TInput* data,
         const bool value
@@ -88,7 +88,7 @@ public:
             *data &= static_cast<TInput>(~(TInput{1} << BitPosition));
     }
 
-    template<UnsignedTinyInt BitPosition, bool Value>
+    template<UInt8_t BitPosition, bool Value>
     static inline constexpr void SetBit(
         TInput* data
     ){
@@ -112,7 +112,7 @@ public:
 
     static inline constexpr bool GetBit(
         const TInput data,
-        const UnsignedTinyInt bitPosition
+        const UInt8_t bitPosition
     ) {
         return (data & (TInput{1} << bitPosition)) != 0;
     }
@@ -124,16 +124,16 @@ public:
         return (data & (TInput{1} << BitPosition)) != 0;
     }
 
-    static inline constexpr void OrBit(TInput* data, const UnsignedTinyInt bitPosition, const bool value){
+    static inline constexpr void OrBit(TInput* data, const UInt8_t bitPosition, const bool value){
         *data |= static_cast<TInput>(static_cast<TInput>(value) << bitPosition);
     }
 
-    static inline constexpr UnsignedTinyInt SIZE = sizeof(TInput);
+    static inline constexpr UInt8_t SIZE = sizeof(TInput);
 };
 
-using PackedByte = PackedWord<UnsignedTinyInt>;
+using PackedByte = PackedWord<UInt8_t>;
 using WireBitmap = PackedByte;                   // 8 rows per byte
-using EngineBitmap = PackedWord<UnsignedBigInt>;   // 64 rows per word
+using EngineBitmap = PackedWord<UInt64_t>;   // 64 rows per word
 
 static_assert(PackedByte::SHIFT == 3 && PackedByte::MASK == 7);
 static_assert(EngineBitmap::SHIFT == 6 && EngineBitmap::MASK == 63);

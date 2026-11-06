@@ -29,7 +29,7 @@ namespace Network {
     Security::UserManager userManager;
     Sessions::SessionManager sessionManager;
 
-    Dictionary<Int, CoreEngine::Database*> databases;
+    Dictionary<Int32_t, CoreEngine::Database*> databases;
 
     MultiThreading::Mutex databasesLatch;
 
@@ -64,8 +64,8 @@ namespace Network {
     Errors::RuntimeStatus UpdateUserById(
         const CoreEngine::ExecutionContext& context,
         session_id_t callerSessionId,
-        Int userId,
-        Int roleId
+        Int32_t userId,
+        Int32_t roleId
     )const;
     [[nodiscard]] const Security::User* Authenticate(const DataTypes::String& username, const DataTypes::String& password)const;
     [[nodiscard]] const Security::User* Authenticate(const DataTypes::StringView& username, const DataTypes::StringView& password)const;
@@ -77,7 +77,7 @@ namespace Network {
     [[nodiscard]] const Network::Session* CreateSession(const Security::User* user);
     [[nodiscard]] const Network::Session* GetSession(session_id_t key)const;
     [[nodiscard]] bool CloseSession(session_id_t key);
-    [[nodiscard]] bool UpdateSession(session_id_t key, Int databaseId)const;
+    [[nodiscard]] bool UpdateSession(session_id_t key, Int32_t databaseId)const;
     [[nodiscard]] bool AddOrSetVariable(session_id_t sessionId, const Variable& variable)const;
 
     [[nodiscard]] QueryPipeline::Cursor* CreateCursor(
@@ -94,9 +94,9 @@ namespace Network {
     );
     [[nodiscard]] CoreEngine::Database* UseDatabase(
         const CoreEngine::ExecutionContext& context,
-        Int databaseId
+        Int32_t databaseId
     );
-    const Dictionary<Int, CoreEngine::Database*>& GetDatabases()const;
+    const Dictionary<Int32_t, CoreEngine::Database*>& GetDatabases()const;
     MultiThreading::Mutex& GetDatabasesLatch();
     
   };

@@ -12,13 +12,13 @@
 #endif
 
 namespace Storage{
-    enum class FileOpenMode: UnsignedTinyInt{
+    enum class FileOpenMode: UInt8_t{
         OpenExisting = 0,
         CreateNew = 1,
         OpenOrCreate = 2
     };
 
-    enum class FileOpenFlags: UnsignedTinyInt{
+    enum class FileOpenFlags: UInt8_t{
         None = 0,
         Direct = 1 << 0,
         WriteThrough = 1 << 1,
@@ -42,31 +42,31 @@ namespace Storage{
 
         void Close(native_file_t file);
 
-        [[nodiscard]] UnsignedBigInt ReadScatter(
+        [[nodiscard]] UInt64_t ReadScatter(
             native_file_t file,
             std::span<object_t* const> pages,
-            UnsignedBigInt offset
+            UInt64_t offset
         );
 
-        [[nodiscard]] UnsignedBigInt Read(
+        [[nodiscard]] UInt64_t Read(
             native_file_t file,
             void* data,
-            UnsignedBigInt size,
-            UnsignedBigInt offset
+            UInt64_t size,
+            UInt64_t offset
         );
 
         void Write(
             native_file_t file,
             const void* data,
-            UnsignedBigInt size,
-            UnsignedBigInt offset
+            UInt64_t size,
+            UInt64_t offset
         );
 
         void Sync(native_file_t file);
     }
 
     struct File{
-        static inline constexpr Int MAX_PATH_SIZE = 512;
+        static inline constexpr Int32_t MAX_PATH_SIZE = 512;
 
         char _path[MAX_PATH_SIZE];
         std::atomic<native_file_t> _handle;

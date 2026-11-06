@@ -5,7 +5,7 @@ namespace CoreEngine::Pages{
 
     OverflowPageView::OverflowPageView(Frame* frame) : PageView(frame) {}
 
-    OverflowPtr OverflowPageView::Insert(const object_t* data, const Int size) const{
+    OverflowPtr OverflowPageView::Insert(const object_t* data, const Int32_t size) const{
         const auto offset = this->NewInsertOffset();
 
         std::memcpy(this->_frame->_data + offset, data, size);
@@ -25,7 +25,7 @@ namespace CoreEngine::Pages{
         return OverflowPtr(header->_pageId, header->_size - 1);
     }
 
-    const object_t* OverflowPageView::Get(const Int index, Int& outSize) const{
+    const object_t* OverflowPageView::Get(const Int32_t index, Int32_t& outSize) const{
         const auto slot = this->GetSlotDirectory(index);
         outSize = slot.Size();
         return this->_frame->_data + slot.AbsoluteDataOffset();

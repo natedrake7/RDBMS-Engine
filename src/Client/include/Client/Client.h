@@ -10,7 +10,7 @@ struct ConnectionParameters {
     std::string _username;
     std::string _password;
 
-    Int _port;
+    Int32_t _port;
     Network::socket_t _socket;
 
     ConnectionParameters()

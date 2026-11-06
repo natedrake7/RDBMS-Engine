@@ -80,7 +80,7 @@ namespace QueryPipeline{
          return this->_compileContext.GetAllocator();
      }
 
-     UnsignedSmallInt QueryContext::NextVirtualId(){
+     UInt16_t QueryContext::NextVirtualId(){
          return this->_virtualId++;
      }
 

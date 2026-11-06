@@ -20,11 +20,11 @@ namespace CoreEngine{
 
         std::atomic<page_id_t> lastUsedPageId;
 
-        std::atomic<Int> numberOfPendingVersions;
+        std::atomic<Int32_t> numberOfPendingVersions;
 
         Accessors::PageAccessor _pageAccessor;
 
-        static constexpr Int PENDING_VERSIONS_THRESHOLD = 1000;
+        static constexpr Int32_t PENDING_VERSIONS_THRESHOLD = 1000;
 
         void PopulateFilenames(const ::Memory::IAllocator* allocator, const DataTypes::StringView& dbName);
         void WriteHeaderToFile()const;

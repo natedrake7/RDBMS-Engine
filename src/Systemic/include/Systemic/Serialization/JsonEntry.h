@@ -5,11 +5,11 @@
 
 namespace Serialization{
     struct JsonHeader{
-        UnsignedInt _size;
-        UnsignedSmallInt _entryTablePosition;
-        UnsignedTinyInt _type;
+        UInt32_t _size;
+        UInt16_t _entryTablePosition;
+        UInt8_t _type;
 
-        static constexpr auto SIZE = sizeof(UnsignedInt) + sizeof(UnsignedSmallInt) + sizeof(UnsignedTinyInt);
+        static constexpr auto SIZE = sizeof(UInt32_t) + sizeof(UInt16_t) + sizeof(UInt8_t);
 
         [[nodiscard]] bool IsObject()const{
             return static_cast<JsonType>(this->_type) == JsonType::Object;
@@ -26,37 +26,37 @@ namespace Serialization{
     };
 
     struct JsonEntry{
-        UnsignedBigInt _keyHash;
-        UnsignedSmallInt _keyOffset;
-        UnsignedSmallInt _keySize;
+        UInt64_t _keyHash;
+        UInt16_t _keyOffset;
+        UInt16_t _keySize;
 
-        UnsignedSmallInt _valueOffset;
-        UnsignedSmallInt _valueSize;
+        UInt16_t _valueOffset;
+        UInt16_t _valueSize;
 
-        UnsignedTinyInt _type;
+        UInt8_t _type;
 
         explicit JsonEntry(
-            const UnsignedBigInt keyHash,
-            const UnsignedSmallInt keyOffset,
-            const UnsignedSmallInt keySize
+            const UInt64_t keyHash,
+            const UInt16_t keyOffset,
+            const UInt16_t keySize
         ):  _keyHash(keyHash), _keyOffset(keyOffset),
             _keySize(keySize), _valueOffset(0),
             _valueSize(0), _type(0) {}
 
-        static constexpr auto SIZE = sizeof(UnsignedBigInt) + 4 * sizeof(UnsignedSmallInt) + sizeof(UnsignedTinyInt);
+        static constexpr auto SIZE = sizeof(UInt64_t) + 4 * sizeof(UInt16_t) + sizeof(UInt8_t);
     };
 
     struct JsonContainer{
         DataStructures::PolymorphicArray<JsonEntry> _entries;
 
-        Int _headerPosition;
+        Int32_t _headerPosition;
         JsonType _type;
 
         bool _expectingKey = false;
 
         explicit JsonContainer(
             const ::Memory::IAllocator* allocator,
-            const Int headerPosition,
+            const Int32_t headerPosition,
             const JsonType type,
             const bool expectingKey
         ) : _entries(allocator),

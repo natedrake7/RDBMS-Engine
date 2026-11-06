@@ -8,7 +8,7 @@
 #include <memory>
 
 namespace DataStructures{
-    enum class ArraySortType: UnsignedTinyInt{
+    enum class ArraySortType: UInt8_t{
         ASC = 0,
         DESC = 1
     };
@@ -138,7 +138,7 @@ namespace DataStructures{
             return *this;
         }
 
-        PolymorphicArray& PartialMove(PolymorphicArray& other, Int offSet) noexcept requires TRIVIALLY_COPIABLE{
+        PolymorphicArray& PartialMove(PolymorphicArray& other, Int32_t offSet) noexcept requires TRIVIALLY_COPIABLE{
             if (this == &other)
                 return *this;
 
@@ -269,7 +269,7 @@ namespace DataStructures{
             this->_size += size;
         }
 
-        void Resize(Int newSize){
+        void Resize(Int32_t newSize){
             if (newSize < this->_size){
                 std::destroy_n(this->_data + newSize, this->_size - newSize);
                 this->_size = newSize;
@@ -291,15 +291,15 @@ namespace DataStructures{
             this->_capacity = newCapacity;
         }
 
-        void Remove(Int index){
+        void Remove(Int32_t index){
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::Remove: Index out of range.");
             // Shift elements to the left to fill the gap
-            for (Int i = index; i < this->_size - 1; i++)
+            for (Int32_t i = index; i < this->_size - 1; i++)
                 this->_data[i] = std::move(this->_data[i + 1]);
             std::destroy_at(this->_data + --this->_size);
         }
 
-        void RemoveFrom(Int index){
+        void RemoveFrom(Int32_t index){
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::RemoveFrom: Index out of range.");
             std::destroy_n(this->_data + index, this->_size - index);
             this->_size = index;
@@ -318,12 +318,12 @@ namespace DataStructures{
             return this->_data[0];
         }
 
-        [[nodiscard]] T& operator[](Int index) noexcept{
+        [[nodiscard]] T& operator[](Int32_t index) noexcept{
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]: Index out of range.");
             return this->_data[index];
         }
 
-        [[nodiscard]] const T& operator[](Int index) const noexcept{
+        [[nodiscard]] const T& operator[](Int32_t index) const noexcept{
             assert(!(index < 0 || index >= this->_size) && "PolymorphicArray::operator[]const: Index out of range.");
             return this->_data[index];
         }
@@ -334,7 +334,7 @@ namespace DataStructures{
 
         template<typename... Args>
         static PolymorphicArray From(const Memory::IAllocator* allocator, Args&&... args){
-            PolymorphicArray arr(allocator, static_cast<Int>(sizeof...(args)));
+            PolymorphicArray arr(allocator, static_cast<Int32_t>(sizeof...(args)));
             (arr.Push(std::forward<Args>(args)), ...);
             return arr;
         }
@@ -388,7 +388,7 @@ namespace DataStructures{
 
         iterator erase(iterator pos){
             assert(!(pos < this->begin() || pos >= this->end()) && "DataStructures:PolymorphicArray:erase: Iterator out of range.");
-            Int index = pos - this->begin();
+            Int32_t index = pos - this->begin();
             this->Remove(index);
             return this->begin() + index;
         }

@@ -77,7 +77,7 @@ namespace CoreEngine::StorageTypes {
     //     // return status;
     // }
 
-    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const Int indexPos, const Int pagesToAllocate){
+    Errors::RuntimeStatus Table::NonClusteredIndexInsertExistingRows(const Int32_t indexPos, const Int32_t pagesToAllocate){
         if (this->GetType() == Constants::TableType::CLUSTERED) {
             this->InsertExistingRowsToNonClusteredIndexByClusteredIndex(indexPos, pagesToAllocate);
             return Errors::RuntimeStatus();
@@ -94,8 +94,8 @@ namespace CoreEngine::StorageTypes {
         const DataTypes::Indexing::Key& maxKey,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex,
-        const UnsignedSmallInt schemaWidth
+        const UInt16_t slotIndex,
+        const UInt16_t schemaWidth
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -114,8 +114,8 @@ namespace CoreEngine::StorageTypes {
         const DataTypes::Indexing::Key &key,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex,
-        const UnsignedSmallInt schemaWidth
+        const UInt16_t slotIndex,
+        const UInt16_t schemaWidth
     ){
         const auto* tree = this->GetClusteredIndexedTree();
 
@@ -150,8 +150,8 @@ namespace CoreEngine::StorageTypes {
         IndexState& state,
         const Expressions::Expression* expression,
         const DataStructures::PolymorphicArray<FilterColumnInfo>& filterColumns,
-        const UnsignedSmallInt slotIndex,
-        const UnsignedSmallInt schemaWidth
+        const UInt16_t slotIndex,
+        const UInt16_t schemaWidth
     ){
         if (this->IsEmpty())
             return;
@@ -207,7 +207,7 @@ namespace CoreEngine::StorageTypes {
     void Table::NonClusteredIndexScan(
         const ExecutionContext& executionContext,
         DataStructures::PolymorphicArray<RID> *selectedRows,
-        const Int indexPos,
+        const Int32_t indexPos,
         IndexState& state,
         const Expressions::Expression *expression
     ){
@@ -301,7 +301,7 @@ namespace CoreEngine::StorageTypes {
 
     }
 
-    Int Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
+    Int32_t Table::CreateNonClusteredIndex(const DataStructures::PolymorphicArray<column_index_t>& columnIndices){
         // const Catalog::Index index(columnIndices.Data(), columnIndices.Size());
         // this->nonClusteredHeaders.Push(index);
         // return this->nonClusteredHeaders.Size() - 1;
@@ -313,12 +313,12 @@ namespace CoreEngine::StorageTypes {
         this->_physicalHeader.SetClusteredIndexPageId(pageId);
     }
 
-    page_id_t Table::GetNonClusteredIndexPageId(const Int indexPosition) const{
+    page_id_t Table::GetNonClusteredIndexPageId(const Int32_t indexPosition) const{
         return INVALID_PAGE_ID;
         // return this->_header.nonClusteredIndexPageIds[indexPosition];
     }
 
-    void Table::SetNonClusteredIndexPageId(const page_id_t indexPageId, const Int indexPosition){
+    void Table::SetNonClusteredIndexPageId(const page_id_t indexPageId, const Int32_t indexPosition){
         // this->_header.nonClusteredIndexPageIds[indexPosition] = indexPageId;
     }
 
@@ -339,7 +339,7 @@ namespace CoreEngine::StorageTypes {
         return this->_clusteredTree;
     }
 
-      Indexing::BTree* Table::GetNonClusteredIndexTree(const Int nonClusteredIndexId){
+      Indexing::BTree* Table::GetNonClusteredIndexTree(const Int32_t nonClusteredIndexId){
           //
           // if(this->_nonClusteredTrees.Empty())
           //     this->_nonClusteredTrees.Resize(numOfIndexes);
@@ -385,10 +385,10 @@ namespace CoreEngine::StorageTypes {
         return DataTypes::Indexing::Key(executionContext.GetAllocator(), values);
     }
 
-    key_size_t Table::CalculateIndexKeySize(const Int indexPos) const {
+    key_size_t Table::CalculateIndexKeySize(const Int32_t indexPos) const {
         key_size_t keySize = 0;
         const auto* index = &this->_schema->_indexes[indexPos];
-        for (Int i = 0;i < index->_keyCount; i++){
+        for (Int32_t i = 0;i < index->_keyCount; i++){
             const auto ordinal = index->_keyColumns[i]._ordinalPosition;
             keySize += this->_schema->_columns[ordinal]._recordSize;
         }

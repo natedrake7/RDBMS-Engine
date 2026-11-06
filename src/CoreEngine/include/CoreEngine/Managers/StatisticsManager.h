@@ -7,24 +7,24 @@
 
 namespace CoreEngine {
   class StatisticsManager {
-    Dictionary<Int, Catalog::TableStatistics> tableStatisticsCache;
+    Dictionary<Int32_t, Catalog::TableStatistics> tableStatisticsCache;
     mutable MultiThreading::Mutex tableStatisticsLatch;
 
-    Dictionary<Int, Catalog::ColumnStatistics> columnStatisticsCache;
+    Dictionary<Int32_t, Catalog::ColumnStatistics> columnStatisticsCache;
     mutable MultiThreading::Mutex columnStatisticsLatch;
 
-    Dictionary<Int, std::vector<Catalog::IndexStatistics>> indexStatisticsCache;
+    Dictionary<Int32_t, std::vector<Catalog::IndexStatistics>> indexStatisticsCache;
     mutable MultiThreading::Mutex indexStatisticsLatch;
 
     public:
       static StatisticsManager& Get();
 
-      Catalog::TableStatistics GetTableStatistics(Int tableId);
+      Catalog::TableStatistics GetTableStatistics(Int32_t tableId);
       Catalog::ColumnStatistics GetColumnStatistics(
-        Int tableId,
-        Int columnId
+        Int32_t tableId,
+        Int32_t columnId
       );
-      DataStructures::PolymorphicArray<Catalog::IndexStatistics> GetIndexStatistics(Int tableId);
+      DataStructures::PolymorphicArray<Catalog::IndexStatistics> GetIndexStatistics(Int32_t tableId);
 
       void Update(
         const Catalog::TableStatistics& tableStatistics,

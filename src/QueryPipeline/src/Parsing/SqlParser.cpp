@@ -12,11 +12,11 @@
 namespace QueryPipeline::Parsing{
 
     //Longest sign-prefixed decimal literal we will construct on the stack.
-    static constexpr Int MAX_DECIMAL_LITERAL_LENGTH = 64;
+    static constexpr Int32_t MAX_DECIMAL_LITERAL_LENGTH = 64;
 
     SqlParser::SqlParser(
         const Token* tokens,
-        const Int count,
+        const Int32_t count,
         const ::Memory::IAllocator* allocator,
         Diagnostic& diagnostic
     )   :   _tokens(tokens), _count(count), _position(0),
@@ -35,8 +35,8 @@ namespace QueryPipeline::Parsing{
      * @{
      */
 
-    const Token& SqlParser::Peek(const Int offset) const{
-        const Int index = this->_position + offset;
+    const Token& SqlParser::Peek(const Int32_t offset) const{
+        const Int32_t index = this->_position + offset;
 
         if (index < 0)
             return this->_tokens[0];
@@ -283,7 +283,7 @@ namespace QueryPipeline::Parsing{
             return nullptr;
 
         //The engine has no unary expression node, so negation becomes (0 - operand).
-        auto zero = Value(static_cast<BigInt>(0), 0);
+        auto zero = Value(static_cast<Int64_t>(0), 0);
         auto* left = this->_allocator->Allocate<Expressions::ConstantExpression>(std::move(zero));
 
         return this->_allocator->Allocate<Expressions::BinaryExpression>(
@@ -412,13 +412,13 @@ namespace QueryPipeline::Parsing{
     }
 
     bool SqlParser::MakeIntegerValue(const Token& token, bool negated, Value& value) const{
-        constexpr auto UNSIGNED_HUGE_MAX = ~static_cast<UnsignedHugeInt>(0);
+        constexpr auto UNSIGNED_HUGE_MAX = ~static_cast<UInt128_t>(0);
         constexpr auto HUGE_MAX = UNSIGNED_HUGE_MAX >> 1;
-        constexpr auto BIG_MAX = static_cast<UnsignedHugeInt>(~static_cast<UnsignedBigInt>(0) >> 1);
+        constexpr auto BIG_MAX = static_cast<UInt128_t>(~static_cast<UInt64_t>(0) >> 1);
 
-        UnsignedHugeInt magnitude = 0;
-        for (Int i = 0; i < token._length; i++){
-            const auto digit = static_cast<UnsignedHugeInt>(token._text[i] - '0');
+        UInt128_t magnitude = 0;
+        for (Int32_t i = 0; i < token._length; i++){
+            const auto digit = static_cast<UInt128_t>(token._text[i] - '0');
             if (magnitude > (UNSIGNED_HUGE_MAX - digit) / 10){
                 (void)this->Fail("integer literal is out of range");
                 return false;
@@ -433,9 +433,9 @@ namespace QueryPipeline::Parsing{
                 return false;
             }
 
-            const auto number = static_cast<HugeInt>(0 - magnitude);
+            const auto number = static_cast<Int128_t>(0 - magnitude);
             if (magnitude <= BIG_MAX + 1)
-                value = Value(static_cast<BigInt>(number), 0);
+                value = Value(static_cast<Int64_t>(number), 0);
             else
                 value = Value(number, 0);
 
@@ -445,13 +445,13 @@ namespace QueryPipeline::Parsing{
         DataTypes::Coercions::DeduceIntegerType()
 
         if (magnitude <= BIG_MAX)
-            value = Value(static_cast<BigInt>(magnitude), 0);
+            value = Value(static_cast<Int64_t>(magnitude), 0);
         else if (magnitude <= HUGE_MAX)
-            value = Value(static_cast<HugeInt>(magnitude), 0);
+            value = Value(static_cast<Int128_t>(magnitude), 0);
         else
             value = Value(magnitude, 0);
 
-        return true;(void)
+        return true;
     }
 
     bool SqlParser::MakeDecimalValue(const Token& token, bool negated, Value& value) const
@@ -703,12 +703,12 @@ namespace QueryPipeline::Parsing{
                     }
 
                     const auto& width = this->Advance();
-                    if (!IntegerConverter::TryStrToInt<Int>(width.View())){
+                    if (!IntegerConverter::TryStrToInt<Int32_t>(width.View())){
                         this->Fail("string width is out of range");
                         return false;
                     }
 
-                    typeInfo._maxLength = IntegerConverter::StrToInt<Int>(width.View());
+                    typeInfo._maxLength = IntegerConverter::StrToInt<Int32_t>(width.View());
                 }
 
                 return this->Expect(TokenType::RightParen);
@@ -725,7 +725,7 @@ namespace QueryPipeline::Parsing{
                 }
 
                 const auto& precision = this->Advance();
-                typeInfo._decimal._precision = static_cast<TinyInt>(IntegerConverter::StrToInt<Int>(precision.View()));
+                typeInfo._decimal._precision = static_cast<Int8_t>(IntegerConverter::StrToInt<Int32_t>(precision.View()));
 
                 if (!this->Expect(TokenType::Comma))
                     return false;
@@ -736,7 +736,7 @@ namespace QueryPipeline::Parsing{
                 }
 
                 const auto& scale = this->Advance();
-                typeInfo._decimal._scale = static_cast<TinyInt>(IntegerConverter::StrToInt<Int>(scale.View()));
+                typeInfo._decimal._scale = static_cast<Int8_t>(IntegerConverter::StrToInt<Int32_t>(scale.View()));
 
                 return this->Expect(TokenType::RightParen);
             }

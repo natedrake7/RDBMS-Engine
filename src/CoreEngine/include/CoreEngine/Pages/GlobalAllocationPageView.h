@@ -9,7 +9,7 @@ namespace CoreEngine::StorageTypes{
 namespace CoreEngine::Pages{
     struct GlobalAllocationPageAdditionalHeader{
         gam_index_t _gamIndex;
-        UnsignedInt _freeExtentCount;
+        UInt32_t _freeExtentCount;
         extent_id_t _firstFreeBitId;
         extent_id_t _appendBitId;
         byte_t _reserved[CoreEngine::StorageLayout::GAM_HEADER_RESERVED_SPACE];
@@ -22,7 +22,7 @@ namespace CoreEngine::Pages{
             return reinterpret_cast<GlobalAllocationPageAdditionalHeader*>(this->_frame->_data + CoreEngine::StorageLayout::PAGE_HEADER_SIZE);
         }
 
-        void SetBits(UnsignedInt startIndex, UnsignedInt numberOfBits) const;
+        void SetBits(UInt32_t startIndex, UInt32_t numberOfBits) const;
         void CollectRunsNoLock(
             DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segments,
             extent_id_t from,
@@ -48,9 +48,9 @@ namespace CoreEngine::Pages{
             GlobalAllocationPageView(GlobalAllocationPageView&& other) noexcept = default;
             GlobalAllocationPageView& operator=(GlobalAllocationPageView&& other) noexcept = default;
 
-            [[nodiscard]] UnsignedInt ReserveExtentsNoLock(
+            [[nodiscard]] UInt32_t ReserveExtentsNoLock(
                 DataStructures::PolymorphicArray<CoreEngine::StorageTypes::ExtentSegment>& segmentsRuns,
-                UnsignedInt neededExtents
+                UInt32_t neededExtents
             ) const;
 
             [[nodiscard]] DataStructures::PolymorphicArray<extent_id_t> GetAllocatedExtents(const ::Memory::IAllocator* allocator) const;

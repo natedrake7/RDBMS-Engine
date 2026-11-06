@@ -14,7 +14,7 @@ namespace CoreEngine {
         return Storage::FileManager::FileExists(filename);
     }
 
-    Int TemporaryDatabase::GetNextOrdinalPosition(){
+    Int32_t TemporaryDatabase::GetNextOrdinalPosition(){
         return this->currentOrdinalPosition.fetch_add(1, std::memory_order_relaxed);
     }
 
@@ -61,7 +61,7 @@ namespace CoreEngine {
         // );
     }
 
-    StorageTypes::Table* TemporaryDatabase::OpenTable(const Int tableId) const{
+    StorageTypes::Table* TemporaryDatabase::OpenTable(const Int32_t tableId) const{
         return this->_db->OpenTableByOrdinal(tableId);
     }
 

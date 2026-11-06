@@ -6,17 +6,17 @@
 namespace CoreEngine::Pages{
     struct SlotDirectory{
     private:
-        UnsignedSmallInt flags_offset;
-        UnsignedSmallInt _dataSize;
+        UInt16_t flags_offset;
+        UInt16_t _dataSize;
 
-        UnsignedSmallInt _offset;
-        UnsignedSmallInt _keySize;
+        UInt16_t _offset;
+        UInt16_t _keySize;
 
-        static constexpr UnsignedSmallInt OFFSET_MASK = 0x3FFF; // lower 14 bits
-        static constexpr UnsignedSmallInt FLAGS_MASK  = 0xC000; // upper 2 bits
+        static constexpr UInt16_t OFFSET_MASK = 0x3FFF; // lower 14 bits
+        static constexpr UInt16_t FLAGS_MASK  = 0xC000; // upper 2 bits
 
     public:
-        enum Flag : UnsignedTinyInt {
+        enum Flag : UInt8_t {
             SLOT_EMPTY      = 0,
             SLOT_USED       = 1,
             SLOT_FORWARDED  = 2,
@@ -28,10 +28,10 @@ namespace CoreEngine::Pages{
             _offset(0), _keySize(0){}
 
         explicit SlotDirectory(
-            const UnsignedSmallInt offset,
-            const UnsignedSmallInt dataOffset,
-            const UnsignedSmallInt dataSize,
-            const UnsignedSmallInt keySize,
+            const UInt16_t offset,
+            const UInt16_t dataOffset,
+            const UInt16_t dataSize,
+            const UInt16_t keySize,
             const Flag flag
         ):  flags_offset(0), _dataSize(dataSize),
             _offset(offset), _keySize(keySize){
@@ -43,47 +43,47 @@ namespace CoreEngine::Pages{
             return SlotDirectory(0, 0, 0, 0, SLOT_DEAD);
         }
 
-        [[nodiscard]] UnsignedSmallInt AbsoluteDataOffset() const{
+        [[nodiscard]] UInt16_t AbsoluteDataOffset() const{
             return this->_offset + this->DataOffset();
         }
 
-        [[nodiscard]] UnsignedSmallInt AbsoluteKeyOffset() const{
+        [[nodiscard]] UInt16_t AbsoluteKeyOffset() const{
             return this->_offset;
         }
 
-        void SetDataOffset(const UnsignedSmallInt otherOffset){
+        void SetDataOffset(const UInt16_t otherOffset){
             this->flags_offset = (this->flags_offset & FLAGS_MASK) | (otherOffset & OFFSET_MASK);
         }
 
-        [[nodiscard]] UnsignedSmallInt DataOffset() const{
+        [[nodiscard]] UInt16_t DataOffset() const{
             return this->flags_offset & OFFSET_MASK;
         }
 
-        void SetDataSize(const UnsignedSmallInt otherSize){
+        void SetDataSize(const UInt16_t otherSize){
             this->_dataSize = otherSize;
         }
 
-        [[nodiscard]] UnsignedSmallInt Offset() const{
+        [[nodiscard]] UInt16_t Offset() const{
             return this->_offset;
         }
 
-        void SetOffset(const UnsignedSmallInt otherOffset){
+        void SetOffset(const UInt16_t otherOffset){
             this->_offset = otherOffset;
         }
 
-        [[nodiscard]] UnsignedSmallInt KeySize() const{
+        [[nodiscard]] UInt16_t KeySize() const{
             return this->_keySize;
         }
 
-        void SetKeySize(const UnsignedSmallInt otherSize){
+        void SetKeySize(const UInt16_t otherSize){
             this->_keySize = otherSize;
         }
 
-        [[nodiscard]] UnsignedSmallInt Size() const{
+        [[nodiscard]] UInt16_t Size() const{
             return this->_dataSize + this->_keySize;
         }
 
-        [[nodiscard]] UnsignedSmallInt DataSize() const{
+        [[nodiscard]] UInt16_t DataSize() const{
             return this->_dataSize;
         }
 
@@ -111,11 +111,11 @@ namespace CoreEngine::Pages{
 
     struct SlotDirectoryDefragment{
         SlotDirectory _slotDirectory;
-        Int _indexPosition;
+        Int32_t _indexPosition;
 
        explicit SlotDirectoryDefragment(
             const SlotDirectory slotDirectory,
-            const Int indexPosition
+            const Int32_t indexPosition
         ):  _slotDirectory(slotDirectory),
             _indexPosition(indexPosition){}
     };

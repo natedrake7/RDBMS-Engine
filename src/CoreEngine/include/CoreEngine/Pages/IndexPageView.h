@@ -36,13 +36,13 @@ namespace CoreEngine::Pages{
             [[nodiscard]] bool IsEmpty() const;
             [[nodiscard]] bool IsLeaf() const;
             [[nodiscard]] bool IsRoot() const;
-            [[nodiscard]] UnsignedSmallInt Keys() const;
+            [[nodiscard]] UInt16_t Keys() const;
 
             void SetIsLeaf(bool isLeaf) const;
             void SetIsRoot(bool isRoot) const;
 
             void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key) const;
-            void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int indexPosition) const;
+            void InsertChild(page_id_t child, const DataTypes::Indexing::Key* key, Int32_t indexPosition) const;
             void InsertFirstChild(page_id_t child) const;
 
             void SetLeftSibling(page_id_t previousPage) const;
@@ -57,18 +57,18 @@ namespace CoreEngine::Pages{
             // void InsertKey(const DataTypes::Indexing::Key& key, Int indexPosition) const;
 
             void InsertTuple(const IndexInsertTuple& tuple) const;
-            void InsertTuple(const IndexInsertTuple& tuple, Int indexPosition) const;
+            void InsertTuple(const IndexInsertTuple& tuple, Int32_t indexPosition) const;
 
-            [[nodiscard]] DataTypes::Indexing::Key GetKeyByIndex(Int indexPosition) const;
+            [[nodiscard]] DataTypes::Indexing::Key GetKeyByIndex(Int32_t indexPosition) const;
 
             //always returns the result of the comparison of the page key against the provided key
-            [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
-            [[nodiscard]] Comparators::Comparator PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int indexPosition) const;
+            [[nodiscard]] Comparators::Comparator ComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int32_t indexPosition) const;
+            [[nodiscard]] Comparators::Comparator PartialComparePageKeyAgainst(const DataTypes::Indexing::Key& key, Int32_t indexPosition) const;
 
 
-            [[nodiscard]] StorageTypes::RowHeader PeekHeader(Int indexPosition) const;
+            [[nodiscard]] StorageTypes::RowHeader PeekHeader(Int32_t indexPosition) const;
 
-            [[nodiscard]] page_id_t GetChild(Int indexPosition) const;
-            [[nodiscard]] InternalNodeTuple GetInternalNodeTuple( Int indexPosition) const;
+            [[nodiscard]] page_id_t GetChild(Int32_t indexPosition) const;
+            [[nodiscard]] InternalNodeTuple GetInternalNodeTuple( Int32_t indexPosition) const;
     };
 }

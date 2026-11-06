@@ -14,11 +14,11 @@ namespace CoreEngine::StorageTypes{
 
     struct AllocationCursor{
         extent_id_t _extentId;
-        UnsignedInt _offset;
+        UInt32_t _offset;
 
         AllocationCursor()
             : _extentId(INVALID_EXTENT_ID), _offset(0) {}
-        AllocationCursor(const extent_id_t extentId, const UnsignedInt offset)
+        AllocationCursor(const extent_id_t extentId, const UInt32_t offset)
             : _extentId(extentId), _offset(offset) {}
 
         ~AllocationCursor() = default;
@@ -26,7 +26,7 @@ namespace CoreEngine::StorageTypes{
 
     struct ExtentSegment{
         extent_id_t _firstExtentId;
-        UnsignedInt _count;
+        UInt32_t _count;
 
         friend bool operator>(const ExtentSegment& lhs, const ExtentSegment& rhs){
             return lhs._count > rhs._count;
@@ -38,9 +38,9 @@ namespace CoreEngine::StorageTypes{
         Database* _db;
         const Table* _table;
 
-        UnsignedSmallInt _segmentIndex;
-        UnsignedSmallInt _segmentOffset;
-        UnsignedSmallInt _extentIndex;
+        UInt16_t _segmentIndex;
+        UInt16_t _segmentOffset;
+        UInt16_t _extentIndex;
 
         Accessors::PageAccessor _pageAccessor;
 

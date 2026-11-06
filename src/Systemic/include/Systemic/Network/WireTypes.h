@@ -9,7 +9,7 @@ namespace Network{
     inline constexpr protocol_version_t PROTOCOL_VERSION = 1;
 
     // Explicit, stable codes. Never renumber; only append.
-    enum class WireType : UnsignedTinyInt{
+    enum class WireType : UInt8_t{
         Null      = 0,
         Bool      = 1,   // 1 byte, 0 or 1
         TinyInt   = 2,   // i8
@@ -37,20 +37,20 @@ namespace Network{
         return !IsVariableLength(type);
     }
 
-    [[nodiscard]] inline constexpr UnsignedSmallInt FixedWidth(const WireType type){
+    [[nodiscard]] inline constexpr UInt16_t FixedWidth(const WireType type){
         switch (type){
         case WireType::Bool:
             return sizeof(bool);
         case WireType::TinyInt:
-            return sizeof(TinyInt);
+            return sizeof(Int8_t);
         case WireType::SmallInt:
-            return sizeof(SmallInt);
+            return sizeof(Int16_t);
         case WireType::Int:
-            return sizeof(Int);
+            return sizeof(Int32_t);
         case WireType::Float:
             return 4;
         case WireType::BigInt:
-            return sizeof(BigInt);
+            return sizeof(Int64_t);
         case WireType::Double:
             return sizeof(double);
         case WireType::DateTime:
@@ -67,12 +67,12 @@ namespace Network{
         return 0;
     }
 
-    enum class ColumnFlags : UnsignedTinyInt{
+    enum class ColumnFlags : UInt8_t{
         None     = 0,
         Constant = 1 << 0,   // encodedRows == 1, applies to every row of the batch
     };
 
-    [[nodiscard]] inline constexpr UnsignedInt ValidityBytes(const UnsignedInt rows){
+    [[nodiscard]] inline constexpr UInt32_t ValidityBytes(const UInt32_t rows){
         return PackedByte::WordsFor(rows);
     }
 }

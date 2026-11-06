@@ -54,7 +54,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     bool Table::VectorContainsIndex(const DataStructures::PolymorphicArray<column_index_t>& vector, const column_index_t index, int& indexPosition){
-        for(Int i = 0;i < vector.Size(); i++)
+        for(Int32_t i = 0;i < vector.Size(); i++)
             if(vector[i] == index){
                 indexPosition = i;
                 return true;
@@ -73,12 +73,12 @@ namespace CoreEngine::StorageTypes {
         });
     }
 
-    void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int indexPos, const Int pagesToAllocate){
+    void Table::InsertExistingRowsToNonClusteredIndexByClusteredIndex(const Int32_t indexPos, const Int32_t pagesToAllocate){
         const auto* clusteredTree = this->GetClusteredIndexedTree();
         // clusteredTree->InsertRowsToOtherTree(indexPos, pagesToAllocate);
     }
 
-    void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int indexPos, const Int pagesToAllocate){
+    void Table::InsertExistingRowToNonClusteredIndexByHeap(const Int32_t indexPos, const Int32_t pagesToAllocate){
         if(this->IsEmpty())
             return;
         //
@@ -202,7 +202,7 @@ namespace CoreEngine::StorageTypes {
             const auto* expression = plan._sharedDefaults[defaultIndex];
             const DataVector* vector = nullptr;
 
-            const auto evaluateExpression = [&](const Int i){
+            const auto evaluateExpression = [&](const Int32_t i){
                 bool isNull = false;
                 Expressions::EvaluateExpression(expression, evaluationContext, vector->SlotAt(i), &isNull);
                 vector->SetNullValue(i, isNull);
@@ -214,7 +214,7 @@ namespace CoreEngine::StorageTypes {
             }
             else{
                 vector = DataVector::FlatVector(allocator, type, state._rowCount);
-                for (Int i = 0;i < state._rowCount; i++)
+                for (Int32_t i = 0;i < state._rowCount; i++)
                     evaluateExpression(i);
             }
 
@@ -234,7 +234,7 @@ namespace CoreEngine::StorageTypes {
             auto* vector = DataVector::FlatVector(allocator, type, state._rowCount);
 
             auto* identityManager = this->IdentityOf(slotIndex);
-            const auto base = identityManager->ReserveRange<BigInt>(allocator, state._rowCount);
+            const auto base = identityManager->ReserveRange<Int64_t>(allocator, state._rowCount);
             const auto increment = identityManager->GetIncrement();
 
             VisitStorageType(type, [&]<typename T>(){
@@ -250,7 +250,7 @@ namespace CoreEngine::StorageTypes {
             state._vectors[slotIndex] = vector;
         };
 
-        const auto prepareChunk = [&](const Int index, const InsertColumnPlan& columnPlan){
+        const auto prepareChunk = [&](const Int32_t index, const InsertColumnPlan& columnPlan){
             switch (columnPlan._source) {
             case InsertColumnSource::Vector:
                 vectorSourceFunc(index, columnPlan._slot);
@@ -289,7 +289,7 @@ namespace CoreEngine::StorageTypes {
         this->_identities.SetAllocator(&this->_allocator);
         this->_identities.Resize(this->_schema->_identitiesCount);
 
-        for (Int i = 0;i < this->_schema->_columnCount; i++){
+        for (Int32_t i = 0;i < this->_schema->_columnCount; i++){
             const auto* column = this->Column(i);
 
             if (column->_identity != nullptr){
@@ -316,7 +316,7 @@ namespace CoreEngine::StorageTypes {
         const DataChunk* chunk,
         const InsertPlan& plan
     ) {
-        Int rowSize = 0;
+        Int32_t rowSize = 0;
         DataStructures::PolymorphicArray<char> buffer;
 
         const auto* allocator = executionContext.GetAllocator();
@@ -351,7 +351,7 @@ namespace CoreEngine::StorageTypes {
            ? static_cast<float>(StorageLayout::INDEX_PAGE_DEFAULT_SIZE)
            : static_cast<float>(StorageLayout::PAGE_SIZE_WITHOUT_HEADER);
 
-        const auto pagesNeeded = static_cast<Int>(std::ceil(static_cast<float>(rowSize) / pageSize));
+        const auto pagesNeeded = static_cast<Int32_t>(std::ceil(static_cast<float>(rowSize) / pageSize));
 
         auto extentReservation = this->ReserveExtents(allocator, pagesNeeded);
 
@@ -525,7 +525,7 @@ namespace CoreEngine::StorageTypes {
         for (const auto extentId : tableExtentIds){
             const auto firstPageId = StorageLayout::ExtentFirstPageId(extentId);
 
-            UnsignedInt mask = 0;
+            UInt32_t mask = 0;
             {
                 const auto pfs = pageAccessor.GetAssociatedPfsPage(firstPageId);
                 MultiThreading::ReaderGuard pfsLatch(&pfs.Latch());
@@ -549,7 +549,7 @@ namespace CoreEngine::StorageTypes {
                     return;
                 }
 
-                for (Int i = 0;i < page.PageSize(); i++)
+                for (Int32_t i = 0;i < page.PageSize(); i++)
                     if (page.RetrieveVisibleRow(snapshot, i, &rid)) [[likely]]
                         result->Push(rid);
 
@@ -567,7 +567,7 @@ namespace CoreEngine::StorageTypes {
     void Table::TemporaryDatabaseHeapScan(
         DataStructures::PolymorphicArray<RID>* result,
         ScanState& state,
-        const Int batchSize
+        const Int32_t batchSize
     ) const{
         auto properties = ExecutionContext();
         properties.SetBatchSize(batchSize);
@@ -612,7 +612,7 @@ namespace CoreEngine::StorageTypes {
                 if (page.IsEmpty())
                     continue;
 
-                for (Int i = 0; i < page.PageSize(); i++) {
+                for (Int32_t i = 0; i < page.PageSize(); i++) {
                     auto row = RID(pageId, i);
                     evaluationContext._rids = &row;
 
@@ -1005,7 +1005,7 @@ namespace CoreEngine::StorageTypes {
         // }
     }
 
-    ExtentReservation Table::ReserveExtents(const ::Memory::IAllocator* allocator, const Int requiredPages) const{
+    ExtentReservation Table::ReserveExtents(const ::Memory::IAllocator* allocator, const Int32_t requiredPages) const{
         return this->_db->ReserveExtents(
             allocator,
             this,
@@ -1119,7 +1119,7 @@ namespace CoreEngine::StorageTypes {
     }
 
     void Table::UpdateSystemCatalog(const ::Memory::IAllocator* allocator) const{
-        for (Int i = 0;i < this->_schema->_columnCount; i++){
+        for (Int32_t i = 0;i < this->_schema->_columnCount; i++){
             this->UpdateCatalogIdentityColumn(allocator, i);
         }
     }
@@ -1135,7 +1135,7 @@ namespace CoreEngine::StorageTypes {
         manager->UpdateMasterDbOnShutdown(allocator);
     }
 
-    void Table::ReseedIdentity(const column_index_t ordinal, const BigInt value){
+    void Table::ReseedIdentity(const column_index_t ordinal, const Int64_t value){
         if (!this->HasIdentity(ordinal))
             return;
 

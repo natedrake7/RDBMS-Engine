@@ -17,7 +17,7 @@ namespace Security {
         this->_allocator.Release();
     }
 
-    const Role* RoleManager::GetRole(const Int roleId)const{
+    const Role* RoleManager::GetRole(const Int32_t roleId)const{
         Role *role = nullptr;
 
         MultiThreading::ReaderGuard guard(&this->mutex);
@@ -32,7 +32,7 @@ namespace Security {
 
         MultiThreading::ReaderGuard guard(&this->mutex);
 
-        Int roleId = -1;
+        Int32_t roleId = -1;
         this->rolesNames.TryGetValue(name, roleId);
         this->roles.TryGetValue(roleId, role);
 
@@ -67,7 +67,7 @@ namespace Security {
     bool RoleManager::RemoveRole(const DataTypes::StringView& name){
         MultiThreading::WriterGuard guard(&this->mutex);
 
-        Int roleId = -1;
+        Int32_t roleId = -1;
         if (!this->rolesNames.TryGetValue(name, roleId))
             return false;
 

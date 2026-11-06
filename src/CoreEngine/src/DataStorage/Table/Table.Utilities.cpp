@@ -3,7 +3,7 @@
 
 namespace CoreEngine::StorageTypes{
     Errors::RuntimeStatus Table::ValidateTableLayout(const ::Memory::IAllocator* allocator) const{
-        UnsignedInt minimum = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
+        UInt32_t minimum = sizeof(RowHeader) + this->ColumnCount() * sizeof(RowEntry);
 
         for (const auto& column : this->Columns()){
             minimum += this->CanStoreColumnOffRow(column._ordinalPosition)
@@ -37,25 +37,25 @@ namespace CoreEngine::StorageTypes{
     row_size_t Table::ClusteredKeySize() const{
         row_size_t size = 0;
         const auto* index = &this->_schema->_indexes[this->_schema->_clusteredIndexOrdinalPosition];
-        for (Int i = 0;i < index->_keyCount; i++)
+        for (Int32_t i = 0;i < index->_keyCount; i++)
             size += this->_schema->_columns[index->_keyColumns[i]._ordinalPosition]._recordSize;
         return size;
     }
 
     row_size_t Table::WorstCaseRowSize() const{
-        UnsignedInt size = sizeof(RowHeader) + sizeof(RowEntry) * this->ColumnCount();
+        UInt32_t size = sizeof(RowHeader) + sizeof(RowEntry) * this->ColumnCount();
 
         for (const auto& column : this->Columns()){
             size += column._recordSize;
         }
 
-        return static_cast<row_size_t>(Math::Min<UnsignedInt>(size, this->MaxInlineRowSize()));
+        return static_cast<row_size_t>(Math::Min<UInt32_t>(size, this->MaxInlineRowSize()));
     }
 
     bool Table::IsKeyColumn(const column_index_t ordinalPosition) const{
         auto* column = &this->_schema->_columns[ordinalPosition];
 
-        for (Int i = 0;i < this->_schema->_indexesCount; i++){
+        for (Int32_t i = 0;i < this->_schema->_indexesCount; i++){
             const auto* index = &this->_schema->_indexes[i];
             if (index->_coveredColumnsMask.HasValue(ordinalPosition))
                 return true;

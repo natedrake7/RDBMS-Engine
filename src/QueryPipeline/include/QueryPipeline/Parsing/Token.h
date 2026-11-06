@@ -25,7 +25,7 @@ namespace QueryPipeline::Parsing{
      * The keyword block must stay contiguous between FirstKeyword and LastKeyword,
      * so keyword membership is a single range check instead of a table lookup.
      */
-    enum class TokenType : UnsignedSmallInt {
+    enum class TokenType : UInt16_t {
         EndOfFile               [[=Spelled("end of input")]] = 0,
         Invalid                 [[=Spelled("invalid token")]],
 
@@ -219,7 +219,7 @@ namespace QueryPipeline::Parsing{
                         ? UpperCased(SourceText(token))
                         : SourceText(token);
                     texts[static_cast<std::size_t>([:token:])] =
-                        DataTypes::StringView(text.data(), static_cast<Int>(text.size()));
+                        DataTypes::StringView(text.data(), static_cast<Int32_t>(text.size()));
                 }
             }
             return texts;
@@ -260,10 +260,10 @@ namespace QueryPipeline::Parsing{
      */
     struct Token {
         const char* _text;
-        Int _length;
+        Int32_t _length;
 
-        UnsignedInt line;   //1 based
-        UnsignedInt column; //1 based
+        UInt32_t line;   //1 based
+        UInt32_t column; //1 based
 
         TokenType type;
 

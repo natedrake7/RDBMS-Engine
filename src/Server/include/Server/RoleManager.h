@@ -9,8 +9,8 @@ namespace Security {
     struct Role;
 
     class RoleManager {
-        Dictionary<Int, Role*> roles;
-        Dictionary<DataTypes::StringView, Int> rolesNames;
+        Dictionary<Int32_t, Role*> roles;
+        Dictionary<DataTypes::StringView, Int32_t> rolesNames;
         mutable MultiThreading::Mutex mutex;
 
         const CoreEngine::Memory::PersistentAllocator _allocator;
@@ -19,7 +19,7 @@ namespace Security {
           RoleManager();
           ~RoleManager();
 
-          [[nodiscard]] const Role* GetRole(Int roleId)const;
+          [[nodiscard]] const Role* GetRole(Int32_t roleId)const;
           [[nodiscard]] const Role* GetRole(const DataTypes::StringView& name)const;
           [[nodiscard]] bool AddRole(const DataTypes::StringView& name, const Role* role);
           [[nodiscard]] bool RemoveRole(const DataTypes::StringView& name);

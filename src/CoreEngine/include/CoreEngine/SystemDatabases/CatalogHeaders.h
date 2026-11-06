@@ -15,10 +15,10 @@ namespace CoreEngine::Catalog{
 
     // TODO: runtime index description, replaced by Schemas::IndexSchema
     struct Index{
-        using IndexedColumns = DataStructures::StaticArray<UnsignedTinyInt, 10>;
+        using IndexedColumns = DataStructures::StaticArray<UInt8_t, 10>;
         IndexedColumns columns;
 
-        explicit Index(const UnsignedTinyInt* columns, const Int size)
+        explicit Index(const UInt8_t* columns, const Int32_t size)
             : columns(columns, size){}
 
         Index() = default;
@@ -28,7 +28,7 @@ namespace CoreEngine::Catalog{
         DataTypes::DateTime createdAt;
         DataTypes::DateTime lastModified;
         DataTypes::String lastModifiedBy;
-        Int version;
+        Int32_t version;
         bool isDeleted;
         DataTypes::DateTime deletedAt;
 
@@ -43,7 +43,7 @@ namespace CoreEngine::Catalog{
             const DataTypes::DateTime& createdAt,
             const DataTypes::DateTime& lastModified,
             const DataTypes::String& lastModifiedBy,
-            const Int version,
+            const Int32_t version,
             const bool isDeleted,
             const DataTypes::DateTime& deletedAt
         ) : createdAt(createdAt),
@@ -55,7 +55,7 @@ namespace CoreEngine::Catalog{
 
         // Partial constructor — for headers that only store version/isDeleted/deletedAt
         explicit AuditInformation(
-            const Int version,
+            const Int32_t version,
             const bool isDeleted,
             const DataTypes::String& lastModifiedBy,
             const DataTypes::DateTime& deletedAt
@@ -68,23 +68,23 @@ namespace CoreEngine::Catalog{
     };
 
     struct IndexColumnsHeader{
-        Int indexId = INVALID_INDEX_ID;
-        Int columnId;
-        SmallInt ordinalPosition;
+        Int32_t indexId = INVALID_INDEX_ID;
+        Int32_t columnId;
+        Int16_t ordinalPosition;
         bool isIncluded;
 
         AuditInformation additionalInfo;
     };
 
     struct IdentityColumnsHeader{
-        Int tableId;
-        Int columnId;
-        Int seedValue;
-        Int increment;
-        BigInt lastValue;
+        Int32_t tableId;
+        Int32_t columnId;
+        Int32_t seedValue;
+        Int32_t increment;
+        Int64_t lastValue;
 
         bool isCached;
-        Int cacheBlock;
+        Int32_t cacheBlock;
         AuditInformation additionalInfo;
 
         explicit IdentityColumnsHeader()
@@ -93,26 +93,26 @@ namespace CoreEngine::Catalog{
                 isCached(false), cacheBlock(0){}
 
         explicit IdentityColumnsHeader(
-            const Int tableId,
-            const Int columnId,
-            const Int seedValue,
-            const Int increment,
-            const BigInt lastValue,
+            const Int32_t tableId,
+            const Int32_t columnId,
+            const Int32_t seedValue,
+            const Int32_t increment,
+            const Int64_t lastValue,
             const bool isCached,
-            const Int cacheBlock
+            const Int32_t cacheBlock
         ):  tableId(tableId),columnId(columnId),
             seedValue(seedValue), increment(increment),
             lastValue(lastValue), isCached(isCached),
             cacheBlock(cacheBlock){}
 
         explicit IdentityColumnsHeader(
-            const Int tableId,
-            const Int columnId,
-            const Int seedValue,
-            const Int increment,
-            const BigInt lastValue,
+            const Int32_t tableId,
+            const Int32_t columnId,
+            const Int32_t seedValue,
+            const Int32_t increment,
+            const Int64_t lastValue,
             const bool isCached,
-            const Int cacheBlock,
+            const Int32_t cacheBlock,
             AuditInformation  additionalInfo
         ):  tableId(tableId), columnId(columnId),
             seedValue(seedValue), increment(increment),
@@ -121,8 +121,8 @@ namespace CoreEngine::Catalog{
     };
 
     struct IndexHeader {
-        Int tableId;
-        Int id = -1;
+        Int32_t tableId;
+        Int32_t id = -1;
         DataTypes::String name;
         bool isClustered;
         bool isDisabled;
@@ -132,19 +132,19 @@ namespace CoreEngine::Catalog{
     };
 
     struct ConstraintsColumnsHeader{
-        Int constraintId = INVALID_CONSTRAINT_ID;
-        Int columnId;
-        Int ordinalPosition;
+        Int32_t constraintId = INVALID_CONSTRAINT_ID;
+        Int32_t columnId;
+        Int32_t ordinalPosition;
         AuditInformation additionalInfo;
     };
 
     struct ConstraintsHeader{
-        Int tableId;
-        Int constraintId = INVALID_CONSTRAINT_ID;
+        Int32_t tableId;
+        Int32_t constraintId = INVALID_CONSTRAINT_ID;
         DataTypes::String name;
         ConstraintType type;
         bool isDisabled;
-        Int indexId = INVALID_INDEX_ID;
+        Int32_t indexId = INVALID_INDEX_ID;
         IndexHeader index;
         DataStructures::PolymorphicArray<ConstraintsColumnsHeader> columns;
 
@@ -152,7 +152,7 @@ namespace CoreEngine::Catalog{
     };
 
     struct DefaultValuesHeader {
-        Int columnId = INVALID_COLUMN_ID;
+        Int32_t columnId = INVALID_COLUMN_ID;
         DataTypes::String value;
         //add size here
 
@@ -160,11 +160,11 @@ namespace CoreEngine::Catalog{
     };
 
     struct TableStatistics {
-        Int tableId ;
+        Int32_t tableId ;
 
-        BigInt rowCount;
-        Int averageRowSize;
-        Int pageCount;
+        Int64_t rowCount;
+        Int32_t averageRowSize;
+        Int32_t pageCount;
 
         DataTypes::DateTime lastModified;
 
@@ -176,15 +176,15 @@ namespace CoreEngine::Catalog{
             this->lastModified = DataTypes::DateTime::Now();
         }
 
-        explicit TableStatistics(const Int tableId)
+        explicit TableStatistics(const Int32_t tableId)
             : tableId(tableId),
               rowCount(0),averageRowSize(0), pageCount(0), lastModified(DataTypes::DateTime::Now()) {}
 
         TableStatistics(
-            const Int tableId,
-            const BigInt& rowCount,
-            const Int averageRowSize,
-            const Int pageCount,
+            const Int32_t tableId,
+            const Int64_t& rowCount,
+            const Int32_t averageRowSize,
+            const Int32_t pageCount,
             const DataTypes::DateTime& lastModified
         ) : tableId(tableId),
             rowCount(rowCount),
@@ -194,30 +194,30 @@ namespace CoreEngine::Catalog{
     };
 
     struct ColumnStatistics {
-        Int columnId;
+        Int32_t columnId;
 
-        BigInt distinctCount;
+        Int64_t distinctCount;
         Value min;
         Value max;
-        BigInt nullCount;
+        Int64_t nullCount;
     };
 
     struct ColumnHistograms {
-        Int columnId;
-        Int histogramId;
+        Int32_t columnId;
+        Int32_t histogramId;
 
         Value rangeStart;
         Value rangeEnd;
 
-        Int rowCount;
-        Int distinctCount;
+        Int32_t rowCount;
+        Int32_t distinctCount;
 
         ColumnHistograms(
-            const Int columnId,
+            const Int32_t columnId,
             const Value& rangeStart,
             const Value& rangeEnd,
-            const Int rowCount,
-            const Int distinctCount
+            const Int32_t rowCount,
+            const Int32_t distinctCount
         )
             : columnId(columnId),
               rangeStart(rangeStart),
@@ -229,12 +229,12 @@ namespace CoreEngine::Catalog{
         }
 
         ColumnHistograms(
-            const Int columnId,
-            const Int histogramId,
+            const Int32_t columnId,
+            const Int32_t histogramId,
             const Value& rangeStart,
             const Value& rangeEnd,
-            const Int rowCount,
-            const Int distinctCount
+            const Int32_t rowCount,
+            const Int32_t distinctCount
         )
             : columnId(columnId),
               histogramId(histogramId),
@@ -245,10 +245,10 @@ namespace CoreEngine::Catalog{
     };
 
     struct IndexStatistics {
-        Int tableId;
-        Int indexId;
-        Int leafPages;
-        TinyInt depth;
+        Int32_t tableId;
+        Int32_t indexId;
+        Int32_t leafPages;
+        Int8_t depth;
         DataTypes::Decimal averageFragmentation;
         DataTypes::DateTime lastUpdated;
 
@@ -262,18 +262,18 @@ namespace CoreEngine::Catalog{
         }
 
         IndexStatistics(
-            const Int tableId,
-            const Int indexId
+            const Int32_t tableId,
+            const Int32_t indexId
         ) : IndexStatistics() {
             this->tableId = tableId;
             this->indexId = indexId;
         }
 
         IndexStatistics(
-            const Int tableId,
-            const Int indexId,
-            const Int leafPages,
-            const TinyInt& depth,
+            const Int32_t tableId,
+            const Int32_t indexId,
+            const Int32_t leafPages,
+            const Int8_t& depth,
             const DataTypes::Decimal& averageFragmentation,
             const DataTypes::DateTime& lastUpdated
         )
@@ -292,26 +292,26 @@ namespace CoreEngine::Catalog{
     };
 
     struct ColumnHeader {
-        Int tableId;
-        Int id = INVALID_COLUMN_ID;
+        Int32_t tableId;
+        Int32_t id = INVALID_COLUMN_ID;
         DataTypes::String name;
-        UnsignedTinyInt dataType;
-        Int recordSize;
-        TinyInt precision = INVALID_DECIMAL_PRECISION;
-        TinyInt scale = INVALID_DECIMAL_SCALE;
+        UInt8_t dataType;
+        Int32_t recordSize;
+        Int8_t precision = INVALID_DECIMAL_PRECISION;
+        Int8_t scale = INVALID_DECIMAL_SCALE;
         bool isNullable;
-        SmallInt ordinalPosition;
+        Int16_t ordinalPosition;
         bool isSystem;
 
         AuditInformation additionalInfo;
     };
 
     struct TableHeader {
-        Int databaseId;
-        Int id;
-        Int schemaId;
+        Int32_t databaseId;
+        Int32_t id;
+        Int32_t schemaId;
         DataTypes::String name;
-        SmallInt ordinalPosition;
+        Int16_t ordinalPosition;
         bool isSystem;
 
         AuditInformation additionalInfo;
@@ -328,8 +328,8 @@ namespace CoreEngine::Catalog{
     };
 
     struct SchemaHeader {
-        Int id = -1;
-        Int databaseId;
+        Int32_t id = -1;
+        Int32_t databaseId;
         DataTypes::String name;
         AuditInformation additionalInfo;
 
@@ -339,8 +339,8 @@ namespace CoreEngine::Catalog{
         }
 
         SchemaHeader(
-            const Int id,
-            const Int databaseId,
+            const Int32_t id,
+            const Int32_t databaseId,
             const DataTypes::String& name
         ) : id(id), databaseId(databaseId), name(name){}
 
@@ -354,12 +354,12 @@ namespace CoreEngine::Catalog{
         DataStructures::PolymorphicArray<IdentityColumnsHeader> _identities;
         DataStructures::PolymorphicArray<DefaultValuesHeader> _defaults;
 
-        UnsignedInt _indexesColumnsCount;
-        UnsignedInt _constraintsColumnsCount;
+        UInt32_t _indexesColumnsCount;
+        UInt32_t _constraintsColumnsCount;
     };
 
     struct DatabaseHeader {
-        Int id = -1;
+        Int32_t id = -1;
         DataTypes::String name;
         DataTypes::String filepath;
         bool isSystem;

@@ -25,7 +25,7 @@ namespace Security {
         [[nodiscard]] User* Authenticate(const DataTypes::StringView& name, const DataTypes::StringView& password)const;
         [[nodiscard]] const User* GetUser(const DataTypes::StringView& name)const;
         [[nodiscard]] bool AddUser(
-            Int id,
+            Int32_t id,
             const DataTypes::String& name,
             const DataTypes::String& passwordHash,
             const Role* role
@@ -34,7 +34,7 @@ namespace Security {
         // [[nodiscard]] bool AddSystemUser(User* user);
         [[nodiscard]]bool RemoveUser(const DataTypes::StringView& name);
 
-        bool GrantRole(const DataTypes::StringView& name, const Role* role, Int& outUserId)const;
+        bool GrantRole(const DataTypes::StringView& name, const Role* role, Int32_t& outUserId)const;
 
         static bool HashPassword(const DataTypes::StringView& password, DataTypes::String& outHash);
     };

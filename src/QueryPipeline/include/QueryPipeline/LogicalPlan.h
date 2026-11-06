@@ -13,9 +13,9 @@ namespace QueryPipeline {
         );
     public:
         session_id_t sessionId;
-        Int databaseId;
+        Int32_t databaseId;
 
-        LogicalPlan(session_id_t sessionId, Int databaseId);
+        LogicalPlan(session_id_t sessionId, Int32_t databaseId);
         explicit LogicalPlan(session_id_t sessionId);
         LogicalPlan();
         virtual ~LogicalPlan() = default;
@@ -24,12 +24,12 @@ namespace QueryPipeline {
 
     class LogicalMaterialize : public LogicalPlan{
         LogicalPlan* child;
-        UnsignedSmallInt _slotIndex;
+        UInt16_t _slotIndex;
 
     public:
         LogicalMaterialize(
             LogicalPlan* child,
-            UnsignedSmallInt slotIndex
+            UInt16_t slotIndex
         );
         [[nodiscard]] [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context) override;
     };
@@ -77,10 +77,10 @@ namespace QueryPipeline {
 
     class LogicalUseDatabase final : public LogicalPlan {
     public:
-        Int databaseId;
+        Int32_t databaseId;
         session_id_t sessionId;
 
-        explicit LogicalUseDatabase(session_id_t sessionId, Int databaseId);
+        explicit LogicalUseDatabase(session_id_t sessionId, Int32_t databaseId);
         [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
 
@@ -88,12 +88,12 @@ namespace QueryPipeline {
     public:
         LogicalPlan* child;
         DataStructures::PolymorphicArray<Expressions::Expression*> _projections;
-        UnsignedSmallInt _slotCount;
+        UInt16_t _slotCount;
 
         LogicalProject(
             LogicalPlan* child,
             DataStructures::PolymorphicArray<Expressions::Expression*>& projections,
-            UnsignedSmallInt slotCount
+            UInt16_t slotCount
         );
         [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
     };
@@ -143,8 +143,8 @@ namespace QueryPipeline {
     );
 
     public:
-        Int leftTableId;
-        Int rightTableId;
+        Int32_t leftTableId;
+        Int32_t rightTableId;
 
         LogicalPlan* left;
         LogicalPlan* right;
@@ -155,8 +155,8 @@ namespace QueryPipeline {
         LogicalPlan* right,
         Expressions::Expression* condition,
         JoinType type,
-        Int leftTableId,
-        Int rightTableId
+        Int32_t leftTableId,
+        Int32_t rightTableId
     );
 
     [[nodiscard]] PhysicalPlan::PlanNode* ToPhysical(QueryContext& context)override;
@@ -166,9 +166,9 @@ namespace QueryPipeline {
     public:
         LogicalPlan* child;
         Expressions::Expression* filter;
-        UnsignedSmallInt _slotCount;
+        UInt16_t _slotCount;
 
-        explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter, UnsignedSmallInt slotCount);
+        explicit LogicalFilter( LogicalPlan* child, Expressions::Expression* filter, UInt16_t slotCount);
         PhysicalPlan::PhysicalFilter* ToPhysical(QueryContext& context)override;
     };
 
@@ -187,9 +187,9 @@ namespace QueryPipeline {
   class LogicalTop final : public LogicalPlan {
     public:
       LogicalPlan* child;
-      BigInt top;
+      Int64_t top;
 
-      explicit LogicalTop(LogicalPlan* child, BigInt top);
+      explicit LogicalTop(LogicalPlan* child, Int64_t top);
       PhysicalPlan::PhysicalTop* ToPhysical(QueryContext& context)override;
   };
 
@@ -231,8 +231,8 @@ namespace QueryPipeline {
     class LogicalSchemaCreate final : public LogicalPlan {
     public:
         DataTypes::String schemaName;
-        Int databaseId;
-        explicit LogicalSchemaCreate(session_id_t sessionId, Int databaseId, DataTypes::String& schemaName);
+        Int32_t databaseId;
+        explicit LogicalSchemaCreate(session_id_t sessionId, Int32_t databaseId, DataTypes::String& schemaName);
         PhysicalPlan::PhysicalSchemaCreate* ToPhysical(QueryContext& context)override;
     };
 
